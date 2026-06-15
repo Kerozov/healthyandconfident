@@ -1,11 +1,7 @@
--- SMS scheduling + worker job tracking
--- Run after 003_campaign_audience.sql
+-- 004: SMS schedule column + status values (no local sent/failed counts — worker is source of truth)
 
 alter table public.sms_campaigns
-  add column if not exists worker_job_id text,
-  add column if not exists scheduled_at timestamptz,
-  add column if not exists sent_count int not null default 0,
-  add column if not exists failed_count int not null default 0;
+  add column if not exists scheduled_at timestamptz;
 
 alter table public.sms_campaigns
   drop constraint if exists sms_campaigns_status_check;

@@ -31,15 +31,27 @@ export type WorkerSmsSendResult = {
   failed?: number;
   sendAt?: string;
   invalid?: number;
+  errors?: string[];
 };
 
-export type SmsJobStatus = {
+export type SmsJobTracking = {
+  total: number;
+  sent: number;
+  failed: number;
+  invalid: number;
+  bounced: number;
+  delivered: number;
+};
+
+export type SmsJobReport = {
   jobId: string;
   status: string;
   sendAt: string | null;
   sentAt: string | null;
   sent: number;
   failed: number;
+  error: string | null;
+  tracking: SmsJobTracking;
 };
 
 function getConfig() {
@@ -87,7 +99,7 @@ export async function scheduleSms(args: ScheduleArgs): Promise<WorkerSmsSendResu
   });
 }
 
-export async function getSmsJobStatus(jobId: string): Promise<SmsJobStatus | null> {
+export async function getSmsJobReport(jobId: string): Promise<SmsJobReport | null> {
   const { url, key } = getConfig();
   const res = await fetch(`${url}/api/v1/sms/jobs/${jobId}`, {
     headers: { Authorization: `Bearer ${key}` },
@@ -102,16 +114,45 @@ export async function getSmsJobStatus(jobId: string): Promise<SmsJobStatus | nul
     sentAt?: string | null;
     sent?: number;
     failed?: number;
+    error?: string | null;
+    tracking?: Partial<SmsJobTracking>;
   } | null;
 
   if (!data) return null;
+
+  const tracking = data.tracking ?? {};
+  const sent = data.sent ?? tracking.sent ?? 0;
+  const failed = data.failed ?? tracking.failed ?? 0;
 
   return {
     jobId: data.jobId ?? jobId,
     status: data.status ?? "unknown",
     sendAt: data.sendAt ?? null,
     sentAt: data.sentAt ?? null,
-    sent: data.sent ?? 0,
-    failed: data.failed ?? 0,
+    sent,
+    failed,
+    error: data.error ?? null,
+    tracking: {
+      total: tracking.total ?? sent + failed,
+      sent,
+      failed,
+      invalid: tracking.invalid ?? 0,
+      bounced: tracking.bounced ?? 0,
+      delivered: tracking.delivered ?? 0,
+    },
+  };
+}
+
+/** @deprecated Use getSmsJobReport */
+export async function getSmsJobStatus(jobId: string) {
+  const report = await getSmsJobReport(jobId);
+  if (!report) return null;
+  return {
+    jobId: report.jobId,
+    status: report.status,
+    sendAt: report.sendAt,
+    sentAt: report.sentAt,
+    sent: report.sent,
+    failed: report.failed,
   };
 }

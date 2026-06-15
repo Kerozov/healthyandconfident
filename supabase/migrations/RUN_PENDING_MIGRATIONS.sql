@@ -1,10 +1,20 @@
 -- ═══════════════════════════════════════════════════════════════
--- Healthy & Confident — run this ONCE in Supabase SQL Editor
--- Dashboard → SQL → New query → Paste → Run
--- Safe to re-run (uses IF NOT EXISTS / IF EXISTS)
+-- UPGRADE ONLY — run AFTER 001_init.sql
+-- Fresh project? Use SETUP_DATABASE.sql instead (one file, full schema).
 -- ═══════════════════════════════════════════════════════════════
 
--- 002: campaign tracking columns
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'email_campaigns'
+  ) THEN
+    RAISE EXCEPTION
+      'Table email_campaigns does not exist. Run SETUP_DATABASE.sql first (fresh DB) or 001_init.sql then re-run this file.';
+  END IF;
+END $$;
+
+-- 002: campaign tracking
 alter table public.email_campaigns
   add column if not exists sent_count           int not null default 0,
   add column if not exists failed_count         int not null default 0,
@@ -30,30 +40,19 @@ alter table public.email_campaigns
 create index if not exists email_campaigns_parent_idx
   on public.email_campaigns (parent_campaign_id);
 
--- 003: audience targeting + bounce count
+-- 003: audience + bounces (email only)
 alter table public.email_campaigns
   add column if not exists bounced_count int not null default 0,
   add column if not exists target_tags text[];
 
+-- 004: SMS schedule (worker job id stored in provider_ref)
 alter table public.sms_campaigns
-  add column if not exists target_tags text[];
+  add column if not exists scheduled_at timestamptz;
 
--- Verify (optional — should show the new columns)
-select column_name, data_type
-from information_schema.columns
-where table_schema = 'public'
-  and table_name = 'email_campaigns'
-  and column_name in (
-    'target_tags', 'bounced_count', 'opened_count',
-    'delivered_count', 'not_opened_count', 'last_synced_at'
-  )
-order by column_name;
-
--- 004: SMS scheduling
 alter table public.sms_campaigns
-  add column if not exists worker_job_id text,
-  add column if not exists scheduled_at timestamptz,
-  add column if not exists sent_count int not null default 0,
+  add column if not exists sent_count int not null default 0;
+
+alter table public.sms_campaigns
   add column if not exists failed_count int not null default 0;
 
 alter table public.sms_campaigns
@@ -67,3 +66,5 @@ alter table public.sms_campaigns
 
 create index if not exists sms_campaigns_scheduled_idx
   on public.sms_campaigns (scheduled_at desc nulls last);
+
+select 'Upgrade complete' as result;

@@ -118,14 +118,13 @@ export type SmsCampaign = {
   message: string;
   segment_tag: string;
   recipients_count: number;
-  worker_job_id: string | null;
+  /** Worker job id — source of truth for delivery status */
   provider_ref: string | null;
   status: SmsCampaignStatus;
-  scheduled_at: string | null;
-  sent_at: string | null;
   sent_count: number;
   failed_count: number;
+  scheduled_at: string | null;
+  sent_at: string | null;
   error: string | null;
   created_at: string;
-  target_tags: string[] | null;
 };

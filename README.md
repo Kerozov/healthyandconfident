@@ -15,7 +15,7 @@ bun install
 cp .env.example .env
 ```
 
-1. Run `supabase/migrations/001_init.sql` then `RUN_PENDING_MIGRATIONS.sql` in Supabase SQL editor
+1. Run `supabase/migrations/SETUP_DATABASE.sql` in Supabase SQL editor (fresh project)
 2. Set env vars (see `.env.example`)
 3. In `notification-worker`: tenant seed with matching `NOTIFICATION_WORKER_API_KEY`
 4. `bun run dev` → `/bg`, `/en`, admin at `/admin/login`

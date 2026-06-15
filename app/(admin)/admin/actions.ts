@@ -9,7 +9,7 @@ import {
   getJobReport,
   type RecipientRow,
 } from "@/lib/worker/email";
-import { sendSms, scheduleSms, getSmsJobStatus } from "@/lib/worker/sms";
+import { sendSms, scheduleSms, getSmsJobReport } from "@/lib/worker/sms";
 import type { SmsCampaignStatus } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 import type { AudienceInput, CampaignStatus } from "@/lib/supabase/types";
@@ -672,6 +672,7 @@ export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
 
 function deriveSmsCampaignStatus(
   workerStatus: string,
+  counts: { sent: number; failed: number; total: number },
   scheduled: boolean,
 ): SmsCampaignStatus {
   switch (workerStatus) {
@@ -683,13 +684,49 @@ function deriveSmsCampaignStatus(
       return "canceled";
     case "failed":
       return "failed";
-    case "partial":
-      return "partial";
     case "sent":
-      return "sent";
+    case "partial":
     default:
-      return scheduled ? "scheduled" : "sent";
+      if (counts.failed > 0 && counts.sent > 0) return "partial";
+      if (counts.sent === 0 && counts.failed > 0) return "failed";
+      if (counts.sent > 0) return "sent";
+      return scheduled ? "scheduled" : "queued";
   }
+}
+
+async function persistSmsCampaignSync(
+  id: string,
+  workerJobId: string,
+  scheduledAt: string | null,
+  recipientsCount: number,
+): Promise<ActionResult & { status?: SmsCampaignStatus; sent?: number; failed?: number }> {
+  const supabase = getAdminClient();
+  const report = await getSmsJobReport(workerJobId);
+  if (!report) {
+    return { ok: false, message: "Could not reach the worker for this SMS job." };
+  }
+
+  const t = report.tracking;
+  const failedTotal = t.failed + t.invalid;
+  const status = deriveSmsCampaignStatus(
+    report.status,
+    { sent: t.sent, failed: failedTotal, total: t.total || recipientsCount },
+    Boolean(scheduledAt) && report.status === "pending",
+  );
+
+  const { error } = await supabase
+    .from("sms_campaigns")
+    .update({
+      status,
+      sent_count: t.sent,
+      failed_count: failedTotal,
+      sent_at: report.sentAt,
+      error: report.error,
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, status, sent: t.sent, failed: failedTotal };
 }
 
 export async function sendSmsCampaign(input: {
@@ -725,37 +762,59 @@ export async function sendSmsCampaign(input: {
           recipients: audience.phones,
         });
 
-    const workerStatus = res.status || (scheduledAt ? "pending" : "sent");
-    const status = deriveSmsCampaignStatus(workerStatus, Boolean(scheduledAt));
-    const sent = res.sent ?? 0;
-    const failed = res.failed ?? 0;
+    const invalidNote =
+      res.invalid && res.invalid > 0
+        ? `${res.invalid} invalid phone number(s) skipped`
+        : null;
+    const workerErrors = res.errors?.length ? res.errors.join("; ") : null;
+    const initialError = [invalidNote, workerErrors].filter(Boolean).join(" | ") || null;
 
-    const { error } = await supabase.from("sms_campaigns").insert({
-      message: input.message,
-      segment_tag: audience.segment_tag,
-      target_tags: audience.target_tags,
-      recipients_count: audience.phones.length,
-      worker_job_id: res.jobId,
-      status,
-      scheduled_at: scheduledAt ?? null,
-      sent_count: sent,
-      failed_count: failed,
-      sent_at: !scheduledAt && status === "sent" ? new Date().toISOString() : null,
-      error:
-        res.invalid && res.invalid > 0
-          ? `${res.invalid} invalid phone number(s) skipped`
-          : null,
-    });
+    const { data, error } = await supabase
+      .from("sms_campaigns")
+      .insert({
+        message: input.message,
+        segment_tag: audience.segment_tag,
+        recipients_count: audience.phones.length,
+        provider_ref: res.jobId,
+        status: scheduledAt ? "scheduled" : "queued",
+        scheduled_at: scheduledAt ?? null,
+        sent_count: 0,
+        failed_count: 0,
+        error: initialError,
+      })
+      .select("id")
+      .single();
 
     if (error) return { ok: false, message: error.message };
+
+    const campaignId = (data as { id: string }).id;
+    let status: SmsCampaignStatus = scheduledAt ? "scheduled" : "queued";
+    let sent = 0;
+    let failed = 0;
+
+    if (res.jobId) {
+      const sync = await persistSmsCampaignSync(
+        campaignId,
+        res.jobId,
+        scheduledAt ?? null,
+        audience.phones.length,
+      );
+      if (sync.status) status = sync.status;
+      sent = sync.sent ?? 0;
+      failed = sync.failed ?? 0;
+    }
 
     revalidatePath("/admin/campaigns");
 
     const msg = scheduledAt
       ? `Scheduled for ${audience.phones.length} numbers at ${new Date(scheduledAt).toLocaleString("en-GB")}.`
-      : status === "partial"
-        ? `Sent to ${sent}, failed ${failed}.`
-        : `Sent to ${sent} numbers.`;
+      : status === "failed"
+        ? `Send failed for all ${audience.phones.length} recipients.`
+        : status === "partial"
+          ? `Sent to ${sent}, failed ${failed} of ${audience.phones.length}.`
+          : status === "sent"
+            ? `Sent to ${sent} numbers.`
+            : `Queued for ${audience.phones.length} numbers.`;
 
     return { ok: status !== "failed", message: msg };
   } catch (err) {
@@ -764,7 +823,6 @@ export async function sendSmsCampaign(input: {
     await supabase.from("sms_campaigns").insert({
       message: input.message,
       segment_tag: audience.segment_tag,
-      target_tags: audience.target_tags,
       recipients_count: audience.phones.length,
       status: "failed",
       error: message,
@@ -781,42 +839,30 @@ export async function syncSmsCampaign(id: string): Promise<ActionResult> {
 
   const { data: row } = await supabase
     .from("sms_campaigns")
-    .select("id, worker_job_id, scheduled_at")
+    .select("id, provider_ref, scheduled_at, recipients_count")
     .eq("id", id)
     .maybeSingle();
 
   const campaign = row as
-    | { worker_job_id: string | null; scheduled_at: string | null }
+    | {
+        provider_ref: string | null;
+        scheduled_at: string | null;
+        recipients_count: number;
+      }
     | null;
 
-  if (!campaign?.worker_job_id) {
+  if (!campaign?.provider_ref) {
     return { ok: false, message: "No worker job linked to this SMS campaign." };
   }
 
-  const job = await getSmsJobStatus(campaign.worker_job_id);
-  if (!job) {
-    return { ok: false, message: "Could not reach the worker for this SMS job." };
-  }
-
-  const status = deriveSmsCampaignStatus(
-    job.status,
-    Boolean(campaign.scheduled_at) && job.status === "pending",
+  const res = await persistSmsCampaignSync(
+    id,
+    campaign.provider_ref,
+    campaign.scheduled_at,
+    campaign.recipients_count,
   );
-
-  const { error } = await supabase
-    .from("sms_campaigns")
-    .update({
-      status,
-      sent_count: job.sent,
-      failed_count: job.failed,
-      sent_at: job.sentAt,
-    })
-    .eq("id", id);
-
-  if (error) return { ok: false, message: error.message };
-
-  revalidatePath("/admin/campaigns");
-  return { ok: true };
+  if (res.ok) revalidatePath("/admin/campaigns");
+  return res;
 }
 
 export async function syncAllSmsCampaigns(): Promise<ActionResult> {
@@ -825,8 +871,8 @@ export async function syncAllSmsCampaigns(): Promise<ActionResult> {
 
   const { data } = await supabase
     .from("sms_campaigns")
-    .select("id, worker_job_id")
-    .not("worker_job_id", "is", null)
+    .select("id, provider_ref")
+    .not("provider_ref", "is", null)
     .order("created_at", { ascending: false })
     .limit(50);
 

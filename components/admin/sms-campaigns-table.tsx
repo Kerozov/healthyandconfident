@@ -35,7 +35,6 @@ const STATUS_LABEL: Record<SmsCampaignStatus, string> = {
 };
 
 function audienceLabel(c: SmsCampaign) {
-  if (c.target_tags?.length) return `tags: ${c.target_tags.join(", ")}`;
   return c.segment_tag;
 }
 
@@ -46,7 +45,7 @@ export function SmsCampaignsTable({ campaigns }: { campaigns: SmsCampaign[] }) {
   const [autoSynced, setAutoSynced] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
-  const hasWorkerJobs = campaigns.some((c) => c.worker_job_id);
+  const hasWorkerJobs = campaigns.some((c) => c.provider_ref);
 
   const refreshAll = useCallback(() => {
     setNote(null);
@@ -133,14 +132,23 @@ export function SmsCampaignsTable({ campaigns }: { campaigns: SmsCampaign[] }) {
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-ink-soft/70">
-                      {audienceLabel(c)} · {c.recipients_count} recipients ·{" "}
+                      {audienceLabel(c)} · {c.recipients_count} recipients
+                      {(c.status === "sent" ||
+                        c.status === "partial" ||
+                        c.status === "failed") && (
+                        <>
+                          {" "}
+                          · {c.sent_count} sent
+                          {c.failed_count > 0 && `, ${c.failed_count} failed`}
+                        </>
+                      )}
+                      {" · "}
                       {c.scheduled_at
                         ? `scheduled ${formatDate(c.scheduled_at, "en")}`
                         : formatDate(c.sent_at ?? c.created_at, "en")}
-                      {c.status === "sent" && c.sent_count > 0 && (
-                        <> · sent {c.sent_count}</>
+                      {c.provider_ref && (
+                        <> · job {c.provider_ref.slice(0, 8)}…</>
                       )}
-                      {c.failed_count > 0 && <> · failed {c.failed_count}</>}
                     </p>
                     {c.error && (
                       <p className="mt-1 text-xs text-coral-600">{c.error}</p>
@@ -149,7 +157,7 @@ export function SmsCampaignsTable({ campaigns }: { campaigns: SmsCampaign[] }) {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => syncOne(c.id)}
-                      disabled={pending || !c.worker_job_id}
+                      disabled={pending || !c.provider_ref}
                       title="Sync this campaign"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink disabled:opacity-40"
                     >
