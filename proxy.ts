@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Inlined for Edge compatibility (middleware must not import Clerk or app aliases).
-const LOCALES = ["bg", "en"] as const;
+// Locale redirect only — Edge-safe, no external imports.
+const LOCALES = ["bg", "en"];
 const DEFAULT_LOCALE = "bg";
-const PUBLIC_FILE = /\.(.*)$/;
 
 function hasLocale(pathname: string) {
   return LOCALES.some(
@@ -11,22 +10,18 @@ function hasLocale(pathname: string) {
   );
 }
 
-function shouldSkip(pathname: string) {
-  return (
+export function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Skip admin, API, Next internals, static files, SEO routes
+  if (
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/sign-in") ||
     pathname === "/sitemap.xml" ||
     pathname === "/robots.txt" ||
-    PUBLIC_FILE.test(pathname)
-  );
-}
-
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  if (shouldSkip(pathname)) {
+    pathname.includes(".")
+  ) {
     return NextResponse.next();
   }
 
@@ -40,5 +35,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|.*\\..*).*)", "/", "/(api|trpc)(.*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };
