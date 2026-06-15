@@ -1,21 +1,18 @@
 import "server-only";
 
+import {
+  getNotificationWorkerConfig,
+  isNotificationWorkerConfigured,
+} from "@/lib/worker/config";
+
 /**
- * SMS notifier adapter — wired the same way as the email worker:
- * send an API key + a message, the notifier service handles delivery.
- *
- * Env (fill in when the notifier is ready):
- *   SMS_NOTIFIER_URL       e.g. https://notifier.example.com
- *   SMS_NOTIFIER_API_KEY   Bearer key
- *   SMS_NOTIFIER_SENDER    optional sender id / name
- *
- * Until configured, sendSms() returns a clear "not configured" result so the
- * admin UI keeps working without throwing.
+ * SMS via notification-worker → Notifier.bg (tenant NOTIFIER_KEY lives in worker DB).
+ * Same NOTIFICATION_WORKER_API_KEY as email.
  */
 
 type SendSmsArgs = {
   message: string;
-  recipients: string[]; // phone numbers in E.164 (+359..., +44...)
+  recipients: string[]; // E.164: +359..., +44...
 };
 
 export type SmsSendResult = {
@@ -27,56 +24,62 @@ export type SmsSendResult = {
 };
 
 export function isSmsConfigured() {
-  return Boolean(process.env.SMS_NOTIFIER_URL && process.env.SMS_NOTIFIER_API_KEY);
+  return isNotificationWorkerConfigured();
 }
 
 export async function sendSms(args: SendSmsArgs): Promise<SmsSendResult> {
-  const url = process.env.SMS_NOTIFIER_URL;
-  const key = process.env.SMS_NOTIFIER_API_KEY;
-  const sender = process.env.SMS_NOTIFIER_SENDER;
+  const { url, key, smsSender } = getNotificationWorkerConfig();
 
   if (!url || !key) {
     return {
       ok: false,
       sent: 0,
       failed: args.recipients.length,
-      error: "SMS notifier is not configured yet (set SMS_NOTIFIER_URL & SMS_NOTIFIER_API_KEY).",
+      error:
+        "Notification worker is not configured (set NOTIFICATION_WORKER_URL & NOTIFICATION_WORKER_API_KEY).",
     };
   }
 
   try {
-    const res = await fetch(`${url.replace(/\/$/, "")}/api/v1/send`, {
+    const res = await fetch(`${url}/api/v1/sms/send`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: args.message,
+        body: args.message,
         recipients: args.recipients,
-        ...(sender ? { sender } : {}),
+        ...(smsSender ? { sender: smsSender } : {}),
       }),
       cache: "no-store",
     });
+
     const data = (await res.json().catch(() => ({}))) as {
+      jobId?: string;
       sent?: number;
       failed?: number;
-      ref?: string;
       error?: string;
+      errors?: string[];
     };
+
     if (!res.ok) {
       return {
         ok: false,
         sent: 0,
         failed: args.recipients.length,
-        error: data.error || `Notifier failed (${res.status})`,
+        error:
+          data.error ||
+          data.errors?.join("; ") ||
+          `SMS failed (${res.status})`,
       };
     }
+
     return {
       ok: true,
       sent: data.sent ?? args.recipients.length,
       failed: data.failed ?? 0,
-      providerRef: data.ref,
+      providerRef: data.jobId,
     };
   } catch (err) {
     return {

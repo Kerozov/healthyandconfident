@@ -83,8 +83,10 @@ export function CampaignComposer({
         <div className="space-y-4">
           {!emailConfigured && (
             <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
-              Email worker is not configured. Set <code>EMAIL_WORKER_URL</code>,{" "}
-              <code>EMAIL_WORKER_API_KEY</code> and <code>EMAIL_WORKER_FROM</code>.
+              Notification worker is not configured. Set{" "}
+              <code>NOTIFICATION_WORKER_URL</code>,{" "}
+              <code>NOTIFICATION_WORKER_API_KEY</code> and{" "}
+              <code>NOTIFICATION_WORKER_FROM</code>.
             </p>
           )}
           <Field label="Subject">
@@ -129,8 +131,11 @@ export function CampaignComposer({
         <div className="space-y-4">
           {!smsConfigured && (
             <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
-              SMS notifier is not configured yet. Set <code>SMS_NOTIFIER_URL</code> and{" "}
-              <code>SMS_NOTIFIER_API_KEY</code> to enable sending.
+              SMS uses the same notification worker. Set{" "}
+              <code>NOTIFICATION_WORKER_URL</code> and{" "}
+              <code>NOTIFICATION_WORKER_API_KEY</code>, and configure{" "}
+              <code>TENANT_*_NOTIFIER_KEY</code> in the worker (then{" "}
+              <code>bun run seed</code>).
             </p>
           )}
           <Field label="Message" hint="Plain text. Sent to subscribers with a phone number.">

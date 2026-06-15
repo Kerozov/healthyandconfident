@@ -5,7 +5,7 @@ import {
   getSubscriberTags,
 } from "@/lib/admin/data";
 import { isSmsConfigured } from "@/lib/sms/notifier";
-import { isEmailWorkerConfigured } from "@/lib/worker/email";
+import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { CampaignsWorkspace } from "@/components/admin/campaigns-workspace";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function AdminCampaignsPage() {
       getSubscriberTags(),
     ]);
   const smsConfigured = isSmsConfigured();
-  const emailConfigured = isEmailWorkerConfigured();
+  const emailConfigured = isNotificationWorkerConfigured();
 
   return (
     <div>

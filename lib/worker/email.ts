@@ -1,14 +1,15 @@
 import "server-only";
 
+import {
+  getNotificationWorkerConfig,
+  isNotificationWorkerConfigured,
+  requireNotificationWorkerConfig,
+} from "@/lib/worker/config";
+
 /**
- * Adapter for the multi-tenant notification-worker (ZeptoMail under the hood).
- * Docs: D:\notification-worker\README.md
+ * Email adapter for notification-worker (ZeptoMail under the hood).
  *
- * Env:
- *   EMAIL_WORKER_URL       e.g. https://notification-worker-phi.vercel.app
- *   EMAIL_WORKER_API_KEY   tenant Bearer key (e.g. hc_xxxxxxxx)
- *   EMAIL_WORKER_FROM      "Vessie Ney <vessie@healthyandconfident.co.uk>"
- *   EMAIL_WORKER_REPLY_TO  optional
+ * Env: see lib/worker/config.ts (NOTIFICATION_WORKER_*)
  */
 
 type SendArgs = {
@@ -148,15 +149,8 @@ export function summarizeRecipients(recipients: RecipientRow[]): RecipientStats 
 }
 
 function getConfig() {
-  const url = process.env.EMAIL_WORKER_URL;
-  const key = process.env.EMAIL_WORKER_API_KEY?.trim();
-  const from = process.env.EMAIL_WORKER_FROM;
-  if (!url || !key) {
-    throw new Error(
-      "EMAIL_WORKER_URL and EMAIL_WORKER_API_KEY are required to send email.",
-    );
-  }
-  return { url: url.replace(/\/$/, ""), key, from };
+  const { url, key, from } = requireNotificationWorkerConfig();
+  return { url, key, from };
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -180,24 +174,24 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export async function sendEmail(args: SendArgs): Promise<WorkerSendResult> {
-  const { from } = getConfig();
+  const { from, replyTo } = getNotificationWorkerConfig();
   return post<WorkerSendResult>("/api/v1/send", {
     subject: args.subject,
     html: args.html,
     recipients: args.recipients,
     from: args.from || from,
-    replyTo: args.replyTo || process.env.EMAIL_WORKER_REPLY_TO,
+    replyTo: args.replyTo || replyTo,
   });
 }
 
 export async function scheduleEmail(args: ScheduleArgs): Promise<WorkerSendResult> {
-  const { from } = getConfig();
+  const { from, replyTo } = getNotificationWorkerConfig();
   return post<WorkerSendResult>("/api/v1/schedule", {
     subject: args.subject,
     html: args.html,
     recipients: args.recipients,
     from: args.from || from,
-    replyTo: args.replyTo || process.env.EMAIL_WORKER_REPLY_TO,
+    replyTo: args.replyTo || replyTo,
     sendAt: args.sendAt,
     idempotencyKey: args.idempotencyKey,
   });
@@ -284,5 +278,7 @@ export async function getNotOpenedEmails(jobId: string): Promise<string[]> {
 }
 
 export function isEmailWorkerConfigured() {
-  return Boolean(process.env.EMAIL_WORKER_URL && process.env.EMAIL_WORKER_API_KEY);
+  return isNotificationWorkerConfigured();
 }
+
+export { isNotificationWorkerConfigured };
