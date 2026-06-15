@@ -1,5 +1,6 @@
 import { getSubscribers, getSegments } from "@/lib/admin/data";
 import { SubscribersManager } from "@/components/admin/subscribers-manager";
+import { SegmentsManager } from "@/components/admin/segments-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ export default async function AdminSubscribersPage() {
       <p className="mt-1 text-sm text-ink-soft">
         Full control of your list — add manually, segment, export and manage status.
       </p>
-      <div className="mt-8">
+      <div className="mt-8 space-y-8">
+        <SegmentsManager segments={segments} />
         <SubscribersManager subscribers={subscribers} segments={segments} />
       </div>
     </div>

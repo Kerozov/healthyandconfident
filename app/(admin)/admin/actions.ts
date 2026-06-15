@@ -6,12 +6,12 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import {
   sendEmail,
   scheduleEmail,
-  getJobStatus,
-  getNotOpenedEmails,
+  getJobReport,
+  type RecipientRow,
 } from "@/lib/worker/email";
 import { sendSms } from "@/lib/sms/notifier";
 import { slugify } from "@/lib/utils";
-import type { CampaignStatus } from "@/lib/supabase/types";
+import type { AudienceInput, CampaignStatus } from "@/lib/supabase/types";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string };
 
@@ -192,24 +192,124 @@ export async function deleteSubscriber(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-async function recipientsForSegment(
-  tag: string,
-  locale?: "bg" | "en",
-): Promise<{ emails: string[]; phones: string[] }> {
+// ── Segments ────────────────────────────────────────────────
+export async function createSegment(input: {
+  key: string;
+  name: string;
+  description?: string;
+}): Promise<ActionResult> {
+  await requireAdmin();
   const supabase = getAdminClient();
+  const key = slugify(input.key || input.name);
+  if (!key || key === "all") {
+    return { ok: false, message: "Invalid segment key." };
+  }
+
+  const { error } = await supabase.from("segments").insert({
+    key,
+    name: input.name.trim(),
+    description: input.description?.trim() || null,
+  });
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin/subscribers");
+  revalidatePath("/admin/campaigns");
+  return { ok: true, message: `Segment "${input.name}" created.` };
+}
+
+export async function deleteSegment(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("segments")
+    .select("key")
+    .eq("id", id)
+    .maybeSingle();
+
+  const segment = row as { key: string } | null;
+  if (!segment) return { ok: false, message: "Segment not found." };
+  if (segment.key === "all") {
+    return { ok: false, message: 'The "all" segment cannot be deleted.' };
+  }
+
+  const { error } = await supabase.from("segments").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin/subscribers");
+  revalidatePath("/admin/campaigns");
+  return { ok: true };
+}
+
+// ── Audience targeting ──────────────────────────────────────
+type ResolvedAudience = {
+  emails: string[];
+  phones: string[];
+  label: string;
+  segment_tag: string;
+  target_tags: string[] | null;
+};
+
+async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> {
+  const supabase = getAdminClient();
+  const locale = input.locale || undefined;
+
   let q = supabase
     .from("subscribers")
-    .select("email, phone, tags, locale")
+    .select("email, phone")
     .eq("status", "subscribed");
+
   if (locale) q = q.eq("locale", locale);
-  if (tag && tag !== "all") q = q.contains("tags", [tag]);
+
+  if (input.mode === "tags") {
+    const tags = (input.tags ?? []).map((t) => t.trim()).filter(Boolean);
+    if (tags.length === 0) {
+      return {
+        emails: [],
+        phones: [],
+        label: "tags: (none)",
+        segment_tag: "tags:",
+        target_tags: [],
+      };
+    }
+    q = q.overlaps("tags", tags);
+    const { data } = await q;
+    const rows = (data as { email: string; phone: string | null }[]) ?? [];
+    return {
+      emails: rows.map((r) => r.email).filter(Boolean),
+      phones: rows.map((r) => r.phone || "").filter(Boolean),
+      label: `tags: ${tags.join(", ")}`,
+      segment_tag: `tags:${tags.join(",")}`,
+      target_tags: tags,
+    };
+  }
+
+  const key = input.segment_key || "all";
+  if (key !== "all") q = q.contains("tags", [key]);
   const { data } = await q;
   const rows = (data as { email: string; phone: string | null }[]) ?? [];
   return {
     emails: rows.map((r) => r.email).filter(Boolean),
     phones: rows.map((r) => r.phone || "").filter(Boolean),
+    label: key,
+    segment_tag: key,
+    target_tags: null,
   };
 }
+
+export async function previewAudience(
+  input: AudienceInput,
+): Promise<{ ok: true; emails: number; phones: number; label: string } | { ok: false; message: string }> {
+  await requireAdmin();
+  const audience = await resolveAudience(input);
+  return {
+    ok: true,
+    emails: audience.emails.length,
+    phones: audience.phones.length,
+    label: audience.label,
+  };
+}
+
 
 // ── Email campaigns ─────────────────────────────────────────
 
@@ -241,6 +341,7 @@ type CampaignInsert = {
   html: string;
   locale: "bg" | "en" | null;
   segment_tag: string;
+  target_tags: string[] | null;
   recipients: string[];
   scheduledAt?: string;
   parentCampaignId?: string;
@@ -297,6 +398,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
         html: input.html,
         locale: input.locale,
         segment_tag: input.segment_tag,
+        target_tags: input.target_tags,
         recipients_count: total,
         worker_job_id: jobId,
         status,
@@ -337,6 +439,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
       html: input.html,
       locale: input.locale,
       segment_tag: input.segment_tag,
+      target_tags: input.target_tags,
       recipients_count: total,
       total_count: total,
       status: "failed",
@@ -351,20 +454,20 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
 export async function sendEmailCampaign(input: {
   subject: string;
   html: string;
-  segment_tag: string;
-  locale?: "bg" | "en" | "";
+  audience: AudienceInput;
   scheduled_at?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
-  const locale = input.locale || undefined;
-  const { emails } = await recipientsForSegment(input.segment_tag, locale);
+  const locale = input.audience.locale || undefined;
+  const audience = await resolveAudience(input.audience);
 
   return dispatchCampaign({
     subject: input.subject,
     html: input.html,
     locale: locale ?? null,
-    segment_tag: input.segment_tag,
-    recipients: emails,
+    segment_tag: audience.segment_tag,
+    target_tags: audience.target_tags,
+    recipients: audience.emails,
     scheduledAt: input.scheduled_at || undefined,
   });
 }
@@ -388,15 +491,15 @@ export async function syncEmailCampaign(id: string): Promise<ActionResult> {
     return { ok: false, message: "No worker job linked to this campaign." };
   }
 
-  const job = await getJobStatus(campaign.worker_job_id);
-  if (!job) {
+  const report = await getJobReport(campaign.worker_job_id);
+  if (!report) {
     return { ok: false, message: "Could not reach the worker for this job." };
   }
 
-  const t = job.tracking;
+  const t = report.tracking;
   const status = deriveCampaignStatus(
-    job.status,
-    { sent: t.sent, failed: t.failed, total: t.total },
+    report.status,
+    { sent: t.sent, failed: t.failed + t.bounced, total: t.total },
     Boolean(campaign.scheduled_at),
   );
 
@@ -406,11 +509,13 @@ export async function syncEmailCampaign(id: string): Promise<ActionResult> {
       status,
       sent_count: t.sent,
       failed_count: t.failed,
+      bounced_count: t.bounced,
+      delivered_count: t.delivered,
       opened_count: t.opened,
       machine_opened_count: 0,
       not_opened_count: t.notOpened,
       total_count: t.total || campaign.recipients_count,
-      sent_at: job.sentAt,
+      sent_at: report.sentAt,
       last_synced_at: new Date().toISOString(),
     })
     .eq("id", id);
@@ -477,9 +582,13 @@ export async function resendToNonOpeners(input: {
     return { ok: false, message: "No worker job linked to this campaign." };
   }
 
-  const emails = await getNotOpenedEmails(parent.worker_job_id);
+  const report = await getJobReport(parent.worker_job_id);
+  const emails = report?.notOpenedEmails ?? [];
   if (emails.length === 0) {
-    return { ok: false, message: "Everyone has opened it — nobody to resend to. 🎉" };
+    return {
+      ok: false,
+      message: "Everyone has opened it (or bounced) — nobody to resend to.",
+    };
   }
 
   const subject = (input.subject?.trim() || `${parent.subject}`).slice(0, 250);
@@ -489,9 +598,42 @@ export async function resendToNonOpeners(input: {
     html: parent.html,
     locale: parent.locale,
     segment_tag: `${parent.segment_tag} · resend`,
+    target_tags: null,
     recipients: emails,
     parentCampaignId: input.campaignId,
   });
+}
+
+export async function getCampaignRecipientReport(
+  campaignId: string,
+): Promise<
+  | {
+      ok: true;
+      recipients: RecipientRow[];
+      tracking: import("@/lib/worker/email").RecipientStats;
+    }
+  | { ok: false; message: string }
+> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("email_campaigns")
+    .select("worker_job_id")
+    .eq("id", campaignId)
+    .maybeSingle();
+
+  const campaign = row as { worker_job_id: string | null } | null;
+  if (!campaign?.worker_job_id) {
+    return { ok: false, message: "No worker job linked." };
+  }
+
+  const report = await getJobReport(campaign.worker_job_id);
+  if (!report) {
+    return { ok: false, message: "Could not load recipient report." };
+  }
+
+  return { ok: true, recipients: report.recipients, tracking: report.tracking };
 }
 
 export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
@@ -506,23 +648,27 @@ export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
 // ── SMS campaigns ───────────────────────────────────────────
 export async function sendSmsCampaign(input: {
   message: string;
-  segment_tag: string;
-  locale?: "bg" | "en" | "";
+  audience: AudienceInput;
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
-  const locale = input.locale || undefined;
-  const { phones } = await recipientsForSegment(input.segment_tag, locale);
-  if (phones.length === 0) {
-    return { ok: false, message: "No subscribers with a phone number match this segment." };
+  const locale = input.audience.locale || undefined;
+  const audience = await resolveAudience(input.audience);
+
+  if (audience.phones.length === 0) {
+    return {
+      ok: false,
+      message: "No subscribers with a phone number match this audience.",
+    };
   }
 
-  const res = await sendSms({ message: input.message, recipients: phones });
+  const res = await sendSms({ message: input.message, recipients: audience.phones });
 
   await supabase.from("sms_campaigns").insert({
     message: input.message,
-    segment_tag: input.segment_tag,
-    recipients_count: phones.length,
+    segment_tag: audience.segment_tag,
+    target_tags: audience.target_tags,
+    recipients_count: audience.phones.length,
     provider_ref: res.providerRef || null,
     status: res.ok ? "sent" : "failed",
     sent_at: res.ok ? new Date().toISOString() : null,
@@ -536,4 +682,13 @@ export async function sendSmsCampaign(input: {
       ? `Sent to ${res.sent} numbers.`
       : res.error || "SMS failed",
   };
+}
+
+export async function deleteSmsCampaign(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("sms_campaigns").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/campaigns");
+  return { ok: true };
 }

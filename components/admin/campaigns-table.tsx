@@ -9,6 +9,8 @@ import {
   MailOpen,
   CornerDownRight,
   Loader2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import type { EmailCampaign, CampaignStatus } from "@/lib/supabase/types";
 import {
@@ -16,7 +18,9 @@ import {
   syncEmailCampaign,
   resendToNonOpeners,
   deleteEmailCampaign,
+  getCampaignRecipientReport,
 } from "@/app/(admin)/admin/actions";
+import type { RecipientRow } from "@/lib/worker/email";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -42,10 +46,24 @@ const STATUS_LABEL: Record<CampaignStatus, string> = {
   canceled: "Canceled",
 };
 
+const RECIPIENT_STATUS_STYLES: Record<string, string> = {
+  opened: "text-forest-600 bg-forest-500/10",
+  delivered: "text-forest-600 bg-forest-500/10",
+  sent: "text-ink-soft bg-ink/5",
+  pending: "text-gold-600 bg-gold-400/15",
+  bounced: "text-coral-600 bg-coral-500/15",
+  failed: "text-coral-600 bg-coral-500/15",
+};
+
 function openRate(c: EmailCampaign) {
   const base = c.sent_count || c.recipients_count;
   if (!base) return 0;
   return Math.round((c.opened_count / base) * 100);
+}
+
+function audienceLabel(c: EmailCampaign) {
+  if (c.target_tags?.length) return `tags: ${c.target_tags.join(", ")}`;
+  return c.segment_tag;
 }
 
 function Metric({
@@ -55,7 +73,7 @@ function Metric({
 }: {
   label: string;
   value: React.ReactNode;
-  tone?: "good" | "bad" | "muted";
+  tone?: "good" | "bad" | "muted" | "warn";
 }) {
   return (
     <div className="min-w-[64px]">
@@ -64,6 +82,7 @@ function Metric({
           "font-display text-lg font-semibold leading-none",
           tone === "good" && "text-forest-600",
           tone === "bad" && "text-coral-600",
+          tone === "warn" && "text-gold-600",
           tone === "muted" && "text-ink-soft",
         )}
       >
@@ -73,6 +92,19 @@ function Metric({
         {label}
       </p>
     </div>
+  );
+}
+
+function RecipientStatusBadge({ status }: { status: string }) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+        RECIPIENT_STATUS_STYLES[status] ?? "bg-ink/5 text-ink-soft",
+      )}
+    >
+      {status}
+    </span>
   );
 }
 
@@ -86,6 +118,9 @@ export function CampaignsTable({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [autoSynced, setAutoSynced] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [recipients, setRecipients] = useState<RecipientRow[] | null>(null);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
 
   const hasLiveJobs = campaigns.some(
     (c) =>
@@ -102,7 +137,6 @@ export function CampaignsTable({
     });
   }, [router]);
 
-  // Auto-sync once on mount so the table is always live when you open it.
   useEffect(() => {
     if (autoSynced || !hasLiveJobs) return;
     setAutoSynced(true);
@@ -122,7 +156,7 @@ export function CampaignsTable({
   function resend(c: EmailCampaign) {
     if (
       !confirm(
-        `Resend "${c.subject}" to everyone who hasn't opened it yet?`,
+        `Resend "${c.subject}" to ${c.not_opened_count} subscriber(s) who haven't opened it? (Bounced addresses are excluded.)`,
       )
     )
       return;
@@ -146,14 +180,29 @@ export function CampaignsTable({
     });
   }
 
+  async function toggleRecipients(campaignId: string) {
+    if (expandedId === campaignId) {
+      setExpandedId(null);
+      setRecipients(null);
+      return;
+    }
+    setExpandedId(campaignId);
+    setLoadingRecipients(true);
+    setRecipients(null);
+    const res = await getCampaignRecipientReport(campaignId);
+    setLoadingRecipients(false);
+    if (res.ok) setRecipients(res.recipients);
+    else setRecipients([]);
+  }
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-semibold">Email campaigns</h2>
           <p className="mt-0.5 text-xs text-ink-soft/70">
-            Open counts are synced from the email worker (automated prefetch
-            opens are filtered there).
+            Live stats from the notification worker. Bounced addresses are not
+            counted as non-openers.
           </p>
           {note && <p className="mt-0.5 text-xs text-ink-soft">{note}</p>}
         </div>
@@ -185,6 +234,7 @@ export function CampaignsTable({
               ["sent", "partial"].includes(c.status) &&
               c.not_opened_count > 0;
             const rowBusy = busyId === c.id && pending;
+            const isExpanded = expandedId === c.id;
 
             return (
               <div
@@ -215,7 +265,7 @@ export function CampaignsTable({
                       )}
                     </div>
                     <p className="mt-1 text-xs text-ink-soft/70">
-                      {c.segment_tag}
+                      {audienceLabel(c)}
                       {c.locale ? ` · ${c.locale.toUpperCase()}` : ""} ·{" "}
                       {c.scheduled_at
                         ? `scheduled ${formatDate(c.scheduled_at, "en")}`
@@ -253,10 +303,10 @@ export function CampaignsTable({
                   </div>
                 </div>
 
-                {/* Metrics */}
-                <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-ink/10 pt-4">
-                  <Metric label="Recipients" value={c.recipients_count} tone="muted" />
+                <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-ink/10 pt-4">
+                  <Metric label="Total" value={c.total_count || c.recipients_count} tone="muted" />
                   <Metric label="Sent" value={c.sent_count} />
+                  <Metric label="Delivered" value={c.delivered_count} tone="good" />
                   <Metric
                     label="Opened"
                     value={
@@ -270,20 +320,13 @@ export function CampaignsTable({
                     tone="good"
                   />
                   <Metric label="Not opened" value={c.not_opened_count} tone="muted" />
-                  {c.machine_opened_count > 0 && (
-                    <Metric
-                      label="Auto (filtered)"
-                      value={c.machine_opened_count}
-                      tone="muted"
-                    />
+                  {(c.bounced_count ?? 0) > 0 && (
+                    <Metric label="Bounced" value={c.bounced_count} tone="bad" />
                   )}
-                  <Metric
-                    label="Failed"
-                    value={c.failed_count}
-                    tone={c.failed_count > 0 ? "bad" : "muted"}
-                  />
+                  {c.failed_count > 0 && (
+                    <Metric label="Failed" value={c.failed_count} tone="bad" />
+                  )}
 
-                  {/* Open-rate bar */}
                   <div className="ml-auto flex min-w-[160px] flex-1 items-center gap-3">
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink/10">
                       <div
@@ -294,12 +337,66 @@ export function CampaignsTable({
                   </div>
                 </div>
 
-                {/* Resend action */}
+                {c.worker_job_id && (
+                  <button
+                    onClick={() => toggleRecipients(c.id)}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft hover:text-ink"
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    {isExpanded ? "Hide" : "Show"} per-recipient status
+                  </button>
+                )}
+
+                {isExpanded && (
+                  <div className="mt-3 overflow-x-auto rounded-xl border border-ink/10">
+                    {loadingRecipients ? (
+                      <p className="p-4 text-sm text-ink-soft">Loading…</p>
+                    ) : recipients && recipients.length > 0 ? (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
+                            <th className="px-4 py-2">Email</th>
+                            <th className="px-4 py-2">Status</th>
+                            <th className="px-4 py-2">Sent</th>
+                            <th className="px-4 py-2">Opened</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recipients.map((r) => (
+                            <tr key={r.email} className="border-b border-ink/5 last:border-0">
+                              <td className="px-4 py-2 font-mono text-xs">{r.email}</td>
+                              <td className="px-4 py-2">
+                                <RecipientStatusBadge status={r.status} />
+                              </td>
+                              <td className="px-4 py-2 text-xs text-ink-soft">
+                                {r.sentAt ? formatDate(r.sentAt, "en") : "—"}
+                              </td>
+                              <td className="px-4 py-2 text-xs text-ink-soft">
+                                {r.openedAt ? formatDate(r.openedAt, "en") : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="p-4 text-sm text-ink-soft">No recipient data.</p>
+                    )}
+                  </div>
+                )}
+
                 {canResend && (
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-cream-2/50 px-4 py-3">
                     <p className="text-sm text-ink-soft">
                       <MailOpen className="mr-1.5 inline h-4 w-4 text-coral-500" />
-                      <strong>{c.not_opened_count}</strong> haven&apos;t opened this yet.
+                      <strong>{c.not_opened_count}</strong> haven&apos;t opened this yet
+                      {(c.bounced_count ?? 0) > 0 && (
+                        <> ({c.bounced_count} bounced — excluded)</>
+                      )}
+                      .
                     </p>
                     <button
                       onClick={() => resend(c)}

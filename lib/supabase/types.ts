@@ -87,9 +87,20 @@ export type EmailCampaign = {
   machine_opened_count: number;
   delivered_count: number;
   not_opened_count: number;
+  bounced_count: number;
   total_count: number;
   last_synced_at: string | null;
   parent_campaign_id: string | null;
+  target_tags: string[] | null;
+};
+
+export type AudienceMode = "segment" | "tags";
+
+export type AudienceInput = {
+  mode: AudienceMode;
+  segment_key?: string;
+  tags?: string[];
+  locale?: "bg" | "en" | "";
 };
 
 export type SmsCampaign = {
@@ -102,4 +113,5 @@ export type SmsCampaign = {
   sent_at: string | null;
   error: string | null;
   created_at: string;
+  target_tags: string[] | null;
 };

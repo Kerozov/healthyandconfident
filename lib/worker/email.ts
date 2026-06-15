@@ -58,24 +58,82 @@ export type RecipientRow = {
   error: string | null;
 };
 
+export type RecipientStats = {
+  total: number;
+  sent: number;
+  failed: number;
+  bounced: number;
+  delivered: number;
+  opened: number;
+  notOpened: number;
+  pending: number;
+};
+
 export type JobReport = {
   jobId: string;
   status: string;
   sendAt: string | null;
   sentAt: string | null;
   recipients: RecipientRow[];
-  tracking: {
-    total: number;
-    sent: number;
-    failed: number;
-    opened: number;
-    notOpened: number;
-  };
+  tracking: RecipientStats;
   notOpenedEmails: string[];
 };
 
+function isBounced(r: RecipientRow): boolean {
+  return r.status === "bounced";
+}
+
 function isFailedRecipient(r: RecipientRow): boolean {
-  return r.status === "failed" || r.status === "bounced" || Boolean(r.error);
+  return r.status === "failed" || isBounced(r) || Boolean(r.error);
+}
+
+function isDelivered(r: RecipientRow): boolean {
+  return Boolean(r.deliveredAt) || r.status === "delivered" || r.status === "opened";
+}
+
+/** Per-recipient breakdown — bounced are excluded from not-opened counts. */
+export function summarizeRecipients(recipients: RecipientRow[]): RecipientStats {
+  let bounced = 0;
+  let failed = 0;
+  let delivered = 0;
+  let opened = 0;
+  let notOpened = 0;
+  let pending = 0;
+  let sent = 0;
+
+  for (const r of recipients) {
+    if (isBounced(r)) {
+      bounced += 1;
+      continue;
+    }
+    if (r.status === "failed" || (r.error && r.status !== "sent")) {
+      failed += 1;
+      continue;
+    }
+    if (r.status === "pending" || !r.sentAt) {
+      pending += 1;
+      continue;
+    }
+
+    sent += 1;
+    if (isDelivered(r)) delivered += 1;
+    if (r.opened) {
+      opened += 1;
+    } else {
+      notOpened += 1;
+    }
+  }
+
+  return {
+    total: recipients.length,
+    sent,
+    failed,
+    bounced,
+    delivered,
+    opened,
+    notOpened,
+    pending,
+  };
 }
 
 function getConfig() {
@@ -192,9 +250,9 @@ export async function getJobReport(jobId: string): Promise<JobReport | null> {
   if (!data) return null;
 
   const recipients = data.recipients ?? [];
-  const workerTracking = { ...EMPTY_TRACKING, ...(data.tracking ?? {}) };
+  const tracking = summarizeRecipients(recipients);
   const notOpenedEmails = recipients
-    .filter((r) => !isFailedRecipient(r) && !r.opened)
+    .filter((r) => !isFailedRecipient(r) && r.sentAt && !r.opened)
     .map((r) => r.email);
 
   return {
@@ -204,27 +262,16 @@ export async function getJobReport(jobId: string): Promise<JobReport | null> {
     sentAt: data.sentAt ?? null,
     recipients,
     tracking: {
-      total: workerTracking.total || recipients.length,
-      sent: workerTracking.sent,
-      failed: workerTracking.failed,
-      opened: workerTracking.opened,
-      notOpened: workerTracking.notOpened || notOpenedEmails.length,
+      ...tracking,
+      notOpened: notOpenedEmails.length,
     },
     notOpenedEmails,
   };
 }
 
 export async function getNotOpenedEmails(jobId: string): Promise<string[]> {
-  const { url, key } = getConfig();
-  const res = await fetch(`${url}/api/v1/jobs/${jobId}?notOpened=true`, {
-    headers: { Authorization: `Bearer ${key}` },
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
-  const data = (await res.json().catch(() => null)) as
-    | { notOpenedEmails?: string[] }
-    | null;
-  return data?.notOpenedEmails ?? [];
+  const report = await getJobReport(jobId);
+  return report?.notOpenedEmails ?? [];
 }
 
 export function isEmailWorkerConfigured() {

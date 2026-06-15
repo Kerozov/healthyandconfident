@@ -69,6 +69,22 @@ export async function getSegments(): Promise<Segment[]> {
   return (data as Segment[]) ?? [];
 }
 
+/** All unique tags currently assigned to subscribers (for tag-based targeting). */
+export async function getSubscriberTags(): Promise<string[]> {
+  const supabase = getAdminClient();
+  const { data } = await supabase
+    .from("subscribers")
+    .select("tags")
+    .eq("status", "subscribed");
+  const tags = new Set<string>();
+  for (const row of (data as { tags: string[] }[]) ?? []) {
+    for (const tag of row.tags ?? []) {
+      if (tag && tag !== "all") tags.add(tag);
+    }
+  }
+  return [...tags].sort();
+}
+
 export async function getPopups(): Promise<PopupConfig[]> {
   const supabase = getAdminClient();
   const { data } = await supabase.from("popup_config").select("*").order("locale");
