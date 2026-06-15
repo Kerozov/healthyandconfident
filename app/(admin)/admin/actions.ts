@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { sendEmail, scheduleEmail } from "@/lib/worker/email";
+import { sendEmail, scheduleEmail, getJobReport } from "@/lib/worker/email";
 import { sendSms } from "@/lib/sms/notifier";
 import { slugify } from "@/lib/utils";
+import type { CampaignStatus } from "@/lib/supabase/types";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string };
 
@@ -206,6 +207,142 @@ async function recipientsForSegment(
 }
 
 // ── Email campaigns ─────────────────────────────────────────
+
+/** Map worker job status + counts → our campaign status. */
+function deriveCampaignStatus(
+  workerStatus: string,
+  counts: { sent: number; failed: number; total: number },
+  scheduled: boolean,
+): CampaignStatus {
+  switch (workerStatus) {
+    case "pending":
+      return scheduled ? "scheduled" : "queued";
+    case "processing":
+      return "sending";
+    case "canceled":
+      return "canceled";
+    case "failed":
+      return "failed";
+    case "sent":
+    default:
+      if (counts.failed > 0 && counts.sent > 0) return "partial";
+      if (counts.sent === 0 && counts.failed > 0) return "failed";
+      return "sent";
+  }
+}
+
+type CampaignInsert = {
+  subject: string;
+  html: string;
+  locale: "bg" | "en" | null;
+  segment_tag: string;
+  recipients: string[];
+  scheduledAt?: string;
+  parentCampaignId?: string;
+};
+
+/** Core sender: create the worker job, then persist a campaign row with the
+ *  REAL status + counts returned by the worker (no more hardcoded "sent"). */
+async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
+  const supabase = getAdminClient();
+  const total = input.recipients.length;
+
+  if (total === 0) {
+    return { ok: false, message: "No recipients match this segment." };
+  }
+
+  try {
+    let jobId = "";
+    let workerStatus = "pending";
+    let sent = 0;
+    let failed = 0;
+
+    if (input.scheduledAt) {
+      const res = await scheduleEmail({
+        subject: input.subject,
+        html: input.html,
+        recipients: input.recipients,
+        sendAt: new Date(input.scheduledAt).toISOString(),
+        idempotencyKey: `camp-${Date.now()}`,
+      });
+      jobId = res.jobId;
+      workerStatus = res.status || "pending";
+    } else {
+      const res = await sendEmail({
+        subject: input.subject,
+        html: input.html,
+        recipients: input.recipients,
+      });
+      jobId = res.jobId;
+      workerStatus = res.status || "sent";
+      sent = res.sent ?? 0;
+      failed = res.failed ?? 0;
+    }
+
+    const status = deriveCampaignStatus(
+      workerStatus,
+      { sent, failed, total },
+      Boolean(input.scheduledAt),
+    );
+
+    const { data, error } = await supabase
+      .from("email_campaigns")
+      .insert({
+        subject: input.subject,
+        html: input.html,
+        locale: input.locale,
+        segment_tag: input.segment_tag,
+        recipients_count: total,
+        worker_job_id: jobId,
+        status,
+        scheduled_at: input.scheduledAt || null,
+        sent_at: input.scheduledAt ? null : new Date().toISOString(),
+        sent_count: sent,
+        failed_count: failed,
+        total_count: total,
+        not_opened_count: sent,
+        last_synced_at: new Date().toISOString(),
+        parent_campaign_id: input.parentCampaignId || null,
+      })
+      .select("id")
+      .single();
+
+    if (error) return { ok: false, message: error.message };
+
+    revalidatePath("/admin/campaigns");
+
+    const msg =
+      status === "scheduled"
+        ? `Scheduled for ${total} subscribers.`
+        : status === "failed"
+          ? `Send failed for all ${total} recipients.`
+          : status === "partial"
+            ? `Sent to ${sent}, failed ${failed} of ${total}.`
+            : `Sent to ${total} subscribers.`;
+
+    return {
+      ok: status !== "failed",
+      message: msg,
+      id: (data as { id: string }).id,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Send failed";
+    await supabase.from("email_campaigns").insert({
+      subject: input.subject,
+      html: input.html,
+      locale: input.locale,
+      segment_tag: input.segment_tag,
+      recipients_count: total,
+      total_count: total,
+      status: "failed",
+      error: message,
+      parent_campaign_id: input.parentCampaignId || null,
+    });
+    revalidatePath("/admin/campaigns");
+    return { ok: false, message };
+  }
+}
+
 export async function sendEmailCampaign(input: {
   subject: string;
   html: string;
@@ -214,65 +351,154 @@ export async function sendEmailCampaign(input: {
   scheduled_at?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
-  const supabase = getAdminClient();
   const locale = input.locale || undefined;
-
   const { emails } = await recipientsForSegment(input.segment_tag, locale);
-  if (emails.length === 0) {
-    return { ok: false, message: "No subscribers match this segment." };
+
+  return dispatchCampaign({
+    subject: input.subject,
+    html: input.html,
+    locale: locale ?? null,
+    segment_tag: input.segment_tag,
+    recipients: emails,
+    scheduledAt: input.scheduled_at || undefined,
+  });
+}
+
+/** Pull authoritative status + filtered open tracking from the worker into our DB. */
+export async function syncEmailCampaign(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("email_campaigns")
+    .select("id, worker_job_id, scheduled_at, recipients_count")
+    .eq("id", id)
+    .maybeSingle();
+
+  const campaign = row as
+    | { worker_job_id: string | null; scheduled_at: string | null; recipients_count: number }
+    | null;
+
+  if (!campaign?.worker_job_id) {
+    return { ok: false, message: "No worker job linked to this campaign." };
   }
 
-  try {
-    let jobId = "";
-    let status: "sent" | "scheduled" = "sent";
+  // Per-recipient report applies machine-open filtering for accurate opens.
+  const report = await getJobReport(campaign.worker_job_id);
+  if (!report) {
+    return { ok: false, message: "Could not reach the worker for this job." };
+  }
 
-    if (input.scheduled_at) {
-      const res = await scheduleEmail({
-        subject: input.subject,
-        html: input.html,
-        recipients: emails,
-        sendAt: new Date(input.scheduled_at).toISOString(),
-        idempotencyKey: `camp-${Date.now()}`,
-      });
-      jobId = res.jobId;
-      status = "scheduled";
-    } else {
-      const res = await sendEmail({
-        subject: input.subject,
-        html: input.html,
-        recipients: emails,
-      });
-      jobId = res.jobId;
-    }
+  const t = report.tracking;
+  const status = deriveCampaignStatus(
+    report.status,
+    { sent: t.sent, failed: t.failed, total: t.total },
+    Boolean(campaign.scheduled_at),
+  );
 
-    await supabase.from("email_campaigns").insert({
-      subject: input.subject,
-      html: input.html,
-      locale: locale || null,
-      segment_tag: input.segment_tag,
-      recipients_count: emails.length,
-      worker_job_id: jobId,
+  const { error } = await supabase
+    .from("email_campaigns")
+    .update({
       status,
-      scheduled_at: input.scheduled_at || null,
-      sent_at: status === "sent" ? new Date().toISOString() : null,
-    });
+      sent_count: t.sent,
+      failed_count: t.failed,
+      opened_count: t.opened,
+      machine_opened_count: t.machineOpened,
+      not_opened_count: t.notOpened,
+      total_count: t.total || campaign.recipients_count,
+      sent_at: report.sentAt,
+      last_synced_at: new Date().toISOString(),
+    })
+    .eq("id", id);
 
-    revalidatePath("/admin/campaigns");
-    return { ok: true, message: `Queued to ${emails.length} subscribers.` };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Send failed";
-    await supabase.from("email_campaigns").insert({
-      subject: input.subject,
-      html: input.html,
-      locale: locale || null,
-      segment_tag: input.segment_tag,
-      recipients_count: emails.length,
-      status: "failed",
-      error: message,
-    });
-    revalidatePath("/admin/campaigns");
-    return { ok: false, message };
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin/campaigns");
+  return { ok: true };
+}
+
+/** Refresh every campaign that still has a worker job (skips drafts/failed-at-create). */
+export async function syncAllEmailCampaigns(): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data } = await supabase
+    .from("email_campaigns")
+    .select("id, worker_job_id")
+    .not("worker_job_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const rows = (data as { id: string; worker_job_id: string | null }[]) ?? [];
+
+  await Promise.all(
+    rows.map(async (r) => {
+      try {
+        await syncEmailCampaign(r.id);
+      } catch {
+        /* ignore individual failures so one bad job doesn't block the rest */
+      }
+    }),
+  );
+
+  revalidatePath("/admin/campaigns");
+  return { ok: true, message: `Synced ${rows.length} campaign(s).` };
+}
+
+/** One-click resend to everyone who has NOT opened the original campaign. */
+export async function resendToNonOpeners(input: {
+  campaignId: string;
+  subject?: string;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("email_campaigns")
+    .select("*")
+    .eq("id", input.campaignId)
+    .maybeSingle();
+
+  const parent = row as
+    | {
+        worker_job_id: string | null;
+        subject: string;
+        html: string;
+        locale: "bg" | "en" | null;
+        segment_tag: string;
+      }
+    | null;
+
+  if (!parent?.worker_job_id) {
+    return { ok: false, message: "No worker job linked to this campaign." };
   }
+
+  // Use the filtered report so machine/prefetch opens still count as non-openers.
+  const report = await getJobReport(parent.worker_job_id);
+  const emails = report?.notOpenedEmails ?? [];
+  if (emails.length === 0) {
+    return { ok: false, message: "Everyone has opened it — nobody to resend to. 🎉" };
+  }
+
+  const subject = (input.subject?.trim() || `${parent.subject}`).slice(0, 250);
+
+  return dispatchCampaign({
+    subject,
+    html: parent.html,
+    locale: parent.locale,
+    segment_tag: `${parent.segment_tag} · resend`,
+    recipients: emails,
+    parentCampaignId: input.campaignId,
+  });
+}
+
+export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("email_campaigns").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/campaigns");
+  return { ok: true };
 }
 
 // ── SMS campaigns ───────────────────────────────────────────

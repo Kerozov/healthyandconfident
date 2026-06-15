@@ -33,11 +33,62 @@ export type WorkerSendResult = {
 };
 
 export type JobTracking = {
+  total: number;
   opened: number;
   notOpened: number;
   sent: number;
   failed: number;
 };
+
+export type JobStatus = {
+  jobId: string;
+  status: string; // pending | processing | sent | failed | canceled
+  sendAt: string | null;
+  sentAt: string | null;
+  tracking: JobTracking;
+};
+
+export type RecipientRow = {
+  email: string;
+  status: string;
+  opened: boolean;
+  openedAt: string | null;
+  deliveredAt: string | null;
+  sentAt: string | null;
+  error: string | null;
+};
+
+export type JobReport = {
+  jobId: string;
+  status: string;
+  sendAt: string | null;
+  sentAt: string | null;
+  recipients: RecipientRow[];
+  tracking: {
+    total: number;
+    sent: number;
+    failed: number;
+    opened: number; // confirmed (human) opens only
+    machineOpened: number; // instant / prefetch opens that are filtered out
+    notOpened: number;
+  };
+  notOpenedEmails: string[]; // confirmed non-openers (for resend)
+};
+
+/**
+ * Minimum seconds between send and open for an open to count as a real human
+ * open. Faster opens are almost always Apple Mail Privacy Protection, Gmail's
+ * image proxy, or antivirus/link scanners pre-loading the tracking pixel.
+ */
+const OPEN_CONFIRM_SECONDS = Number(process.env.OPEN_CONFIRM_SECONDS ?? 12);
+
+function isConfirmedOpen(r: RecipientRow): boolean {
+  if (!r.opened || !r.openedAt) return false;
+  if (!r.sentAt) return true; // no baseline to compare → trust it
+  const delaySec =
+    (new Date(r.openedAt).getTime() - new Date(r.sentAt).getTime()) / 1000;
+  return delaySec >= OPEN_CONFIRM_SECONDS;
+}
 
 function getConfig() {
   const url = process.env.EMAIL_WORKER_URL;
@@ -95,17 +146,105 @@ export async function scheduleEmail(args: ScheduleArgs): Promise<WorkerSendResul
   });
 }
 
-export async function getJobTracking(jobId: string): Promise<JobTracking | null> {
+const EMPTY_TRACKING: JobTracking = {
+  total: 0,
+  opened: 0,
+  notOpened: 0,
+  sent: 0,
+  failed: 0,
+};
+
+/** Full, authoritative status from the worker (status + tracking + dates). */
+export async function getJobStatus(jobId: string): Promise<JobStatus | null> {
   const { url, key } = getConfig();
   const res = await fetch(`${url}/api/v1/jobs/${jobId}`, {
     headers: { Authorization: `Bearer ${key}` },
     cache: "no-store",
   });
   if (!res.ok) return null;
-  const data = (await res.json().catch(() => null)) as
-    | { tracking?: JobTracking }
-    | null;
-  return data?.tracking ?? null;
+  const data = (await res.json().catch(() => null)) as {
+    jobId?: string;
+    status?: string;
+    sendAt?: string | null;
+    sentAt?: string | null;
+    tracking?: Partial<JobTracking>;
+  } | null;
+  if (!data) return null;
+
+  return {
+    jobId: data.jobId ?? jobId,
+    status: data.status ?? "unknown",
+    sendAt: data.sendAt ?? null,
+    sentAt: data.sentAt ?? null,
+    tracking: { ...EMPTY_TRACKING, ...(data.tracking ?? {}) },
+  };
+}
+
+export async function getJobTracking(jobId: string): Promise<JobTracking | null> {
+  const status = await getJobStatus(jobId);
+  return status?.tracking ?? null;
+}
+
+/**
+ * Authoritative per-recipient report with machine-open filtering applied.
+ * This is what the admin uses for accurate open counts + resend targeting.
+ */
+export async function getJobReport(jobId: string): Promise<JobReport | null> {
+  const { url, key } = getConfig();
+  const res = await fetch(`${url}/api/v1/jobs/${jobId}?recipients=true`, {
+    headers: { Authorization: `Bearer ${key}` },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  const data = (await res.json().catch(() => null)) as {
+    jobId?: string;
+    status?: string;
+    sendAt?: string | null;
+    sentAt?: string | null;
+    recipients?: RecipientRow[];
+  } | null;
+  if (!data) return null;
+
+  const recipients = data.recipients ?? [];
+
+  let failed = 0;
+  let opened = 0;
+  let machineOpened = 0;
+  const notOpenedEmails: string[] = [];
+
+  for (const r of recipients) {
+    const isFailed =
+      r.status === "failed" || r.status === "bounced" || Boolean(r.error);
+    if (isFailed) {
+      failed += 1;
+      continue;
+    }
+    if (isConfirmedOpen(r)) {
+      opened += 1;
+    } else {
+      if (r.opened) machineOpened += 1; // opened pixel, but too fast = machine
+      notOpenedEmails.push(r.email);
+    }
+  }
+
+  const sent = recipients.length - failed;
+
+  return {
+    jobId: data.jobId ?? jobId,
+    status: data.status ?? "unknown",
+    sendAt: data.sendAt ?? null,
+    sentAt: data.sentAt ?? null,
+    recipients,
+    tracking: {
+      total: recipients.length,
+      sent,
+      failed,
+      opened,
+      machineOpened,
+      notOpened: notOpenedEmails.length,
+    },
+    notOpenedEmails,
+  };
 }
 
 export async function getNotOpenedEmails(jobId: string): Promise<string[]> {
