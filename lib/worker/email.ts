@@ -41,7 +41,7 @@ export type JobTracking = {
 
 function getConfig() {
   const url = process.env.EMAIL_WORKER_URL;
-  const key = process.env.EMAIL_WORKER_API_KEY;
+  const key = process.env.EMAIL_WORKER_API_KEY?.trim();
   const from = process.env.EMAIL_WORKER_FROM;
   if (!url || !key) {
     throw new Error(

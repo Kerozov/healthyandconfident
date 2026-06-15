@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
@@ -11,6 +10,7 @@ import {
   MousePointerClick,
   Leaf,
   ExternalLink,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,9 +24,14 @@ const links = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const clerkEnabled = Boolean(
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-  );
+  const router = useRouter();
+
+  async function logout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/admin/login");
+    router.refresh();
+  }
+
   return (
     <aside className="flex w-full flex-col border-b border-ink/10 bg-white lg:h-screen lg:w-64 lg:border-b-0 lg:border-r">
       <div className="flex items-center gap-2 px-6 py-5 font-display text-lg font-semibold">
@@ -65,13 +70,13 @@ export function Sidebar() {
         >
           <ExternalLink className="h-3.5 w-3.5" /> View site
         </Link>
-        {clerkEnabled ? (
-          <UserButton />
-        ) : (
-          <span className="rounded-full bg-gold-400/20 px-2.5 py-1 text-[11px] font-medium text-gold-500">
-            No-auth
-          </span>
-        )}
+        <button
+          type="button"
+          onClick={logout}
+          className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-ink/5 hover:text-ink"
+        >
+          <LogOut className="h-3.5 w-3.5" /> Sign out
+        </button>
       </div>
     </aside>
   );

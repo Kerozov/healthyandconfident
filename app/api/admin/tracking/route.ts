@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin/auth";
+import { hasAdminSession } from "@/lib/admin/auth";
 import { getJobTracking, getNotOpenedEmails } from "@/lib/worker/email";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  if (!(await isAdmin())) {
+  if (!(await hasAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { searchParams } = new URL(req.url);
