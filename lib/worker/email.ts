@@ -68,26 +68,14 @@ export type JobReport = {
     total: number;
     sent: number;
     failed: number;
-    opened: number; // confirmed (human) opens only
-    machineOpened: number; // instant / prefetch opens that are filtered out
+    opened: number;
     notOpened: number;
   };
-  notOpenedEmails: string[]; // confirmed non-openers (for resend)
+  notOpenedEmails: string[];
 };
 
-/**
- * Minimum seconds between send and open for an open to count as a real human
- * open. Faster opens are almost always Apple Mail Privacy Protection, Gmail's
- * image proxy, or antivirus/link scanners pre-loading the tracking pixel.
- */
-const OPEN_CONFIRM_SECONDS = Number(process.env.OPEN_CONFIRM_SECONDS ?? 12);
-
-function isConfirmedOpen(r: RecipientRow): boolean {
-  if (!r.opened || !r.openedAt) return false;
-  if (!r.sentAt) return true; // no baseline to compare → trust it
-  const delaySec =
-    (new Date(r.openedAt).getTime() - new Date(r.sentAt).getTime()) / 1000;
-  return delaySec >= OPEN_CONFIRM_SECONDS;
+function isFailedRecipient(r: RecipientRow): boolean {
+  return r.status === "failed" || r.status === "bounced" || Boolean(r.error);
 }
 
 function getConfig() {
@@ -185,10 +173,7 @@ export async function getJobTracking(jobId: string): Promise<JobTracking | null>
   return status?.tracking ?? null;
 }
 
-/**
- * Authoritative per-recipient report with machine-open filtering applied.
- * This is what the admin uses for accurate open counts + resend targeting.
- */
+/** Per-recipient report — tracking counts come from the worker (authoritative). */
 export async function getJobReport(jobId: string): Promise<JobReport | null> {
   const { url, key } = getConfig();
   const res = await fetch(`${url}/api/v1/jobs/${jobId}?recipients=true`, {
@@ -202,32 +187,15 @@ export async function getJobReport(jobId: string): Promise<JobReport | null> {
     sendAt?: string | null;
     sentAt?: string | null;
     recipients?: RecipientRow[];
+    tracking?: Partial<JobTracking>;
   } | null;
   if (!data) return null;
 
   const recipients = data.recipients ?? [];
-
-  let failed = 0;
-  let opened = 0;
-  let machineOpened = 0;
-  const notOpenedEmails: string[] = [];
-
-  for (const r of recipients) {
-    const isFailed =
-      r.status === "failed" || r.status === "bounced" || Boolean(r.error);
-    if (isFailed) {
-      failed += 1;
-      continue;
-    }
-    if (isConfirmedOpen(r)) {
-      opened += 1;
-    } else {
-      if (r.opened) machineOpened += 1; // opened pixel, but too fast = machine
-      notOpenedEmails.push(r.email);
-    }
-  }
-
-  const sent = recipients.length - failed;
+  const workerTracking = { ...EMPTY_TRACKING, ...(data.tracking ?? {}) };
+  const notOpenedEmails = recipients
+    .filter((r) => !isFailedRecipient(r) && !r.opened)
+    .map((r) => r.email);
 
   return {
     jobId: data.jobId ?? jobId,
@@ -236,12 +204,11 @@ export async function getJobReport(jobId: string): Promise<JobReport | null> {
     sentAt: data.sentAt ?? null,
     recipients,
     tracking: {
-      total: recipients.length,
-      sent,
-      failed,
-      opened,
-      machineOpened,
-      notOpened: notOpenedEmails.length,
+      total: workerTracking.total || recipients.length,
+      sent: workerTracking.sent,
+      failed: workerTracking.failed,
+      opened: workerTracking.opened,
+      notOpened: workerTracking.notOpened || notOpenedEmails.length,
     },
     notOpenedEmails,
   };

@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { sendEmail, scheduleEmail, getJobReport } from "@/lib/worker/email";
+import {
+  sendEmail,
+  scheduleEmail,
+  getJobStatus,
+  getNotOpenedEmails,
+} from "@/lib/worker/email";
 import { sendSms } from "@/lib/sms/notifier";
 import { slugify } from "@/lib/utils";
 import type { CampaignStatus } from "@/lib/supabase/types";
@@ -383,15 +388,14 @@ export async function syncEmailCampaign(id: string): Promise<ActionResult> {
     return { ok: false, message: "No worker job linked to this campaign." };
   }
 
-  // Per-recipient report applies machine-open filtering for accurate opens.
-  const report = await getJobReport(campaign.worker_job_id);
-  if (!report) {
+  const job = await getJobStatus(campaign.worker_job_id);
+  if (!job) {
     return { ok: false, message: "Could not reach the worker for this job." };
   }
 
-  const t = report.tracking;
+  const t = job.tracking;
   const status = deriveCampaignStatus(
-    report.status,
+    job.status,
     { sent: t.sent, failed: t.failed, total: t.total },
     Boolean(campaign.scheduled_at),
   );
@@ -403,10 +407,10 @@ export async function syncEmailCampaign(id: string): Promise<ActionResult> {
       sent_count: t.sent,
       failed_count: t.failed,
       opened_count: t.opened,
-      machine_opened_count: t.machineOpened,
+      machine_opened_count: 0,
       not_opened_count: t.notOpened,
       total_count: t.total || campaign.recipients_count,
-      sent_at: report.sentAt,
+      sent_at: job.sentAt,
       last_synced_at: new Date().toISOString(),
     })
     .eq("id", id);
@@ -473,9 +477,7 @@ export async function resendToNonOpeners(input: {
     return { ok: false, message: "No worker job linked to this campaign." };
   }
 
-  // Use the filtered report so machine/prefetch opens still count as non-openers.
-  const report = await getJobReport(parent.worker_job_id);
-  const emails = report?.notOpenedEmails ?? [];
+  const emails = await getNotOpenedEmails(parent.worker_job_id);
   if (emails.length === 0) {
     return { ok: false, message: "Everyone has opened it — nobody to resend to. 🎉" };
   }

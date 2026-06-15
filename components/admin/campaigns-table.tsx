@@ -152,8 +152,8 @@ export function CampaignsTable({
         <div>
           <h2 className="font-display text-lg font-semibold">Email campaigns</h2>
           <p className="mt-0.5 text-xs text-ink-soft/70">
-            Instant pixel loads (Apple Mail, Gmail proxy, scanners) are filtered
-            out — only real opens are counted.
+            Open counts are synced from the email worker (automated prefetch
+            opens are filtered there).
           </p>
           {note && <p className="mt-0.5 text-xs text-ink-soft">{note}</p>}
         </div>
