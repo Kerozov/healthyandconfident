@@ -87,11 +87,22 @@ function isFailedRecipient(r: RecipientRow): boolean {
   return r.status === "failed" || isBounced(r) || Boolean(r.error);
 }
 
+function isOpened(r: RecipientRow): boolean {
+  return r.opened || r.status === "opened" || Boolean(r.openedAt);
+}
+
+/** Only successfully delivered, non-opened addresses — never bounced/failed. */
+function canResendTo(r: RecipientRow): boolean {
+  if (isFailedRecipient(r)) return false;
+  if (!r.sentAt) return false;
+  return !isOpened(r);
+}
+
 function isDelivered(r: RecipientRow): boolean {
   return Boolean(r.deliveredAt) || r.status === "delivered" || r.status === "opened";
 }
 
-/** Per-recipient breakdown — bounced are excluded from not-opened counts. */
+/** Per-recipient breakdown — bounced/failed are excluded from not-opened counts. */
 export function summarizeRecipients(recipients: RecipientRow[]): RecipientStats {
   let bounced = 0;
   let failed = 0;
@@ -106,7 +117,7 @@ export function summarizeRecipients(recipients: RecipientRow[]): RecipientStats 
       bounced += 1;
       continue;
     }
-    if (r.status === "failed" || (r.error && r.status !== "sent")) {
+    if (r.status === "failed" || (r.error && r.status !== "sent" && r.status !== "opened")) {
       failed += 1;
       continue;
     }
@@ -117,7 +128,7 @@ export function summarizeRecipients(recipients: RecipientRow[]): RecipientStats 
 
     sent += 1;
     if (isDelivered(r)) delivered += 1;
-    if (r.opened) {
+    if (isOpened(r)) {
       opened += 1;
     } else {
       notOpened += 1;
@@ -251,9 +262,7 @@ export async function getJobReport(jobId: string): Promise<JobReport | null> {
 
   const recipients = data.recipients ?? [];
   const tracking = summarizeRecipients(recipients);
-  const notOpenedEmails = recipients
-    .filter((r) => !isFailedRecipient(r) && r.sentAt && !r.opened)
-    .map((r) => r.email);
+  const notOpenedEmails = recipients.filter(canResendTo).map((r) => r.email);
 
   return {
     jobId: data.jobId ?? jobId,

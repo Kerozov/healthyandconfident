@@ -407,7 +407,10 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
         sent_count: sent,
         failed_count: failed,
         total_count: total,
-        not_opened_count: sent,
+        not_opened_count: 0,
+        bounced_count: 0,
+        opened_count: 0,
+        delivered_count: 0,
         last_synced_at: new Date().toISOString(),
         parent_campaign_id: input.parentCampaignId || null,
       })
@@ -415,6 +418,11 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
       .single();
 
     if (error) return { ok: false, message: error.message };
+
+    const campaignId = (data as { id: string }).id;
+    if (jobId && !input.scheduledAt) {
+      await persistCampaignSync(campaignId, jobId, null, total);
+    }
 
     revalidatePath("/admin/campaigns");
 
@@ -472,7 +480,7 @@ export async function sendEmailCampaign(input: {
   });
 }
 
-/** Pull authoritative status + filtered open tracking from the worker into our DB. */
+/** Pull authoritative status + open tracking from the worker into our DB. */
 export async function syncEmailCampaign(id: string): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -491,7 +499,24 @@ export async function syncEmailCampaign(id: string): Promise<ActionResult> {
     return { ok: false, message: "No worker job linked to this campaign." };
   }
 
-  const report = await getJobReport(campaign.worker_job_id);
+  const res = await persistCampaignSync(
+    id,
+    campaign.worker_job_id,
+    campaign.scheduled_at,
+    campaign.recipients_count,
+  );
+  if (res.ok) revalidatePath("/admin/campaigns");
+  return res;
+}
+
+async function persistCampaignSync(
+  id: string,
+  workerJobId: string,
+  scheduledAt: string | null,
+  recipientsCount: number,
+): Promise<ActionResult> {
+  const supabase = getAdminClient();
+  const report = await getJobReport(workerJobId);
   if (!report) {
     return { ok: false, message: "Could not reach the worker for this job." };
   }
@@ -500,7 +525,7 @@ export async function syncEmailCampaign(id: string): Promise<ActionResult> {
   const status = deriveCampaignStatus(
     report.status,
     { sent: t.sent, failed: t.failed + t.bounced, total: t.total },
-    Boolean(campaign.scheduled_at),
+    Boolean(scheduledAt),
   );
 
   const { error } = await supabase
@@ -514,15 +539,13 @@ export async function syncEmailCampaign(id: string): Promise<ActionResult> {
       opened_count: t.opened,
       machine_opened_count: 0,
       not_opened_count: t.notOpened,
-      total_count: t.total || campaign.recipients_count,
+      total_count: t.total || recipientsCount,
       sent_at: report.sentAt,
       last_synced_at: new Date().toISOString(),
     })
     .eq("id", id);
 
   if (error) return { ok: false, message: error.message };
-
-  revalidatePath("/admin/campaigns");
   return { ok: true };
 }
 

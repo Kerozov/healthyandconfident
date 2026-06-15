@@ -122,11 +122,7 @@ export function CampaignsTable({
   const [recipients, setRecipients] = useState<RecipientRow[] | null>(null);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
 
-  const hasLiveJobs = campaigns.some(
-    (c) =>
-      c.worker_job_id &&
-      ["queued", "scheduled", "sending", "sent", "partial"].includes(c.status),
-  );
+  const hasWorkerJobs = campaigns.some((c) => c.worker_job_id);
 
   const refreshAll = useCallback(() => {
     setNote(null);
@@ -138,10 +134,10 @@ export function CampaignsTable({
   }, [router]);
 
   useEffect(() => {
-    if (autoSynced || !hasLiveJobs) return;
+    if (autoSynced || !hasWorkerJobs) return;
     setAutoSynced(true);
     refreshAll();
-  }, [autoSynced, hasLiveJobs, refreshAll]);
+  }, [autoSynced, hasWorkerJobs, refreshAll]);
 
   function syncOne(id: string) {
     setBusyId(id);
@@ -392,9 +388,11 @@ export function CampaignsTable({
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-cream-2/50 px-4 py-3">
                     <p className="text-sm text-ink-soft">
                       <MailOpen className="mr-1.5 inline h-4 w-4 text-coral-500" />
-                      <strong>{c.not_opened_count}</strong> haven&apos;t opened this yet
+                      <strong>{c.not_opened_count}</strong> valid{" "}
+                      {c.not_opened_count === 1 ? "address hasn't" : "addresses haven't"}{" "}
+                      opened yet
                       {(c.bounced_count ?? 0) > 0 && (
-                        <> ({c.bounced_count} bounced — excluded)</>
+                        <> · {c.bounced_count} bounced (excluded)</>
                       )}
                       .
                     </p>
