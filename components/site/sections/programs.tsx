@@ -1,0 +1,92 @@
+import { Check, Star } from "lucide-react";
+import type { Dictionary } from "@/i18n/types";
+import type { Locale } from "@/i18n/config";
+import { Container } from "@/components/ui/container";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export function Programs({ dict, locale }: { dict: Dictionary; locale: Locale }) {
+  const { programs } = dict;
+  return (
+    <section id="programs" className="scroll-mt-24 py-24">
+      <Container>
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="eyebrow text-coral-500">
+            <Star className="h-4 w-4" /> {locale === "bg" ? "Програми" : "Programs"}
+          </span>
+          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            {programs.title}
+          </h2>
+          <p className="mt-4 text-ink-soft">{programs.subtitle}</p>
+        </div>
+
+        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          {programs.items.map((p) => (
+            <div
+              key={p.title}
+              className={cn(
+                "relative flex flex-col rounded-3xl border p-8 transition-all hover:-translate-y-1",
+                p.highlight
+                  ? "border-coral-400 bg-forest-700 text-cream shadow-soft lg:-mt-4 lg:mb-4"
+                  : "border-ink/10 bg-white",
+              )}
+            >
+              {p.badge && (
+                <span
+                  className={cn(
+                    "absolute -top-3 left-8 rounded-full px-3 py-1 text-xs font-semibold",
+                    p.highlight
+                      ? "bg-coral-500 text-white"
+                      : "bg-forest-50 text-forest-600",
+                  )}
+                >
+                  {p.badge}
+                </span>
+              )}
+              <h3 className="font-display text-2xl font-semibold">{p.title}</h3>
+              <p
+                className={cn(
+                  "mt-1 text-xs uppercase tracking-wider",
+                  p.highlight ? "text-cream/60" : "text-ink-soft/70",
+                )}
+              >
+                {p.duration}
+              </p>
+              <p className="mt-5 font-display text-3xl font-semibold text-coral-500">
+                {p.price}
+              </p>
+              <p
+                className={cn(
+                  "mt-4 text-sm leading-relaxed",
+                  p.highlight ? "text-cream/80" : "text-ink-soft",
+                )}
+              >
+                {p.description}
+              </p>
+              <ul className="mt-6 flex-1 space-y-3 text-sm">
+                {p.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2.5">
+                    <Check
+                      className={cn(
+                        "mt-0.5 h-4 w-4 shrink-0",
+                        p.highlight ? "text-coral-300" : "text-forest-500",
+                      )}
+                    />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                href={`/${locale}${p.href}`}
+                variant={p.highlight ? "primary" : "forest"}
+                className="mt-8 w-full"
+              >
+                {p.cta}
+              </Button>
+            </div>
+          ))}
+        </div>
+      </Container>
+    </section>
+  );
+}

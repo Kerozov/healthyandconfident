@@ -1,0 +1,131 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  /* Brand palette — warm wellness, deep green + coral */
+  --color-cream: #faf6ef;
+  --color-cream-2: #f3ecdf;
+  --color-ink: #15201b;
+  --color-ink-soft: #3a4a42;
+
+  --color-forest-50: #eef6f1;
+  --color-forest-100: #d6eade;
+  --color-forest-200: #b7d7c4;
+  --color-forest-300: #8cc0a3;
+  --color-forest-400: #5aa37e;
+  --color-forest-500: #2d6a4f;
+  --color-forest-600: #1b4332;
+  --color-forest-700: #143528;
+  --color-forest-800: #0f281e;
+
+  --color-coral-300: #ffb3a3;
+  --color-coral-400: #ff8a73;
+  --color-coral-500: #f2784b;
+  --color-coral-600: #e2603a;
+
+  --color-gold-400: #e7b15a;
+  --color-gold-500: #d99b3a;
+
+  --color-background: var(--color-cream);
+  --color-foreground: var(--color-ink);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  --radius-xl2: 1.75rem;
+
+  --shadow-brutal: 6px 6px 0 0 var(--color-ink);
+  --shadow-soft: 0 24px 60px -28px rgba(21, 32, 27, 0.35);
+}
+
+:root {
+  --background: var(--color-cream);
+  --foreground: var(--color-ink);
+}
+
+* {
+  border-color: color-mix(in oklab, var(--color-ink) 12%, transparent);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-coral-400);
+  color: var(--color-ink);
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+/* Decorative section label */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* Marquee */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+.animate-float-slow {
+  animation: float-slow 7s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Blog prose tweaks */
+.prose-hc {
+  --tw-prose-body: var(--color-ink-soft);
+  --tw-prose-headings: var(--color-ink);
+  --tw-prose-links: var(--color-coral-600);
+  --tw-prose-bold: var(--color-ink);
+  --tw-prose-quotes: var(--color-forest-600);
+  --tw-prose-quote-borders: var(--color-coral-400);
+  --tw-prose-bullets: var(--color-forest-500);
+}
