@@ -13,15 +13,13 @@ export function CampaignsWorkspace({
   smsCampaigns,
   segments,
   subscriberTags,
-  smsConfigured,
-  emailConfigured,
+  workerConfigured,
 }: {
   emailCampaigns: EmailCampaign[];
   smsCampaigns: SmsCampaign[];
   segments: Segment[];
   subscriberTags: string[];
-  smsConfigured: boolean;
-  emailConfigured: boolean;
+  workerConfigured: boolean;
 }) {
   const [tab, setTab] = useState<"email" | "sms">("email");
 
@@ -59,8 +57,7 @@ export function CampaignsWorkspace({
       <CampaignComposer
         segments={segments}
         subscriberTags={subscriberTags}
-        smsConfigured={smsConfigured}
-        emailConfigured={emailConfigured}
+        workerConfigured={workerConfigured}
         tab={tab}
       />
 

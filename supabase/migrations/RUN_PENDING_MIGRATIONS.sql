@@ -48,3 +48,22 @@ where table_schema = 'public'
     'delivered_count', 'not_opened_count', 'last_synced_at'
   )
 order by column_name;
+
+-- 004: SMS scheduling
+alter table public.sms_campaigns
+  add column if not exists worker_job_id text,
+  add column if not exists scheduled_at timestamptz,
+  add column if not exists sent_count int not null default 0,
+  add column if not exists failed_count int not null default 0;
+
+alter table public.sms_campaigns
+  drop constraint if exists sms_campaigns_status_check;
+
+alter table public.sms_campaigns
+  add constraint sms_campaigns_status_check
+  check (status in (
+    'draft', 'queued', 'scheduled', 'sending', 'sent', 'failed', 'partial', 'canceled'
+  ));
+
+create index if not exists sms_campaigns_scheduled_idx
+  on public.sms_campaigns (scheduled_at desc nulls last);

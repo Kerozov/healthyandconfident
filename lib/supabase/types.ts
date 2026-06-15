@@ -103,14 +103,28 @@ export type AudienceInput = {
   locale?: "bg" | "en" | "";
 };
 
+export type SmsCampaignStatus =
+  | "draft"
+  | "queued"
+  | "scheduled"
+  | "sending"
+  | "sent"
+  | "failed"
+  | "partial"
+  | "canceled";
+
 export type SmsCampaign = {
   id: string;
   message: string;
   segment_tag: string;
   recipients_count: number;
+  worker_job_id: string | null;
   provider_ref: string | null;
-  status: "draft" | "sending" | "sent" | "failed";
+  status: SmsCampaignStatus;
+  scheduled_at: string | null;
   sent_at: string | null;
+  sent_count: number;
+  failed_count: number;
   error: string | null;
   created_at: string;
   target_tags: string[] | null;

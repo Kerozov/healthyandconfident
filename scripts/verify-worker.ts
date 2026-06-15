@@ -1,27 +1,13 @@
 #!/usr/bin/env bun
 export {};
 
-/**
- * Verify notification-worker tenant auth (email endpoint).
- * Run: bun run verify:worker
- */
-const url = (
-  process.env.NOTIFICATION_WORKER_URL ||
-  process.env.EMAIL_WORKER_URL ||
-  ""
-).replace(/\/$/, "");
-const key = (
-  process.env.NOTIFICATION_WORKER_API_KEY ||
-  process.env.EMAIL_WORKER_API_KEY ||
-  ""
-).trim();
-const from =
-  process.env.NOTIFICATION_WORKER_FROM || process.env.EMAIL_WORKER_FROM;
+/** Verify notification-worker tenant auth. Run: bun run verify:worker */
+const url = (process.env.NOTIFICATION_WORKER_URL || "").replace(/\/$/, "");
+const key = (process.env.NOTIFICATION_WORKER_API_KEY || "").trim();
+const from = process.env.NOTIFICATION_WORKER_FROM;
 
 if (!url || !key) {
-  console.error(
-    "Set NOTIFICATION_WORKER_URL and NOTIFICATION_WORKER_API_KEY in .env",
-  );
+  console.error("Set NOTIFICATION_WORKER_URL and NOTIFICATION_WORKER_API_KEY in .env");
   process.exit(1);
 }
 
@@ -47,19 +33,14 @@ console.log("Status:", res.status);
 console.log("Response:", JSON.stringify(body, null, 2));
 
 if (res.status === 401) {
-  console.log("\n❌ Unauthorized — worker does not recognize this API key.");
-  console.log("Fix: ensure TENANT_HEALTHYCONFIDENT_KEY in notification-worker");
-  console.log("matches NOTIFICATION_WORKER_API_KEY here, then bun run seed + redeploy.");
+  console.log("\n❌ Unauthorized — check TENANT_*_KEY in notification-worker matches .env");
   process.exit(1);
 }
 
 if (res.ok || res.status === 400) {
-  console.log("\n✅ Auth OK — worker recognizes your tenant API key.");
-  if (!res.ok) {
-    console.log("(Non-401 = auth passed; ZeptoMail/from may still need tuning.)");
-  }
+  console.log("\n✅ Auth OK");
   process.exit(0);
 }
 
-console.log("\n⚠️ Unexpected status — check worker logs on Vercel.");
+console.log("\n⚠️ Unexpected status — check worker logs.");
 process.exit(1);

@@ -9,7 +9,8 @@ import {
   getJobReport,
   type RecipientRow,
 } from "@/lib/worker/email";
-import { sendSms } from "@/lib/sms/notifier";
+import { sendSms, scheduleSms, getSmsJobStatus } from "@/lib/worker/sms";
+import type { SmsCampaignStatus } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 import type { AudienceInput, CampaignStatus } from "@/lib/supabase/types";
 
@@ -537,7 +538,6 @@ async function persistCampaignSync(
       bounced_count: t.bounced,
       delivered_count: t.delivered,
       opened_count: t.opened,
-      machine_opened_count: 0,
       not_opened_count: t.notOpened,
       total_count: t.total || recipientsCount,
       sent_at: report.sentAt,
@@ -669,13 +669,36 @@ export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
 }
 
 // ── SMS campaigns ───────────────────────────────────────────
+
+function deriveSmsCampaignStatus(
+  workerStatus: string,
+  scheduled: boolean,
+): SmsCampaignStatus {
+  switch (workerStatus) {
+    case "pending":
+      return scheduled ? "scheduled" : "queued";
+    case "processing":
+      return "sending";
+    case "canceled":
+      return "canceled";
+    case "failed":
+      return "failed";
+    case "partial":
+      return "partial";
+    case "sent":
+      return "sent";
+    default:
+      return scheduled ? "scheduled" : "sent";
+  }
+}
+
 export async function sendSmsCampaign(input: {
   message: string;
   audience: AudienceInput;
+  scheduled_at?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
-  const locale = input.audience.locale || undefined;
   const audience = await resolveAudience(input.audience);
 
   if (audience.phones.length === 0) {
@@ -685,26 +708,142 @@ export async function sendSmsCampaign(input: {
     };
   }
 
-  const res = await sendSms({ message: input.message, recipients: audience.phones });
+  const scheduledAt = input.scheduled_at
+    ? new Date(input.scheduled_at).toISOString()
+    : undefined;
 
-  await supabase.from("sms_campaigns").insert({
-    message: input.message,
-    segment_tag: audience.segment_tag,
-    target_tags: audience.target_tags,
-    recipients_count: audience.phones.length,
-    provider_ref: res.providerRef || null,
-    status: res.ok ? "sent" : "failed",
-    sent_at: res.ok ? new Date().toISOString() : null,
-    error: res.error || null,
-  });
+  try {
+    const res = scheduledAt
+      ? await scheduleSms({
+          body: input.message,
+          recipients: audience.phones,
+          sendAt: scheduledAt,
+          idempotencyKey: `sms-${Date.now()}`,
+        })
+      : await sendSms({
+          body: input.message,
+          recipients: audience.phones,
+        });
+
+    const workerStatus = res.status || (scheduledAt ? "pending" : "sent");
+    const status = deriveSmsCampaignStatus(workerStatus, Boolean(scheduledAt));
+    const sent = res.sent ?? 0;
+    const failed = res.failed ?? 0;
+
+    const { error } = await supabase.from("sms_campaigns").insert({
+      message: input.message,
+      segment_tag: audience.segment_tag,
+      target_tags: audience.target_tags,
+      recipients_count: audience.phones.length,
+      worker_job_id: res.jobId,
+      status,
+      scheduled_at: scheduledAt ?? null,
+      sent_count: sent,
+      failed_count: failed,
+      sent_at: !scheduledAt && status === "sent" ? new Date().toISOString() : null,
+      error:
+        res.invalid && res.invalid > 0
+          ? `${res.invalid} invalid phone number(s) skipped`
+          : null,
+    });
+
+    if (error) return { ok: false, message: error.message };
+
+    revalidatePath("/admin/campaigns");
+
+    const msg = scheduledAt
+      ? `Scheduled for ${audience.phones.length} numbers at ${new Date(scheduledAt).toLocaleString("en-GB")}.`
+      : status === "partial"
+        ? `Sent to ${sent}, failed ${failed}.`
+        : `Sent to ${sent} numbers.`;
+
+    return { ok: status !== "failed", message: msg };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "SMS failed";
+
+    await supabase.from("sms_campaigns").insert({
+      message: input.message,
+      segment_tag: audience.segment_tag,
+      target_tags: audience.target_tags,
+      recipients_count: audience.phones.length,
+      status: "failed",
+      error: message,
+    });
+
+    revalidatePath("/admin/campaigns");
+    return { ok: false, message };
+  }
+}
+
+export async function syncSmsCampaign(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("sms_campaigns")
+    .select("id, worker_job_id, scheduled_at")
+    .eq("id", id)
+    .maybeSingle();
+
+  const campaign = row as
+    | { worker_job_id: string | null; scheduled_at: string | null }
+    | null;
+
+  if (!campaign?.worker_job_id) {
+    return { ok: false, message: "No worker job linked to this SMS campaign." };
+  }
+
+  const job = await getSmsJobStatus(campaign.worker_job_id);
+  if (!job) {
+    return { ok: false, message: "Could not reach the worker for this SMS job." };
+  }
+
+  const status = deriveSmsCampaignStatus(
+    job.status,
+    Boolean(campaign.scheduled_at) && job.status === "pending",
+  );
+
+  const { error } = await supabase
+    .from("sms_campaigns")
+    .update({
+      status,
+      sent_count: job.sent,
+      failed_count: job.failed,
+      sent_at: job.sentAt,
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
 
   revalidatePath("/admin/campaigns");
-  return {
-    ok: res.ok,
-    message: res.ok
-      ? `Sent to ${res.sent} numbers.`
-      : res.error || "SMS failed",
-  };
+  return { ok: true };
+}
+
+export async function syncAllSmsCampaigns(): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data } = await supabase
+    .from("sms_campaigns")
+    .select("id, worker_job_id")
+    .not("worker_job_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const rows = (data as { id: string }[]) ?? [];
+
+  await Promise.all(
+    rows.map(async (r) => {
+      try {
+        await syncSmsCampaign(r.id);
+      } catch {
+        /* ignore individual failures */
+      }
+    }),
+  );
+
+  revalidatePath("/admin/campaigns");
+  return { ok: true, message: `Synced ${rows.length} SMS campaign(s).` };
 }
 
 export async function deleteSmsCampaign(id: string): Promise<ActionResult> {

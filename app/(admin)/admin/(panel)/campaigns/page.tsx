@@ -4,7 +4,6 @@ import {
   getSegments,
   getSubscriberTags,
 } from "@/lib/admin/data";
-import { isSmsConfigured } from "@/lib/sms/notifier";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { CampaignsWorkspace } from "@/components/admin/campaigns-workspace";
 
@@ -18,8 +17,7 @@ export default async function AdminCampaignsPage() {
       getSegments(),
       getSubscriberTags(),
     ]);
-  const smsConfigured = isSmsConfigured();
-  const emailConfigured = isNotificationWorkerConfigured();
+  const workerConfigured = isNotificationWorkerConfigured();
 
   return (
     <div>
@@ -35,8 +33,7 @@ export default async function AdminCampaignsPage() {
           smsCampaigns={smsCampaigns}
           segments={segments}
           subscriberTags={subscriberTags}
-          smsConfigured={smsConfigured}
-          emailConfigured={emailConfigured}
+          workerConfigured={workerConfigured}
         />
       </div>
     </div>

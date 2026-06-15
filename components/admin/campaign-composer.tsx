@@ -15,14 +15,12 @@ import { cn } from "@/lib/utils";
 export function CampaignComposer({
   segments,
   subscriberTags,
-  smsConfigured,
-  emailConfigured,
+  workerConfigured,
   tab,
 }: {
   segments: Segment[];
   subscriberTags: string[];
-  smsConfigured: boolean;
-  emailConfigured: boolean;
+  workerConfigured: boolean;
   tab: "email" | "sms";
 }) {
   const router = useRouter();
@@ -38,6 +36,7 @@ export function CampaignComposer({
   const [sms, setSms] = useState({
     message: "",
     audience: { ...EMPTY_AUDIENCE } as AudienceInput,
+    scheduled_at: "",
   });
 
   function submitEmail() {
@@ -68,10 +67,11 @@ export function CampaignComposer({
       const res = await sendSmsCampaign({
         message: sms.message,
         audience: sms.audience,
+        scheduled_at: sms.scheduled_at || undefined,
       });
       setResult(res);
       if (res.ok) {
-        setSms({ message: "", audience: { ...EMPTY_AUDIENCE } });
+        setSms({ message: "", audience: { ...EMPTY_AUDIENCE }, scheduled_at: "" });
         router.refresh();
       }
     });
@@ -81,12 +81,11 @@ export function CampaignComposer({
     <Card>
       {tab === "email" ? (
         <div className="space-y-4">
-          {!emailConfigured && (
+          {!workerConfigured && (
             <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
-              Notification worker is not configured. Set{" "}
-              <code>NOTIFICATION_WORKER_URL</code>,{" "}
+              Set <code>NOTIFICATION_WORKER_URL</code>,{" "}
               <code>NOTIFICATION_WORKER_API_KEY</code> and{" "}
-              <code>NOTIFICATION_WORKER_FROM</code>.
+              <code>NOTIFICATION_WORKER_FROM</code> in .env
             </p>
           )}
           <Field label="Subject">
@@ -120,7 +119,7 @@ export function CampaignComposer({
           </Field>
           <button
             onClick={submitEmail}
-            disabled={pending || !email.subject || !email.html || !emailConfigured}
+            disabled={pending || !email.subject || !email.html || !workerConfigured}
             className="inline-flex h-11 items-center gap-2 rounded-full bg-coral-500 px-6 font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
           >
             <Send className="h-4 w-4" />
@@ -129,13 +128,10 @@ export function CampaignComposer({
         </div>
       ) : (
         <div className="space-y-4">
-          {!smsConfigured && (
+          {!workerConfigured && (
             <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
-              SMS uses the same notification worker. Set{" "}
-              <code>NOTIFICATION_WORKER_URL</code> and{" "}
-              <code>NOTIFICATION_WORKER_API_KEY</code>, and configure{" "}
-              <code>TENANT_*_NOTIFIER_KEY</code> in the worker (then{" "}
-              <code>bun run seed</code>).
+              Same worker env vars as email. SMS Notifier key is in notification-worker
+              tenant seed.
             </p>
           )}
           <Field label="Message" hint="Plain text. Sent to subscribers with a phone number.">
@@ -152,12 +148,20 @@ export function CampaignComposer({
             onChange={(audience) => setSms({ ...sms, audience })}
             channel="sms"
           />
+          <Field label="Schedule (optional)" hint="Leave empty to send immediately.">
+            <Input
+              type="datetime-local"
+              value={sms.scheduled_at}
+              onChange={(e) => setSms({ ...sms, scheduled_at: e.target.value })}
+            />
+          </Field>
           <button
             onClick={submitSms}
-            disabled={pending || !sms.message || !smsConfigured}
+            disabled={pending || !sms.message || !workerConfigured}
             className="inline-flex h-11 items-center gap-2 rounded-full bg-coral-500 px-6 font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
           >
-            <Send className="h-4 w-4" /> Send SMS
+            <Send className="h-4 w-4" />
+            {sms.scheduled_at ? "Schedule SMS" : "Send now"}
           </button>
         </div>
       )}

@@ -2,7 +2,6 @@ import "server-only";
 
 import {
   getNotificationWorkerConfig,
-  isNotificationWorkerConfigured,
   requireNotificationWorkerConfig,
 } from "@/lib/worker/config";
 
@@ -276,9 +275,3 @@ export async function getNotOpenedEmails(jobId: string): Promise<string[]> {
   const report = await getJobReport(jobId);
   return report?.notOpenedEmails ?? [];
 }
-
-export function isEmailWorkerConfigured() {
-  return isNotificationWorkerConfigured();
-}
-
-export { isNotificationWorkerConfigured };
