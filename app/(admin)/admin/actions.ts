@@ -12,6 +12,7 @@ import {
 import { sendSms, scheduleSms, getSmsJobReport } from "@/lib/worker/sms";
 import type { SmsCampaignStatus } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
+import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus } from "@/lib/supabase/types";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string };
@@ -364,12 +365,18 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     let sent = 0;
     let failed = 0;
 
+    let scheduledAtIso: string | null = null;
+
     if (input.scheduledAt) {
+      scheduledAtIso = parseScheduledAt(input.scheduledAt);
+      if (!scheduledAtIso) {
+        return { ok: false, message: "Invalid schedule time." };
+      }
       const res = await scheduleEmail({
         subject: input.subject,
         html: input.html,
         recipients: input.recipients,
-        sendAt: new Date(input.scheduledAt).toISOString(),
+        sendAt: scheduledAtIso,
         idempotencyKey: `camp-${Date.now()}`,
       });
       jobId = res.jobId;
@@ -389,7 +396,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     const status = deriveCampaignStatus(
       workerStatus,
       { sent, failed, total },
-      Boolean(input.scheduledAt),
+      Boolean(scheduledAtIso),
     );
 
     const { data, error } = await supabase
@@ -403,8 +410,8 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
         recipients_count: total,
         worker_job_id: jobId,
         status,
-        scheduled_at: input.scheduledAt || null,
-        sent_at: input.scheduledAt ? null : new Date().toISOString(),
+        scheduled_at: scheduledAtIso,
+        sent_at: scheduledAtIso ? null : new Date().toISOString(),
         sent_count: sent,
         failed_count: failed,
         total_count: total,
@@ -421,7 +428,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     if (error) return { ok: false, message: error.message };
 
     const campaignId = (data as { id: string }).id;
-    if (jobId && !input.scheduledAt) {
+    if (jobId && !scheduledAtIso) {
       await persistCampaignSync(campaignId, jobId, null, total);
     }
 
@@ -746,8 +753,12 @@ export async function sendSmsCampaign(input: {
   }
 
   const scheduledAt = input.scheduled_at
-    ? new Date(input.scheduled_at).toISOString()
+    ? parseScheduledAt(input.scheduled_at)
     : undefined;
+
+  if (input.scheduled_at && !scheduledAt) {
+    return { ok: false, message: "Invalid schedule time." };
+  }
 
   try {
     const res = scheduledAt
@@ -807,7 +818,7 @@ export async function sendSmsCampaign(input: {
     revalidatePath("/admin/campaigns");
 
     const msg = scheduledAt
-      ? `Scheduled for ${audience.phones.length} numbers at ${new Date(scheduledAt).toLocaleString("en-GB")}.`
+      ? `Scheduled for ${audience.phones.length} numbers at ${formatScheduledAt(scheduledAt, "en")}.`
       : status === "failed"
         ? `Send failed for all ${audience.phones.length} recipients.`
         : status === "partial"

@@ -10,6 +10,7 @@ import {
   syncSmsCampaign,
 } from "@/app/(admin)/admin/actions";
 import { formatDate } from "@/lib/utils";
+import { formatScheduledAt } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<SmsCampaignStatus, string> = {
@@ -144,7 +145,7 @@ export function SmsCampaignsTable({ campaigns }: { campaigns: SmsCampaign[] }) {
                       )}
                       {" · "}
                       {c.scheduled_at
-                        ? `scheduled ${formatDate(c.scheduled_at, "en")}`
+                        ? `scheduled ${formatScheduledAt(c.scheduled_at, "en")}`
                         : formatDate(c.sent_at ?? c.created_at, "en")}
                       {c.provider_ref && (
                         <> · job {c.provider_ref.slice(0, 8)}…</>

@@ -22,6 +22,7 @@ import {
 } from "@/app/(admin)/admin/actions";
 import type { RecipientRow } from "@/lib/worker/email";
 import { formatDate } from "@/lib/utils";
+import { formatScheduledAt } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<CampaignStatus, string> = {
@@ -264,7 +265,7 @@ export function CampaignsTable({
                       {audienceLabel(c)}
                       {c.locale ? ` · ${c.locale.toUpperCase()}` : ""} ·{" "}
                       {c.scheduled_at
-                        ? `scheduled ${formatDate(c.scheduled_at, "en")}`
+                        ? `scheduled ${formatScheduledAt(c.scheduled_at, "en")}`
                         : formatDate(c.created_at, "en")}
                       {c.last_synced_at && (
                         <> · synced {formatDate(c.last_synced_at, "en")}</>

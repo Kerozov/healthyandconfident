@@ -10,6 +10,7 @@ import {
 } from "@/app/(admin)/admin/actions";
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
+import { datetimeLocalToIso } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
 export function CampaignComposer({
@@ -46,7 +47,9 @@ export function CampaignComposer({
         subject: email.subject,
         html: email.html,
         audience: email.audience,
-        scheduled_at: email.scheduled_at || undefined,
+        scheduled_at: email.scheduled_at
+          ? datetimeLocalToIso(email.scheduled_at) ?? undefined
+          : undefined,
       });
       setResult(res);
       if (res.ok) {
@@ -67,7 +70,9 @@ export function CampaignComposer({
       const res = await sendSmsCampaign({
         message: sms.message,
         audience: sms.audience,
-        scheduled_at: sms.scheduled_at || undefined,
+        scheduled_at: sms.scheduled_at
+          ? datetimeLocalToIso(sms.scheduled_at) ?? undefined
+          : undefined,
       });
       setResult(res);
       if (res.ok) {
@@ -110,7 +115,7 @@ export function CampaignComposer({
             onChange={(audience) => setEmail({ ...email, audience })}
             channel="email"
           />
-          <Field label="Schedule (optional)">
+          <Field label="Schedule (optional)" hint="Your local time (Bulgaria).">
             <Input
               type="datetime-local"
               value={email.scheduled_at}
@@ -148,7 +153,7 @@ export function CampaignComposer({
             onChange={(audience) => setSms({ ...sms, audience })}
             channel="sms"
           />
-          <Field label="Schedule (optional)" hint="Leave empty to send immediately.">
+          <Field label="Schedule (optional)" hint="Your local time (Bulgaria).">
             <Input
               type="datetime-local"
               value={sms.scheduled_at}
