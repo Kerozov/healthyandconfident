@@ -127,6 +127,31 @@ export async function savePopup(input: {
   return { ok: true };
 }
 
+// ── Automated emails ────────────────────────────────────────
+export async function saveAutomatedEmail(input: {
+  trigger: "registration" | "purchase";
+  locale: "bg" | "en";
+  enabled: boolean;
+  subject: string;
+  html: string;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("automated_emails")
+    .update({
+      enabled: input.enabled,
+      subject: input.subject,
+      html: input.html,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("trigger", input.trigger)
+    .eq("locale", input.locale);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/automations");
+  return { ok: true };
+}
+
 // ── Subscribers ─────────────────────────────────────────────
 export async function addSubscriber(input: {
   email: string;

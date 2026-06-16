@@ -57,6 +57,18 @@ export type PopupConfig = {
   updated_at: string;
 };
 
+export type AutomationTrigger = "registration" | "purchase";
+
+export type AutomatedEmail = {
+  id: string;
+  trigger: AutomationTrigger;
+  locale: Locale;
+  enabled: boolean;
+  subject: string;
+  html: string;
+  updated_at: string;
+};
+
 export type CampaignStatus =
   | "draft"
   | "queued"

@@ -7,6 +7,7 @@ import type {
   PopupConfig,
   EmailCampaign,
   SmsCampaign,
+  AutomatedEmail,
 } from "@/lib/supabase/types";
 
 export async function getDashboardStats() {
@@ -89,6 +90,16 @@ export async function getPopups(): Promise<PopupConfig[]> {
   const supabase = getAdminClient();
   const { data } = await supabase.from("popup_config").select("*").order("locale");
   return (data as PopupConfig[]) ?? [];
+}
+
+export async function getAutomatedEmails(): Promise<AutomatedEmail[]> {
+  const supabase = getAdminClient();
+  const { data } = await supabase
+    .from("automated_emails")
+    .select("*")
+    .order("trigger")
+    .order("locale");
+  return (data as AutomatedEmail[]) ?? [];
 }
 
 export async function getEmailCampaigns(): Promise<EmailCampaign[]> {

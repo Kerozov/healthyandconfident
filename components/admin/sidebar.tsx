@@ -8,6 +8,7 @@ import {
   Users,
   Megaphone,
   MousePointerClick,
+  Mail,
   Leaf,
   ExternalLink,
   LogOut,
@@ -19,6 +20,7 @@ const links = [
   { href: "/admin/blog", label: "Blog", icon: FileText },
   { href: "/admin/subscribers", label: "Subscribers", icon: Users },
   { href: "/admin/campaigns", label: "Campaigns", icon: Megaphone },
+  { href: "/admin/automations", label: "Automations", icon: Mail },
   { href: "/admin/popup", label: "Popup", icon: MousePointerClick },
 ];
 
