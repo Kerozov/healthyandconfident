@@ -133,15 +133,24 @@ export async function addSubscriber(input: {
   name?: string;
   phone?: string;
   locale: "bg" | "en";
-  tags?: string;
+  tags?: string[];
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
   const email = input.email.trim().toLowerCase();
-  const tags = (input.tags || "")
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
+  const tags = Array.from(
+    new Set((input.tags ?? []).map((t) => t.trim()).filter(Boolean)),
+  );
+
+  const { data: existing } = await supabase
+    .from("subscribers")
+    .select("id, tags")
+    .eq("email", email)
+    .maybeSingle();
+
+  const mergedTags = existing
+    ? Array.from(new Set([...(existing.tags as string[]), ...tags]))
+    : tags;
 
   const { error } = await supabase.from("subscribers").upsert(
     {
@@ -150,7 +159,8 @@ export async function addSubscriber(input: {
       phone: input.phone || null,
       locale: input.locale,
       source: "manual",
-      tags,
+      tags: mergedTags,
+      status: "subscribed",
     },
     { onConflict: "email" },
   );
@@ -161,18 +171,18 @@ export async function addSubscriber(input: {
 
 export async function updateSubscriber(input: {
   id: string;
-  tags?: string;
+  tags?: string[];
   status?: "subscribed" | "unsubscribed";
   notes?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
   const patch: Partial<import("@/lib/supabase/types").Subscriber> = {};
-  if (input.tags !== undefined)
-    patch.tags = input.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+  if (input.tags !== undefined) {
+    patch.tags = Array.from(
+      new Set(input.tags.map((t) => t.trim()).filter(Boolean)),
+    );
+  }
   if (input.status) patch.status = input.status;
   if (input.notes !== undefined) patch.notes = input.notes;
 
