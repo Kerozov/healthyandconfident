@@ -169,6 +169,110 @@ export async function addSubscriber(input: {
   return { ok: true };
 }
 
+export async function importSubscribers(input: {
+  rows: {
+    email: string;
+    name?: string;
+    phone?: string;
+    locale?: "bg" | "en";
+    status?: "subscribed" | "unsubscribed";
+    segments?: string[];
+    notes?: string;
+  }[];
+  mergeSegments?: boolean;
+}): Promise<
+  ActionResult & {
+    created?: number;
+    updated?: number;
+    failed?: number;
+    errors?: string[];
+  }
+> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const mergeSegments = input.mergeSegments !== false;
+
+  let created = 0;
+  let updated = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (const row of input.rows) {
+    const email = row.email.trim().toLowerCase();
+    if (!email) continue;
+
+    const tags = Array.from(
+      new Set((row.segments ?? []).map((t) => t.trim()).filter(Boolean)),
+    );
+
+    try {
+      const { data: existing } = await supabase
+        .from("subscribers")
+        .select("id, tags")
+        .eq("email", email)
+        .maybeSingle();
+
+      const mergedTags = existing && mergeSegments
+        ? Array.from(new Set([...(existing.tags as string[]), ...tags]))
+        : tags;
+
+      const payload = {
+        email,
+        name: row.name?.trim() || null,
+        phone: row.phone?.trim() || null,
+        locale: row.locale === "en" ? "en" : "bg",
+        status: row.status === "unsubscribed" ? "unsubscribed" : "subscribed",
+        source: "import",
+        tags: mergedTags,
+        notes: row.notes?.trim() || null,
+      } as const;
+
+      const { error } = await supabase
+        .from("subscribers")
+        .upsert(payload, { onConflict: "email" });
+
+      if (error) {
+        failed += 1;
+        if (errors.length < 5) errors.push(`${email}: ${error.message}`);
+        continue;
+      }
+
+      if (existing) updated += 1;
+      else created += 1;
+    } catch (err) {
+      failed += 1;
+      if (errors.length < 5) {
+        errors.push(
+          `${email}: ${err instanceof Error ? err.message : "Import failed"}`,
+        );
+      }
+    }
+  }
+
+  revalidatePath("/admin/subscribers");
+
+  const total = created + updated;
+  if (total === 0 && failed > 0) {
+    return {
+      ok: false,
+      message: errors[0] ?? "Import failed.",
+      created,
+      updated,
+      failed,
+      errors,
+    };
+  }
+
+  return {
+    ok: true,
+    message: `Imported ${total} subscriber(s): ${created} new, ${updated} updated${failed ? `, ${failed} failed` : ""}.`,
+    created,
+    updated,
+    failed,
+    errors: errors.length ? errors : undefined,
+  };
+}
+
 export async function updateSubscriber(input: {
   id: string;
   tags?: string[];

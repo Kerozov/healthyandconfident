@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Download, Trash2, Tag, UserMinus, UserCheck, X } from "lucide-react";
+import { Plus, Download, Upload, Trash2, Tag, UserMinus, UserCheck, X } from "lucide-react";
 import type { Subscriber, Segment } from "@/lib/supabase/types";
 import {
   addSubscriber,
   updateSubscriber,
   deleteSubscriber,
+  importSubscribers,
 } from "@/app/(admin)/admin/actions";
 import { SegmentChecklist } from "@/components/admin/segment-checklist";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
@@ -15,6 +16,11 @@ import {
   exportSubscribersCsv,
   exportSubscribersExcel,
 } from "@/lib/admin/export-subscribers";
+import {
+  downloadImportTemplate,
+  parseSubscriberFile,
+  type ImportSubscriberRow,
+} from "@/lib/admin/import-subscribers";
 
 export function SubscribersManager({
   subscribers,
@@ -40,6 +46,15 @@ export function SubscribersManager({
 
   const [editing, setEditing] = useState<Subscriber | null>(null);
   const [editSegments, setEditSegments] = useState<string[]>([]);
+
+  const [importSegments, setImportSegments] = useState<string[]>([]);
+  const [importPreview, setImportPreview] = useState<ImportSubscriberRow[] | null>(
+    null,
+  );
+  const [importSkipped, setImportSkipped] = useState<
+    { line: number; reason: string }[]
+  >([]);
+  const [importNote, setImportNote] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return subscribers.filter((s) => {
@@ -121,6 +136,45 @@ export function SubscribersManager({
     });
   }
 
+  async function handleImportFile(file: File | null) {
+    setImportNote(null);
+    setImportPreview(null);
+    setImportSkipped([]);
+    if (!file) return;
+
+    try {
+      const parsed = await parseSubscriberFile(file, segments, importSegments);
+      setImportPreview(parsed.rows);
+      setImportSkipped(parsed.skipped);
+      if (parsed.rows.length === 0) {
+        setImportNote(
+          parsed.skipped.length
+            ? "No valid rows found. Check the file format."
+            : "The file is empty.",
+        );
+      }
+    } catch (err) {
+      setImportNote(err instanceof Error ? err.message : "Could not read file.");
+    }
+  }
+
+  function runImport() {
+    if (!importPreview?.length) return;
+    setImportNote(null);
+    startTransition(async () => {
+      const res = await importSubscribers({
+        rows: importPreview,
+        mergeSegments: true,
+      });
+      setImportNote(res.message ?? (res.ok ? "Done." : "Import failed."));
+      if (res.ok) {
+        setImportPreview(null);
+        setImportSkipped([]);
+        router.refresh();
+      }
+    });
+  }
+
   return (
     <div className="space-y-6">
       <Card title="Add subscriber manually">
@@ -180,6 +234,89 @@ export function SubscribersManager({
           </button>
         </form>
         {error && <p className="mt-3 text-sm text-coral-600">{error}</p>}
+      </Card>
+
+      <Card title="Import from Excel / CSV">
+        <p className="mb-4 text-sm text-ink-soft">
+          Upload <code className="text-xs">.xlsx</code> or <code className="text-xs">.csv</code>.
+          Required column: <strong>email</strong>. Optional: name, phone, locale, status,
+          segments (comma-separated keys or names).
+        </p>
+
+        <Field
+          label="Default segments"
+          hint="Applied when a row has no segments column or it is empty."
+        >
+          <SegmentChecklist
+            segments={segments}
+            selected={importSegments}
+            onChange={setImportSegments}
+            disabled={pending}
+          />
+        </Field>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-semibold hover:bg-ink/5">
+            <Upload className="h-4 w-4" />
+            Choose file
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="sr-only"
+              disabled={pending}
+              onChange={(e) => {
+                void handleImportFile(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={downloadImportTemplate}
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-semibold hover:bg-ink/5"
+          >
+            <Download className="h-4 w-4" /> Download template
+          </button>
+          {importPreview && importPreview.length > 0 && (
+            <button
+              type="button"
+              onClick={runImport}
+              disabled={pending}
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
+            >
+              <Upload className="h-4 w-4" />
+              Import {importPreview.length} row{importPreview.length === 1 ? "" : "s"}
+            </button>
+          )}
+        </div>
+
+        {importPreview && importPreview.length > 0 && (
+          <p className="mt-3 text-sm text-forest-600">
+            Ready: {importPreview.length} subscriber
+            {importPreview.length === 1 ? "" : "s"}
+            {importSkipped.length > 0 &&
+              ` · ${importSkipped.length} row(s) skipped`}
+          </p>
+        )}
+        {importSkipped.length > 0 && (
+          <ul className="mt-2 text-xs text-coral-600">
+            {importSkipped.slice(0, 5).map((s) => (
+              <li key={`${s.line}-${s.reason}`}>
+                Row {s.line}: {s.reason}
+              </li>
+            ))}
+            {importSkipped.length > 5 && (
+              <li>…and {importSkipped.length - 5} more</li>
+            )}
+          </ul>
+        )}
+        {importNote && (
+          <p
+            className={`mt-3 text-sm ${importNote.includes("failed") || importNote.includes("No valid") ? "text-coral-600" : "text-forest-600"}`}
+          >
+            {importNote}
+          </p>
+        )}
       </Card>
 
       {editing && (
