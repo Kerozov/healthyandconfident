@@ -104,6 +104,13 @@ alter table public.automation_deliveries
   add constraint automation_deliveries_status_check
   check (status in ('scheduled', 'sent', 'failed', 'skipped', 'canceled'));
 
+-- 010: delivery tracking (opens, bounces)
+alter table public.automation_deliveries
+  add column if not exists recipient_status text,
+  add column if not exists opened_at timestamptz,
+  add column if not exists delivered_at timestamptz,
+  add column if not exists last_synced_at timestamptz;
+
 notify pgrst, 'reload schema';
 
 select 'Upgrade complete — also run 007_automations.sql if not yet applied' as result;

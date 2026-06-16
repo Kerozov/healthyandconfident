@@ -13,6 +13,12 @@ import {
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
 import { runAutomations } from "@/lib/automation/send";
 import { cancelAutomationScheduledJobs } from "@/lib/automation/cancel";
+import {
+  syncAutomationDeliveries,
+} from "@/lib/automation/sync";
+import { renderEmailTemplate } from "@/lib/automation/template";
+import { getAutomationDeliveries } from "@/lib/admin/automations-data";
+import type { Automation, AutomationDelivery } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus } from "@/lib/supabase/types";
@@ -217,6 +223,142 @@ export async function toggleAutomationEnabled(
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/automations");
   return { ok: true };
+}
+
+export async function syncAutomation(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const result = await syncAutomationDeliveries(id);
+  revalidatePath("/admin/automations");
+  return {
+    ok: true,
+    message: `Synced ${result.synced} of ${result.total} delivery(ies).`,
+  };
+}
+
+export async function syncAllAutomations(): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { data } = await supabase.from("automations").select("id");
+  const ids = ((data as { id: string }[]) ?? []).map((r) => r.id);
+
+  let synced = 0;
+  for (const id of ids) {
+    const result = await syncAutomationDeliveries(id);
+    synced += result.synced;
+  }
+
+  revalidatePath("/admin/automations");
+  return {
+    ok: true,
+    message: `Synced ${synced} delivery(ies) across ${ids.length} automation(s).`,
+  };
+}
+
+export async function getAutomationDeliveriesReport(
+  automationId: string,
+): Promise<
+  | { ok: true; deliveries: AutomationDelivery[] }
+  | { ok: false; message: string }
+> {
+  await requireAdmin();
+  await syncAutomationDeliveries(automationId);
+  const deliveries = await getAutomationDeliveries(automationId);
+  revalidatePath("/admin/automations");
+  return { ok: true, deliveries };
+}
+
+export async function resendAutomationToNonOpeners(
+  automationId: string,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("automations")
+    .select("*")
+    .eq("id", automationId)
+    .maybeSingle();
+
+  const automation = row as Automation | null;
+  if (!automation) {
+    return { ok: false, message: "Automation not found." };
+  }
+  if (automation.channel !== "email") {
+    return {
+      ok: false,
+      message: "Resend to non-openers is only available for email automations.",
+    };
+  }
+
+  await syncAutomationDeliveries(automationId);
+  const deliveries = await getAutomationDeliveries(automationId);
+
+  const nonOpeners = deliveries.filter(
+    (d) =>
+      d.status === "sent" &&
+      !d.opened_at &&
+      d.recipient_status !== "bounced" &&
+      d.recipient_status !== "opened" &&
+      d.recipient_status !== "failed" &&
+      d.recipient_status !== "complained",
+  );
+
+  if (nonOpeners.length === 0) {
+    return {
+      ok: false,
+      message: "Everyone has opened (or bounced) — nobody to resend to.",
+    };
+  }
+
+  const emails = nonOpeners.map((d) => d.email);
+  const { data: subs } = await supabase
+    .from("subscribers")
+    .select("email, locale, name")
+    .in("email", emails);
+
+  const byLocale = new Map<"bg" | "en", string[]>();
+  for (const email of emails) {
+    const sub = (subs as { email: string; locale: string }[] | null)?.find(
+      (s) => s.email === email,
+    );
+    const locale = sub?.locale === "en" ? "en" : "bg";
+    const list = byLocale.get(locale) ?? [];
+    list.push(email);
+    byLocale.set(locale, list);
+  }
+
+  for (const [locale, localeEmails] of byLocale) {
+    const subjectTpl =
+      locale === "en" ? automation.subject_en : automation.subject_bg;
+    const htmlTpl = locale === "en" ? automation.html_en : automation.html_bg;
+    const sampleEmail = localeEmails[0] ?? "";
+    const subject = renderEmailTemplate(subjectTpl, {
+      name: null,
+      email: sampleEmail,
+    }).slice(0, 250);
+    const html = renderEmailTemplate(htmlTpl, {
+      name: null,
+      email: sampleEmail,
+    });
+
+    await dispatchCampaign({
+      subject,
+      html,
+      locale,
+      segment_tag: `${automation.name} · resend`,
+      target_tags: automation.segment_keys.length
+        ? automation.segment_keys
+        : null,
+      recipients: localeEmails,
+    });
+  }
+
+  revalidatePath("/admin/automations");
+  revalidatePath("/admin/campaigns");
+  return {
+    ok: true,
+    message: `Resent to ${emails.length} non-opener(s). Track progress under Campaigns.`,
+  };
 }
 
 // ── Subscribers ─────────────────────────────────────────────

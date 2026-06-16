@@ -105,6 +105,21 @@ export type AutomationDelivery = {
   error: string | null;
   scheduled_for: string | null;
   sent_at: string;
+  recipient_status: string | null;
+  opened_at: string | null;
+  delivered_at: string | null;
+  last_synced_at: string | null;
+};
+
+export type AutomationStats = {
+  sent_count: number;
+  scheduled_count: number;
+  failed_count: number;
+  opened_count: number;
+  delivered_count: number;
+  bounced_count: number;
+  not_opened_count: number;
+  last_synced_at: string | null;
 };
 
 export type CampaignStatus =

@@ -50,6 +50,10 @@ export default async function AdminAutomationsPage() {
           <li>
             Each automation sends <strong>once per email</strong> (tracked automatically).
           </li>
+          <li>
+            Use <strong>Refresh stats</strong> for opens and delivery — resend to
+            non-openers creates a campaign under Campaigns.
+          </li>
         </ul>
       </div>
     </div>

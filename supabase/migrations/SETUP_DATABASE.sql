@@ -154,6 +154,10 @@ create table if not exists public.automation_deliveries (
   error           text,
   scheduled_for   timestamptz,
   sent_at         timestamptz not null default now(),
+  recipient_status text,
+  opened_at       timestamptz,
+  delivered_at    timestamptz,
+  last_synced_at  timestamptz,
   unique (automation_id, email)
 );
 
