@@ -45,7 +45,7 @@ alter table public.email_campaigns
   add column if not exists bounced_count int not null default 0,
   add column if not exists target_tags text[];
 
--- 004: SMS schedule (worker job id stored in provider_ref)
+-- 004–005: SMS columns
 alter table public.sms_campaigns
   add column if not exists scheduled_at timestamptz;
 
@@ -67,7 +67,7 @@ alter table public.sms_campaigns
 create index if not exists sms_campaigns_scheduled_idx
   on public.sms_campaigns (scheduled_at desc nulls last);
 
--- 006: automated transactional emails
+-- 006: legacy automated_emails (optional)
 create table if not exists public.automated_emails (
   id         uuid primary key default gen_random_uuid(),
   trigger    text not null check (trigger in ('registration', 'purchase')),
@@ -79,17 +79,9 @@ create table if not exists public.automated_emails (
   unique (trigger, locale)
 );
 
-insert into public.automated_emails (trigger, locale, enabled, subject, html) values
-  ('registration', 'bg', false, 'Добре дошла, {{name}}!',
-   '<h1>Здравей, {{name}}!</h1><p>Благодарим ти, че се регистрира при нас.</p>'),
-  ('registration', 'en', false, 'Welcome, {{name}}!',
-   '<h1>Hi {{name}}!</h1><p>Thanks for signing up.</p>'),
-  ('purchase', 'bg', false, 'Благодарим за покупката, {{name}}!',
-   '<h1>Здравей, {{name}}!</h1><p>Получихме поръчката ти.</p>'),
-  ('purchase', 'en', false, 'Thank you for your purchase, {{name}}!',
-   '<h1>Hi {{name}}!</h1><p>We received your order.</p>')
-on conflict (trigger, locale) do nothing;
+-- 007: automations — run full file:
+-- supabase/migrations/007_automations.sql
 
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete' as result;
+select 'Upgrade complete — also run 007_automations.sql' as result;

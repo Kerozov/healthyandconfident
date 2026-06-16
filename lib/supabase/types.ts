@@ -57,16 +57,52 @@ export type PopupConfig = {
   updated_at: string;
 };
 
-export type AutomationTrigger = "registration" | "purchase";
+export type AutomationTrigger = "registration" | "purchase" | "new_subscriber";
 
+export type AutomationChannel = "email" | "sms";
+
+/** @deprecated Legacy table — use Automation */
 export type AutomatedEmail = {
   id: string;
-  trigger: AutomationTrigger;
+  trigger: "registration" | "purchase";
   locale: Locale;
   enabled: boolean;
   subject: string;
   html: string;
   updated_at: string;
+};
+
+export type Automation = {
+  id: string;
+  name: string;
+  channel: AutomationChannel;
+  trigger_event: AutomationTrigger;
+  enabled: boolean;
+  segment_keys: string[];
+  new_subscribers_only: boolean;
+  after_automation_id: string | null;
+  subject_bg: string;
+  html_bg: string;
+  subject_en: string;
+  html_en: string;
+  sms_bg: string;
+  sms_en: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AutomationDelivery = {
+  id: string;
+  automation_id: string;
+  subscriber_id: string | null;
+  email: string;
+  phone: string | null;
+  channel: AutomationChannel;
+  status: "sent" | "failed" | "skipped";
+  worker_job_id: string | null;
+  error: string | null;
+  sent_at: string;
 };
 
 export type CampaignStatus =

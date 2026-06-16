@@ -10,10 +10,10 @@ import {
   type RecipientRow,
 } from "@/lib/worker/email";
 import { sendSms, scheduleSms, getSmsJobReport } from "@/lib/worker/sms";
-import type { SmsCampaignStatus } from "@/lib/supabase/types";
+import { runAutomations } from "@/lib/automation/send";
 import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
-import type { AudienceInput, CampaignStatus } from "@/lib/supabase/types";
+import type { AudienceInput, CampaignStatus, SmsCampaignStatus } from "@/lib/supabase/types";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string };
 
@@ -127,26 +127,66 @@ export async function savePopup(input: {
   return { ok: true };
 }
 
-// ── Automated emails ────────────────────────────────────────
-export async function saveAutomatedEmail(input: {
-  trigger: "registration" | "purchase";
-  locale: "bg" | "en";
+// ── Automations ───────────────────────────────────────────────
+type AutomationInput = {
+  name: string;
+  channel: "email" | "sms";
+  trigger_event: "registration" | "purchase" | "new_subscriber";
   enabled: boolean;
-  subject: string;
-  html: string;
-}): Promise<ActionResult> {
+  segment_keys: string[];
+  new_subscribers_only: boolean;
+  after_automation_id?: string | null;
+  subject_bg: string;
+  html_bg: string;
+  subject_en: string;
+  html_en: string;
+  sms_bg: string;
+  sms_en: string;
+  sort_order?: number;
+};
+
+export async function createAutomation(
+  input: AutomationInput,
+): Promise<ActionResult & { id?: string }> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { data, error } = await supabase
+    .from("automations")
+    .insert({
+      ...input,
+      after_automation_id: input.after_automation_id || null,
+      sort_order: input.sort_order ?? 0,
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/automations");
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function updateAutomation(
+  id: string,
+  input: AutomationInput,
+): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
   const { error } = await supabase
-    .from("automated_emails")
+    .from("automations")
     .update({
-      enabled: input.enabled,
-      subject: input.subject,
-      html: input.html,
+      ...input,
+      after_automation_id: input.after_automation_id || null,
       updated_at: new Date().toISOString(),
     })
-    .eq("trigger", input.trigger)
-    .eq("locale", input.locale);
+    .eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/automations");
+  return { ok: true };
+}
+
+export async function deleteAutomation(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("automations").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/automations");
   return { ok: true };
@@ -190,6 +230,25 @@ export async function addSubscriber(input: {
     { onConflict: "email" },
   );
   if (error) return { ok: false, message: error.message };
+
+  const isNew = !existing;
+  const { data: row } = await supabase
+    .from("subscribers")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  void runAutomations({
+    email,
+    name: input.name ?? null,
+    phone: input.phone ?? null,
+    locale: input.locale,
+    subscriberId: (row as { id: string } | null)?.id ?? null,
+    tags: mergedTags,
+    isNew,
+    source: "manual",
+  });
+
   revalidatePath("/admin/subscribers");
   return { ok: true };
 }

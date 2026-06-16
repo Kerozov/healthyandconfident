@@ -8,6 +8,7 @@ import type {
   EmailCampaign,
   SmsCampaign,
   AutomatedEmail,
+  Automation,
 } from "@/lib/supabase/types";
 
 export async function getDashboardStats() {
@@ -100,6 +101,35 @@ export async function getAutomatedEmails(): Promise<AutomatedEmail[]> {
     .order("trigger")
     .order("locale");
   return (data as AutomatedEmail[]) ?? [];
+}
+
+export async function getAutomations(): Promise<
+  (Automation & { sent_count: number })[]
+> {
+  const supabase = getAdminClient();
+  const { data: rules } = await supabase
+    .from("automations")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  const automations = (rules as Automation[]) ?? [];
+  if (automations.length === 0) return [];
+
+  const { data: deliveries } = await supabase
+    .from("automation_deliveries")
+    .select("automation_id, status")
+    .eq("status", "sent");
+
+  const counts = new Map<string, number>();
+  for (const d of (deliveries as { automation_id: string }[]) ?? []) {
+    counts.set(d.automation_id, (counts.get(d.automation_id) ?? 0) + 1);
+  }
+
+  return automations.map((a) => ({
+    ...a,
+    sent_count: counts.get(a.id) ?? 0,
+  }));
 }
 
 export async function getEmailCampaigns(): Promise<EmailCampaign[]> {

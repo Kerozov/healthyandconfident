@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
-  sendPurchaseWelcomeEmail,
-  sendRegistrationWelcomeEmail,
+  runAutomations,
 } from "@/lib/automation/send";
 import type { Locale } from "@/lib/supabase/types";
 
@@ -32,6 +31,7 @@ export async function POST(req: Request) {
 
   const locale = body.locale === "en" ? "en" : "bg";
   const source = body.source || "popup";
+  const mailLocale: Locale = locale;
   const incomingTags = Array.isArray(body.tags)
     ? body.tags.filter((t) => typeof t === "string" && t.length > 0)
     : [];
@@ -47,36 +47,49 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     const isNew = !existing;
+    let subscriberId = existing?.id as string | undefined;
+    let finalTags = incomingTags;
 
     if (existing) {
-      const merged = Array.from(
+      finalTags = Array.from(
         new Set([...(existing.tags as string[] ?? []), ...incomingTags]),
       );
       await supabase
         .from("subscribers")
         .update({
-          tags: merged,
+          tags: finalTags,
           status: "subscribed",
           ...(name ? { name } : {}),
+          ...(body.phone?.trim() ? { phone: body.phone.trim() } : {}),
         })
         .eq("id", existing.id as string);
     } else {
-      await supabase.from("subscribers").insert({
-        email,
-        name,
-        phone: body.phone?.trim() || null,
-        locale,
-        source,
-        tags: incomingTags,
-      });
+      const { data: inserted } = await supabase
+        .from("subscribers")
+        .insert({
+          email,
+          name,
+          phone: body.phone?.trim() || null,
+          locale,
+          source,
+          tags: incomingTags,
+        })
+        .select("id")
+        .single();
+      subscriberId = (inserted as { id: string } | null)?.id;
+      finalTags = incomingTags;
     }
 
-    const mailLocale: Locale = locale;
-    if (source === "purchase") {
-      void sendPurchaseWelcomeEmail({ email, name, locale: mailLocale });
-    } else if (isNew) {
-      void sendRegistrationWelcomeEmail({ email, name, locale: mailLocale });
-    }
+    void runAutomations({
+      email,
+      name,
+      phone: body.phone?.trim() || null,
+      locale: mailLocale,
+      subscriberId: subscriberId ?? null,
+      tags: finalTags,
+      isNew,
+      source,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

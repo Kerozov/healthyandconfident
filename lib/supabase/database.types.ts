@@ -6,6 +6,8 @@ import type {
   EmailCampaign,
   SmsCampaign,
   AutomatedEmail,
+  Automation,
+  AutomationDelivery,
 } from "@/lib/supabase/types";
 
 type TableShape<Row> = {
@@ -25,6 +27,8 @@ export type Database = {
       email_campaigns: TableShape<EmailCampaign>;
       sms_campaigns: TableShape<SmsCampaign>;
       automated_emails: TableShape<AutomatedEmail>;
+      automations: TableShape<Automation>;
+      automation_deliveries: TableShape<AutomationDelivery>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
