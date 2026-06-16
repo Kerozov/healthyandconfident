@@ -156,3 +156,14 @@ export async function getSmsJobStatus(jobId: string) {
     failed: report.failed,
   };
 }
+
+/** Cancel a pending/scheduled SMS job in the worker. */
+export async function cancelSmsJob(jobId: string): Promise<boolean> {
+  const { url, key } = getConfig();
+  const res = await fetch(`${url}/api/v1/sms/jobs/${jobId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${key}` },
+    cache: "no-store",
+  });
+  return res.ok;
+}

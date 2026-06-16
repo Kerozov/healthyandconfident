@@ -4,8 +4,8 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale } from "@/lib/supabase/types";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
-import { sendEmail } from "@/lib/worker/email";
-import { sendSms } from "@/lib/worker/sms";
+import { sendEmail, scheduleEmail } from "@/lib/worker/email";
+import { sendSms, scheduleSms } from "@/lib/worker/sms";
 
 export type AutomationRunContext = {
   email: string;
@@ -37,7 +37,17 @@ function segmentMatches(automation: Automation, tags: string[]): boolean {
   return required.some((key) => tags.includes(key));
 }
 
-async function alreadyReceived(
+function sendAtAfterDays(days: number, from?: Date): string {
+  const at = from ? new Date(from) : new Date();
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString();
+}
+
+function idempotencyKey(automationId: string, email: string): string {
+  return `auto-${automationId}-${email}`;
+}
+
+async function alreadyQueuedOrSent(
   automationId: string,
   email: string,
 ): Promise<boolean> {
@@ -47,6 +57,7 @@ async function alreadyReceived(
     .select("id")
     .eq("automation_id", automationId)
     .eq("email", email)
+    .in("status", ["sent", "scheduled"])
     .maybeSingle();
   return Boolean(data);
 }
@@ -57,9 +68,10 @@ async function recordDelivery(input: {
   email: string;
   phone?: string | null;
   channel: Automation["channel"];
-  status: "sent" | "failed" | "skipped";
+  status: "scheduled" | "sent" | "failed" | "skipped";
   workerJobId?: string | null;
   error?: string | null;
+  scheduledFor?: string | null;
 }) {
   const supabase = getAdminClient();
   await supabase.from("automation_deliveries").upsert(
@@ -72,29 +84,57 @@ async function recordDelivery(input: {
       status: input.status,
       worker_job_id: input.workerJobId ?? null,
       error: input.error ?? null,
+      scheduled_for: input.scheduledFor ?? null,
       sent_at: new Date().toISOString(),
     },
     { onConflict: "automation_id,email" },
   );
 }
 
-async function executeAutomation(
-  automation: Automation,
+async function scheduleChainedFromParent(
+  parentAutomationId: string,
+  parentSendAt: string,
   ctx: AutomationRunContext,
 ): Promise<void> {
+  const supabase = getAdminClient();
+  const { data } = await supabase
+    .from("automations")
+    .select("*")
+    .eq("enabled", true)
+    .eq("after_automation_id", parentAutomationId);
+
+  const parentAt = new Date(parentSendAt);
+  for (const rule of (data as Automation[]) ?? []) {
+    const email = ctx.email.trim().toLowerCase();
+    if (rule.new_subscribers_only && !ctx.isNew) continue;
+    if (!segmentMatches(rule, ctx.tags ?? [])) continue;
+    if (await alreadyQueuedOrSent(rule.id, email)) continue;
+    const childDelay = rule.delay_days ?? 0;
+    try {
+      if (childDelay > 0) {
+        const sendAt = sendAtAfterDays(childDelay, parentAt);
+        await scheduleAutomation(rule, ctx, sendAt);
+        await scheduleChainedFromParent(rule.id, sendAt, ctx);
+      } else {
+        const sent = await sendAutomationNow(rule, ctx);
+        if (sent) {
+          await scheduleChainedFromParent(rule.id, new Date().toISOString(), ctx);
+        }
+      }
+    } catch (err) {
+      console.error(`[automation] chain ${rule.id}:`, err);
+    }
+  }
+}
+
+async function scheduleAutomation(
+  automation: Automation,
+  ctx: AutomationRunContext,
+  sendAt: string,
+): Promise<boolean> {
   const email = ctx.email.trim().toLowerCase();
   const locale: Locale = ctx.locale === "en" ? "en" : "bg";
-  const tags = ctx.tags ?? [];
-
-  if (automation.new_subscribers_only && !ctx.isNew) return;
-  if (!segmentMatches(automation, tags)) return;
-
-  if (await alreadyReceived(automation.id, email)) return;
-
-  if (automation.after_automation_id) {
-    const gotPrior = await alreadyReceived(automation.after_automation_id, email);
-    if (!gotPrior) return;
-  }
+  const key = idempotencyKey(automation.id, email);
 
   if (automation.channel === "sms") {
     const phone = ctx.phone?.trim();
@@ -103,74 +143,173 @@ async function executeAutomation(
         automationId: automation.id,
         subscriberId: ctx.subscriberId,
         email,
-        phone: null,
         channel: "sms",
         status: "skipped",
         error: "No phone number",
       });
-      return;
+      return false;
     }
-
     const body = renderEmailTemplate(
       locale === "en" ? automation.sms_en : automation.sms_bg,
       { name: ctx.name, email },
     );
-    if (!body.trim()) return;
+    if (!body.trim()) return false;
 
-    try {
-      const res = await sendSms({
-        body,
-        recipients: [phone],
-        idempotencyKey: `auto-${automation.id}-${email}`,
-      });
-      await recordDelivery({
-        automationId: automation.id,
-        subscriberId: ctx.subscriberId,
-        email,
-        phone,
-        channel: "sms",
-        status: "sent",
-        workerJobId: res.jobId,
-      });
-    } catch (err) {
-      await recordDelivery({
-        automationId: automation.id,
-        subscriberId: ctx.subscriberId,
-        email,
-        phone,
-        channel: "sms",
-        status: "failed",
-        error: err instanceof Error ? err.message : "Send failed",
-      });
-    }
-    return;
-  }
-
-  const subjectRaw = locale === "en" ? automation.subject_en : automation.subject_bg;
-  const htmlRaw = locale === "en" ? automation.html_en : automation.html_bg;
-  if (!subjectRaw.trim() || !htmlRaw.trim()) return;
-
-  const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
-  const html = renderEmailTemplate(htmlRaw, { name: ctx.name, email });
-
-  try {
-    const res = await sendEmail({ subject, html, recipients: [email] });
+    const res = await scheduleSms({
+      body,
+      recipients: [phone],
+      sendAt,
+      idempotencyKey: key,
+    });
     await recordDelivery({
       automationId: automation.id,
       subscriberId: ctx.subscriberId,
       email,
-      phone: ctx.phone,
-      channel: "email",
+      phone,
+      channel: "sms",
+      status: "scheduled",
+      workerJobId: res.jobId,
+      scheduledFor: sendAt,
+    });
+    await scheduleChainedFromParent(automation.id, sendAt, ctx);
+    return true;
+  }
+
+  const subjectRaw =
+    locale === "en" ? automation.subject_en : automation.subject_bg;
+  const htmlRaw = locale === "en" ? automation.html_en : automation.html_bg;
+  if (!subjectRaw.trim() || !htmlRaw.trim()) return false;
+
+  const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
+  const html = renderEmailTemplate(htmlRaw, { name: ctx.name, email });
+
+  const res = await scheduleEmail({
+    subject,
+    html,
+    recipients: [email],
+    sendAt,
+    idempotencyKey: key,
+  });
+  await recordDelivery({
+    automationId: automation.id,
+    subscriberId: ctx.subscriberId,
+    email,
+    phone: ctx.phone,
+    channel: "email",
+    status: "scheduled",
+    workerJobId: res.jobId,
+    scheduledFor: sendAt,
+  });
+  await scheduleChainedFromParent(automation.id, sendAt, ctx);
+  return true;
+}
+
+async function sendAutomationNow(
+  automation: Automation,
+  ctx: AutomationRunContext,
+): Promise<boolean> {
+  const email = ctx.email.trim().toLowerCase();
+  const locale: Locale = ctx.locale === "en" ? "en" : "bg";
+
+  if (automation.channel === "sms") {
+    const phone = ctx.phone?.trim();
+    if (!phone) {
+      await recordDelivery({
+        automationId: automation.id,
+        subscriberId: ctx.subscriberId,
+        email,
+        channel: "sms",
+        status: "skipped",
+        error: "No phone number",
+      });
+      return false;
+    }
+    const body = renderEmailTemplate(
+      locale === "en" ? automation.sms_en : automation.sms_bg,
+      { name: ctx.name, email },
+    );
+    if (!body.trim()) return false;
+
+    const res = await sendSms({
+      body,
+      recipients: [phone],
+      idempotencyKey: idempotencyKey(automation.id, email),
+    });
+    await recordDelivery({
+      automationId: automation.id,
+      subscriberId: ctx.subscriberId,
+      email,
+      phone,
+      channel: "sms",
       status: "sent",
       workerJobId: res.jobId,
     });
+    return true;
+  }
+
+  const subjectRaw =
+    locale === "en" ? automation.subject_en : automation.subject_bg;
+  const htmlRaw = locale === "en" ? automation.html_en : automation.html_bg;
+  if (!subjectRaw.trim() || !htmlRaw.trim()) return false;
+
+  const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
+  const html = renderEmailTemplate(htmlRaw, { name: ctx.name, email });
+
+  const res = await sendEmail({ subject, html, recipients: [email] });
+  await recordDelivery({
+    automationId: automation.id,
+    subscriberId: ctx.subscriberId,
+    email,
+    phone: ctx.phone,
+    channel: "email",
+    status: "sent",
+    workerJobId: res.jobId,
+  });
+  return true;
+}
+
+async function executeAutomation(
+  automation: Automation,
+  ctx: AutomationRunContext,
+  opts?: { fromChain?: boolean },
+): Promise<void> {
+  const email = ctx.email.trim().toLowerCase();
+  const tags = ctx.tags ?? [];
+
+  if (automation.new_subscribers_only && !ctx.isNew) return;
+  if (!segmentMatches(automation, tags)) return;
+  if (await alreadyQueuedOrSent(automation.id, email)) return;
+
+  if (automation.after_automation_id) {
+    const gotPrior = await alreadyQueuedOrSent(
+      automation.after_automation_id,
+      email,
+    );
+    if (!gotPrior) return;
+    if (automation.delay_days > 0 && !opts?.fromChain) return;
+  }
+
+  const delay = automation.delay_days ?? 0;
+
+  try {
+    if (delay > 0) {
+      const sendAt = sendAtAfterDays(delay);
+      await scheduleAutomation(automation, ctx, sendAt);
+      return;
+    }
+
+    const sent = await sendAutomationNow(automation, ctx);
+    if (sent) {
+      const nowIso = new Date().toISOString();
+      await scheduleChainedFromParent(automation.id, nowIso, ctx);
+    }
   } catch (err) {
     await recordDelivery({
       automationId: automation.id,
       subscriberId: ctx.subscriberId,
       email,
       phone: ctx.phone,
-      channel: "email",
+      channel: automation.channel,
       status: "failed",
       error: err instanceof Error ? err.message : "Send failed",
     });

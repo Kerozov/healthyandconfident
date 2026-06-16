@@ -11,6 +11,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Ban,
 } from "lucide-react";
 import type { EmailCampaign, CampaignStatus } from "@/lib/supabase/types";
 import {
@@ -18,6 +19,7 @@ import {
   syncEmailCampaign,
   resendToNonOpeners,
   deleteEmailCampaign,
+  cancelEmailCampaign,
   getCampaignRecipientReport,
 } from "@/app/(admin)/admin/actions";
 import type { RecipientRow } from "@/lib/worker/email";
@@ -177,6 +179,24 @@ export function CampaignsTable({
     });
   }
 
+  function cancel(c: EmailCampaign) {
+    if (
+      !confirm(
+        `Cancel scheduled send for "${c.subject}"? Recipients will not receive this email.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(c.id);
+    setNote(null);
+    startTransition(async () => {
+      const res = await cancelEmailCampaign(c.id);
+      setNote(res.message ?? null);
+      router.refresh();
+      setBusyId(null);
+    });
+  }
+
   async function toggleRecipients(campaignId: string) {
     if (expandedId === campaignId) {
       setExpandedId(null);
@@ -230,6 +250,7 @@ export function CampaignsTable({
               Boolean(c.worker_job_id) &&
               ["sent", "partial"].includes(c.status) &&
               c.not_opened_count > 0;
+            const canCancel = ["scheduled", "queued"].includes(c.status);
             const rowBusy = busyId === c.id && pending;
             const isExpanded = expandedId === c.id;
 
@@ -277,6 +298,17 @@ export function CampaignsTable({
                   </div>
 
                   <div className="flex items-center gap-1">
+                    {canCancel && (
+                      <button
+                        onClick={() => cancel(c)}
+                        disabled={pending}
+                        title="Cancel scheduled send"
+                        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-medium text-coral-600 hover:bg-coral-500/10 disabled:opacity-40"
+                      >
+                        <Ban className="h-4 w-4" />
+                        Cancel
+                      </button>
+                    )}
                     <button
                       onClick={() => syncOne(c.id)}
                       disabled={pending || !c.worker_job_id}

@@ -8,39 +8,105 @@ import {
   createAutomation,
   updateAutomation,
   deleteAutomation,
+  toggleAutomationEnabled,
 } from "@/app/(admin)/admin/actions";
 import { SegmentChecklist } from "@/components/admin/segment-checklist";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { cn } from "@/lib/utils";
 
-const TRIGGER_OPTIONS: { value: AutomationTrigger; label: string; hint: string }[] = [
+const TRIGGER_OPTIONS: {
+  value: AutomationTrigger;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: "new_subscriber",
+    label: "New subscriber",
+    hint: "When an email appears in the list for the first time — website, manual add, or import.",
+  },
   {
     value: "registration",
     label: "Website signup",
-    hint: "Popup, lead form — usually for new subscribers only.",
+    hint: "Popup or lead form only (not manual add in admin).",
   },
   {
     value: "purchase",
     label: "After purchase",
-    hint: 'When /api/subscribe is called with source "purchase".',
-  },
-  {
-    value: "new_subscriber",
-    label: "Any new subscriber",
-    hint: "Manual add, import, or signup — first time this email appears.",
+    hint: 'When the system receives a purchase event (source: "purchase").',
   },
 ];
+
+function TogglePair({
+  label,
+  hint,
+  value,
+  onChange,
+  options,
+  disabled,
+}: {
+  label: string;
+  hint?: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  options: { trueLabel: string; falseLabel: string };
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <p className="mb-2 text-sm font-medium">{label}</p>
+      <div className="inline-flex rounded-xl border border-ink/15 bg-cream-2/40 p-1">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(true)}
+          className={cn(
+            "rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50",
+            value
+              ? "bg-forest-600 text-cream shadow-sm"
+              : "text-ink-soft hover:bg-ink/5",
+          )}
+        >
+          {options.trueLabel}
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(false)}
+          className={cn(
+            "rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50",
+            !value
+              ? "bg-ink/15 text-ink shadow-sm"
+              : "text-ink-soft hover:bg-ink/5",
+          )}
+        >
+          {options.falseLabel}
+        </button>
+      </div>
+      {hint && <p className="mt-1.5 text-xs text-ink-soft/70">{hint}</p>}
+    </div>
+  );
+}
+
+function triggerSummary(a: Automation): string {
+  const t = TRIGGER_OPTIONS.find((x) => x.value === a.trigger_event);
+  return t?.label ?? a.trigger_event;
+}
+
+function audienceSummary(newOnly: boolean): string {
+  return newOnly ? "new only" : "new + existing";
+}
 
 type AutomationRow = Automation & { sent_count: number };
 
 const EMPTY_FORM = {
   name: "",
   channel: "email" as AutomationChannel,
-  trigger_event: "registration" as AutomationTrigger,
+  trigger_event: "new_subscriber" as AutomationTrigger,
   enabled: false,
   segment_keys: [] as string[],
   new_subscribers_only: true,
   after_automation_id: "" as string,
+  delay_days: 0,
   subject_bg: "",
   html_bg: "",
   subject_en: "",
@@ -59,6 +125,7 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     segment_keys: a.segment_keys ?? [],
     new_subscribers_only: a.new_subscribers_only,
     after_automation_id: a.after_automation_id ?? "",
+    delay_days: a.delay_days ?? 0,
     subject_bg: a.subject_bg,
     html_bg: a.html_bg,
     subject_en: a.subject_en,
@@ -136,14 +203,22 @@ export function AutomationsManager({
     });
   }
 
+  function toggleEnabled(a: AutomationRow) {
+    startTransition(async () => {
+      await toggleAutomationEnabled(a.id, !a.enabled);
+      router.refresh();
+    });
+  }
+
   const triggerMeta = TRIGGER_OPTIONS.find((t) => t.value === form.trigger_event);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-ink-soft max-w-2xl">
-          Create email or SMS rules that run automatically. Filter by segment, new
-          subscribers only, or chain after another automation was already sent.
+          Automatic emails or SMS on new subscribers, purchases, or on a delay.
+          By default they go to new subscribers only — once per email, no
+          duplicates.
         </p>
         <button
           type="button"
@@ -157,13 +232,13 @@ export function AutomationsManager({
 
       {editingId && (
         <Card title={editingId === "new" ? "Create automation" : "Edit automation"}>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Name">
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Welcome — weight loss segment"
+                  placeholder="Welcome — weight loss"
                 />
               </Field>
               <Field label="Channel">
@@ -197,7 +272,7 @@ export function AutomationsManager({
                   ))}
                 </Select>
               </Field>
-              <Field label="Order" hint="Lower runs first when several match.">
+              <Field label="Order" hint="Lower number runs first if several match.">
                 <Input
                   type="number"
                   value={form.sort_order}
@@ -209,32 +284,46 @@ export function AutomationsManager({
             </div>
 
             {triggerMeta && (
-              <p className="text-sm text-ink-soft">{triggerMeta.hint}</p>
+              <p className="rounded-xl bg-cream-2/60 px-4 py-3 text-sm text-ink-soft">
+                {triggerMeta.hint}
+              </p>
             )}
 
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={form.enabled}
-                onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-              />
-              Enabled — send automatically when conditions match
-            </label>
-
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={form.new_subscribers_only}
-                onChange={(e) =>
-                  setForm({ ...form, new_subscribers_only: e.target.checked })
+            <div className="grid gap-5 sm:grid-cols-2">
+              <TogglePair
+                label="Status"
+                hint={
+                  form.enabled
+                    ? "This automation is active and will send when conditions match."
+                    : "Disabled — nothing is sent, even for new subscribers."
                 }
+                value={form.enabled}
+                onChange={(enabled) => setForm({ ...form, enabled })}
+                options={{ trueLabel: "Enabled", falseLabel: "Disabled" }}
+                disabled={pending}
               />
-              New subscribers only (skip if email already existed)
-            </label>
+              <TogglePair
+                label="Who receives it"
+                hint={
+                  form.new_subscribers_only
+                    ? "Only the first time this email is added. Recommended for welcome series."
+                    : "New and already saved emails (uncommon — may resend to existing contacts)."
+                }
+                value={form.new_subscribers_only}
+                onChange={(new_subscribers_only) =>
+                  setForm({ ...form, new_subscribers_only })
+                }
+                options={{
+                  trueLabel: "New only",
+                  falseLabel: "New + existing",
+                }}
+                disabled={pending}
+              />
+            </div>
 
             <Field
               label="Segments (optional)"
-              hint="Leave empty = any segment. Subscriber must have at least one ticked segment."
+              hint="Leave empty for everyone. Subscriber must match at least one selected segment."
             >
               <SegmentChecklist
                 segments={segments}
@@ -245,8 +334,8 @@ export function AutomationsManager({
             </Field>
 
             <Field
-              label="Send only after automation"
-              hint="Optional — subscriber must have received the chosen automation first (e.g. welcome → follow-up)."
+              label="After another automation"
+              hint="Optional — sends only if the chosen automation was already sent (e.g. welcome → follow-up)."
             >
               <Select
                 value={form.after_automation_id}
@@ -254,7 +343,7 @@ export function AutomationsManager({
                   setForm({ ...form, after_automation_id: e.target.value })
                 }
               >
-                <option value="">— No prerequisite —</option>
+                <option value="">— None —</option>
                 {otherAutomations.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name} ({a.channel})
@@ -263,10 +352,27 @@ export function AutomationsManager({
               </Select>
             </Field>
 
+            <Field
+              label="Delay (days)"
+              hint="0 = send immediately. With a prerequisite, days are counted after that automation."
+            >
+              <Input
+                type="number"
+                min={0}
+                value={form.delay_days}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    delay_days: Math.max(0, Number(e.target.value) || 0),
+                  })
+                }
+              />
+            </Field>
+
             {form.channel === "email" ? (
               <div className="grid gap-6 xl:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-ink/10 p-4">
-                  <p className="font-medium">Български</p>
+                  <p className="font-medium">Bulgarian</p>
                   <Field label="Subject">
                     <Input
                       value={form.subject_bg}
@@ -310,7 +416,7 @@ export function AutomationsManager({
               </div>
             ) : (
               <div className="grid gap-6 xl:grid-cols-2">
-                <Field label="SMS — Български" hint="{{name}}, {{email}}">
+                <Field label="SMS — Bulgarian" hint="{{name}}, {{email}}">
                   <Textarea
                     rows={4}
                     value={form.sms_bg}
@@ -354,8 +460,8 @@ export function AutomationsManager({
       <div className="space-y-3">
         {automations.length === 0 ? (
           <p className="rounded-2xl border border-ink/10 bg-white p-8 text-center text-sm text-ink-soft">
-            No automations yet. Create one to send welcome emails, purchase
-            confirmations, or segment-specific SMS.
+            No automations yet. Create a welcome email, segment SMS, or post-purchase
+            series.
           </p>
         ) : (
           automations.map((a) => (
@@ -375,28 +481,43 @@ export function AutomationsManager({
                           : "bg-ink/10 text-ink-soft",
                       )}
                     >
-                      {a.enabled ? "On" : "Off"}
+                      {a.enabled ? "Enabled" : "Disabled"}
                     </span>
                     <span className="rounded-full bg-ink/10 px-2.5 py-0.5 text-xs uppercase text-ink-soft">
                       {a.channel}
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-ink-soft">
-                    {TRIGGER_OPTIONS.find((t) => t.value === a.trigger_event)?.label}
+                    {triggerSummary(a)}
                     {a.segment_keys.length > 0 &&
                       ` · segments: ${a.segment_keys.join(", ")}`}
-                    {a.new_subscribers_only && " · new only"}
+                    {` · ${audienceSummary(a.new_subscribers_only)}`}
                     {a.after_automation_id &&
                       ` · after: ${
                         automations.find((x) => x.id === a.after_automation_id)?.name ??
                         "…"
                       }`}
+                    {(a.delay_days ?? 0) > 0 && ` · +${a.delay_days} days`}
                   </p>
                   <p className="mt-0.5 text-xs text-ink-soft/70">
                     Sent {a.sent_count} time{a.sent_count === 1 ? "" : "s"}
                   </p>
                 </div>
                 <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleEnabled(a)}
+                    disabled={pending}
+                    title={a.enabled ? "Disable automation" : "Enable automation"}
+                    className={cn(
+                      "inline-flex h-8 items-center rounded-lg px-3 text-xs font-semibold",
+                      a.enabled
+                        ? "bg-forest-500/15 text-forest-700 hover:bg-forest-500/25"
+                        : "bg-ink/10 text-ink-soft hover:bg-ink/15",
+                    )}
+                  >
+                    {a.enabled ? "Enabled" : "Disabled"}
+                  </button>
                   <button
                     onClick={() => openEdit(a)}
                     disabled={pending}

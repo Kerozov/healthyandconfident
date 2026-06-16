@@ -275,3 +275,14 @@ export async function getNotOpenedEmails(jobId: string): Promise<string[]> {
   const report = await getJobReport(jobId);
   return report?.notOpenedEmails ?? [];
 }
+
+/** Cancel a pending/scheduled email job in the worker. */
+export async function cancelEmailJob(jobId: string): Promise<boolean> {
+  const { url, key } = getConfig();
+  const res = await fetch(`${url}/api/v1/jobs/${jobId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${key}` },
+    cache: "no-store",
+  });
+  return res.ok;
+}

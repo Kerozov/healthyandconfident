@@ -130,6 +130,7 @@ create table if not exists public.automations (
   segment_keys                text[] not null default '{}',
   new_subscribers_only        boolean not null default true,
   after_automation_id         uuid references public.automations(id) on delete set null,
+  delay_days                  int not null default 0,
   subject_bg                  text not null default '',
   html_bg                     text not null default '',
   subject_en                  text not null default '',
@@ -148,9 +149,10 @@ create table if not exists public.automation_deliveries (
   email           text not null,
   phone           text,
   channel         text not null check (channel in ('email', 'sms')),
-  status          text not null default 'sent' check (status in ('sent', 'failed', 'skipped')),
+  status          text not null default 'sent' check (status in ('scheduled', 'sent', 'failed', 'skipped', 'canceled')),
   worker_job_id   text,
   error           text,
+  scheduled_for   timestamptz,
   sent_at         timestamptz not null default now(),
   unique (automation_id, email)
 );

@@ -82,6 +82,28 @@ create table if not exists public.automated_emails (
 -- 007: automations — run full file:
 -- supabase/migrations/007_automations.sql
 
+-- 008: automation delays
+alter table public.automations
+  add column if not exists delay_days int not null default 0;
+
+alter table public.automation_deliveries
+  drop constraint if exists automation_deliveries_status_check;
+
+alter table public.automation_deliveries
+  add constraint automation_deliveries_status_check
+  check (status in ('scheduled', 'sent', 'failed', 'skipped'));
+
+alter table public.automation_deliveries
+  add column if not exists scheduled_for timestamptz;
+
+-- 009: canceled deliveries
+alter table public.automation_deliveries
+  drop constraint if exists automation_deliveries_status_check;
+
+alter table public.automation_deliveries
+  add constraint automation_deliveries_status_check
+  check (status in ('scheduled', 'sent', 'failed', 'skipped', 'canceled'));
+
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete — also run 007_automations.sql' as result;
+select 'Upgrade complete — also run 007_automations.sql if not yet applied' as result;

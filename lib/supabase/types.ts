@@ -81,6 +81,7 @@ export type Automation = {
   segment_keys: string[];
   new_subscribers_only: boolean;
   after_automation_id: string | null;
+  delay_days: number;
   subject_bg: string;
   html_bg: string;
   subject_en: string;
@@ -99,9 +100,10 @@ export type AutomationDelivery = {
   email: string;
   phone: string | null;
   channel: AutomationChannel;
-  status: "sent" | "failed" | "skipped";
+  status: "scheduled" | "sent" | "failed" | "skipped" | "canceled";
   worker_job_id: string | null;
   error: string | null;
+  scheduled_for: string | null;
   sent_at: string;
 };
 

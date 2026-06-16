@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { Trash2, RefreshCw, Loader2, Ban } from "lucide-react";
 import type { SmsCampaign, SmsCampaignStatus } from "@/lib/supabase/types";
 import {
   deleteSmsCampaign,
+  cancelSmsCampaign,
   syncAllSmsCampaigns,
   syncSmsCampaign,
 } from "@/app/(admin)/admin/actions";
@@ -80,6 +81,20 @@ export function SmsCampaignsTable({ campaigns }: { campaigns: SmsCampaign[] }) {
     });
   }
 
+  function cancel(c: SmsCampaign) {
+    if (!confirm("Cancel this scheduled SMS? Recipients will not receive it.")) {
+      return;
+    }
+    setBusyId(c.id);
+    setNote(null);
+    startTransition(async () => {
+      const res = await cancelSmsCampaign(c.id);
+      setNote(res.message ?? null);
+      router.refresh();
+      setBusyId(null);
+    });
+  }
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -112,6 +127,7 @@ export function SmsCampaignsTable({ campaigns }: { campaigns: SmsCampaign[] }) {
         <div className="space-y-3">
           {campaigns.map((c) => {
             const rowBusy = busyId === c.id && pending;
+            const canCancel = ["scheduled", "queued"].includes(c.status);
             return (
               <div
                 key={c.id}
@@ -156,6 +172,17 @@ export function SmsCampaignsTable({ campaigns }: { campaigns: SmsCampaign[] }) {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
+                    {canCancel && (
+                      <button
+                        onClick={() => cancel(c)}
+                        disabled={pending}
+                        title="Cancel scheduled send"
+                        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-medium text-coral-600 hover:bg-coral-500/10 disabled:opacity-40"
+                      >
+                        <Ban className="h-4 w-4" />
+                        Cancel
+                      </button>
+                    )}
                     <button
                       onClick={() => syncOne(c.id)}
                       disabled={pending || !c.provider_ref}

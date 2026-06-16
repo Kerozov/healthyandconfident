@@ -7,10 +7,12 @@ import {
   sendEmail,
   scheduleEmail,
   getJobReport,
+  cancelEmailJob,
   type RecipientRow,
 } from "@/lib/worker/email";
-import { sendSms, scheduleSms, getSmsJobReport } from "@/lib/worker/sms";
+import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
 import { runAutomations } from "@/lib/automation/send";
+import { cancelAutomationScheduledJobs } from "@/lib/automation/cancel";
 import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus } from "@/lib/supabase/types";
@@ -136,6 +138,7 @@ type AutomationInput = {
   segment_keys: string[];
   new_subscribers_only: boolean;
   after_automation_id?: string | null;
+  delay_days?: number;
   subject_bg: string;
   html_bg: string;
   subject_en: string;
@@ -155,6 +158,7 @@ export async function createAutomation(
     .insert({
       ...input,
       after_automation_id: input.after_automation_id || null,
+      delay_days: Math.max(0, input.delay_days ?? 0),
       sort_order: input.sort_order ?? 0,
     })
     .select("id")
@@ -175,6 +179,7 @@ export async function updateAutomation(
     .update({
       ...input,
       after_automation_id: input.after_automation_id || null,
+      delay_days: Math.max(0, input.delay_days ?? 0),
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
@@ -185,8 +190,30 @@ export async function updateAutomation(
 
 export async function deleteAutomation(id: string): Promise<ActionResult> {
   await requireAdmin();
+  await cancelAutomationScheduledJobs(id);
   const supabase = getAdminClient();
   const { error } = await supabase.from("automations").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/automations");
+  return { ok: true };
+}
+
+export async function toggleAutomationEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!enabled) {
+    await cancelAutomationScheduledJobs(id);
+  }
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("automations")
+    .update({
+      enabled,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/automations");
   return { ok: true };
@@ -864,9 +891,80 @@ export async function getCampaignRecipientReport(
   return { ok: true, recipients: report.recipients, tracking: report.tracking };
 }
 
+const CANCELABLE_EMAIL_STATUSES: CampaignStatus[] = ["scheduled", "queued"];
+
+export async function cancelEmailCampaign(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { data, error } = await supabase
+    .from("email_campaigns")
+    .select("id, worker_job_id, status")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    return { ok: false, message: "Campaign not found." };
+  }
+
+  const campaign = data as {
+    id: string;
+    worker_job_id: string | null;
+    status: CampaignStatus;
+  };
+
+  if (!CANCELABLE_EMAIL_STATUSES.includes(campaign.status)) {
+    return {
+      ok: false,
+      message: "Only scheduled or queued campaigns can be canceled.",
+    };
+  }
+
+  let workerCanceled = false;
+  if (campaign.worker_job_id) {
+    workerCanceled = await cancelEmailJob(campaign.worker_job_id);
+  }
+
+  const { error: updateError } = await supabase
+    .from("email_campaigns")
+    .update({
+      status: "canceled",
+      last_synced_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (updateError) return { ok: false, message: updateError.message };
+
+  revalidatePath("/admin/campaigns");
+  return {
+    ok: true,
+    message: workerCanceled
+      ? "Scheduled send canceled."
+      : "Campaign marked as canceled.",
+  };
+}
+
 export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
+
+  const { data } = await supabase
+    .from("email_campaigns")
+    .select("worker_job_id, status")
+    .eq("id", id)
+    .maybeSingle();
+
+  const campaign = data as {
+    worker_job_id: string | null;
+    status: CampaignStatus;
+  } | null;
+
+  if (
+    campaign?.worker_job_id &&
+    CANCELABLE_EMAIL_STATUSES.includes(campaign.status)
+  ) {
+    await cancelEmailJob(campaign.worker_job_id);
+  }
+
   const { error } = await supabase.from("email_campaigns").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/campaigns");
@@ -1101,9 +1199,77 @@ export async function syncAllSmsCampaigns(): Promise<ActionResult> {
   return { ok: true, message: `Synced ${rows.length} SMS campaign(s).` };
 }
 
+const CANCELABLE_SMS_STATUSES: SmsCampaignStatus[] = ["scheduled", "queued"];
+
+export async function cancelSmsCampaign(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { data, error } = await supabase
+    .from("sms_campaigns")
+    .select("id, provider_ref, status")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    return { ok: false, message: "SMS campaign not found." };
+  }
+
+  const campaign = data as {
+    id: string;
+    provider_ref: string | null;
+    status: SmsCampaignStatus;
+  };
+
+  if (!CANCELABLE_SMS_STATUSES.includes(campaign.status)) {
+    return {
+      ok: false,
+      message: "Only scheduled or queued SMS campaigns can be canceled.",
+    };
+  }
+
+  let workerCanceled = false;
+  if (campaign.provider_ref) {
+    workerCanceled = await cancelSmsJob(campaign.provider_ref);
+  }
+
+  const { error: updateError } = await supabase
+    .from("sms_campaigns")
+    .update({ status: "canceled" })
+    .eq("id", id);
+
+  if (updateError) return { ok: false, message: updateError.message };
+
+  revalidatePath("/admin/campaigns");
+  return {
+    ok: true,
+    message: workerCanceled
+      ? "Scheduled SMS canceled."
+      : "SMS campaign marked as canceled.",
+  };
+}
+
 export async function deleteSmsCampaign(id: string): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
+
+  const { data } = await supabase
+    .from("sms_campaigns")
+    .select("provider_ref, status")
+    .eq("id", id)
+    .maybeSingle();
+
+  const campaign = data as {
+    provider_ref: string | null;
+    status: SmsCampaignStatus;
+  } | null;
+
+  if (
+    campaign?.provider_ref &&
+    CANCELABLE_SMS_STATUSES.includes(campaign.status)
+  ) {
+    await cancelSmsJob(campaign.provider_ref);
+  }
+
   const { error } = await supabase.from("sms_campaigns").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/campaigns");
