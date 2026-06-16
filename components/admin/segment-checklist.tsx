@@ -8,6 +8,17 @@ export function assignableSegments(segments: Segment[]): Segment[] {
   return segments.filter((s) => s.key !== "all");
 }
 
+export function parseTagList(value: string): string[] {
+  return value
+    .split(/[,;|]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+export function mergeTags(...groups: string[][]): string[] {
+  return Array.from(new Set(groups.flat()));
+}
+
 export function SegmentChecklist({
   segments,
   selected,

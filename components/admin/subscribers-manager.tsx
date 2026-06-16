@@ -10,7 +10,7 @@ import {
   deleteSubscriber,
   importSubscribers,
 } from "@/app/(admin)/admin/actions";
-import { SegmentChecklist } from "@/components/admin/segment-checklist";
+import { SegmentChecklist, assignableSegments, mergeTags, parseTagList } from "@/components/admin/segment-checklist";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
 import {
   exportSubscribersCsv,
@@ -25,9 +25,11 @@ import {
 export function SubscribersManager({
   subscribers,
   segments,
+  subscriberTags = [],
 }: {
   subscribers: Subscriber[];
   segments: Segment[];
+  subscriberTags?: string[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -41,11 +43,13 @@ export function SubscribersManager({
     name: "",
     phone: "",
     locale: "bg" as "bg" | "en",
-    segmentKeys: [] as string[],
+    tagKeys: [] as string[],
+    extraTags: "",
   });
 
   const [editing, setEditing] = useState<Subscriber | null>(null);
-  const [editSegments, setEditSegments] = useState<string[]>([]);
+  const [editTagKeys, setEditTagKeys] = useState<string[]>([]);
+  const [editExtraTags, setEditExtraTags] = useState("");
 
   const [importSegments, setImportSegments] = useState<string[]>([]);
   const [importPreview, setImportPreview] = useState<ImportSubscriberRow[] | null>(
@@ -66,6 +70,16 @@ export function SubscribersManager({
     });
   }, [subscribers, statusFilter, tagFilter, search]);
 
+  const segmentKeySet = useMemo(
+    () => new Set(assignableSegments(segments).map((s) => s.key)),
+    [segments],
+  );
+
+  const customTagOptions = useMemo(() => {
+    const fromSubs = subscriberTags.filter((t) => !segmentKeySet.has(t) && t !== "all");
+    return [...new Set(fromSubs)].sort();
+  }, [subscriberTags, segmentKeySet]);
+
   const segmentNameByKey = useMemo(() => {
     const map = new Map(segments.map((s) => [s.key, s.name]));
     return (key: string) => map.get(key) ?? key;
@@ -80,7 +94,7 @@ export function SubscribersManager({
         name: add.name || undefined,
         phone: add.phone || undefined,
         locale: add.locale,
-        tags: add.segmentKeys,
+        tags: mergeTags(add.tagKeys, parseTagList(add.extraTags)),
       });
       if (!res.ok) {
         setError(res.message || "Failed");
@@ -91,7 +105,8 @@ export function SubscribersManager({
         name: "",
         phone: "",
         locale: "bg",
-        segmentKeys: [],
+        tagKeys: [],
+        extraTags: "",
       });
       router.refresh();
     });
@@ -99,7 +114,9 @@ export function SubscribersManager({
 
   function openEditSegments(s: Subscriber) {
     setEditing(s);
-    setEditSegments(s.tags);
+    const known = new Set([...segmentKeySet, ...customTagOptions]);
+    setEditTagKeys(s.tags.filter((t) => known.has(t)));
+    setEditExtraTags(s.tags.filter((t) => !known.has(t)).join(", "));
   }
 
   function saveEditSegments() {
@@ -107,7 +124,7 @@ export function SubscribersManager({
     startTransition(async () => {
       const res = await updateSubscriber({
         id: editing.id,
-        tags: editSegments,
+        tags: mergeTags(editTagKeys, parseTagList(editExtraTags)),
       });
       if (!res.ok) {
         setError(res.message || "Failed to update segments");
@@ -216,12 +233,40 @@ export function SubscribersManager({
             </Field>
           </div>
 
-          <Field label="Segments" hint="Choose one or more segments for this person.">
+          <Field label="Segments" hint="Tick one or more segments.">
             <SegmentChecklist
               segments={segments}
-              selected={add.segmentKeys}
-              onChange={(segmentKeys) => setAdd({ ...add, segmentKeys })}
+              selected={add.tagKeys}
+              onChange={(tagKeys) => setAdd({ ...add, tagKeys })}
               disabled={pending}
+            />
+          </Field>
+
+          {customTagOptions.length > 0 && (
+            <Field label="Existing tags" hint="Tags already used on other subscribers.">
+              <SegmentChecklist
+                segments={customTagOptions.map((key) => ({
+                  id: key,
+                  key,
+                  name: key,
+                  description: null,
+                  created_at: "",
+                }))}
+                selected={add.tagKeys}
+                onChange={(tagKeys) => setAdd({ ...add, tagKeys })}
+              disabled={pending}
+              />
+            </Field>
+          )}
+
+          <Field
+            label="Additional tags"
+            hint="Comma-separated — custom tags not in the list above."
+          >
+            <Input
+              value={add.extraTags}
+              onChange={(e) => setAdd({ ...add, extraTags: e.target.value })}
+              placeholder="vip, webinar-2026"
             />
           </Field>
 
@@ -320,20 +365,51 @@ export function SubscribersManager({
       </Card>
 
       {editing && (
-        <Card title={`Segments — ${editing.email}`}>
-          <SegmentChecklist
-            segments={segments}
-            selected={editSegments}
-            onChange={setEditSegments}
-            disabled={pending}
-          />
+        <Card title={`Tags — ${editing.email}`}>
+          <Field label="Segments">
+            <SegmentChecklist
+              segments={segments}
+              selected={editTagKeys}
+              onChange={setEditTagKeys}
+              disabled={pending}
+            />
+          </Field>
+
+          {customTagOptions.length > 0 && (
+            <div className="mt-4">
+              <Field label="Existing tags">
+                <SegmentChecklist
+                  segments={customTagOptions.map((key) => ({
+                    id: key,
+                    key,
+                    name: key,
+                    description: null,
+                    created_at: "",
+                  }))}
+                  selected={editTagKeys}
+                  onChange={setEditTagKeys}
+                  disabled={pending}
+                />
+              </Field>
+            </div>
+          )}
+
+          <div className="mt-4">
+            <Field label="Additional tags" hint="Comma-separated.">
+              <Input
+                value={editExtraTags}
+                onChange={(e) => setEditExtraTags(e.target.value)}
+              />
+            </Field>
+          </div>
+
           <div className="mt-4 flex gap-2">
             <button
               onClick={saveEditSegments}
               disabled={pending}
               className="inline-flex h-10 items-center rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
             >
-              Save segments
+              Save tags
             </button>
             <button
               onClick={() => setEditing(null)}

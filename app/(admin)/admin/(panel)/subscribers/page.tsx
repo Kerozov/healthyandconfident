@@ -1,13 +1,14 @@
-import { getSubscribers, getSegments } from "@/lib/admin/data";
+import { getSubscribers, getSegments, getSubscriberTags } from "@/lib/admin/data";
 import { SubscribersManager } from "@/components/admin/subscribers-manager";
 import { SegmentsManager } from "@/components/admin/segments-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSubscribersPage() {
-  const [subscribers, segments] = await Promise.all([
+  const [subscribers, segments, subscriberTags] = await Promise.all([
     getSubscribers(),
     getSegments(),
+    getSubscriberTags(),
   ]);
 
   return (
@@ -18,7 +19,11 @@ export default async function AdminSubscribersPage() {
       </p>
       <div className="mt-8 space-y-8">
         <SegmentsManager segments={segments} />
-        <SubscribersManager subscribers={subscribers} segments={segments} />
+        <SubscribersManager
+          subscribers={subscribers}
+          segments={segments}
+          subscriberTags={subscriberTags}
+        />
       </div>
     </div>
   );
