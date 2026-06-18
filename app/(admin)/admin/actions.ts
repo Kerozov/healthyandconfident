@@ -145,6 +145,7 @@ type AutomationInput = {
   new_subscribers_only: boolean;
   after_automation_id?: string | null;
   delay_days?: number;
+  send_time?: string;
   subject_bg: string;
   html_bg: string;
   subject_en: string;
@@ -153,6 +154,14 @@ type AutomationInput = {
   sms_en: string;
   sort_order?: number;
 };
+
+function normalizeSendTime(value?: string): string {
+  const m = (value ?? "09:00").trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return "09:00";
+  const h = Math.min(23, Math.max(0, Number(m[1])));
+  const min = Math.min(59, Math.max(0, Number(m[2])));
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
 
 export async function createAutomation(
   input: AutomationInput,
@@ -165,6 +174,7 @@ export async function createAutomation(
       ...input,
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
+      send_time: normalizeSendTime(input.send_time),
       sort_order: input.sort_order ?? 0,
     })
     .select("id")
@@ -186,6 +196,7 @@ export async function updateAutomation(
       ...input,
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
+      send_time: normalizeSendTime(input.send_time),
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
@@ -654,15 +665,43 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
   }
 
   const key = input.segment_key || "all";
-  if (key !== "all") q = q.contains("tags", [key]);
+  const keys =
+    input.segment_keys && input.segment_keys.length > 0
+      ? input.segment_keys
+      : [key];
+
+  if (keys.length === 1 && keys[0] === "all") {
+    const { data } = await q;
+    const rows = (data as { email: string; phone: string | null }[]) ?? [];
+    return {
+      emails: rows.map((r) => r.email).filter(Boolean),
+      phones: rows.map((r) => r.phone || "").filter(Boolean),
+      label: "all",
+      segment_tag: "all",
+      target_tags: null,
+    };
+  }
+
+  const filtered = keys.filter((k) => k && k !== "all");
+  if (filtered.length === 0) {
+    return {
+      emails: [],
+      phones: [],
+      label: "segments: (none)",
+      segment_tag: "segments:",
+      target_tags: [],
+    };
+  }
+
+  q = q.overlaps("tags", filtered);
   const { data } = await q;
   const rows = (data as { email: string; phone: string | null }[]) ?? [];
   return {
     emails: rows.map((r) => r.email).filter(Boolean),
     phones: rows.map((r) => r.phone || "").filter(Boolean),
-    label: key,
-    segment_tag: key,
-    target_tags: null,
+    label: `segments: ${filtered.join(", ")}`,
+    segment_tag: `segments:${filtered.join(",")}`,
+    target_tags: filtered,
   };
 }
 

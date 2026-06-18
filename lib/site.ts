@@ -1,6 +1,10 @@
 export const siteConfig = {
-  name: "Healthy & Confident",
+  /** Primary name for SEO and Google (how people search). */
   brand: "Vessie Ney",
+  /** Program / site tagline shown under the name. */
+  tagline: "Healthy & Confident",
+  /** @deprecated Use brand — kept for templates that expect siteConfig.name */
+  name: "Vessie Ney",
   domain: "https://www.healthyandconfident.co.uk",
   email: "vessie@healthyandconfident.co.uk",
   phone: "+44 7876 565 263",

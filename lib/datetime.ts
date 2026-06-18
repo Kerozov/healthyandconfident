@@ -103,6 +103,41 @@ export function parseScheduledAt(
   return Number.isNaN(ms) ? null : new Date(ms).toISOString();
 }
 
+/** UTC ISO for N days from anchor at HH:MM in Europe/Sofia. */
+export function scheduledAtAfterDays(
+  days: number,
+  sendTime: string,
+  from?: Date,
+  timeZone = SCHEDULE_TIMEZONE,
+): string {
+  const anchor = from ? new Date(from) : new Date();
+  const parts = getZonedParts(anchor, timeZone);
+  const target = new Date(
+    wallClockInTimeZoneToUtc(
+      parts.year,
+      parts.month,
+      parts.day,
+      0,
+      0,
+      0,
+      timeZone,
+    ),
+  );
+  target.setUTCDate(target.getUTCDate() + days);
+
+  const onDay = getZonedParts(target, timeZone);
+  const [h, m] = sendTime.split(":").map((x) => Number(x) || 0);
+  return wallClockInTimeZoneToUtc(
+    onDay.year,
+    onDay.month,
+    onDay.day,
+    h,
+    m,
+    0,
+    timeZone,
+  ).toISOString();
+}
+
 /** Client: datetime-local → UTC ISO (browser local time). */
 export function datetimeLocalToIso(value: string): string | null {
   const trimmed = value.trim();

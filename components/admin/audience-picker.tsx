@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import type { AudienceInput, Segment } from "@/lib/supabase/types";
 import { previewAudience } from "@/app/(admin)/admin/actions";
 import { Field, Select } from "@/components/admin/fields";
+import { SegmentChecklist } from "@/components/admin/segment-checklist";
 import { cn } from "@/lib/utils";
 
 const EMPTY_AUDIENCE: AudienceInput = {
   mode: "segment",
   segment_key: "all",
+  segment_keys: [],
   tags: [],
   locale: "",
 };
@@ -96,18 +98,46 @@ export function AudiencePicker({
       </div>
 
       {value.mode === "segment" ? (
-        <Field label="Segment" hint="Named audience from your segments list.">
-          <Select
-            value={value.segment_key || "all"}
-            onChange={(e) => onChange({ ...value, segment_key: e.target.value })}
+        <div className="space-y-3">
+          <Field
+            label="All subscribers"
+            hint="Send to everyone subscribed (ignores segment checkboxes below)."
           >
-            {segments.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={
+                  value.segment_keys?.length === 0 &&
+                  (value.segment_key === "all" || !value.segment_key)
+                }
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    onChange({ ...value, segment_key: "all", segment_keys: [] });
+                  } else {
+                    onChange({ ...value, segment_key: "", segment_keys: [] });
+                  }
+                }}
+              />
+              Include all subscribers
+            </label>
+          </Field>
+          <Field
+            label="Segments"
+            hint="Pick one or more — anyone in at least one selected segment receives the campaign (OR)."
+          >
+            <SegmentChecklist
+              segments={segments}
+              selected={value.segment_keys ?? []}
+              onChange={(segment_keys) =>
+                onChange({
+                  ...value,
+                  segment_key: segment_keys.length ? segment_keys[0] : "all",
+                  segment_keys,
+                })
+              }
+            />
+          </Field>
+        </div>
       ) : (
         <Field
           label="Tags"

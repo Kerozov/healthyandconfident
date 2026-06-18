@@ -69,7 +69,7 @@ export default async function BlogPostPage({
     author: { "@type": "Person", name: post.author },
     publisher: {
       "@type": "Organization",
-      name: siteConfig.name,
+      name: siteConfig.brand,
       logo: {
         "@type": "ImageObject",
         url: `${siteConfig.domain}/icon.png`,

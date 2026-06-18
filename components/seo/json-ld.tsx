@@ -18,7 +18,8 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
     {
       "@type": "ProfessionalService",
       "@id": `${siteConfig.domain}/#business`,
-      name: siteConfig.name,
+      name: siteConfig.brand,
+      alternateName: siteConfig.tagline,
       description: dict.meta.description,
       url,
       email: siteConfig.email,
@@ -39,7 +40,8 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
       "@type": "WebSite",
       "@id": `${siteConfig.domain}/#website`,
       url: siteConfig.domain,
-      name: siteConfig.name,
+      name: siteConfig.brand,
+      alternateName: siteConfig.tagline,
       inLanguage: locale === "bg" ? "bg" : "en-GB",
     },
     {

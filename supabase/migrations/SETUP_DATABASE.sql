@@ -1,11 +1,12 @@
 -- ═══════════════════════════════════════════════════════════════
 -- Healthy & Confident — FULL database setup (fresh Supabase project)
 -- Run this ONCE in Supabase SQL Editor if you have NO tables yet.
+-- Already have 001_init? Use RUN_PENDING_MIGRATIONS.sql instead.
 -- ═══════════════════════════════════════════════════════════════
 
 create extension if not exists "pgcrypto";
 
--- Blog
+-- ── Blog ───────────────────────────────────────────────────────
 create table if not exists public.blog_posts (
   id              uuid primary key default gen_random_uuid(),
   locale          text not null check (locale in ('bg', 'en')),
@@ -30,7 +31,7 @@ create table if not exists public.blog_posts (
 create index if not exists blog_posts_locale_status_idx
   on public.blog_posts (locale, status, published_at desc);
 
--- Subscribers
+-- ── Subscribers ────────────────────────────────────────────────
 create table if not exists public.subscribers (
   id          uuid primary key default gen_random_uuid(),
   email       text not null,
@@ -50,7 +51,7 @@ create table if not exists public.subscribers (
 create index if not exists subscribers_status_idx on public.subscribers (status);
 create index if not exists subscribers_tags_idx on public.subscribers using gin (tags);
 
--- Segments
+-- ── Segments ───────────────────────────────────────────────────
 create table if not exists public.segments (
   id          uuid primary key default gen_random_uuid(),
   key         text not null unique,
@@ -66,7 +67,7 @@ insert into public.segments (key, name, description) values
   ('diabetes', 'Type 2 Diabetes', 'Diabetes remission audience')
 on conflict (key) do nothing;
 
--- Popup
+-- ── Popup ──────────────────────────────────────────────────────
 create table if not exists public.popup_config (
   id              uuid primary key default gen_random_uuid(),
   locale          text not null unique check (locale in ('bg', 'en')),
@@ -95,7 +96,7 @@ values
    'Done! Check your inbox. 🎉')
 on conflict (locale) do nothing;
 
--- Automated emails (registration, purchase)
+-- ── Legacy automated_emails (optional — superseded by automations) ──
 create table if not exists public.automated_emails (
   id         uuid primary key default gen_random_uuid(),
   trigger    text not null check (trigger in ('registration', 'purchase')),
@@ -118,58 +119,66 @@ insert into public.automated_emails (trigger, locale, enabled, subject, html) va
    '<h1>Hi {{name}}!</h1><p>We received your order.</p>')
 on conflict (trigger, locale) do nothing;
 
--- Automations (email + SMS rules)
+-- ── Automations (email + SMS rules) ────────────────────────────
 create table if not exists public.automations (
-  id                          uuid primary key default gen_random_uuid(),
-  name                        text not null,
-  channel                     text not null check (channel in ('email', 'sms')),
-  trigger_event               text not null check (trigger_event in (
+  id                   uuid primary key default gen_random_uuid(),
+  name                 text not null,
+  channel              text not null check (channel in ('email', 'sms')),
+  trigger_event        text not null check (trigger_event in (
     'registration', 'purchase', 'new_subscriber'
   )),
-  enabled                     boolean not null default false,
-  segment_keys                text[] not null default '{}',
-  new_subscribers_only        boolean not null default true,
-  after_automation_id         uuid references public.automations(id) on delete set null,
-  delay_days                  int not null default 0,
-  subject_bg                  text not null default '',
-  html_bg                     text not null default '',
-  subject_en                  text not null default '',
-  html_en                     text not null default '',
-  sms_bg                      text not null default '',
-  sms_en                      text not null default '',
-  sort_order                  int not null default 0,
-  created_at                  timestamptz not null default now(),
-  updated_at                  timestamptz not null default now()
+  enabled              boolean not null default false,
+  segment_keys         text[] not null default '{}',
+  new_subscribers_only boolean not null default true,
+  after_automation_id  uuid references public.automations(id) on delete set null,
+  delay_days           int not null default 0,
+  send_time            text not null default '09:00',
+  subject_bg           text not null default '',
+  html_bg              text not null default '',
+  subject_en           text not null default '',
+  html_en              text not null default '',
+  sms_bg               text not null default '',
+  sms_en               text not null default '',
+  sort_order           int not null default 0,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
 );
 
 create table if not exists public.automation_deliveries (
-  id              uuid primary key default gen_random_uuid(),
-  automation_id   uuid not null references public.automations(id) on delete cascade,
-  subscriber_id   uuid references public.subscribers(id) on delete set null,
-  email           text not null,
-  phone           text,
-  channel         text not null check (channel in ('email', 'sms')),
-  status          text not null default 'sent' check (status in ('scheduled', 'sent', 'failed', 'skipped', 'canceled')),
-  worker_job_id   text,
-  error           text,
-  scheduled_for   timestamptz,
-  sent_at         timestamptz not null default now(),
+  id               uuid primary key default gen_random_uuid(),
+  automation_id    uuid not null references public.automations(id) on delete cascade,
+  subscriber_id    uuid references public.subscribers(id) on delete set null,
+  email            text not null,
+  phone            text,
+  channel          text not null check (channel in ('email', 'sms')),
+  status           text not null default 'sent' check (status in (
+    'scheduled', 'sent', 'failed', 'skipped', 'canceled'
+  )),
+  worker_job_id    text,
+  error            text,
+  scheduled_for    timestamptz,
+  sent_at          timestamptz not null default now(),
   recipient_status text,
-  opened_at       timestamptz,
-  delivered_at    timestamptz,
-  last_synced_at  timestamptz,
+  opened_at        timestamptz,
+  delivered_at     timestamptz,
+  last_synced_at   timestamptz,
   unique (automation_id, email)
 );
 
 create index if not exists automation_deliveries_automation_idx
   on public.automation_deliveries (automation_id, sent_at desc);
 
+create index if not exists automation_deliveries_status_idx
+  on public.automation_deliveries (automation_id, status);
+
 insert into public.automations (
   name, channel, trigger_event, enabled, new_subscribers_only,
   subject_bg, html_bg, subject_en, html_en, sort_order
-) values
+)
+select * from (values
   (
-    'Welcome after signup', 'email', 'registration', false, true,
+    'Welcome after signup'::text, 'email'::text, 'new_subscriber'::text,
+    false, true,
     'Добре дошла, {{name}}!',
     '<h1>Здравей, {{name}}!</h1><p>Благодарим ти, че се регистрира при нас.</p>',
     'Welcome, {{name}}!',
@@ -177,15 +186,19 @@ insert into public.automations (
     10
   ),
   (
-    'Thank you after purchase', 'email', 'purchase', false, false,
+    'Thank you after purchase', 'email', 'purchase',
+    false, false,
     'Благодарим за покупката, {{name}}!',
     '<h1>Здравей, {{name}}!</h1><p>Получихме поръчката ти.</p>',
     'Thank you for your purchase, {{name}}!',
     '<h1>Hi {{name}}!</h1><p>We received your order.</p>',
     20
-  );
+  )
+) as v(name, channel, trigger_event, enabled, new_subscribers_only,
+       subject_bg, html_bg, subject_en, html_en, sort_order)
+where not exists (select 1 from public.automations limit 1);
 
--- Email campaigns (full schema)
+-- ── Email campaigns ────────────────────────────────────────────
 create table if not exists public.email_campaigns (
   id                   uuid primary key default gen_random_uuid(),
   subject              text not null,
@@ -217,32 +230,11 @@ create table if not exists public.email_campaigns (
 
 create index if not exists email_campaigns_created_idx
   on public.email_campaigns (created_at desc);
+
 create index if not exists email_campaigns_parent_idx
   on public.email_campaigns (parent_campaign_id);
 
--- Upgrade existing email_campaigns (if 001 ran before SETUP)
-alter table public.email_campaigns
-  add column if not exists sent_count int not null default 0,
-  add column if not exists failed_count int not null default 0,
-  add column if not exists opened_count int not null default 0,
-  add column if not exists delivered_count int not null default 0,
-  add column if not exists not_opened_count int not null default 0,
-  add column if not exists bounced_count int not null default 0,
-  add column if not exists total_count int not null default 0,
-  add column if not exists last_synced_at timestamptz,
-  add column if not exists target_tags text[],
-  add column if not exists parent_campaign_id uuid;
-
-alter table public.email_campaigns
-  drop constraint if exists email_campaigns_status_check;
-alter table public.email_campaigns
-  add constraint email_campaigns_status_check
-  check (status in (
-    'draft', 'queued', 'sending', 'sent', 'scheduled',
-    'failed', 'partial', 'canceled'
-  ));
-
--- SMS campaigns (log + worker job ref — delivery stats live in worker)
+-- ── SMS campaigns ────────────────────────────────────────────────
 create table if not exists public.sms_campaigns (
   id               uuid primary key default gen_random_uuid(),
   message          text not null,
@@ -263,26 +255,7 @@ create table if not exists public.sms_campaigns (
 create index if not exists sms_campaigns_scheduled_idx
   on public.sms_campaigns (scheduled_at desc nulls last);
 
--- Upgrade old sms_campaigns tables (001 had fewer status values)
-alter table public.sms_campaigns
-  add column if not exists scheduled_at timestamptz;
-
-alter table public.sms_campaigns
-  add column if not exists sent_count int not null default 0;
-
-alter table public.sms_campaigns
-  add column if not exists failed_count int not null default 0;
-
-alter table public.sms_campaigns
-  drop constraint if exists sms_campaigns_status_check;
-
-alter table public.sms_campaigns
-  add constraint sms_campaigns_status_check
-  check (status in (
-    'draft', 'queued', 'scheduled', 'sending', 'sent', 'failed', 'partial', 'canceled'
-  ));
-
--- updated_at trigger
+-- ── updated_at triggers ────────────────────────────────────────
 create or replace function public.set_updated_at()
 returns trigger as $$
 begin
@@ -299,5 +272,10 @@ drop trigger if exists subscribers_updated_at on public.subscribers;
 create trigger subscribers_updated_at before update on public.subscribers
   for each row execute function public.set_updated_at();
 
--- Done
+drop trigger if exists automations_updated_at on public.automations;
+create trigger automations_updated_at before update on public.automations
+  for each row execute function public.set_updated_at();
+
+notify pgrst, 'reload schema';
+
 select 'Setup complete' as result;

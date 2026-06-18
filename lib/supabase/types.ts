@@ -82,6 +82,8 @@ export type Automation = {
   new_subscribers_only: boolean;
   after_automation_id: string | null;
   delay_days: number;
+  /** Local send time (Europe/Sofia) on the target day, HH:MM */
+  send_time: string;
   subject_bg: string;
   html_bg: string;
   subject_en: string;
@@ -163,7 +165,10 @@ export type AudienceMode = "segment" | "tags";
 
 export type AudienceInput = {
   mode: AudienceMode;
+  /** @deprecated Use segment_keys */
   segment_key?: string;
+  /** One or more segments (OR) — subscriber must match at least one. */
+  segment_keys?: string[];
   tags?: string[];
   locale?: "bg" | "en" | "";
 };

@@ -203,6 +203,7 @@ const EMPTY_FORM = {
   new_subscribers_only: true,
   after_automation_id: "" as string,
   delay_days: 0,
+  send_time: "09:00",
   subject_bg: "",
   html_bg: "",
   subject_en: "",
@@ -222,6 +223,7 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     new_subscribers_only: a.new_subscribers_only,
     after_automation_id: a.after_automation_id ?? "",
     delay_days: a.delay_days ?? 0,
+    send_time: a.send_time ?? "09:00",
     subject_bg: a.subject_bg,
     html_bg: a.html_bg,
     subject_en: a.subject_en,
@@ -539,22 +541,36 @@ export function AutomationsManager({
               </Select>
             </Field>
 
-            <Field
-              label="Delay (days)"
-              hint="0 = send immediately. With a prerequisite, days are counted after that automation."
-            >
-              <Input
-                type="number"
-                min={0}
-                value={form.delay_days}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    delay_days: Math.max(0, Number(e.target.value) || 0),
-                  })
-                }
-              />
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Delay (days)"
+                hint="0 = on trigger day at the send time below (or immediately if that time passed)."
+              >
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.delay_days}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      delay_days: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                />
+              </Field>
+              <Field
+                label="Send time"
+                hint="Europe/Sofia — on the target day after the delay."
+              >
+                <Input
+                  type="time"
+                  value={form.send_time}
+                  onChange={(e) =>
+                    setForm({ ...form, send_time: e.target.value || "09:00" })
+                  }
+                />
+              </Field>
+            </div>
 
             {form.channel === "email" ? (
               <div className="grid gap-6 xl:grid-cols-2">
@@ -697,6 +713,7 @@ export function AutomationsManager({
                         "…"
                       }`}
                     {(a.delay_days ?? 0) > 0 && ` · +${a.delay_days} days`}
+                    {a.send_time && a.send_time !== "09:00" && ` · ${a.send_time}`}
                   </p>
                   {a.last_synced_at && (
                     <p className="mt-0.5 text-xs text-ink-soft/70">

@@ -72,7 +72,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           <p>
             © {new Date().getFullYear()} {siteConfig.brand}. {dict.footer.rights}
           </p>
-          <p>{siteConfig.brand} · {siteConfig.name}</p>
+          <p>{siteConfig.brand} · {siteConfig.tagline}</p>
         </div>
       </Container>
     </footer>

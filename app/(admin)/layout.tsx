@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
 import { geistSans, fraunces } from "@/app/fonts";
+import { siteConfig } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Admin · Healthy & Confident",
+  title: `Admin · ${siteConfig.brand}`,
   robots: { index: false, follow: false },
 };
 

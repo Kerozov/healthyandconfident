@@ -3,6 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale } from "@/lib/supabase/types";
 import { renderEmailTemplate } from "@/lib/automation/template";
+import { scheduledAtAfterDays } from "@/lib/datetime";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { sendEmail, scheduleEmail } from "@/lib/worker/email";
 import { sendSms, scheduleSms } from "@/lib/worker/sms";
@@ -37,10 +38,32 @@ function segmentMatches(automation: Automation, tags: string[]): boolean {
   return required.some((key) => tags.includes(key));
 }
 
-function sendAtAfterDays(days: number, from?: Date): string {
-  const at = from ? new Date(from) : new Date();
-  at.setUTCDate(at.getUTCDate() + days);
-  return at.toISOString();
+function sendAtAfterDays(
+  days: number,
+  sendTime: string,
+  from?: Date,
+): string {
+  return scheduledAtAfterDays(days, sendTime || "09:00", from);
+}
+
+function sendAtNowOrLaterToday(sendTime: string, from?: Date): string {
+  const now = from ? new Date(from) : new Date();
+  const scheduled = scheduledAtAfterDays(0, sendTime || "09:00", now);
+  if (new Date(scheduled).getTime() > now.getTime()) {
+    return scheduled;
+  }
+  return now.toISOString();
+}
+
+function computeAutomationSendAt(
+  delayDays: number,
+  sendTime: string,
+  from?: Date,
+): string {
+  if (delayDays > 0) {
+    return sendAtAfterDays(delayDays, sendTime, from);
+  }
+  return sendAtNowOrLaterToday(sendTime, from);
 }
 
 function idempotencyKey(automationId: string, email: string): string {
@@ -112,7 +135,11 @@ async function scheduleChainedFromParent(
     const childDelay = rule.delay_days ?? 0;
     try {
       if (childDelay > 0) {
-        const sendAt = sendAtAfterDays(childDelay, parentAt);
+        const sendAt = sendAtAfterDays(
+          childDelay,
+          rule.send_time ?? "09:00",
+          parentAt,
+        );
         await scheduleAutomation(rule, ctx, sendAt);
         await scheduleChainedFromParent(rule.id, sendAt, ctx);
       } else {
@@ -290,19 +317,26 @@ async function executeAutomation(
   }
 
   const delay = automation.delay_days ?? 0;
+  const sendTime = automation.send_time ?? "09:00";
 
   try {
-    if (delay > 0) {
-      const sendAt = sendAtAfterDays(delay);
-      await scheduleAutomation(automation, ctx, sendAt);
+    const sendAt = computeAutomationSendAt(delay, sendTime);
+    const sendNow =
+      delay === 0 && new Date(sendAt).getTime() <= Date.now() + 1000;
+
+    if (sendNow) {
+      const sent = await sendAutomationNow(automation, ctx);
+      if (sent) {
+        await scheduleChainedFromParent(
+          automation.id,
+          new Date().toISOString(),
+          ctx,
+        );
+      }
       return;
     }
 
-    const sent = await sendAutomationNow(automation, ctx);
-    if (sent) {
-      const nowIso = new Date().toISOString();
-      await scheduleChainedFromParent(automation.id, nowIso, ctx);
-    }
+    await scheduleAutomation(automation, ctx, sendAt);
   } catch (err) {
     await recordDelivery({
       automationId: automation.id,

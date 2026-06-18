@@ -111,6 +111,9 @@ alter table public.automation_deliveries
   add column if not exists delivered_at timestamptz,
   add column if not exists last_synced_at timestamptz;
 
+alter table public.automations
+  add column if not exists send_time text not null default '09:00';
+
 notify pgrst, 'reload schema';
 
 select 'Upgrade complete — also run 007_automations.sql if not yet applied' as result;

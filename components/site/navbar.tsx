@@ -8,7 +8,7 @@ import type { Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { cn } from "@/lib/utils";
+import { siteConfig } from "@/lib/site";
 
 export function Navbar({
   locale,
@@ -45,12 +45,17 @@ export function Navbar({
       <Container className="flex h-18 items-center justify-between py-3">
         <Link
           href={`/${locale}`}
-          className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight"
+          className="flex items-center gap-2.5 font-display tracking-tight"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-600 text-cream">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest-600 text-cream">
             <Leaf className="h-5 w-5" />
           </span>
-          Healthy<span className="text-coral-500">&amp;</span>Confident
+          <span className="leading-tight">
+            <span className="block text-lg font-semibold">{siteConfig.brand}</span>
+            <span className="block text-[11px] font-medium uppercase tracking-wider text-ink-soft">
+              {siteConfig.tagline}
+            </span>
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-7 lg:flex">

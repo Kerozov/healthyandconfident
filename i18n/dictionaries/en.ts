@@ -2,7 +2,7 @@ import type { Dictionary } from "@/i18n/types";
 
 export const en: Dictionary = {
   meta: {
-    title: "Healthy & Confident | Holistic Nutritionist & Type 2 Diabetes Practitioner",
+    title: "Vessie Ney | Holistic Nutritionist & Type 2 Diabetes Practitioner",
     description:
       "Vessie Ney — Holistic Nutritionist (B.Med.Sc. Hons) & NHS Type 2 Diabetes Practitioner. Lasting weight loss, blood-sugar balance and diabetes remission through food, mindset and real support. 1:1 and group programs online.",
     keywords: [

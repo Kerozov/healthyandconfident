@@ -26,7 +26,7 @@ export async function generateMetadata({
     metadataBase: new URL(siteConfig.domain),
     title: {
       default: dict.meta.title,
-      template: `%s · Healthy & Confident`,
+      template: `%s · ${siteConfig.brand}`,
     },
     description: dict.meta.description,
     keywords: dict.meta.keywords,
@@ -43,7 +43,7 @@ export async function generateMetadata({
       type: "website",
       locale: locale === "bg" ? "bg_BG" : "en_GB",
       url: `${siteConfig.domain}/${locale}`,
-      siteName: siteConfig.name,
+      siteName: siteConfig.brand,
       title: dict.meta.title,
       description: dict.meta.description,
       images: [{ url: siteConfig.ogImage, width: 1200, height: 630, alt: dict.meta.ogAlt }],
