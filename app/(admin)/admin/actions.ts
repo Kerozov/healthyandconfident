@@ -94,6 +94,41 @@ export async function savePost(input: {
   return { ok: true };
 }
 
+export async function publishPost(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { data: row, error: loadError } = await supabase
+    .from("blog_posts")
+    .select("locale, slug, title")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (loadError || !row) {
+    return { ok: false, message: loadError?.message ?? "Post not found." };
+  }
+
+  const post = row as { locale: string; slug: string; title: string };
+  if (!post.title?.trim()) {
+    return { ok: false, message: "Add a title before publishing." };
+  }
+
+  const { error } = await supabase
+    .from("blog_posts")
+    .update({
+      status: "published",
+      published_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath(`/${post.locale}/blog`);
+  revalidatePath(`/${post.locale}/blog/${post.slug}`);
+  revalidatePath("/admin/blog");
+  return { ok: true };
+}
+
 export async function deletePost(id: string, locale: string): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();

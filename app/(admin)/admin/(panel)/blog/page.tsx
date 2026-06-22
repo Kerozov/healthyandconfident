@@ -3,6 +3,7 @@ import { Plus, Pencil } from "lucide-react";
 import { getPosts } from "@/lib/admin/data";
 import { formatDate } from "@/lib/utils";
 import { DeletePostButton } from "@/components/admin/delete-post-button";
+import { PublishPostButton } from "@/components/admin/publish-post-button";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,7 @@ export default async function AdminBlogList() {
                   <td className="p-4 text-ink-soft">{formatDate(p.updated_at, "en")}</td>
                   <td className="p-4">
                     <div className="flex items-center justify-end gap-1">
+                      {p.status !== "published" && <PublishPostButton id={p.id} />}
                       <Link
                         href={`/admin/blog/${p.id}`}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink"
