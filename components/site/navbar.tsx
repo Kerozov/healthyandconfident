@@ -9,6 +9,7 @@ import type { NavItem } from "@/i18n/types";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
 export function Navbar({
   locale,
