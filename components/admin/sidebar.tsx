@@ -2,17 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  Megaphone,
-  MousePointerClick,
-  Mail,
-  Leaf,
-  ExternalLink,
-  LogOut,
-} from "lucide-react";
+import { LayoutDashboard, FileText, Users, Megaphone, MousePointerClick, Mail, Leaf, ExternalLink, LogOut, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -21,6 +11,7 @@ const links = [
   { href: "/admin/subscribers", label: "Subscribers", icon: Users },
   { href: "/admin/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/admin/automations", label: "Automations", icon: Mail },
+  { href: "/admin/website", label: "Website", icon: Globe },
   { href: "/admin/popup", label: "Popup", icon: MousePointerClick },
 ];
 

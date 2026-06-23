@@ -240,6 +240,18 @@ export const en: Dictionary = {
     phoneLabel: "Mobile (Viber / WhatsApp)",
     cta: "Book a free call",
   },
+  events: {
+    eyebrow: "Events",
+    title: "Upcoming events",
+    subtitle: "Sign up for upcoming webinars, meetups and trainings.",
+    cta: "View details",
+  },
+  shop: {
+    eyebrow: "Shop",
+    title: "Buy online",
+    subtitle: "Choose a product and pay securely via Stripe.",
+    cta: "Buy now",
+  },
   footer: {
     tagline:
       "Holistic Nutritionist & NHS Diabetes Practitioner. Lasting weight loss, balanced blood sugar and confidence — from the inside out.",

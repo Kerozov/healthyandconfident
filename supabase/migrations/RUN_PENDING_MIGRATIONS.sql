@@ -114,6 +114,8 @@ alter table public.automation_deliveries
 alter table public.automations
   add column if not exists send_time text not null default '09:00';
 
+-- 012: site content + automation send_date — run 012_site_content_and_send_date.sql
+
 notify pgrst, 'reload schema';
 
 select 'Upgrade complete — also run 007_automations.sql if not yet applied' as result;

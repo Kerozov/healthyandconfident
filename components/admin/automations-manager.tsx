@@ -204,6 +204,7 @@ const EMPTY_FORM = {
   after_automation_id: "" as string,
   delay_days: 0,
   send_time: "09:00",
+  send_date: "",
   subject_bg: "",
   html_bg: "",
   subject_en: "",
@@ -224,6 +225,7 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     after_automation_id: a.after_automation_id ?? "",
     delay_days: a.delay_days ?? 0,
     send_time: a.send_time ?? "09:00",
+    send_date: a.send_date ?? "",
     subject_bg: a.subject_bg,
     html_bg: a.html_bg,
     subject_en: a.subject_en,
@@ -304,6 +306,7 @@ export function AutomationsManager({
       const payload = {
         ...form,
         after_automation_id: form.after_automation_id || null,
+        send_date: form.send_date.trim() || null,
       };
       const res =
         editingId === "new"
@@ -541,10 +544,10 @@ export function AutomationsManager({
               </Select>
             </Field>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <Field
                 label="Delay (days)"
-                hint="0 = on trigger day at the send time below (or immediately if that time passed)."
+                hint="0 = on trigger day. Ignored if fixed date is set."
               >
                 <Input
                   type="number"
@@ -560,7 +563,7 @@ export function AutomationsManager({
               </Field>
               <Field
                 label="Send time"
-                hint="Europe/Sofia — on the target day after the delay."
+                hint="Europe/Sofia — combined with delay or fixed date."
               >
                 <Input
                   type="time"
@@ -568,6 +571,16 @@ export function AutomationsManager({
                   onChange={(e) =>
                     setForm({ ...form, send_time: e.target.value || "09:00" })
                   }
+                />
+              </Field>
+              <Field
+                label="Fixed date (optional)"
+                hint="Exact calendar day for this email — e.g. event reminder."
+              >
+                <Input
+                  type="date"
+                  value={form.send_date}
+                  onChange={(e) => setForm({ ...form, send_date: e.target.value })}
                 />
               </Field>
             </div>
@@ -712,7 +725,8 @@ export function AutomationsManager({
                         automations.find((x) => x.id === a.after_automation_id)?.name ??
                         "…"
                       }`}
-                    {(a.delay_days ?? 0) > 0 && ` · +${a.delay_days} days`}
+                    {(a.delay_days ?? 0) > 0 && !a.send_date && ` · +${a.delay_days} days`}
+                    {a.send_date && ` · ${a.send_date}`}
                     {a.send_time && a.send_time !== "09:00" && ` · ${a.send_time}`}
                   </p>
                   {a.last_synced_at && (

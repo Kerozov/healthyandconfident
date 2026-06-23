@@ -181,6 +181,7 @@ type AutomationInput = {
   after_automation_id?: string | null;
   delay_days?: number;
   send_time?: string;
+  send_date?: string | null;
   subject_bg: string;
   html_bg: string;
   subject_en: string;
@@ -198,6 +199,13 @@ function normalizeSendTime(value?: string): string {
   return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
+function normalizeSendDate(value?: string | null): string | null {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? trimmed : null;
+}
+
 export async function createAutomation(
   input: AutomationInput,
 ): Promise<ActionResult & { id?: string }> {
@@ -210,6 +218,7 @@ export async function createAutomation(
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
       send_time: normalizeSendTime(input.send_time),
+      send_date: normalizeSendDate(input.send_date),
       sort_order: input.sort_order ?? 0,
     })
     .select("id")
@@ -232,6 +241,7 @@ export async function updateAutomation(
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
       send_time: normalizeSendTime(input.send_time),
+      send_date: normalizeSendDate(input.send_date),
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
@@ -1489,5 +1499,142 @@ export async function deleteSmsCampaign(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("sms_campaigns").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/campaigns");
+  return { ok: true };
+}
+
+// ── Website (events & Stripe products) ────────────────────────
+function revalidateSitePaths() {
+  revalidatePath("/admin/website");
+  revalidatePath("/bg");
+  revalidatePath("/en");
+}
+
+export async function saveSiteSection(input: {
+  key: "events" | "products";
+  enabled: boolean;
+  title_bg?: string;
+  title_en?: string;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("site_sections")
+    .update({
+      enabled: input.enabled,
+      title_bg: input.title_bg ?? "",
+      title_en: input.title_en ?? "",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("key", input.key);
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true };
+}
+
+export async function saveSiteEvent(input: {
+  id?: string;
+  title_bg: string;
+  title_en: string;
+  description_bg?: string;
+  description_en?: string;
+  url: string;
+  image_url?: string;
+  event_date?: string | null;
+  enabled?: boolean;
+  sort_order?: number;
+}): Promise<ActionResult & { id?: string }> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const row = {
+    title_bg: input.title_bg.trim(),
+    title_en: input.title_en.trim(),
+    description_bg: input.description_bg?.trim() ?? "",
+    description_en: input.description_en?.trim() ?? "",
+    url: input.url.trim(),
+    image_url: input.image_url?.trim() || null,
+    event_date: normalizeSendDate(input.event_date),
+    enabled: input.enabled ?? true,
+    sort_order: input.sort_order ?? 0,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { error } = await supabase.from("site_events").update(row).eq("id", input.id);
+    if (error) return { ok: false, message: error.message };
+    revalidateSitePaths();
+    return { ok: true, id: input.id };
+  }
+
+  const { data, error } = await supabase
+    .from("site_events")
+    .insert(row)
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function deleteSiteEvent(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("site_events").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true };
+}
+
+export async function saveSiteProduct(input: {
+  id?: string;
+  title_bg: string;
+  title_en: string;
+  description_bg?: string;
+  description_en?: string;
+  stripe_url: string;
+  price_label_bg?: string;
+  price_label_en?: string;
+  image_url?: string;
+  enabled?: boolean;
+  sort_order?: number;
+}): Promise<ActionResult & { id?: string }> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const row = {
+    title_bg: input.title_bg.trim(),
+    title_en: input.title_en.trim(),
+    description_bg: input.description_bg?.trim() ?? "",
+    description_en: input.description_en?.trim() ?? "",
+    stripe_url: input.stripe_url.trim(),
+    price_label_bg: input.price_label_bg?.trim() ?? "",
+    price_label_en: input.price_label_en?.trim() ?? "",
+    image_url: input.image_url?.trim() || null,
+    enabled: input.enabled ?? true,
+    sort_order: input.sort_order ?? 0,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { error } = await supabase.from("site_products").update(row).eq("id", input.id);
+    if (error) return { ok: false, message: error.message };
+    revalidateSitePaths();
+    return { ok: true, id: input.id };
+  }
+
+  const { data, error } = await supabase
+    .from("site_products")
+    .insert(row)
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function deleteSiteProduct(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("site_products").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
   return { ok: true };
 }

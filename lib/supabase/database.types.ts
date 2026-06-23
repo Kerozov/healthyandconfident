@@ -8,6 +8,9 @@ import type {
   AutomatedEmail,
   Automation,
   AutomationDelivery,
+  SiteSection,
+  SiteEvent,
+  SiteProduct,
 } from "@/lib/supabase/types";
 
 type TableShape<Row> = {
@@ -29,6 +32,9 @@ export type Database = {
       automated_emails: TableShape<AutomatedEmail>;
       automations: TableShape<Automation>;
       automation_deliveries: TableShape<AutomationDelivery>;
+      site_sections: TableShape<SiteSection>;
+      site_events: TableShape<SiteEvent>;
+      site_products: TableShape<SiteProduct>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

@@ -103,6 +103,28 @@ export function parseScheduledAt(
   return Number.isNaN(ms) ? null : new Date(ms).toISOString();
 }
 
+/** UTC ISO for a calendar date at HH:MM in Europe/Sofia. */
+export function scheduledAtOnDate(
+  date: string,
+  sendTime: string,
+  timeZone = SCHEDULE_TIMEZONE,
+): string {
+  const match = date.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    throw new Error(`Invalid send_date: ${date}`);
+  }
+  const [h, m] = sendTime.split(":").map((x) => Number(x) || 0);
+  return wallClockInTimeZoneToUtc(
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+    h,
+    m,
+    0,
+    timeZone,
+  ).toISOString();
+}
+
 /** UTC ISO for N days from anchor at HH:MM in Europe/Sofia. */
 export function scheduledAtAfterDays(
   days: number,

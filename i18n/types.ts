@@ -110,6 +110,18 @@ export type Dictionary = {
     phoneLabel: string;
     cta: string;
   };
+  events: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    cta: string;
+  };
+  shop: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    cta: string;
+  };
   footer: {
     tagline: string;
     rights: string;

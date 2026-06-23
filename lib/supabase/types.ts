@@ -84,6 +84,8 @@ export type Automation = {
   delay_days: number;
   /** Local send time (Europe/Sofia) on the target day, HH:MM */
   send_time: string;
+  /** Optional fixed calendar date — overrides delay_days when set */
+  send_date: string | null;
   subject_bg: string;
   html_bg: string;
   subject_en: string;
@@ -197,4 +199,45 @@ export type SmsCampaign = {
   sent_at: string | null;
   error: string | null;
   created_at: string;
+};
+
+export type SiteSectionKey = "events" | "products";
+
+export type SiteSection = {
+  key: SiteSectionKey;
+  enabled: boolean;
+  title_bg: string;
+  title_en: string;
+  updated_at: string;
+};
+
+export type SiteEvent = {
+  id: string;
+  title_bg: string;
+  title_en: string;
+  description_bg: string;
+  description_en: string;
+  url: string;
+  image_url: string | null;
+  event_date: string | null;
+  enabled: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SiteProduct = {
+  id: string;
+  title_bg: string;
+  title_en: string;
+  description_bg: string;
+  description_en: string;
+  stripe_url: string;
+  price_label_bg: string;
+  price_label_en: string;
+  image_url: string | null;
+  enabled: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 };
