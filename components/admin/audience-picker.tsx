@@ -122,8 +122,8 @@ export function AudiencePicker({
             </label>
           </Field>
           <Field
-            label="Segments"
-            hint="Pick one or more — anyone in at least one selected segment receives the campaign (OR)."
+            label="Сегменти"
+            hint="Изберете една или повече групи. Родителска група включва автоматично всички подгрупи (OR между избраните)."
           >
             <SegmentChecklist
               segments={segments}

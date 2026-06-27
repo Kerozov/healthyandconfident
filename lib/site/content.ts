@@ -2,39 +2,23 @@ import "server-only";
 
 import { getPublicClient } from "@/lib/supabase/public";
 import { getAdminClient } from "@/lib/supabase/admin";
-import type { SiteEvent, SiteProduct, SiteSection, SiteSectionKey } from "@/lib/supabase/types";
+import type { SiteEvent, SiteProduct, SiteSection, SiteCtaPlacement } from "@/lib/supabase/types";
+import { mergeSiteSections, type SiteContent } from "@/lib/site/defaults";
 
-export type SiteContent = {
-  sections: Record<string, SiteSection>;
-  events: SiteEvent[];
-  products: SiteProduct[];
-  dbReady: boolean;
-  dbError?: string;
-};
+export type { SiteContent };
 
-export const DEFAULT_SITE_SECTIONS: Record<SiteSectionKey, SiteSection> = {
-  events: {
-    key: "events",
-    enabled: false,
-    title_bg: "Предстоящи събития",
-    title_en: "Upcoming events",
-    updated_at: new Date().toISOString(),
-  },
-  products: {
-    key: "products",
-    enabled: false,
-    title_bg: "Продукти",
-    title_en: "Products",
-    updated_at: new Date().toISOString(),
-  },
-};
+function indexOffers(products: SiteProduct[]): Record<string, SiteProduct> {
+  return Object.fromEntries(products.map((p) => [p.id, p]));
+}
 
-function mergeSections(rows: SiteSection[]): Record<string, SiteSection> {
-  const map = { ...DEFAULT_SITE_SECTIONS };
-  for (const row of rows) {
-    map[row.key as SiteSectionKey] = row;
-  }
-  return map;
+function indexPlacements(rows: SiteCtaPlacement[]): Record<string, SiteCtaPlacement> {
+  return Object.fromEntries(rows.map((p) => [p.key, p]));
+}
+
+export async function getCtaPlacements(): Promise<SiteCtaPlacement[]> {
+  const supabase = getPublicClient();
+  const { data } = await supabase.from("site_cta_placements").select("*").order("key");
+  return (data as SiteCtaPlacement[]) ?? [];
 }
 
 export async function getSiteSections(): Promise<SiteSection[]> {
@@ -68,25 +52,29 @@ export async function getSiteProducts(includeDisabled = false): Promise<SiteProd
 }
 
 export async function getPublicSiteContent(): Promise<SiteContent> {
-  const [sections, events, products] = await Promise.all([
+  const [sections, events, products, placements] = await Promise.all([
     getSiteSections(),
     getSiteEvents(),
     getSiteProducts(),
+    getCtaPlacements(),
   ]);
 
-  const sectionMap = mergeSections(sections);
+  const sectionMap = mergeSiteSections(sections);
+  const offersById = indexOffers(products);
 
   return {
     sections: sectionMap,
     events: sectionMap.events?.enabled ? events : [],
     products: sectionMap.products?.enabled ? products : [],
+    offersById,
+    ctaPlacements: indexPlacements(placements),
     dbReady: true,
   };
 }
 
 export async function getAdminSiteContent(): Promise<SiteContent> {
   const supabase = getAdminClient();
-  const [sectionsRes, eventsRes, productsRes] = await Promise.all([
+  const [sectionsRes, eventsRes, productsRes, placementsRes] = await Promise.all([
     supabase.from("site_sections").select("*").order("key"),
     supabase
       .from("site_events")
@@ -98,17 +86,23 @@ export async function getAdminSiteContent(): Promise<SiteContent> {
       .select("*")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
+    supabase.from("site_cta_placements").select("*").order("key"),
   ]);
 
   const dbError =
     sectionsRes.error?.message ??
     eventsRes.error?.message ??
-    productsRes.error?.message;
+    productsRes.error?.message ??
+    placementsRes.error?.message;
+
+  const products = (productsRes.data as SiteProduct[]) ?? [];
 
   return {
-    sections: mergeSections((sectionsRes.data as SiteSection[]) ?? []),
+    sections: mergeSiteSections((sectionsRes.data as SiteSection[]) ?? []),
     events: (eventsRes.data as SiteEvent[]) ?? [],
-    products: (productsRes.data as SiteProduct[]) ?? [],
+    products,
+    offersById: indexOffers(products),
+    ctaPlacements: indexPlacements((placementsRes.data as SiteCtaPlacement[]) ?? []),
     dbReady: !dbError,
     dbError,
   };

@@ -11,6 +11,7 @@ import {
   importSubscribers,
 } from "@/app/(admin)/admin/actions";
 import { SegmentChecklist, assignableSegments, mergeTags, parseTagList } from "@/components/admin/segment-checklist";
+import { expandSegmentKeys, flattenSegmentTreeWithDepth } from "@/lib/segments/hierarchy";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
 import {
   exportSubscribersCsv,
@@ -61,14 +62,16 @@ export function SubscribersManager({
   const [importNote, setImportNote] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
+    const expandedTags =
+      tagFilter !== "all" ? expandSegmentKeys([tagFilter], segments) : null;
     return subscribers.filter((s) => {
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
-      if (tagFilter !== "all" && !s.tags.includes(tagFilter)) return false;
+      if (expandedTags && !s.tags.some((t) => expandedTags.includes(t))) return false;
       if (search && !s.email.toLowerCase().includes(search.toLowerCase()))
         return false;
       return true;
     });
-  }, [subscribers, statusFilter, tagFilter, search]);
+  }, [subscribers, statusFilter, tagFilter, search, segments]);
 
   const segmentKeySet = useMemo(
     () => new Set(assignableSegments(segments).map((s) => s.key)),
@@ -426,10 +429,10 @@ export function SubscribersManager({
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Segment">
             <Select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
-              <option value="all">All segments</option>
-              {segments.map((s) => (
+              <option value="all">Всички сегменти</option>
+              {flattenSegmentTreeWithDepth(segments).map(({ segment: s, depth }) => (
                 <option key={s.key} value={s.key}>
-                  {s.name}
+                  {`${"— ".repeat(depth)}${s.name}`}
                 </option>
               ))}
             </Select>

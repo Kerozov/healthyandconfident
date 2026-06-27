@@ -1,7 +1,8 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import type { Automation, AutomationTrigger, Locale } from "@/lib/supabase/types";
+import type { Automation, AutomationTrigger, Locale, Segment } from "@/lib/supabase/types";
+import { expandSegmentKeys } from "@/lib/segments/hierarchy";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { scheduledAtAfterDays, scheduledAtOnDate } from "@/lib/datetime";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
@@ -32,10 +33,15 @@ function resolveTriggerEvents(
   return events;
 }
 
-function segmentMatches(automation: Automation, tags: string[]): boolean {
+function segmentMatches(
+  automation: Automation,
+  tags: string[],
+  segments: Segment[],
+): boolean {
   const required = automation.segment_keys.filter(Boolean);
   if (required.length === 0) return true;
-  return required.some((key) => tags.includes(key));
+  const expanded = expandSegmentKeys(required, segments);
+  return expanded.some((key) => tags.includes(key));
 }
 
 function sendAtAfterDays(
@@ -131,6 +137,9 @@ async function scheduleChainedFromParent(
   ctx: AutomationRunContext,
 ): Promise<void> {
   const supabase = getAdminClient();
+  const { data: segmentRows } = await supabase.from("segments").select("*");
+  const segments = (segmentRows as Segment[]) ?? [];
+
   const { data } = await supabase
     .from("automations")
     .select("*")
@@ -141,7 +150,7 @@ async function scheduleChainedFromParent(
   for (const rule of (data as Automation[]) ?? []) {
     const email = ctx.email.trim().toLowerCase();
     if (rule.new_subscribers_only && !ctx.isNew) continue;
-    if (!segmentMatches(rule, ctx.tags ?? [])) continue;
+    if (!segmentMatches(rule, ctx.tags ?? [], segments)) continue;
     if (await alreadyQueuedOrSent(rule.id, email)) continue;
     const childDelay = rule.delay_days ?? 0;
     try {
@@ -311,13 +320,14 @@ async function sendAutomationNow(
 async function executeAutomation(
   automation: Automation,
   ctx: AutomationRunContext,
+  segments: Segment[],
   opts?: { fromChain?: boolean },
 ): Promise<void> {
   const email = ctx.email.trim().toLowerCase();
   const tags = ctx.tags ?? [];
 
   if (automation.new_subscribers_only && !ctx.isNew) return;
-  if (!segmentMatches(automation, tags)) return;
+  if (!segmentMatches(automation, tags, segments)) return;
   if (await alreadyQueuedOrSent(automation.id, email)) return;
 
   if (automation.after_automation_id) {
@@ -371,22 +381,26 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
   if (events.length === 0) return;
 
   const supabase = getAdminClient();
-  const { data, error } = await supabase
-    .from("automations")
-    .select("*")
-    .eq("enabled", true)
-    .in("trigger_event", events)
-    .order("sort_order", { ascending: true });
+  const [{ data, error }, { data: segmentRows }] = await Promise.all([
+    supabase
+      .from("automations")
+      .select("*")
+      .eq("enabled", true)
+      .in("trigger_event", events)
+      .order("sort_order", { ascending: true }),
+    supabase.from("segments").select("*"),
+  ]);
 
   if (error) {
     console.error("[automation] load rules:", error.message);
     return;
   }
 
+  const segments = (segmentRows as Segment[]) ?? [];
   const rules = (data as Automation[]) ?? [];
   for (const rule of rules) {
     try {
-      await executeAutomation(rule, ctx);
+      await executeAutomation(rule, ctx, segments);
     } catch (err) {
       console.error(`[automation] rule ${rule.id}:`, err);
     }

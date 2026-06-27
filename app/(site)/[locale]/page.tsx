@@ -28,22 +28,27 @@ export default async function HomePage({
   const [dict, site] = await Promise.all([getDictionary(l), getPublicSiteContent()]);
   const eventsSection = site.sections.events;
   const productsSection = site.sections.products;
+  const offerProps = {
+    placements: site.ctaPlacements,
+    offersById: site.offersById,
+  };
 
   return (
     <>
       <HomeJsonLd dict={dict} locale={l} />
-      <Hero dict={dict} locale={l} />
+      <Hero dict={dict} locale={l} {...offerProps} />
       <Marquee locale={l} />
       <Problems dict={dict} />
       <Method dict={dict} />
       <Outcomes dict={dict} />
-      <Programs dict={dict} locale={l} />
+      <Programs dict={dict} locale={l} {...offerProps} />
       {eventsSection && site.events.length > 0 && (
         <EventsSection
           dict={dict}
           locale={l}
           section={eventsSection}
           events={site.events}
+          offersById={site.offersById}
         />
       )}
       {productsSection && site.products.length > 0 && (
@@ -54,11 +59,11 @@ export default async function HomePage({
           products={site.products}
         />
       )}
-      <About dict={dict} locale={l} />
+      <About dict={dict} locale={l} {...offerProps} />
       <Testimonials dict={dict} />
       <LeadMagnet dict={dict} locale={l} />
       <Faq dict={dict} />
-      <Contact dict={dict} />
+      <Contact dict={dict} locale={l} {...offerProps} />
     </>
   );
 }

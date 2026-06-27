@@ -21,7 +21,8 @@ import { getAutomationDeliveries } from "@/lib/admin/automations-data";
 import type { Automation, AutomationDelivery } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
-import type { AudienceInput, CampaignStatus, SmsCampaignStatus } from "@/lib/supabase/types";
+import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment } from "@/lib/supabase/types";
+import { expandSegmentKeys, isDescendantOf } from "@/lib/segments/hierarchy";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string };
 
@@ -622,6 +623,7 @@ export async function createSegment(input: {
   key: string;
   name: string;
   description?: string;
+  parent_id?: string | null;
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -630,16 +632,91 @@ export async function createSegment(input: {
     return { ok: false, message: "Invalid segment key." };
   }
 
+  let parentId: string | null = input.parent_id?.trim() || null;
+  if (parentId) {
+    const { data: parent } = await supabase
+      .from("segments")
+      .select("id, key")
+      .eq("id", parentId)
+      .maybeSingle();
+    if (!parent) return { ok: false, message: "Parent segment not found." };
+    if ((parent as { key: string }).key === "all") {
+      return { ok: false, message: '"all" cannot be a parent segment.' };
+    }
+  } else {
+    parentId = null;
+  }
+
   const { error } = await supabase.from("segments").insert({
     key,
     name: input.name.trim(),
     description: input.description?.trim() || null,
+    parent_id: parentId,
   });
   if (error) return { ok: false, message: error.message };
 
   revalidatePath("/admin/subscribers");
   revalidatePath("/admin/campaigns");
   return { ok: true, message: `Segment "${input.name}" created.` };
+}
+
+export async function updateSegment(input: {
+  id: string;
+  name?: string;
+  description?: string | null;
+  parent_id?: string | null;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("segments")
+    .select("*")
+    .eq("id", input.id)
+    .maybeSingle();
+  const segment = row as Segment | null;
+  if (!segment) return { ok: false, message: "Segment not found." };
+  if (segment.key === "all") {
+    return { ok: false, message: 'The "all" segment cannot be edited.' };
+  }
+
+  const patch: Partial<Pick<Segment, "name" | "description" | "parent_id">> = {};
+  if (input.name !== undefined) patch.name = input.name.trim();
+  if (input.description !== undefined) {
+    patch.description = input.description?.trim() || null;
+  }
+  if (input.parent_id !== undefined) {
+    const parentId = input.parent_id?.trim() || null;
+    if (parentId === input.id) {
+      return { ok: false, message: "A segment cannot be its own parent." };
+    }
+    if (parentId) {
+      const { data: allRows } = await supabase.from("segments").select("*");
+      const all = (allRows as Segment[]) ?? [];
+      if (!all.some((s) => s.id === parentId)) {
+        return { ok: false, message: "Parent segment not found." };
+      }
+      if (isDescendantOf(parentId, input.id, all)) {
+        return { ok: false, message: "Cannot nest a segment under its own subgroup." };
+      }
+      const parent = all.find((s) => s.id === parentId);
+      if (parent?.key === "all") {
+        return { ok: false, message: '"all" cannot be a parent segment.' };
+      }
+    }
+    patch.parent_id = parentId;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return { ok: true };
+  }
+
+  const { error } = await supabase.from("segments").update(patch).eq("id", input.id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin/subscribers");
+  revalidatePath("/admin/campaigns");
+  return { ok: true };
 }
 
 export async function deleteSegment(id: string): Promise<ActionResult> {
@@ -727,7 +804,10 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
     };
   }
 
-  const filtered = keys.filter((k) => k && k !== "all");
+  const { data: segmentRows } = await supabase.from("segments").select("*");
+  const allSegments = (segmentRows as Segment[]) ?? [];
+  const rawKeys = keys.filter((k) => k && k !== "all");
+  const filtered = expandSegmentKeys(rawKeys, allSegments);
   if (filtered.length === 0) {
     return {
       emails: [],
@@ -738,13 +818,17 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
     };
   }
 
+  const nameByKey = new Map(allSegments.map((s) => [s.key, s.name]));
+  const labelParts = rawKeys.map((k) => nameByKey.get(k) ?? k);
+  const includesSubgroups = filtered.length > rawKeys.length;
+
   q = q.overlaps("tags", filtered);
   const { data } = await q;
   const rows = (data as { email: string; phone: string | null }[]) ?? [];
   return {
     emails: rows.map((r) => r.email).filter(Boolean),
     phones: rows.map((r) => r.phone || "").filter(Boolean),
-    label: `segments: ${filtered.join(", ")}`,
+    label: `segments: ${labelParts.join(", ")}${includesSubgroups ? " (вкл. подгрупи)" : ""}`,
     segment_tag: `segments:${filtered.join(",")}`,
     target_tags: filtered,
   };
@@ -1541,6 +1625,10 @@ export async function saveSiteEvent(input: {
   url: string;
   image_url?: string;
   event_date?: string | null;
+  offer_id?: string | null;
+  offer_headline_bg?: string;
+  offer_headline_en?: string;
+  offer_enabled?: boolean;
   enabled?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
@@ -1554,6 +1642,10 @@ export async function saveSiteEvent(input: {
     url: input.url.trim(),
     image_url: input.image_url?.trim() || null,
     event_date: normalizeSendDate(input.event_date),
+    offer_id: input.offer_id || null,
+    offer_headline_bg: input.offer_headline_bg?.trim() ?? "",
+    offer_headline_en: input.offer_headline_en?.trim() ?? "",
+    offer_enabled: input.offer_enabled ?? false,
     enabled: input.enabled ?? true,
     sort_order: input.sort_order ?? 0,
     updated_at: new Date().toISOString(),
@@ -1595,6 +1687,11 @@ export async function saveSiteProduct(input: {
   price_label_bg?: string;
   price_label_en?: string;
   image_url?: string;
+  offer_type?: "upsell" | "downsell";
+  headline_bg?: string;
+  headline_en?: string;
+  cta_label_bg?: string;
+  cta_label_en?: string;
   enabled?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
@@ -1609,6 +1706,11 @@ export async function saveSiteProduct(input: {
     price_label_bg: input.price_label_bg?.trim() ?? "",
     price_label_en: input.price_label_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
+    offer_type: (input.offer_type === "downsell" ? "downsell" : "upsell") as "upsell" | "downsell",
+    headline_bg: input.headline_bg?.trim() ?? "",
+    headline_en: input.headline_en?.trim() ?? "",
+    cta_label_bg: input.cta_label_bg?.trim() ?? "",
+    cta_label_en: input.cta_label_en?.trim() ?? "",
     enabled: input.enabled ?? true,
     sort_order: input.sort_order ?? 0,
     updated_at: new Date().toISOString(),
@@ -1635,6 +1737,30 @@ export async function deleteSiteProduct(id: string): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_products").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true };
+}
+
+export async function saveCtaPlacement(input: {
+  key: string;
+  offer_id?: string | null;
+  offer_headline_bg?: string;
+  offer_headline_en?: string;
+  offer_enabled?: boolean;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("site_cta_placements")
+    .update({
+      offer_id: input.offer_id || null,
+      offer_headline_bg: input.offer_headline_bg?.trim() ?? "",
+      offer_headline_en: input.offer_headline_en?.trim() ?? "",
+      offer_enabled: input.offer_enabled ?? false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("key", input.key);
   if (error) return { ok: false, message: error.message };
   revalidateSitePaths();
   return { ok: true };

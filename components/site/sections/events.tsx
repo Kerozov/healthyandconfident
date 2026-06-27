@@ -1,21 +1,24 @@
 import Link from "next/link";
 import { ArrowUpRight, Calendar } from "lucide-react";
-import type { SiteEvent, SiteSection } from "@/lib/supabase/types";
+import type { SiteEvent, SiteProduct, SiteSection } from "@/lib/supabase/types";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { formatDate } from "@/lib/utils";
+import { EventOfferSlot } from "@/components/site/cta-offer-slot";
 
 export function EventsSection({
   dict,
   locale,
   section,
   events,
+  offersById,
 }: {
   dict: Dictionary;
   locale: Locale;
   section: SiteSection;
   events: SiteEvent[];
+  offersById: Record<string, SiteProduct>;
 }) {
   if (events.length === 0) return null;
 
@@ -44,13 +47,16 @@ export function EventsSection({
               locale === "bg" ? event.description_bg : event.description_en;
 
             return (
-              <Link
+              <div
                 key={event.id}
-                href={event.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-white transition-all hover:-translate-y-1 hover:shadow-soft"
+                className="flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-white transition-all hover:-translate-y-1 hover:shadow-soft"
               >
+                <Link
+                  href={event.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex flex-1 flex-col"
+                >
                 <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">
                   {event.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -83,7 +89,11 @@ export function EventsSection({
                     {dict.events.cta} <ArrowUpRight className="h-4 w-4" />
                   </span>
                 </div>
-              </Link>
+                </Link>
+                <div className="px-6 pb-6">
+                  <EventOfferSlot event={event} offersById={offersById} locale={locale} />
+                </div>
+              </div>
             );
           })}
         </div>

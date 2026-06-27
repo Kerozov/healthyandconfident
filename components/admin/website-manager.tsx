@@ -12,8 +12,10 @@ import {
   Calendar,
   ShoppingBag,
 } from "lucide-react";
-import type { SiteEvent, SiteProduct, SiteSection } from "@/lib/supabase/types";
-import { DEFAULT_SITE_SECTIONS } from "@/lib/site/content";
+import type { SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection } from "@/lib/supabase/types";
+import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
+import { DEFAULT_OFFER_HEADLINES } from "@/lib/site/cta-placements";
+import { CtaPlacementsPanel, WebsiteTabs } from "@/components/admin/website-cta-panel";
 import {
   saveSiteSection,
   saveSiteEvent,
@@ -21,7 +23,7 @@ import {
   saveSiteProduct,
   deleteSiteProduct,
 } from "@/app/(admin)/admin/actions";
-import { Field, Input, Textarea, Card } from "@/components/admin/fields";
+import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { cn } from "@/lib/utils";
 
 function SectionToggle({
@@ -43,10 +45,7 @@ function SectionToggle({
   function save() {
     setError(null);
     startTransition(async () => {
-      const res = await saveSiteSection({
-        key: section.key,
-        ...form,
-      });
+      const res = await saveSiteSection({ key: section.key, ...form });
       if (!res.ok) {
         setError(res.message || "Failed");
         return;
@@ -68,7 +67,7 @@ function SectionToggle({
               setSaved(false);
             }}
           />
-          Show section on website
+          Покажи секцията на сайта
         </label>
         <button
           type="button"
@@ -77,11 +76,11 @@ function SectionToggle({
           className="inline-flex h-9 items-center gap-2 rounded-full bg-forest-600 px-4 text-xs font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
         >
           {saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-          Save visibility
+          Запази видимост
         </button>
       </div>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field label="Section title — BG">
+        <Field label="Заглавие секция — BG">
           <Input
             value={form.title_bg}
             onChange={(e) => {
@@ -90,7 +89,7 @@ function SectionToggle({
             }}
           />
         </Field>
-        <Field label="Section title — EN">
+        <Field label="Заглавие секция — EN">
           <Input
             value={form.title_en}
             onChange={(e) => {
@@ -105,6 +104,28 @@ function SectionToggle({
   );
 }
 
+function OfferPicker({
+  offers,
+  value,
+  onChange,
+}: {
+  offers: SiteProduct[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <Select value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">— Без оферта —</option>
+      {offers.map((o) => (
+        <option key={o.id} value={o.id}>
+          [{o.offer_type === "downsell" ? "Downsell" : "Upsell"}] {o.title_bg}
+          {!o.enabled ? " (скрит)" : ""}
+        </option>
+      ))}
+    </Select>
+  );
+}
+
 const EMPTY_EVENT = {
   title_bg: "",
   title_en: "",
@@ -113,6 +134,10 @@ const EMPTY_EVENT = {
   url: "",
   image_url: "",
   event_date: "",
+  offer_id: "",
+  offer_headline_bg: "",
+  offer_headline_en: "",
+  offer_enabled: false,
   enabled: true,
   sort_order: 0,
 };
@@ -126,6 +151,11 @@ const EMPTY_PRODUCT = {
   price_label_bg: "",
   price_label_en: "",
   image_url: "",
+  offer_type: "upsell" as "upsell" | "downsell",
+  headline_bg: "",
+  headline_en: "",
+  cta_label_bg: "",
+  cta_label_en: "",
   enabled: true,
   sort_order: 0,
 };
@@ -134,22 +164,23 @@ export function WebsiteManager({
   sections,
   events,
   products,
+  ctaPlacements,
   dbReady = true,
   dbError,
 }: {
   sections: Record<string, SiteSection>;
   events: SiteEvent[];
   products: SiteProduct[];
+  ctaPlacements: SiteCtaPlacement[];
   dbReady?: boolean;
   dbError?: string;
 }) {
   const router = useRouter();
+  const [tab, setTab] = useState("offers");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | "new" | null>(null);
-  const [editingProductId, setEditingProductId] = useState<string | "new" | null>(
-    null,
-  );
+  const [editingProductId, setEditingProductId] = useState<string | "new" | null>(null);
   const [eventForm, setEventForm] = useState(EMPTY_EVENT);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
 
@@ -176,6 +207,10 @@ export function WebsiteManager({
       url: event.url,
       image_url: event.image_url ?? "",
       event_date: event.event_date ?? "",
+      offer_id: event.offer_id ?? "",
+      offer_headline_bg: event.offer_headline_bg ?? "",
+      offer_headline_en: event.offer_headline_en ?? "",
+      offer_enabled: event.offer_enabled ?? false,
       enabled: event.enabled,
       sort_order: event.sort_order,
     });
@@ -188,6 +223,7 @@ export function WebsiteManager({
       const res = await saveSiteEvent({
         id: editingEventId === "new" ? undefined : editingEventId!,
         ...eventForm,
+        offer_id: eventForm.offer_id || null,
       });
       if (!res.ok) {
         setError(res.message || "Failed");
@@ -199,7 +235,7 @@ export function WebsiteManager({
   }
 
   function removeEvent(id: string, title: string) {
-    if (!confirm(`Delete event "${title}"?`)) return;
+    if (!confirm(`Изтрий събитие „${title}"?`)) return;
     startTransition(async () => {
       await deleteSiteEvent(id);
       refresh();
@@ -223,6 +259,11 @@ export function WebsiteManager({
       price_label_bg: product.price_label_bg,
       price_label_en: product.price_label_en,
       image_url: product.image_url ?? "",
+      offer_type: product.offer_type ?? "upsell",
+      headline_bg: product.headline_bg ?? "",
+      headline_en: product.headline_en ?? "",
+      cta_label_bg: product.cta_label_bg ?? "",
+      cta_label_en: product.cta_label_en ?? "",
       enabled: product.enabled,
       sort_order: product.sort_order,
     });
@@ -246,292 +287,57 @@ export function WebsiteManager({
   }
 
   function removeProduct(id: string, title: string) {
-    if (!confirm(`Delete product "${title}"?`)) return;
+    if (!confirm(`Изтрий оферта „${title}"?`)) return;
     startTransition(async () => {
       await deleteSiteProduct(id);
       refresh();
     });
   }
 
+  const selectedEventOffer = products.find((p) => p.id === eventForm.offer_id);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {!dbReady && (
         <div className="rounded-2xl border border-coral-400/40 bg-coral-500/10 px-5 py-4 text-sm text-ink">
           <p className="font-semibold text-coral-700">Първо пусни миграцията в Supabase</p>
           <p className="mt-1 text-ink-soft">
-            Отвори Supabase → SQL Editor и изпълни файла{" "}
-            <code className="text-xs">supabase/migrations/012_site_content_and_send_date.sql</code>
-            . След това презареди тази страница.
+            Изпълни{" "}
+            <code className="text-xs">supabase/migrations/013_offers_upsell_downsell.sql</code>{" "}
+            (и 012 ако още не си).
           </p>
-          {dbError && (
-            <p className="mt-2 font-mono text-xs text-coral-600">{dbError}</p>
-          )}
+          {dbError && <p className="mt-2 font-mono text-xs text-coral-600">{dbError}</p>}
         </div>
       )}
 
-      <Card title="Предстоящи събития">
+      <WebsiteTabs tab={tab} onChange={setTab} />
+
+      {tab === "offers" && (
+        <Card title="Upsell / Downsell оферти">
           <p className="mb-4 text-sm text-ink-soft">
-            Add links to registration pages or event landing pages. They appear as
-            cards on the homepage when the section is visible.
-          </p>
-          <SectionToggle section={eventsSection} onSaved={refresh} />
-
-          {editingEventId ? (
-            <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Title — BG">
-                  <Input
-                    value={eventForm.title_bg}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, title_bg: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Title — EN">
-                  <Input
-                    value={eventForm.title_en}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, title_en: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Description — BG">
-                  <Textarea
-                    rows={3}
-                    value={eventForm.description_bg}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, description_bg: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Description — EN">
-                  <Textarea
-                    rows={3}
-                    value={eventForm.description_en}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, description_en: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Link URL" hint="Full URL to the event page.">
-                  <Input
-                    value={eventForm.url}
-                    onChange={(e) => setEventForm({ ...eventForm, url: e.target.value })}
-                    placeholder="https://..."
-                  />
-                </Field>
-                <Field label="Event date (optional)" hint="Shown on the card.">
-                  <Input
-                    type="date"
-                    value={eventForm.event_date}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, event_date: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Image URL (optional)">
-                  <Input
-                    value={eventForm.image_url}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, image_url: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Order">
-                  <Input
-                    type="number"
-                    value={eventForm.sort_order}
-                    onChange={(e) =>
-                      setEventForm({
-                        ...eventForm,
-                        sort_order: Number(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </Field>
-              </div>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={eventForm.enabled}
-                  onChange={(e) =>
-                    setEventForm({ ...eventForm, enabled: e.target.checked })
-                  }
-                />
-                Show this card
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={saveEvent}
-                  disabled={
-                    pending || !eventForm.title_bg || !eventForm.title_en || !eventForm.url
-                  }
-                  className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
-                >
-                  <Save className="h-4 w-4" /> Save event
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingEventId(null)}
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-medium hover:bg-ink/5"
-                >
-                  <X className="h-4 w-4" /> Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={openNewEvent}
-              disabled={pending}
-              className="mb-4 inline-flex h-10 items-center gap-2 rounded-full bg-coral-500 px-5 text-sm font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
-            >
-              <Plus className="h-4 w-4" /> Add event
-            </button>
-          )}
-
-          <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
-            {events.length === 0 ? (
-              <p className="p-4 text-sm text-ink-soft">No events yet.</p>
-            ) : (
-              events.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-start justify-between gap-4 px-4 py-3"
-                >
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Calendar className="h-4 w-4 text-forest-600" />
-                      <p className="font-medium">{event.title_bg}</p>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                          event.enabled
-                            ? "bg-forest-500/15 text-forest-600"
-                            : "bg-ink/10 text-ink-soft",
-                        )}
-                      >
-                        {event.enabled ? "Visible" : "Hidden"}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-ink-soft">
-                      {event.url}
-                      {event.event_date ? ` · ${event.event_date}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => openEditEvent(event)}
-                      disabled={pending}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => removeEvent(event.id, event.title_bg)}
-                      disabled={pending}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-      <Card title="Upsell / Stripe продукти">
-          <p className="mb-4 text-sm text-ink-soft">
-            Add Stripe Payment Links. They appear as purchase cards when the section
-            is visible on the homepage.
+            Каталог от оферти със Stripe линк. Използват се на началната страница, при
+            събития и до бутоните.
           </p>
           <SectionToggle section={productsSection} onSaved={refresh} />
 
           {editingProductId ? (
             <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Title — BG">
-                  <Input
-                    value={productForm.title_bg}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, title_bg: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Title — EN">
-                  <Input
-                    value={productForm.title_en}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, title_en: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Description — BG">
-                  <Textarea
-                    rows={3}
-                    value={productForm.description_bg}
+                <Field label="Тип">
+                  <Select
+                    value={productForm.offer_type}
                     onChange={(e) =>
                       setProductForm({
                         ...productForm,
-                        description_bg: e.target.value,
+                        offer_type: e.target.value as "upsell" | "downsell",
                       })
                     }
-                  />
+                  >
+                    <option value="upsell">Upsell</option>
+                    <option value="downsell">Downsell</option>
+                  </Select>
                 </Field>
-                <Field label="Description — EN">
-                  <Textarea
-                    rows={3}
-                    value={productForm.description_en}
-                    onChange={(e) =>
-                      setProductForm({
-                        ...productForm,
-                        description_en: e.target.value,
-                      })
-                    }
-                  />
-                </Field>
-                <Field label="Stripe payment link">
-                  <Input
-                    value={productForm.stripe_url}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, stripe_url: e.target.value })
-                    }
-                    placeholder="https://buy.stripe.com/..."
-                  />
-                </Field>
-                <Field label="Image URL (optional)">
-                  <Input
-                    value={productForm.image_url}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, image_url: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Price label — BG" hint='e.g. "49 €"'>
-                  <Input
-                    value={productForm.price_label_bg}
-                    onChange={(e) =>
-                      setProductForm({
-                        ...productForm,
-                        price_label_bg: e.target.value,
-                      })
-                    }
-                  />
-                </Field>
-                <Field label="Price label — EN">
-                  <Input
-                    value={productForm.price_label_en}
-                    onChange={(e) =>
-                      setProductForm({
-                        ...productForm,
-                        price_label_en: e.target.value,
-                      })
-                    }
-                  />
-                </Field>
-                <Field label="Order">
+                <Field label="Ред">
                   <Input
                     type="number"
                     value={productForm.sort_order}
@@ -543,6 +349,110 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
+                <Field label="Име — BG">
+                  <Input
+                    value={productForm.title_bg}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, title_bg: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Име — EN">
+                  <Input
+                    value={productForm.title_en}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, title_en: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Описание — BG">
+                  <Textarea
+                    rows={3}
+                    value={productForm.description_bg}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, description_bg: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Описание — EN">
+                  <Textarea
+                    rows={3}
+                    value={productForm.description_en}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, description_en: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Stripe линк">
+                  <Input
+                    value={productForm.stripe_url}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, stripe_url: e.target.value })
+                    }
+                    placeholder="https://buy.stripe.com/..."
+                  />
+                </Field>
+                <Field label="Снимка URL">
+                  <Input
+                    value={productForm.image_url}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, image_url: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Цена — BG">
+                  <Input
+                    value={productForm.price_label_bg}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, price_label_bg: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Цена — EN">
+                  <Input
+                    value={productForm.price_label_en}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, price_label_en: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field
+                  label="Заглавие по подразбиране — BG"
+                  hint={`Празно = ${DEFAULT_OFFER_HEADLINES[productForm.offer_type].bg}`}
+                >
+                  <Input
+                    value={productForm.headline_bg}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, headline_bg: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Заглавие по подразбиране — EN">
+                  <Input
+                    value={productForm.headline_en}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, headline_en: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Бутон — BG">
+                  <Input
+                    value={productForm.cta_label_bg}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, cta_label_bg: e.target.value })
+                    }
+                    placeholder="Виж офертата"
+                  />
+                </Field>
+                <Field label="Бутон — EN">
+                  <Input
+                    value={productForm.cta_label_en}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, cta_label_en: e.target.value })
+                    }
+                    placeholder="View offer"
+                  />
+                </Field>
               </div>
               <label className="flex items-center gap-2 text-sm font-medium">
                 <input
@@ -552,7 +462,7 @@ export function WebsiteManager({
                     setProductForm({ ...productForm, enabled: e.target.checked })
                   }
                 />
-                Show this card
+                Активна оферта
               </label>
               <div className="flex gap-2">
                 <button
@@ -566,14 +476,14 @@ export function WebsiteManager({
                   }
                   className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
                 >
-                  <Save className="h-4 w-4" /> Save product
+                  <Save className="h-4 w-4" /> Запази
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditingProductId(null)}
                   className="inline-flex h-10 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-medium hover:bg-ink/5"
                 >
-                  <X className="h-4 w-4" /> Cancel
+                  <X className="h-4 w-4" /> Отказ
                 </button>
               </div>
             </div>
@@ -584,13 +494,13 @@ export function WebsiteManager({
               disabled={pending}
               className="mb-4 inline-flex h-10 items-center gap-2 rounded-full bg-coral-500 px-5 text-sm font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
             >
-              <Plus className="h-4 w-4" /> Add product
+              <Plus className="h-4 w-4" /> Нова оферта
             </button>
           )}
 
           <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
             {products.length === 0 ? (
-              <p className="p-4 text-sm text-ink-soft">No products yet.</p>
+              <p className="p-4 text-sm text-ink-soft">Няма оферти.</p>
             ) : (
               products.map((product) => (
                 <div
@@ -601,6 +511,9 @@ export function WebsiteManager({
                     <div className="flex flex-wrap items-center gap-2">
                       <ShoppingBag className="h-4 w-4 text-coral-500" />
                       <p className="font-medium">{product.title_bg}</p>
+                      <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[11px] font-medium uppercase">
+                        {product.offer_type ?? "upsell"}
+                      </span>
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[11px] font-medium",
@@ -609,7 +522,7 @@ export function WebsiteManager({
                             : "bg-ink/10 text-ink-soft",
                         )}
                       >
-                        {product.enabled ? "Visible" : "Hidden"}
+                        {product.enabled ? "Активна" : "Скрита"}
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-ink-soft">
@@ -638,6 +551,228 @@ export function WebsiteManager({
             )}
           </div>
         </Card>
+      )}
+
+      {tab === "events" && (
+        <Card title="Предстоящи събития">
+          <p className="mb-4 text-sm text-ink-soft">
+            Всяко събитие може да показва upsell/downsell с персонален текст.
+          </p>
+          <SectionToggle section={eventsSection} onSaved={refresh} />
+
+          {editingEventId ? (
+            <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Заглавие — BG">
+                  <Input
+                    value={eventForm.title_bg}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, title_bg: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Заглавие — EN">
+                  <Input
+                    value={eventForm.title_en}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, title_en: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Описание — BG">
+                  <Textarea
+                    rows={3}
+                    value={eventForm.description_bg}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, description_bg: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Описание — EN">
+                  <Textarea
+                    rows={3}
+                    value={eventForm.description_en}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, description_en: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Линк към събитието">
+                  <Input
+                    value={eventForm.url}
+                    onChange={(e) => setEventForm({ ...eventForm, url: e.target.value })}
+                    placeholder="https://..."
+                  />
+                </Field>
+                <Field label="Дата">
+                  <Input
+                    type="date"
+                    value={eventForm.event_date}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, event_date: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Снимка URL">
+                  <Input
+                    value={eventForm.image_url}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, image_url: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Ред">
+                  <Input
+                    type="number"
+                    value={eventForm.sort_order}
+                    onChange={(e) =>
+                      setEventForm({
+                        ...eventForm,
+                        sort_order: Number(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+
+              <div className="rounded-xl border border-coral-400/20 bg-coral-500/5 p-4 space-y-4">
+                <p className="text-sm font-semibold">Upsell / Downsell при това събитие</p>
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={eventForm.offer_enabled}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, offer_enabled: e.target.checked })
+                    }
+                  />
+                  Покажи оферта на картичката
+                </label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Коя оферта">
+                    <OfferPicker
+                      offers={products}
+                      value={eventForm.offer_id}
+                      onChange={(offer_id) => setEventForm({ ...eventForm, offer_id })}
+                    />
+                  </Field>
+                  <Field
+                    label="Текст BG"
+                    hint={
+                      selectedEventOffer
+                        ? `По подразбиране: ${DEFAULT_OFFER_HEADLINES[selectedEventOffer.offer_type ?? "upsell"].bg}`
+                        : undefined
+                    }
+                  >
+                    <Input
+                      value={eventForm.offer_headline_bg}
+                      onChange={(e) =>
+                        setEventForm({ ...eventForm, offer_headline_bg: e.target.value })
+                      }
+                      placeholder="Мислим, че може да ти хареса…"
+                    />
+                  </Field>
+                  <Field label="Текст EN">
+                    <Input
+                      value={eventForm.offer_headline_en}
+                      onChange={(e) =>
+                        setEventForm({ ...eventForm, offer_headline_en: e.target.value })
+                      }
+                      placeholder="We think you might like this…"
+                    />
+                  </Field>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={eventForm.enabled}
+                  onChange={(e) =>
+                    setEventForm({ ...eventForm, enabled: e.target.checked })
+                  }
+                />
+                Покажи картичката
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={saveEvent}
+                  disabled={
+                    pending || !eventForm.title_bg || !eventForm.title_en || !eventForm.url
+                  }
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
+                >
+                  <Save className="h-4 w-4" /> Запази
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingEventId(null)}
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-medium hover:bg-ink/5"
+                >
+                  <X className="h-4 w-4" /> Отказ
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={openNewEvent}
+              disabled={pending}
+              className="mb-4 inline-flex h-10 items-center gap-2 rounded-full bg-coral-500 px-5 text-sm font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
+            >
+              <Plus className="h-4 w-4" /> Ново събитие
+            </button>
+          )}
+
+          <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
+            {events.length === 0 ? (
+              <p className="p-4 text-sm text-ink-soft">Няма събития.</p>
+            ) : (
+              events.map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-start justify-between gap-4 px-4 py-3"
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Calendar className="h-4 w-4 text-forest-600" />
+                      <p className="font-medium">{event.title_bg}</p>
+                      {event.offer_enabled && event.offer_id && (
+                        <span className="rounded-full bg-coral-500/15 px-2 py-0.5 text-[11px] font-medium text-coral-600">
+                          + оферта
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-ink-soft">{event.url}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => openEditEvent(event)}
+                      disabled={pending}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => removeEvent(event.id, event.title_bg)}
+                      disabled={pending}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      )}
+
+      {tab === "buttons" && (
+        <Card title="Бутони на сайта">
+          <CtaPlacementsPanel placements={ctaPlacements} offers={products} />
+        </Card>
+      )}
 
       {error && <p className="text-sm text-coral-600">{error}</p>}
     </div>

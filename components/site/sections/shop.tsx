@@ -4,6 +4,7 @@ import type { SiteProduct, SiteSection } from "@/lib/supabase/types";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
+import { cn } from "@/lib/utils";
 
 export function ShopSection({
   dict,
@@ -72,6 +73,16 @@ export function ShopSection({
                       {price}
                     </p>
                   )}
+                  <span
+                    className={cn(
+                      "mb-2 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
+                      (product.offer_type ?? "upsell") === "downsell"
+                        ? "bg-gold-400/20 text-gold-700"
+                        : "bg-coral-500/15 text-coral-600",
+                    )}
+                  >
+                    {product.offer_type ?? "upsell"}
+                  </span>
                   <h3 className="mt-2 font-display text-xl font-semibold leading-snug transition-colors group-hover:text-coral-600">
                     {productTitle}
                   </h3>

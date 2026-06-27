@@ -1,10 +1,22 @@
 import { BadgeCheck } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
+import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
+import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
 
-export function About({ dict, locale }: { dict: Dictionary; locale: Locale }) {
+export function About({
+  dict,
+  locale,
+  placements,
+  offersById,
+}: {
+  dict: Dictionary;
+  locale: Locale;
+  placements: Record<string, SiteCtaPlacement>;
+  offersById: Record<string, SiteProduct>;
+}) {
   const { about } = dict;
   return (
     <section id="about" className="scroll-mt-24 py-24">
@@ -42,6 +54,13 @@ export function About({ dict, locale }: { dict: Dictionary; locale: Locale }) {
           <Button href={`/${locale}#contact`} className="mt-8" variant="forest" size="lg">
             {about.cta}
           </Button>
+          <CtaOfferSlot
+            placementKey="about_cta"
+            placements={placements}
+            offersById={offersById}
+            locale={locale}
+            className="mt-4 max-w-lg"
+          />
         </div>
       </Container>
     </section>

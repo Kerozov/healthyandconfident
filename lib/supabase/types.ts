@@ -40,6 +40,7 @@ export type Segment = {
   key: string;
   name: string;
   description: string | null;
+  parent_id: string | null;
   created_at: string;
 };
 
@@ -220,11 +221,17 @@ export type SiteEvent = {
   url: string;
   image_url: string | null;
   event_date: string | null;
+  offer_id: string | null;
+  offer_headline_bg: string;
+  offer_headline_en: string;
+  offer_enabled: boolean;
   enabled: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
 };
+
+export type OfferType = "upsell" | "downsell";
 
 export type SiteProduct = {
   id: string;
@@ -236,8 +243,24 @@ export type SiteProduct = {
   price_label_bg: string;
   price_label_en: string;
   image_url: string | null;
+  offer_type: OfferType;
+  headline_bg: string;
+  headline_en: string;
+  cta_label_bg: string;
+  cta_label_en: string;
   enabled: boolean;
   sort_order: number;
   created_at: string;
+  updated_at: string;
+};
+
+export type SiteCtaPlacement = {
+  key: string;
+  label_bg: string;
+  label_en: string;
+  offer_id: string | null;
+  offer_headline_bg: string;
+  offer_headline_en: string;
+  offer_enabled: boolean;
   updated_at: string;
 };

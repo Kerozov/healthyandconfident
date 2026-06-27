@@ -1,10 +1,23 @@
 import { Mail, Phone, MessageCircle, CalendarHeart } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
+import type { Locale } from "@/i18n/config";
+import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
+import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
 
-export function Contact({ dict }: { dict: Dictionary }) {
+export function Contact({
+  dict,
+  locale,
+  placements,
+  offersById,
+}: {
+  dict: Dictionary;
+  locale: Locale;
+  placements: Record<string, SiteCtaPlacement>;
+  offersById: Record<string, SiteProduct>;
+}) {
   const { contact } = dict;
   return (
     <section id="contact" className="scroll-mt-24 py-24">
@@ -19,6 +32,13 @@ export function Contact({ dict }: { dict: Dictionary }) {
             <Button href={siteConfig.whatsapp} variant="primary" size="lg" className="mt-8">
               <CalendarHeart className="h-5 w-5" /> {contact.cta}
             </Button>
+            <CtaOfferSlot
+              placementKey="contact_cta"
+              placements={placements}
+              offersById={offersById}
+              locale={locale}
+              className="mt-4"
+            />
           </div>
 
           <div className="space-y-4">

@@ -1,11 +1,23 @@
 import { Check, Star } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
+import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
 
-export function Programs({ dict, locale }: { dict: Dictionary; locale: Locale }) {
+export function Programs({
+  dict,
+  locale,
+  placements,
+  offersById,
+}: {
+  dict: Dictionary;
+  locale: Locale;
+  placements: Record<string, SiteCtaPlacement>;
+  offersById: Record<string, SiteProduct>;
+}) {
   const { programs } = dict;
   return (
     <section id="programs" className="scroll-mt-24 py-24">
@@ -21,7 +33,7 @@ export function Programs({ dict, locale }: { dict: Dictionary; locale: Locale })
         </div>
 
         <div className="mt-14 grid gap-6 lg:grid-cols-3">
-          {programs.items.map((p) => (
+          {programs.items.map((p, index) => (
             <div
               key={p.title}
               className={cn(
@@ -83,6 +95,14 @@ export function Programs({ dict, locale }: { dict: Dictionary; locale: Locale })
               >
                 {p.cta}
               </Button>
+              <CtaOfferSlot
+                placementKey={`programs_${index}`}
+                placements={placements}
+                offersById={offersById}
+                locale={locale}
+                compact
+                className="mt-4"
+              />
             </div>
           ))}
         </div>

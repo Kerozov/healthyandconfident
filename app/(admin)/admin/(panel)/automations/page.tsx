@@ -13,10 +13,9 @@ export default async function AdminAutomationsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">Automations</h1>
+      <h1 className="font-display text-3xl font-semibold">Автоматизации</h1>
       <p className="mt-1 text-sm text-ink-soft">
-        One-time email or SMS rules — written here, sent automatically when someone
-        signs up, purchases, or joins a segment.
+        Автоматични имейли и SMS при записване, покупка или с закъснение.
       </p>
 
       {!workerOk && (
@@ -31,30 +30,22 @@ export default async function AdminAutomationsPage() {
       </div>
 
       <div className="mt-10 rounded-2xl border border-ink/10 bg-white p-5 text-sm text-ink-soft">
-        <p className="font-medium text-ink">How it works</p>
-        <ul className="mt-2 list-inside list-disc space-y-1">
+        <p className="font-medium text-ink">Бърз пример: welcome серия от 3 имейла</p>
+        <ol className="mt-2 list-inside list-decimal space-y-1">
           <li>
-            <strong>Purchase email</strong> — create an automation with trigger
-            &quot;After purchase&quot;, write your HTML, enable it. Checkout calls{" "}
-            <code className="text-xs">POST /api/subscribe</code> with{" "}
-            <code className="text-xs">source: &quot;purchase&quot;</code>.
+            <strong>Имейл 1</strong> — събитие „Нов абонат“, режим „Веднага“, без верига.
           </li>
           <li>
-            <strong>Segment welcome</strong> — tick segments, trigger &quot;Website
-            signup&quot; or &quot;Any new subscriber&quot;, enable.
+            <strong>Имейл 2</strong> — същото събитие, „След 2 дни“, верига „След Имейл 1“.
           </li>
           <li>
-            <strong>Follow-up sequence</strong> — automation B → &quot;Send only
-            after automation&quot; = automation A.
+            <strong>Имейл 3</strong> — „След 5 дни“, верига „След Имейл 2“.
           </li>
-          <li>
-            Each automation sends <strong>once per email</strong> (tracked automatically).
-          </li>
-          <li>
-            Use <strong>Refresh stats</strong> for opens and delivery — resend to
-            non-openers creates a campaign under Campaigns.
-          </li>
-        </ul>
+        </ol>
+        <p className="mt-3 text-xs">
+          Всяка автоматизация се изпраща само веднъж на имейл. Включи ги с бутона
+          „Включена“.
+        </p>
       </div>
     </div>
   );

@@ -39,6 +39,70 @@ import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields"
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
+type ScheduleMode = "immediate" | "delay" | "fixed";
+
+function getScheduleMode(form: {
+  delay_days: number;
+  send_date: string;
+}): ScheduleMode {
+  if (form.send_date.trim()) return "fixed";
+  if (form.delay_days > 0) return "delay";
+  return "immediate";
+}
+
+function buildSchedulePreview(
+  form: {
+    delay_days: number;
+    send_time: string;
+    send_date: string;
+    after_automation_id: string;
+    new_subscribers_only: boolean;
+  },
+  triggerLabel: string,
+  afterName?: string,
+): string {
+  const time = form.send_time || "09:00";
+  const audience = form.new_subscribers_only
+    ? "само при първо добавяне на имейла"
+    : "при нов и съществуващ имейл в списъка";
+
+  let when: string;
+  if (form.send_date.trim()) {
+    when = `на ${form.send_date} в ${time} (София)`;
+  } else if (form.delay_days > 0) {
+    const days =
+      form.delay_days === 1 ? "1 ден" : `${form.delay_days} дни`;
+    when = `след ${days} в ${time} (София)`;
+  } else {
+    when = `веднага, или днес в ${time} ако часът още не е минал`;
+  }
+
+  if (afterName) {
+    return `След като „${afterName}" е изпратена → ${when}. Получатели: ${audience}.`;
+  }
+
+  return `При „${triggerLabel}" → ${when}. Получатели: ${audience}.`;
+}
+
+function scheduleSummary(a: Automation, automations: AutomationRow[]): string {
+  const time = a.send_time || "09:00";
+  const after = a.after_automation_id
+    ? automations.find((x) => x.id === a.after_automation_id)?.name
+    : null;
+
+  let when: string;
+  if (a.send_date) {
+    when = `${a.send_date} в ${time}`;
+  } else if ((a.delay_days ?? 0) > 0) {
+    when = `+${a.delay_days} дн. в ${time}`;
+  } else {
+    when = `веднага / днес ${time}`;
+  }
+
+  if (after) return `След „${after}" → ${when}`;
+  return when;
+}
+
 const TRIGGER_OPTIONS: {
   value: AutomationTrigger;
   label: string;
@@ -46,18 +110,18 @@ const TRIGGER_OPTIONS: {
 }[] = [
   {
     value: "new_subscriber",
-    label: "New subscriber",
-    hint: "When an email appears in the list for the first time — website, manual add, or import.",
+    label: "Нов абонат",
+    hint: "Когато имейлът влезе в списъка за първи път — сайт, ръчно добавяне или импорт.",
   },
   {
     value: "registration",
-    label: "Website signup",
-    hint: "Popup or lead form only (not manual add in admin).",
+    label: "Записване от сайта",
+    hint: "Само popup или форма на сайта (не ръчно добавяне в админа).",
   },
   {
     value: "purchase",
-    label: "After purchase",
-    hint: 'When the system receives a purchase event (source: "purchase").',
+    label: "След покупка",
+    hint: 'Когато системата получи събитие за покупка (source: "purchase").',
   },
 ];
 
@@ -118,7 +182,7 @@ function triggerSummary(a: Automation): string {
 }
 
 function audienceSummary(newOnly: boolean): string {
-  return newOnly ? "new only" : "new + existing";
+  return newOnly ? "само нови" : "нови + стари";
 }
 
 type AutomationRow = Automation & AutomationStats;
@@ -276,9 +340,15 @@ export function AutomationsManager({
     refreshAll();
   }, [autoSynced, hasTrackable, refreshAll]);
 
-  const otherAutomations = automations.filter(
-    (a) => editingId !== "new" && a.id !== editingId,
-  );
+  const otherAutomations = automations
+    .filter((a) => (editingId === "new" ? true : a.id !== editingId))
+    .sort((a, b) => a.name.localeCompare(b.name, "bg"));
+
+  const afterAutomationName = form.after_automation_id
+    ? otherAutomations.find((a) => a.id === form.after_automation_id)?.name
+    : undefined;
+
+  const scheduleMode = getScheduleMode(form);
 
   function openNew() {
     setEditingId("new");
@@ -386,14 +456,33 @@ export function AutomationsManager({
 
   const triggerMeta = TRIGGER_OPTIONS.find((t) => t.value === form.trigger_event);
 
+  function setScheduleMode(mode: ScheduleMode) {
+    if (mode === "immediate") {
+      setForm({ ...form, delay_days: 0, send_date: "" });
+      return;
+    }
+    if (mode === "delay") {
+      setForm({
+        ...form,
+        send_date: "",
+        delay_days: form.delay_days > 0 ? form.delay_days : 1,
+      });
+      return;
+    }
+    setForm({
+      ...form,
+      delay_days: 0,
+      send_date: form.send_date || new Date().toISOString().slice(0, 10),
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-ink-soft max-w-2xl">
-            Automatic emails or SMS on new subscribers, purchases, or on a delay.
-            By default they go to new subscribers only — once per email, no
-            duplicates.
+            Автоматични имейли или SMS при нов абонат, покупка или с закъснение.
+            По подразбиране се изпращат само веднъж на имейл — без дублиране.
           </p>
           {note && <p className="mt-1 text-xs text-ink-soft">{note}</p>}
         </div>
@@ -423,17 +512,17 @@ export function AutomationsManager({
       </div>
 
       {editingId && (
-        <Card title={editingId === "new" ? "Create automation" : "Edit automation"}>
+        <Card title={editingId === "new" ? "Нова автоматизация" : "Редакция"}>
           <div className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Name">
+              <Field label="Име">
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Welcome — weight loss"
+                  placeholder="Добре дошла — отслабване"
                 />
               </Field>
-              <Field label="Channel">
+              <Field label="Канал">
                 <Select
                   value={form.channel}
                   onChange={(e) =>
@@ -443,11 +532,11 @@ export function AutomationsManager({
                     })
                   }
                 >
-                  <option value="email">Email</option>
+                  <option value="email">Имейл</option>
                   <option value="sms">SMS</option>
                 </Select>
               </Field>
-              <Field label="When to send">
+              <Field label="Защо се пуска (събитие)">
                 <Select
                   value={form.trigger_event}
                   onChange={(e) =>
@@ -464,7 +553,7 @@ export function AutomationsManager({
                   ))}
                 </Select>
               </Field>
-              <Field label="Order" hint="Lower number runs first if several match.">
+              <Field label="Ред" hint="По-малко число = по-рано, ако няколко съвпадат.">
                 <Input
                   type="number"
                   value={form.sort_order}
@@ -483,39 +572,39 @@ export function AutomationsManager({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <TogglePair
-                label="Status"
+                label="Статус"
                 hint={
                   form.enabled
-                    ? "This automation is active and will send when conditions match."
-                    : "Disabled — nothing is sent, even for new subscribers."
+                    ? "Активна — ще се изпраща при съвпадение."
+                    : "Изключена — нищо не се изпраща."
                 }
                 value={form.enabled}
                 onChange={(enabled) => setForm({ ...form, enabled })}
-                options={{ trueLabel: "Enabled", falseLabel: "Disabled" }}
+                options={{ trueLabel: "Включена", falseLabel: "Изключена" }}
                 disabled={pending}
               />
               <TogglePair
-                label="Who receives it"
+                label="Кой получава"
                 hint={
                   form.new_subscribers_only
-                    ? "Only the first time this email is added. Recommended for welcome series."
-                    : "New and already saved emails (uncommon — may resend to existing contacts)."
+                    ? "Само първият път, когато имейлът влезе в списъка. Препоръчително за welcome серия."
+                    : "И нови, и вече записани имейли (рядко — може да дублира)."
                 }
                 value={form.new_subscribers_only}
                 onChange={(new_subscribers_only) =>
                   setForm({ ...form, new_subscribers_only })
                 }
                 options={{
-                  trueLabel: "New only",
-                  falseLabel: "New + existing",
+                  trueLabel: "Само нови",
+                  falseLabel: "Нови + стари",
                 }}
                 disabled={pending}
               />
             </div>
 
             <Field
-              label="Segments (optional)"
-              hint="Leave empty for everyone. Subscriber must match at least one selected segment."
+              label="Сегменти (по избор)"
+              hint="Празно = всички. Абонатът трябва да е в поне един избран сегмент."
             >
               <SegmentChecklist
                 segments={segments}
@@ -525,45 +614,112 @@ export function AutomationsManager({
               />
             </Field>
 
-            <Field
-              label="After another automation"
-              hint="Optional — sends only if the chosen automation was already sent (e.g. welcome → follow-up)."
-            >
-              <Select
-                value={form.after_automation_id}
-                onChange={(e) =>
-                  setForm({ ...form, after_automation_id: e.target.value })
+            <div className="rounded-2xl border border-ink/10 bg-cream-2/40 p-5 space-y-4">
+              <div>
+                <p className="text-sm font-semibold">Верига (по избор)</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  Използвай, ако това е 2-ри, 3-ти имейл в серия — след друг
+                  автоматизиран имейл/SMS.
+                </p>
+              </div>
+              <Field
+                label="След коя автоматизация"
+                hint={
+                  otherAutomations.length === 0
+                    ? "Няма други автоматизации — първо създай и запази първия имейл в серията."
+                    : "Празно = стартира от събитието горе. С избор = чака предишната да е изпратена."
                 }
               >
-                <option value="">— None —</option>
-                {otherAutomations.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.channel})
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field
-                label="Delay (days)"
-                hint="0 = on trigger day. Ignored if fixed date is set."
-              >
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.delay_days}
+                <Select
+                  value={form.after_automation_id}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      delay_days: Math.max(0, Number(e.target.value) || 0),
-                    })
+                    setForm({ ...form, after_automation_id: e.target.value })
                   }
-                />
+                >
+                  <option value="">— Без верига (директно от събитието) —</option>
+                  {otherAutomations.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({a.channel === "email" ? "имейл" : "SMS"}
+                      {a.enabled ? "" : ", изкл."})
+                    </option>
+                  ))}
+                </Select>
               </Field>
+            </div>
+
+            <div className="rounded-2xl border border-forest-500/20 bg-forest-50/40 p-5 space-y-4">
+              <div>
+                <p className="text-sm font-semibold">Кога точно се изпраща</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {form.after_automation_id
+                    ? "Закъснението се брои от момента, в който предишната автоматизация е изпратена."
+                    : "Закъснението се брои от момента на събитието (нов абонат, покупка и т.н.)."}
+                </p>
+              </div>
+
+              <div className="inline-flex flex-wrap gap-2 rounded-xl border border-ink/15 bg-white p-1">
+                {(
+                  [
+                    ["immediate", "Веднага"],
+                    ["delay", "След дни"],
+                    ["fixed", "На дата"],
+                  ] as const
+                ).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setScheduleMode(mode)}
+                    className={cn(
+                      "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
+                      scheduleMode === mode
+                        ? "bg-forest-600 text-cream shadow-sm"
+                        : "text-ink-soft hover:bg-ink/5",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {scheduleMode === "delay" && (
+                <Field
+                  label="Колко дни след това"
+                  hint="Напр. 2 = втори ден след събитието (или след предишния имейл във веригата)."
+                >
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.delay_days}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        delay_days: Math.max(1, Number(e.target.value) || 1),
+                      })
+                    }
+                  />
+                </Field>
+              )}
+
+              {scheduleMode === "fixed" && (
+                <Field
+                  label="Точна дата"
+                  hint="Всички нови абонати получават имейла на тази дата — удобно за напомняне за събитие."
+                >
+                  <Input
+                    type="date"
+                    value={form.send_date}
+                    onChange={(e) => setForm({ ...form, send_date: e.target.value })}
+                  />
+                </Field>
+              )}
+
               <Field
-                label="Send time"
-                hint="Europe/Sofia — combined with delay or fixed date."
+                label="Час (София)"
+                hint={
+                  scheduleMode === "immediate"
+                    ? "Ако часът вече е минал днес — изпраща се веднага."
+                    : "Часът на избрания ден."
+                }
               >
                 <Input
                   type="time"
@@ -573,16 +729,19 @@ export function AutomationsManager({
                   }
                 />
               </Field>
-              <Field
-                label="Fixed date (optional)"
-                hint="Exact calendar day for this email — e.g. event reminder."
-              >
-                <Input
-                  type="date"
-                  value={form.send_date}
-                  onChange={(e) => setForm({ ...form, send_date: e.target.value })}
-                />
-              </Field>
+
+              <div className="rounded-xl bg-white/80 px-4 py-3 text-sm text-ink">
+                <p className="text-xs font-semibold uppercase tracking-wider text-forest-700">
+                  Обобщение
+                </p>
+                <p className="mt-2 leading-relaxed text-ink-soft">
+                  {buildSchedulePreview(
+                    form,
+                    triggerMeta?.label ?? form.trigger_event,
+                    afterAutomationName,
+                  )}
+                </p>
+              </div>
             </div>
 
             {form.channel === "email" ? (
@@ -718,16 +877,11 @@ export function AutomationsManager({
                   <p className="mt-1 text-sm text-ink-soft">
                     {triggerSummary(a)}
                     {a.segment_keys.length > 0 &&
-                      ` · segments: ${a.segment_keys.join(", ")}`}
+                      ` · сегменти: ${a.segment_keys.join(", ")}`}
                     {` · ${audienceSummary(a.new_subscribers_only)}`}
-                    {a.after_automation_id &&
-                      ` · after: ${
-                        automations.find((x) => x.id === a.after_automation_id)?.name ??
-                        "…"
-                      }`}
-                    {(a.delay_days ?? 0) > 0 && !a.send_date && ` · +${a.delay_days} days`}
-                    {a.send_date && ` · ${a.send_date}`}
-                    {a.send_time && a.send_time !== "09:00" && ` · ${a.send_time}`}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-forest-700">
+                    {scheduleSummary(a, automations)}
                   </p>
                   {a.last_synced_at && (
                     <p className="mt-0.5 text-xs text-ink-soft/70">

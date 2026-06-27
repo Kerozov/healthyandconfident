@@ -72,8 +72,11 @@ create table if not exists public.segments (
   key         text not null unique,
   name        text not null,
   description text,
+  parent_id   uuid references public.segments(id) on delete set null,
   created_at  timestamptz not null default now()
 );
+
+create index if not exists segments_parent_idx on public.segments (parent_id);
 
 insert into public.segments (key, name, description) values
   ('all', 'All subscribers', 'Everyone who opted in'),
@@ -226,7 +229,7 @@ create table if not exists public.site_sections (
 insert into public.site_sections (key, enabled, title_bg, title_en)
 values
   ('events', false, 'Предстоящи събития', 'Upcoming events'),
-  ('products', false, 'Продукти', 'Products')
+  ('products', false, 'Upsell / Downsell', 'Upsell / Downsell')
 on conflict (key) do nothing;
 
 create table if not exists public.site_events (
@@ -238,6 +241,10 @@ create table if not exists public.site_events (
   url             text not null,
   image_url       text,
   event_date      date,
+  offer_id        uuid references public.site_products(id) on delete set null,
+  offer_headline_bg text not null default '',
+  offer_headline_en text not null default '',
+  offer_enabled   boolean not null default false,
   enabled         boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),
@@ -257,6 +264,11 @@ create table if not exists public.site_products (
   price_label_bg  text not null default '',
   price_label_en  text not null default '',
   image_url       text,
+  offer_type      text not null default 'upsell' check (offer_type in ('upsell', 'downsell')),
+  headline_bg     text not null default '',
+  headline_en     text not null default '',
+  cta_label_bg    text not null default '',
+  cta_label_en    text not null default '',
   enabled         boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),
@@ -265,6 +277,28 @@ create table if not exists public.site_products (
 
 create index if not exists site_products_sort_idx
   on public.site_products (enabled, sort_order, created_at desc);
+
+create table if not exists public.site_cta_placements (
+  key               text primary key,
+  label_bg          text not null,
+  label_en          text not null,
+  offer_id          uuid references public.site_products(id) on delete set null,
+  offer_headline_bg text not null default '',
+  offer_headline_en text not null default '',
+  offer_enabled     boolean not null default false,
+  updated_at        timestamptz not null default now()
+);
+
+insert into public.site_cta_placements (key, label_bg, label_en) values
+  ('hero_primary', 'Hero — основен бутон', 'Hero — primary button'),
+  ('hero_secondary', 'Hero — втори бутон', 'Hero — secondary button'),
+  ('nav_cta', 'Навигация — CTA', 'Navigation — CTA'),
+  ('contact_cta', 'Контакти — бутон', 'Contact — button'),
+  ('about_cta', 'За мен — бутон', 'About — button'),
+  ('programs_0', 'Програма 1 — бутон', 'Program 1 — button'),
+  ('programs_1', 'Програма 2 — бутон', 'Program 2 — button'),
+  ('programs_2', 'Програма 3 — бутон', 'Program 3 — button')
+on conflict (key) do nothing;
 
 -- ── Email campaigns ────────────────────────────────────────────
 create table if not exists public.email_campaigns (
@@ -346,6 +380,10 @@ create trigger site_products_updated_at before update on public.site_products
 
 drop trigger if exists site_sections_updated_at on public.site_sections;
 create trigger site_sections_updated_at before update on public.site_sections
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists site_cta_placements_updated_at on public.site_cta_placements;
+create trigger site_cta_placements_updated_at before update on public.site_cta_placements
   for each row execute function public.set_updated_at();
 
 notify pgrst, 'reload schema';

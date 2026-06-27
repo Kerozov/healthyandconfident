@@ -9,6 +9,7 @@ import type {
   SmsCampaign,
   AutomatedEmail,
 } from "@/lib/supabase/types";
+import { flattenSegmentTree } from "@/lib/segments/hierarchy";
 
 export async function getDashboardStats() {
   const supabase = getAdminClient();
@@ -66,8 +67,8 @@ export async function getSubscribers(filter?: {
 
 export async function getSegments(): Promise<Segment[]> {
   const supabase = getAdminClient();
-  const { data } = await supabase.from("segments").select("*").order("name");
-  return (data as Segment[]) ?? [];
+  const { data } = await supabase.from("segments").select("*");
+  return flattenSegmentTree((data as Segment[]) ?? []);
 }
 
 /** All unique tags currently assigned to subscribers (for tag-based targeting). */

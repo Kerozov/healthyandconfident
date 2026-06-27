@@ -1,10 +1,22 @@
 import { Check, Sparkles, TrendingUp } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
+import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
+import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
 
-export function Hero({ dict, locale }: { dict: Dictionary; locale: Locale }) {
+export function Hero({
+  dict,
+  locale,
+  placements,
+  offersById,
+}: {
+  dict: Dictionary;
+  locale: Locale;
+  placements: Record<string, SiteCtaPlacement>;
+  offersById: Record<string, SiteProduct>;
+}) {
   const { hero } = dict;
   return (
     <section className="relative overflow-hidden pt-10 pb-20 lg:pt-16">
@@ -53,13 +65,28 @@ export function Hero({ dict, locale }: { dict: Dictionary; locale: Locale }) {
             ))}
           </ul>
 
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <Button href={`/${locale}#programs`} size="lg">
-              {hero.primaryCta}
-            </Button>
-            <Button href={`/${locale}#lead`} size="lg" variant="outline">
-              {hero.secondaryCta}
-            </Button>
+          <div className="mt-9 space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button href={`/${locale}#programs`} size="lg">
+                {hero.primaryCta}
+              </Button>
+              <Button href={`/${locale}#lead`} size="lg" variant="outline">
+                {hero.secondaryCta}
+              </Button>
+            </div>
+            <CtaOfferSlot
+              placementKey="hero_primary"
+              placements={placements}
+              offersById={offersById}
+              locale={locale}
+            />
+            <CtaOfferSlot
+              placementKey="hero_secondary"
+              placements={placements}
+              offersById={offersById}
+              locale={locale}
+              compact
+            />
           </div>
 
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-ink/10 pt-8">

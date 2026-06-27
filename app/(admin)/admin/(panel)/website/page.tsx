@@ -10,7 +10,7 @@ export default async function AdminWebsitePage() {
     <div>
       <h1 className="font-display text-3xl font-semibold">Website</h1>
       <p className="mt-1 text-sm text-ink-soft">
-        Manage homepage sections — upcoming events and Stripe product links.
+        Upsell / Downsell оферти, събития и настройка на бутони.
       </p>
 
       <div className="mt-8">
@@ -18,6 +18,7 @@ export default async function AdminWebsitePage() {
           sections={content.sections}
           events={content.events}
           products={content.products}
+          ctaPlacements={Object.values(content.ctaPlacements)}
           dbReady={content.dbReady}
           dbError={content.dbError}
         />

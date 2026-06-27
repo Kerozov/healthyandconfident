@@ -4,6 +4,7 @@ import "@/app/globals.css";
 import { geistSans, fraunces } from "@/app/fonts";
 import { locales, isLocale, localeHtmlLang, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
+import { getPublicSiteContent } from "@/lib/site/content";
 import { siteConfig } from "@/lib/site";
 import { Navbar } from "@/components/site/navbar";
 import { Footer } from "@/components/site/footer";
@@ -68,7 +69,7 @@ export default async function SiteLayout({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
-  const dict = getDictionary(l);
+  const [dict, site] = await Promise.all([getDictionary(l), getPublicSiteContent()]);
 
   return (
     <html
@@ -76,7 +77,13 @@ export default async function SiteLayout({
       className={`${geistSans.variable} ${fraunces.variable}`}
     >
       <body className="min-h-screen bg-cream text-ink">
-        <Navbar locale={l} items={dict.nav.items} cta={dict.nav.cta} />
+        <Navbar
+          locale={l}
+          items={dict.nav.items}
+          cta={dict.nav.cta}
+          placements={site.ctaPlacements}
+          offersById={site.offersById}
+        />
         <main>{children}</main>
         <Footer locale={l} dict={dict} />
         <Popup locale={l} />
