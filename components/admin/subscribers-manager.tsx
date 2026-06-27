@@ -253,6 +253,7 @@ export function SubscribersManager({
                   key,
                   name: key,
                   description: null,
+                  parent_id: null,
                   created_at: "",
                 }))}
                 selected={add.tagKeys}
@@ -387,6 +388,7 @@ export function SubscribersManager({
                     key,
                     name: key,
                     description: null,
+                    parent_id: null,
                     created_at: "",
                   }))}
                   selected={editTagKeys}
