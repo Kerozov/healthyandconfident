@@ -51,7 +51,7 @@ export function ShopSection({
                 href={product.stripe_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-white transition-all hover:-translate-y-1 hover:shadow-soft"
+                className="group flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-bg-card transition-all hover:-translate-y-1 hover:shadow-soft"
               >
                 <div className="relative aspect-[16/10] overflow-hidden bg-coral-100">
                   {product.image_url ? (

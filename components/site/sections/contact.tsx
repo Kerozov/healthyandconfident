@@ -22,7 +22,7 @@ export function Contact({
   return (
     <section id="contact" className="scroll-mt-24 py-24">
       <Container>
-        <div className="grid items-center gap-12 rounded-[2.5rem] border border-ink/10 bg-white p-8 shadow-soft sm:p-12 lg:grid-cols-2">
+        <div className="grid items-center gap-12 rounded-[2.5rem] border border-ink/10 bg-bg-card p-8 shadow-soft sm:p-12 lg:grid-cols-2">
           <div>
             <span className="font-display text-5xl">❤</span>
             <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">

@@ -40,7 +40,7 @@ export function Programs({
                 "relative flex flex-col rounded-3xl border p-8 transition-all hover:-translate-y-1",
                 p.highlight
                   ? "border-coral-400 bg-forest-700 text-cream shadow-soft lg:-mt-4 lg:mb-4"
-                  : "border-ink/10 bg-white",
+                  : "border-ink/10 bg-bg-card",
               )}
             >
               {p.badge && (
@@ -90,7 +90,7 @@ export function Programs({
               </ul>
               <Button
                 href={`/${locale}${p.href}`}
-                variant={p.highlight ? "primary" : "forest"}
+                variant="primary"
                 className="mt-8 w-full"
               >
                 {p.cta}

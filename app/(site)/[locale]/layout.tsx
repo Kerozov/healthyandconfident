@@ -33,7 +33,7 @@ export async function generateMetadata({
     keywords: dict.meta.keywords,
     authors: [{ name: siteConfig.brand }],
     alternates: {
-      canonical: `/${locale}`,
+      canonical: `${siteConfig.domain}/${locale}`,
       languages: {
         bg: "/bg",
         en: "/en",
@@ -76,7 +76,7 @@ export default async function SiteLayout({
       lang={localeHtmlLang[l]}
       className={`${geistSans.variable} ${fraunces.variable}`}
     >
-      <body className="min-h-screen bg-cream text-ink">
+      <body className="min-h-screen bg-bg-primary text-text-primary">
         <Navbar
           locale={l}
           items={dict.nav.items}

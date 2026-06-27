@@ -49,7 +49,7 @@ export function EventsSection({
             return (
               <div
                 key={event.id}
-                className="flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-white transition-all hover:-translate-y-1 hover:shadow-soft"
+                className="flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-bg-card transition-all hover:-translate-y-1 hover:shadow-soft"
               >
                 <Link
                   href={event.url}

@@ -24,7 +24,7 @@ export function Outcomes({ dict }: { dict: Dictionary }) {
           {outcomes.items.map((item) => (
             <li
               key={item}
-              className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-white p-4 text-sm font-medium"
+              className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-bg-card p-4 text-sm font-medium"
             >
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-forest-500 text-cream">
                 <Check className="h-3.5 w-3.5" />

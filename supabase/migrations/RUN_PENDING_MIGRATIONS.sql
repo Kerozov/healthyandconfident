@@ -189,6 +189,12 @@ drop trigger if exists site_sections_updated_at on public.site_sections;
 create trigger site_sections_updated_at before update on public.site_sections
   for each row execute function public.set_updated_at();
 
+-- 014: segment subgroups (parent → child)
+alter table public.segments
+  add column if not exists parent_id uuid references public.segments(id) on delete set null;
+
+create index if not exists segments_parent_idx on public.segments (parent_id);
+
 notify pgrst, 'reload schema';
 
 select 'Upgrade complete — also run 007_automations.sql if not yet applied' as result;

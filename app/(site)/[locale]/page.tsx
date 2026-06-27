@@ -60,7 +60,7 @@ export default async function HomePage({
         />
       )}
       <About dict={dict} locale={l} {...offerProps} />
-      <Testimonials dict={dict} />
+      <Testimonials dict={dict} locale={l} />
       <LeadMagnet dict={dict} locale={l} />
       <Faq dict={dict} />
       <Contact dict={dict} locale={l} {...offerProps} />

@@ -30,25 +30,34 @@ export function Hero({
             <Sparkles className="h-4 w-4" /> {hero.eyebrow}
           </span>
 
-          <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.2rem]">
-            {hero.title}{" "}
-            <span className="relative inline-block text-coral-500">
-              {hero.titleAccent}
-              <svg
-                className="absolute -bottom-2 left-0 w-full text-coral-400"
-                viewBox="0 0 300 12"
-                fill="none"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M2 9C60 3 240 3 298 9"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </span>
-          </h1>
+          {locale === "bg" ? (
+            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.2rem]">
+              <span className="block text-sm font-medium text-[#2D6A4F] mb-2">
+                Веси Ней — Холистичен диетолог
+              </span>
+              Свали трайно 5-10-15 кг и се почувствай уверена
+            </h1>
+          ) : (
+            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.2rem]">
+              {hero.title}{" "}
+              <span className="relative inline-block text-coral-500">
+                {hero.titleAccent}
+                <svg
+                  className="absolute -bottom-2 left-0 w-full text-coral-400"
+                  viewBox="0 0 300 12"
+                  fill="none"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M2 9C60 3 240 3 298 9"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+            </h1>
+          )}
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
             {hero.subtitle}
@@ -104,10 +113,10 @@ export function Hero({
         {/* Visual */}
         <div className="relative mx-auto w-full max-w-md">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-forest-500 via-forest-600 to-forest-700 shadow-soft">
-            {/* Replace with a real portrait at /public/images/vessie.jpg */}
-            <div
-              className="absolute inset-0 bg-cover bg-center opacity-90"
-              style={{ backgroundImage: "url('/images/vessie.jpg')" }}
+            <img
+              src="/images/vessie.jpg"
+              alt="Веси Ней — холистичен диетолог, специалист по инсулинова резистентност"
+              className="absolute inset-0 h-full w-full object-cover object-center opacity-90"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-forest-800/60 to-transparent" />
             <div className="absolute bottom-6 left-6 right-6 text-cream">

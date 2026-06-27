@@ -32,7 +32,7 @@ export function About({
             {about.credentials.map((c) => (
               <div
                 key={c}
-                className="flex items-start gap-2 rounded-xl border border-ink/10 bg-white p-3 text-xs font-medium"
+                className="flex items-start gap-2 rounded-xl border border-ink/10 bg-bg-card p-3 text-xs font-medium"
               >
                 <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-forest-500" />
                 {c}

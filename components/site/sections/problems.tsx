@@ -18,7 +18,7 @@ export function Problems({ dict }: { dict: Dictionary }) {
           {problems.items.map((p) => (
             <div
               key={p.text}
-              className="group rounded-2xl border border-ink/10 bg-white p-6 transition-all hover:-translate-y-1 hover:border-coral-400 hover:shadow-soft"
+              className="group rounded-2xl border border-ink/10 bg-bg-card p-6 transition-all hover:-translate-y-1 hover:border-coral-400 hover:shadow-soft"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-forest-50 text-forest-600 transition-colors group-hover:bg-coral-500 group-hover:text-white">
                 <Icon name={p.icon} className="h-6 w-6" />

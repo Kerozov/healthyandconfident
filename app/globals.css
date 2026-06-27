@@ -2,11 +2,22 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* Brand palette — warm wellness, deep green + coral */
-  --color-cream: #faf6ef;
+  /* Brand palette — Vessie Ney wellness */
+  --color-bg-primary: #fff5f7;
+  --color-bg-card: #fffbf0;
+  --color-rose: #ff6b8a;
+  --color-rose-dark: #e8527a;
+  --color-peach: #ffb347;
+  --color-sage: #2d6a4f;
+  --color-sage-light: #e8f5ee;
+  --color-text-primary: #3d2b1f;
+  --color-text-secondary: #6b4f3a;
+  --color-text-muted: #9b7b6a;
+
+  --color-cream: var(--color-bg-primary);
   --color-cream-2: #f3ecdf;
-  --color-ink: #15201b;
-  --color-ink-soft: #3a4a42;
+  --color-ink: var(--color-text-primary);
+  --color-ink-soft: var(--color-text-secondary);
 
   --color-forest-50: #eef6f1;
   --color-forest-100: #d6eade;
@@ -26,8 +37,8 @@
   --color-gold-400: #e7b15a;
   --color-gold-500: #d99b3a;
 
-  --color-background: var(--color-cream);
-  --color-foreground: var(--color-ink);
+  --color-background: var(--color-bg-primary);
+  --color-foreground: var(--color-text-primary);
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
@@ -39,8 +50,19 @@
 }
 
 :root {
-  --background: var(--color-cream);
-  --foreground: var(--color-ink);
+  --color-bg-primary: #fff5f7;
+  --color-bg-card: #fffbf0;
+  --color-rose: #ff6b8a;
+  --color-rose-dark: #e8527a;
+  --color-peach: #ffb347;
+  --color-sage: #2d6a4f;
+  --color-sage-light: #e8f5ee;
+  --color-text-primary: #3d2b1f;
+  --color-text-secondary: #6b4f3a;
+  --color-text-muted: #9b7b6a;
+
+  --background: var(--color-bg-primary);
+  --foreground: var(--color-text-primary);
 }
 
 * {

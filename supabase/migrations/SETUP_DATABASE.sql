@@ -76,6 +76,10 @@ create table if not exists public.segments (
   created_at  timestamptz not null default now()
 );
 
+-- Existing DBs: table may exist without parent_id from older schema
+alter table public.segments
+  add column if not exists parent_id uuid references public.segments(id) on delete set null;
+
 create index if not exists segments_parent_idx on public.segments (parent_id);
 
 insert into public.segments (key, name, description) values

@@ -15,11 +15,18 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
               href={`/${locale}`}
               className="flex items-center gap-2 font-display text-xl font-semibold text-cream"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-coral-500">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#FF6B8A]">
                 <Leaf className="h-5 w-5" />
               </span>
               Healthy &amp; Confident
             </Link>
+            {locale === "bg" && (
+              <p className="text-sm text-[#9B7B6A] mt-2">
+                <strong>Веси Ней</strong> (Vessie Ney) е холистичен диетолог в Англия и
+                България, специалист по инсулинова резистентност и Диабет тип 2. Работи
+                онлайн с клиенти от 13 държави.
+              </p>
+            )}
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-cream/70">
               {dict.footer.tagline}
             </p>

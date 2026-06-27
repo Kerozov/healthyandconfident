@@ -1,8 +1,9 @@
 import { Quote, Star } from "lucide-react";
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
 import { Container } from "@/components/ui/container";
 
-export function Testimonials({ dict }: { dict: Dictionary }) {
+export function Testimonials({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const { testimonials } = dict;
   return (
     <section id="results" className="scroll-mt-24 bg-cream-2 py-24">
@@ -21,11 +22,20 @@ export function Testimonials({ dict }: { dict: Dictionary }) {
           {testimonials.items.map((t) => (
             <figure
               key={t.name}
-              className="flex flex-col rounded-3xl border border-ink/10 bg-white p-8 shadow-sm"
+              className="flex flex-col rounded-3xl border border-ink/10 bg-bg-card p-8 shadow-sm"
             >
               <Quote className="h-8 w-8 text-coral-400" />
               <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-ink-soft">
-                “{t.quote}”
+                {locale === "bg" ? (
+                  <>
+                    <span className="block text-xs font-medium text-text-muted mb-2">
+                      Клиент на Веси Ней:
+                    </span>
+                    “{t.quote}”
+                  </>
+                ) : (
+                  <>“{t.quote}”</>
+                )}
               </blockquote>
               <figcaption className="mt-6 border-t border-ink/10 pt-4">
                 <p className="font-display text-lg font-semibold">{t.name}</p>
