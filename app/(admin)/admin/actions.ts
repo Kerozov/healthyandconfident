@@ -1517,15 +1517,16 @@ export async function saveSiteSection(input: {
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
-  const { error } = await supabase
-    .from("site_sections")
-    .update({
+  const { error } = await supabase.from("site_sections").upsert(
+    {
+      key: input.key,
       enabled: input.enabled,
       title_bg: input.title_bg ?? "",
       title_en: input.title_en ?? "",
       updated_at: new Date().toISOString(),
-    })
-    .eq("key", input.key);
+    },
+    { onConflict: "key" },
+  );
   if (error) return { ok: false, message: error.message };
   revalidateSitePaths();
   return { ok: true };

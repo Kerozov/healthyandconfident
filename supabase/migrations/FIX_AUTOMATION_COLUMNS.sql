@@ -7,6 +7,9 @@ alter table public.automations
 alter table public.automations
   add column if not exists send_time text not null default '09:00';
 
+alter table public.automations
+  add column if not exists send_date date;
+
 alter table public.automation_deliveries
   add column if not exists scheduled_for timestamptz,
   add column if not exists recipient_status text,

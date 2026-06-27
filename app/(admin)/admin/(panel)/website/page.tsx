@@ -18,6 +18,8 @@ export default async function AdminWebsitePage() {
           sections={content.sections}
           events={content.events}
           products={content.products}
+          dbReady={content.dbReady}
+          dbError={content.dbError}
         />
       </div>
     </div>

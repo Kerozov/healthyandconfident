@@ -13,6 +13,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import type { SiteEvent, SiteProduct, SiteSection } from "@/lib/supabase/types";
+import { DEFAULT_SITE_SECTIONS } from "@/lib/site/content";
 import {
   saveSiteSection,
   saveSiteEvent,
@@ -133,10 +134,14 @@ export function WebsiteManager({
   sections,
   events,
   products,
+  dbReady = true,
+  dbError,
 }: {
   sections: Record<string, SiteSection>;
   events: SiteEvent[];
   products: SiteProduct[];
+  dbReady?: boolean;
+  dbError?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -148,8 +153,8 @@ export function WebsiteManager({
   const [eventForm, setEventForm] = useState(EMPTY_EVENT);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
 
-  const eventsSection = sections.events;
-  const productsSection = sections.products;
+  const eventsSection = sections.events ?? DEFAULT_SITE_SECTIONS.events;
+  const productsSection = sections.products ?? DEFAULT_SITE_SECTIONS.products;
 
   function refresh() {
     router.refresh();
@@ -250,8 +255,21 @@ export function WebsiteManager({
 
   return (
     <div className="space-y-8">
-      {eventsSection && (
-        <Card title="Upcoming events">
+      {!dbReady && (
+        <div className="rounded-2xl border border-coral-400/40 bg-coral-500/10 px-5 py-4 text-sm text-ink">
+          <p className="font-semibold text-coral-700">Първо пусни миграцията в Supabase</p>
+          <p className="mt-1 text-ink-soft">
+            Отвори Supabase → SQL Editor и изпълни файла{" "}
+            <code className="text-xs">supabase/migrations/012_site_content_and_send_date.sql</code>
+            . След това презареди тази страница.
+          </p>
+          {dbError && (
+            <p className="mt-2 font-mono text-xs text-coral-600">{dbError}</p>
+          )}
+        </div>
+      )}
+
+      <Card title="Предстоящи събития">
           <p className="mb-4 text-sm text-ink-soft">
             Add links to registration pages or event landing pages. They appear as
             cards on the homepage when the section is visible.
@@ -423,10 +441,8 @@ export function WebsiteManager({
             )}
           </div>
         </Card>
-      )}
 
-      {productsSection && (
-        <Card title="Stripe products">
+      <Card title="Upsell / Stripe продукти">
           <p className="mb-4 text-sm text-ink-soft">
             Add Stripe Payment Links. They appear as purchase cards when the section
             is visible on the homepage.
@@ -622,7 +638,6 @@ export function WebsiteManager({
             )}
           </div>
         </Card>
-      )}
 
       {error && <p className="text-sm text-coral-600">{error}</p>}
     </div>

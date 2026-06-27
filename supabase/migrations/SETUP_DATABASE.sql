@@ -1,10 +1,25 @@
 -- ═══════════════════════════════════════════════════════════════
 -- Healthy & Confident — FULL database setup (fresh Supabase project)
 -- Run this ONCE in Supabase SQL Editor if you have NO tables yet.
--- Already have 001_init? Use RUN_PENDING_MIGRATIONS.sql instead.
+-- Already have tables? Use RUN_PENDING_MIGRATIONS.sql (+ 007 if needed).
+--
+-- Schema includes:
+--   blog, subscribers, segments, popup
+--   automations (email/SMS, delay_days, send_time, send_date)
+--   automation_deliveries (scheduled, opens, bounces)
+--   site_sections / site_events / site_products (Admin → Website)
+--   email_campaigns, sms_campaigns
 -- ═══════════════════════════════════════════════════════════════
 
 create extension if not exists "pgcrypto";
+
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
 
 -- ── Blog ───────────────────────────────────────────────────────
 create table if not exists public.blog_posts (
@@ -199,7 +214,7 @@ select * from (values
        subject_bg, html_bg, subject_en, html_en, sort_order)
 where not exists (select 1 from public.automations limit 1);
 
--- ── Site sections (events, Stripe products) ────────────────────
+-- ── Website CMS (Admin → Website: events + Stripe upsell) ────
 create table if not exists public.site_sections (
   key         text primary key,
   enabled     boolean not null default false,
@@ -250,18 +265,6 @@ create table if not exists public.site_products (
 
 create index if not exists site_products_sort_idx
   on public.site_products (enabled, sort_order, created_at desc);
-
-drop trigger if exists site_events_updated_at on public.site_events;
-create trigger site_events_updated_at before update on public.site_events
-  for each row execute function public.set_updated_at();
-
-drop trigger if exists site_products_updated_at on public.site_products;
-create trigger site_products_updated_at before update on public.site_products
-  for each row execute function public.set_updated_at();
-
-drop trigger if exists site_sections_updated_at on public.site_sections;
-create trigger site_sections_updated_at before update on public.site_sections
-  for each row execute function public.set_updated_at();
 
 -- ── Email campaigns ────────────────────────────────────────────
 create table if not exists public.email_campaigns (
@@ -321,14 +324,6 @@ create index if not exists sms_campaigns_scheduled_idx
   on public.sms_campaigns (scheduled_at desc nulls last);
 
 -- ── updated_at triggers ────────────────────────────────────────
-create or replace function public.set_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
-
 drop trigger if exists blog_posts_updated_at on public.blog_posts;
 create trigger blog_posts_updated_at before update on public.blog_posts
   for each row execute function public.set_updated_at();
@@ -339,6 +334,18 @@ create trigger subscribers_updated_at before update on public.subscribers
 
 drop trigger if exists automations_updated_at on public.automations;
 create trigger automations_updated_at before update on public.automations
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists site_events_updated_at on public.site_events;
+create trigger site_events_updated_at before update on public.site_events
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists site_products_updated_at on public.site_products;
+create trigger site_products_updated_at before update on public.site_products
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists site_sections_updated_at on public.site_sections;
+create trigger site_sections_updated_at before update on public.site_sections
   for each row execute function public.set_updated_at();
 
 notify pgrst, 'reload schema';
