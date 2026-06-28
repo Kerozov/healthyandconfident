@@ -12,6 +12,7 @@ import {
 } from "@/lib/worker/email";
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
 import { runAutomations } from "@/lib/automation/send";
+import { composeBrandedEmail } from "@/lib/email/layout";
 import { cancelAutomationScheduledJobs } from "@/lib/automation/cancel";
 import {
   syncAutomationDeliveries,
@@ -187,6 +188,10 @@ type AutomationInput = {
   html_bg: string;
   subject_en: string;
   html_en: string;
+  cta_label_bg: string;
+  cta_url_bg: string;
+  cta_label_en: string;
+  cta_url_en: string;
   sms_bg: string;
   sms_en: string;
   sort_order?: number;
@@ -397,10 +402,15 @@ export async function resendAutomationToNonOpeners(
       name: null,
       email: sampleEmail,
     });
+    const ctaLabel =
+      locale === "en" ? automation.cta_label_en : automation.cta_label_bg;
+    const ctaUrl = locale === "en" ? automation.cta_url_en : automation.cta_url_bg;
 
     await dispatchCampaign({
       subject,
       html,
+      cta_label: ctaLabel,
+      cta_url: ctaUrl,
       locale,
       segment_tag: `${automation.name} · resend`,
       target_tags: automation.segment_keys.length
@@ -876,6 +886,8 @@ function deriveCampaignStatus(
 type CampaignInsert = {
   subject: string;
   html: string;
+  cta_label?: string;
+  cta_url?: string;
   locale: "bg" | "en" | null;
   segment_tag: string;
   target_tags: string[] | null;
@@ -894,6 +906,14 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     return { ok: false, message: "No recipients match this segment." };
   }
 
+  const ctaLabel = input.cta_label?.trim() ?? "";
+  const ctaUrl = input.cta_url?.trim() ?? "";
+  const wrappedHtml = composeBrandedEmail({
+    bodyHtml: input.html,
+    locale: input.locale === "en" ? "en" : "bg",
+    cta: ctaLabel && ctaUrl ? { label: ctaLabel, href: ctaUrl } : null,
+  });
+
   try {
     let jobId = "";
     let workerStatus = "pending";
@@ -909,7 +929,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
       }
       const res = await scheduleEmail({
         subject: input.subject,
-        html: input.html,
+        html: wrappedHtml,
         recipients: input.recipients,
         sendAt: scheduledAtIso,
         idempotencyKey: `camp-${Date.now()}`,
@@ -919,7 +939,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     } else {
       const res = await sendEmail({
         subject: input.subject,
-        html: input.html,
+        html: wrappedHtml,
         recipients: input.recipients,
       });
       jobId = res.jobId;
@@ -939,6 +959,8 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
       .insert({
         subject: input.subject,
         html: input.html,
+        cta_label: ctaLabel,
+        cta_url: ctaUrl,
         locale: input.locale,
         segment_tag: input.segment_tag,
         target_tags: input.target_tags,
@@ -1005,6 +1027,8 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
 export async function sendEmailCampaign(input: {
   subject: string;
   html: string;
+  cta_label?: string;
+  cta_url?: string;
   audience: AudienceInput;
   scheduled_at?: string;
 }): Promise<ActionResult> {
@@ -1015,6 +1039,8 @@ export async function sendEmailCampaign(input: {
   return dispatchCampaign({
     subject: input.subject,
     html: input.html,
+    cta_label: input.cta_label,
+    cta_url: input.cta_url,
     locale: locale ?? null,
     segment_tag: audience.segment_tag,
     target_tags: audience.target_tags,
@@ -1138,6 +1164,8 @@ export async function resendToNonOpeners(input: {
         worker_job_id: string | null;
         subject: string;
         html: string;
+        cta_label: string;
+        cta_url: string;
         locale: "bg" | "en" | null;
         segment_tag: string;
       }
@@ -1161,6 +1189,8 @@ export async function resendToNonOpeners(input: {
   return dispatchCampaign({
     subject,
     html: parent.html,
+    cta_label: parent.cta_label,
+    cta_url: parent.cta_url,
     locale: parent.locale,
     segment_tag: `${parent.segment_tag} · resend`,
     target_tags: null,

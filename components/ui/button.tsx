@@ -4,23 +4,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:translate-y-px",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         primary:
-          "bg-[#FF6B8A] text-white shadow-soft hover:bg-[#E8527A] hover:-translate-y-0.5",
+          "bg-rose-400 text-white shadow-sm hover:bg-rose-500 hover:shadow-md",
+        secondary:
+          "border border-rose-300 bg-transparent text-rose-500 hover:bg-rose-50",
         forest:
-          "bg-forest-600 text-cream hover:bg-forest-700 hover:-translate-y-0.5",
+          "bg-sage-600 text-white hover:bg-sage-800",
         outline:
-          "border-2 border-ink/15 bg-transparent text-ink hover:border-ink hover:bg-ink hover:text-cream",
-        ghost: "text-ink hover:bg-ink/5",
-        gold: "bg-gold-400 text-ink hover:bg-gold-500 hover:-translate-y-0.5",
+          "border border-rose-300 bg-transparent text-rose-500 hover:bg-rose-50",
+        ghost: "text-warm-800 hover:bg-rose-50",
+        gold: "bg-peach-400 text-warm-900 hover:bg-peach-500",
       },
       size: {
-        sm: "h-9 px-4 text-sm",
+        sm: "h-9 px-5 py-2 text-sm",
         md: "h-11 px-6 text-sm",
-        lg: "h-14 px-8 text-base",
+        lg: "px-8 py-3.5 text-base",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },
@@ -47,7 +49,8 @@ export function Button(props: ButtonAsButton | ButtonAsLink) {
 
   if ("href" in props && props.href !== undefined) {
     const { href, target, rel } = props;
-    const external = href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:");
+    const external =
+      href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:");
     if (external) {
       return (
         <a href={href} target={target} rel={rel} className={classes}>

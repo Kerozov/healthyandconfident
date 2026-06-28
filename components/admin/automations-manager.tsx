@@ -36,6 +36,7 @@ import {
 } from "@/app/(admin)/admin/actions";
 import { SegmentChecklist } from "@/components/admin/segment-checklist";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -271,8 +272,12 @@ const EMPTY_FORM = {
   send_date: "",
   subject_bg: "",
   html_bg: "",
+  cta_label_bg: "",
+  cta_url_bg: "",
   subject_en: "",
   html_en: "",
+  cta_label_en: "",
+  cta_url_en: "",
   sms_bg: "",
   sms_en: "",
   sort_order: 0,
@@ -292,8 +297,12 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     send_date: a.send_date ?? "",
     subject_bg: a.subject_bg,
     html_bg: a.html_bg,
+    cta_label_bg: a.cta_label_bg ?? "",
+    cta_url_bg: a.cta_url_bg ?? "",
     subject_en: a.subject_en,
     html_en: a.html_en,
+    cta_label_en: a.cta_label_en ?? "",
+    cta_url_en: a.cta_url_en ?? "",
     sms_bg: a.sms_bg,
     sms_en: a.sms_en,
     sort_order: a.sort_order,
@@ -756,9 +765,9 @@ export function AutomationsManager({
                       }
                     />
                   </Field>
-                  <Field label="HTML" hint="{{name}}, {{email}}">
+                  <Field label="Съдържание" hint="{{name}}, {{email}} — header/footer автоматично">
                     <Textarea
-                      rows={8}
+                      rows={6}
                       className="font-mono text-[13px]"
                       value={form.html_bg}
                       onChange={(e) =>
@@ -766,6 +775,31 @@ export function AutomationsManager({
                       }
                     />
                   </Field>
+                  <Field label="Текст на бутона (по избор)">
+                    <Input
+                      value={form.cta_label_bg}
+                      onChange={(e) =>
+                        setForm({ ...form, cta_label_bg: e.target.value })
+                      }
+                      placeholder="Запиши безплатен разговор"
+                    />
+                  </Field>
+                  <Field label="Линк на бутона (по избор)">
+                    <Input
+                      type="url"
+                      value={form.cta_url_bg}
+                      onChange={(e) =>
+                        setForm({ ...form, cta_url_bg: e.target.value })
+                      }
+                      placeholder="https://www.healthyandconfident.co.uk/bg#contact"
+                    />
+                  </Field>
+                  <EmailTemplatePreview
+                    bodyHtml={form.html_bg}
+                    ctaLabel={form.cta_label_bg}
+                    ctaUrl={form.cta_url_bg}
+                    locale="bg"
+                  />
                 </div>
                 <div className="space-y-3 rounded-xl border border-ink/10 p-4">
                   <p className="font-medium">English</p>
@@ -777,9 +811,9 @@ export function AutomationsManager({
                       }
                     />
                   </Field>
-                  <Field label="HTML" hint="{{name}}, {{email}}">
+                  <Field label="Content" hint="{{name}}, {{email}} — header/footer added automatically">
                     <Textarea
-                      rows={8}
+                      rows={6}
                       className="font-mono text-[13px]"
                       value={form.html_en}
                       onChange={(e) =>
@@ -787,6 +821,31 @@ export function AutomationsManager({
                       }
                     />
                   </Field>
+                  <Field label="Button text (optional)">
+                    <Input
+                      value={form.cta_label_en}
+                      onChange={(e) =>
+                        setForm({ ...form, cta_label_en: e.target.value })
+                      }
+                      placeholder="Book a free call"
+                    />
+                  </Field>
+                  <Field label="Button link (optional)">
+                    <Input
+                      type="url"
+                      value={form.cta_url_en}
+                      onChange={(e) =>
+                        setForm({ ...form, cta_url_en: e.target.value })
+                      }
+                      placeholder="https://www.healthyandconfident.co.uk/en#contact"
+                    />
+                  </Field>
+                  <EmailTemplatePreview
+                    bodyHtml={form.html_en}
+                    ctaLabel={form.cta_label_en}
+                    ctaUrl={form.cta_url_en}
+                    locale="en"
+                  />
                 </div>
               </div>
             ) : (

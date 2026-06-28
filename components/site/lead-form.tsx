@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
+import { cn } from "@/lib/utils";
 
 export function LeadForm({
   locale,
@@ -13,6 +14,7 @@ export function LeadForm({
   error,
   segmentTag = "all",
   source = "lead-magnet",
+  variant = "default",
 }: {
   locale: Locale;
   placeholder: string;
@@ -22,6 +24,7 @@ export function LeadForm({
   error: string;
   segmentTag?: string;
   source?: string;
+  variant?: "default" | "gradient";
 }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -45,7 +48,14 @@ export function LeadForm({
 
   if (state === "done") {
     return (
-      <div className="flex items-center gap-3 rounded-2xl bg-forest-50 px-6 py-5 text-forest-600">
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-2xl px-6 py-5",
+          variant === "gradient"
+            ? "bg-white/15 text-white"
+            : "bg-sage-50 text-sage-600",
+        )}
+      >
         <CheckCircle2 className="h-6 w-6 shrink-0" />
         <p className="font-medium">{success}</p>
       </div>
@@ -61,20 +71,27 @@ export function LeadForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={placeholder}
-          className="h-14 flex-1 rounded-full border border-ink/15 bg-white px-6 text-sm outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-400/30"
+          className="h-14 flex-1 rounded-full bg-white px-5 py-3 text-sm text-warm-800 outline-none focus:ring-2 focus:ring-white/50"
         />
         <button
           type="submit"
           disabled={state === "loading"}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-coral-500 px-7 font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-coral-600 disabled:opacity-60"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-warm-900 px-6 py-3 font-medium text-white transition-colors hover:bg-warm-800 disabled:opacity-60"
         >
           {state === "loading" ? "..." : button}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
-      <p className="mt-3 text-xs text-ink-soft/70">{consent}</p>
+      <p
+        className={cn(
+          "mt-3 text-xs",
+          variant === "gradient" ? "text-white/70" : "text-[#8B6A5A]",
+        )}
+      >
+        {consent}
+      </p>
       {state === "error" && (
-        <p className="mt-2 text-sm text-coral-600">{error}</p>
+        <p className="mt-2 text-sm text-rose-100">{error}</p>
       )}
     </form>
   );

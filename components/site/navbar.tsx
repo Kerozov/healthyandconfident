@@ -43,10 +43,8 @@ export function Navbar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 transition-all duration-300",
-        scrolled
-          ? "border-b border-ink/10 bg-cream/85 backdrop-blur-md"
-          : "bg-transparent",
+        "sticky top-0 z-50 border-b border-rose-100 bg-white/90 backdrop-blur-md transition-all duration-300",
+        scrolled && "shadow-sm",
       )}
     >
       <Container className="flex h-18 items-center justify-between py-3">
@@ -54,12 +52,14 @@ export function Navbar({
           href={`/${locale}`}
           className="flex items-center gap-2.5 font-display tracking-tight"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest-600 text-cream">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-400 text-white">
             <Leaf className="h-5 w-5" />
           </span>
           <span className="leading-tight">
-            <span className="block text-lg font-semibold">{siteConfig.brand}</span>
-            <span className="block text-[11px] font-medium uppercase tracking-wider text-ink-soft">
+            <span className="block text-lg font-semibold text-rose-500">
+              {siteConfig.brand}
+            </span>
+            <span className="block text-[11px] font-medium uppercase tracking-wider text-warm-800/70">
               {siteConfig.tagline}
             </span>
           </span>
@@ -70,7 +70,7 @@ export function Navbar({
             <Link
               key={item.href}
               href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
-              className="text-sm font-medium text-ink-soft transition-colors hover:text-ink"
+              className="text-sm font-medium text-warm-800 transition-colors hover:text-rose-500"
             >
               {item.label}
             </Link>
@@ -80,7 +80,7 @@ export function Navbar({
         <div className="hidden items-center gap-3 lg:flex">
           <Link
             href={switchHref}
-            className="rounded-full border border-ink/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors hover:border-ink hover:bg-ink hover:text-cream"
+            className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-warm-800 transition-colors hover:border-rose-300 hover:bg-rose-50"
           >
             {other}
           </Link>
@@ -90,7 +90,7 @@ export function Navbar({
         </div>
 
         <button
-          className="lg:hidden"
+          className="text-warm-800 lg:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label="Menu"
         >
@@ -99,14 +99,14 @@ export function Navbar({
       </Container>
 
       {open && (
-        <div className="border-t border-ink/10 bg-cream lg:hidden">
+        <div className="border-t border-rose-100 bg-white lg:hidden">
           <Container className="flex flex-col gap-1 py-4">
             {items.map((item) => (
               <Link
                 key={item.href}
                 href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-3 text-base font-medium hover:bg-ink/5"
+                className="rounded-lg px-2 py-3 text-base font-medium text-warm-800 hover:bg-rose-50"
               >
                 {item.label}
               </Link>
@@ -115,7 +115,7 @@ export function Navbar({
               <Link
                 href={switchHref}
                 onClick={() => setOpen(false)}
-                className="rounded-full border border-ink/15 px-3 py-2 text-xs font-semibold uppercase tracking-wider"
+                className="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-warm-800"
               >
                 {other}
               </Link>

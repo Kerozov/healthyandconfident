@@ -19,31 +19,30 @@ export function Hero({
 }) {
   const { hero } = dict;
   return (
-    <section className="relative overflow-hidden pt-10 pb-20 lg:pt-16">
-      {/* background flourishes */}
-      <div className="pointer-events-none absolute -right-32 -top-24 h-96 w-96 rounded-full bg-coral-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 top-40 h-80 w-80 rounded-full bg-forest-200/40 blur-3xl" />
+    <section className="relative overflow-hidden bg-gradient-to-br from-rose-50 via-[#FFF5F0] to-peach-100 pt-10 pb-20 lg:pt-16">
+      <div className="pointer-events-none absolute -right-32 -top-24 h-96 w-96 rounded-full bg-rose-100/60 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 top-40 h-80 w-80 rounded-full bg-peach-100/80 blur-3xl" />
 
       <Container className="relative grid items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="animate-fade-up">
-          <span className="eyebrow rounded-full bg-forest-600/10 px-4 py-2 text-forest-700">
+          <span className="inline-flex items-center gap-2 rounded-full border border-sage-100 bg-sage-50 px-4 py-1 text-sm text-sage-600">
             <Sparkles className="h-4 w-4" /> {hero.eyebrow}
           </span>
 
           {locale === "bg" ? (
-            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.2rem]">
-              <span className="block text-sm font-medium text-[#2D6A4F] mb-2">
+            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-warm-900 sm:text-6xl lg:text-[4.2rem]">
+              <span className="mb-2 block text-sm font-medium text-sage-600">
                 Веси Ней — Холистичен диетолог
               </span>
               Свали трайно 5-10-15 кг и се почувствай уверена
             </h1>
           ) : (
-            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.2rem]">
+            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-warm-900 sm:text-6xl lg:text-[4.2rem]">
               {hero.title}{" "}
-              <span className="relative inline-block text-coral-500">
+              <span className="relative inline-block text-rose-500">
                 {hero.titleAccent}
                 <svg
-                  className="absolute -bottom-2 left-0 w-full text-coral-400"
+                  className="absolute -bottom-2 left-0 w-full text-rose-400"
                   viewBox="0 0 300 12"
                   fill="none"
                   preserveAspectRatio="none"
@@ -59,14 +58,14 @@ export function Hero({
             </h1>
           )}
 
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-warm-800">
             {hero.subtitle}
           </p>
 
           <ul className="mt-7 grid gap-2.5 sm:grid-cols-2">
             {hero.bullets.map((b) => (
-              <li key={b} className="flex items-start gap-2.5 text-sm font-medium">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest-500 text-cream">
+              <li key={b} className="flex items-start gap-2.5 text-sm font-medium text-warm-800">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sage-600 text-white">
                   <Check className="h-3 w-3" />
                 </span>
                 {b}
@@ -79,7 +78,7 @@ export function Hero({
               <Button href={`/${locale}#programs`} size="lg">
                 {hero.primaryCta}
               </Button>
-              <Button href={`/${locale}#lead`} size="lg" variant="outline">
+              <Button href={`/${locale}#lead`} size="lg" variant="secondary">
                 {hero.secondaryCta}
               </Button>
             </div>
@@ -98,41 +97,38 @@ export function Hero({
             />
           </div>
 
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-ink/10 pt-8">
+          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-[#F0D5CC] pt-8">
             {hero.stats.map((s) => (
               <div key={s.label}>
-                <dt className="font-display text-3xl font-semibold text-forest-600">
-                  {s.value}
-                </dt>
-                <dd className="mt-1 text-xs leading-snug text-ink-soft">{s.label}</dd>
+                <dt className="text-3xl font-bold text-rose-500">{s.value}</dt>
+                <dd className="mt-1 text-sm leading-snug text-warm-700">{s.label}</dd>
               </div>
             ))}
           </dl>
         </div>
 
-        {/* Visual */}
         <div className="relative mx-auto w-full max-w-md">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-forest-500 via-forest-600 to-forest-700 shadow-soft">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-sage-400 via-sage-600 to-sage-800 shadow-soft">
             <img
               src="/images/vessie.jpg"
               alt="Веси Ней — холистичен диетолог, специалист по инсулинова резистентност"
               className="absolute inset-0 h-full w-full object-cover object-center opacity-90"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-forest-800/60 to-transparent" />
-            <div className="absolute bottom-6 left-6 right-6 text-cream">
+            <div className="absolute inset-0 bg-gradient-to-t from-sage-800/60 to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6 text-white">
               <p className="font-display text-2xl font-semibold">Vessie Ney</p>
-              <p className="text-sm text-cream/80">{hero.imageAlt}</p>
+              <p className="text-sm text-white/80">{hero.imageAlt}</p>
             </div>
           </div>
 
-          <div className="animate-float-slow absolute -left-6 top-10 hidden rounded-2xl bg-cream p-4 shadow-soft sm:block">
+          <div className="animate-float-slow absolute -left-6 top-10 hidden rounded-2xl border border-[#F0D5CC] bg-white p-4 shadow-soft sm:block">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-coral-300/40 text-coral-600">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-rose-500">
                 <TrendingUp className="h-5 w-5" />
               </span>
               <div>
-                <p className="font-display text-xl font-semibold text-ink">94%</p>
-                <p className="text-[11px] text-ink-soft">
+                <p className="text-xl font-bold text-rose-500">94%</p>
+                <p className="text-[11px] text-warm-700">
                   {locale === "bg" ? "успех" : "success rate"}
                 </p>
               </div>

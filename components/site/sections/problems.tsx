@@ -5,30 +5,30 @@ import { Icon } from "@/components/site/icon";
 export function Problems({ dict }: { dict: Dictionary }) {
   const { problems } = dict;
   return (
-    <section className="py-20">
+    <section className="bg-white py-20">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-warm-900 sm:text-4xl">
             {problems.title}
           </h2>
-          <p className="mt-4 text-ink-soft">{problems.subtitle}</p>
+          <p className="mt-4 text-warm-800">{problems.subtitle}</p>
         </div>
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {problems.items.map((p) => (
             <div
               key={p.text}
-              className="group rounded-2xl border border-ink/10 bg-bg-card p-6 transition-all hover:-translate-y-1 hover:border-coral-400 hover:shadow-soft"
+              className="rounded-2xl border border-[#F0D5CC] bg-warm-50 p-4 transition-all hover:border-rose-300 hover:shadow-sm"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-forest-50 text-forest-600 transition-colors group-hover:bg-coral-500 group-hover:text-white">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-rose-400">
                 <Icon name={p.icon} className="h-6 w-6" />
               </span>
-              <p className="mt-4 text-sm font-medium leading-snug">{p.text}</p>
+              <p className="mt-4 text-sm font-medium leading-snug text-warm-800">{p.text}</p>
             </div>
           ))}
         </div>
 
-        <p className="mx-auto mt-10 max-w-2xl rounded-2xl bg-cream-2 px-6 py-5 text-center text-sm text-ink-soft">
+        <p className="mx-auto mt-10 max-w-2xl rounded-2xl border border-[#F0D5CC] bg-warm-50 px-6 py-5 text-center text-sm text-warm-800">
           {problems.note}
         </p>
       </Container>

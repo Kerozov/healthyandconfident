@@ -23,6 +23,13 @@ export type Testimonial = {
   quote: string;
 };
 
+export type GoogleReview = {
+  name: string;
+  quote: string;
+  rating: number;
+  date: string;
+};
+
 export type FaqItem = { q: string; a: string };
 
 export type Dictionary = {
@@ -79,6 +86,17 @@ export type Dictionary = {
     title: string;
     subtitle: string;
     items: Testimonial[];
+  };
+  googleReviews: {
+    title: string;
+    subtitle: string;
+    aggregateRating: string;
+    reviewCount: string;
+    reviewCountLabel: string;
+    verifiedLabel: string;
+    postedOnLabel: string;
+    ctaLabel: string;
+    items: GoogleReview[];
   };
   leadMagnet: {
     title: string;

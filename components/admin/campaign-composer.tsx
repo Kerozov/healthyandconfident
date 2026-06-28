@@ -9,6 +9,7 @@ import {
   sendSmsCampaign,
 } from "@/app/(admin)/admin/actions";
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
+import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { datetimeLocalToIso } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,8 @@ export function CampaignComposer({
   const [email, setEmail] = useState({
     subject: "",
     html: "",
+    cta_label: "",
+    cta_url: "",
     audience: { ...EMPTY_AUDIENCE } as AudienceInput,
     scheduled_at: "",
   });
@@ -46,6 +49,8 @@ export function CampaignComposer({
       const res = await sendEmailCampaign({
         subject: email.subject,
         html: email.html,
+        cta_label: email.cta_label || undefined,
+        cta_url: email.cta_url || undefined,
         audience: email.audience,
         scheduled_at: email.scheduled_at
           ? datetimeLocalToIso(email.scheduled_at) ?? undefined
@@ -56,6 +61,8 @@ export function CampaignComposer({
         setEmail({
           subject: "",
           html: "",
+          cta_label: "",
+          cta_url: "",
           audience: { ...EMPTY_AUDIENCE },
           scheduled_at: "",
         });
@@ -99,15 +106,41 @@ export function CampaignComposer({
               onChange={(e) => setEmail({ ...email, subject: e.target.value })}
             />
           </Field>
-          <Field label="HTML body" hint="Full HTML. Open tracking is automatic.">
+          <Field
+            label="Съдържание"
+            hint="Само текстът в средата — header и footer се добавят автоматично."
+          >
             <Textarea
-              rows={10}
+              rows={8}
               value={email.html}
               onChange={(e) => setEmail({ ...email, html: e.target.value })}
               className="font-mono text-[13px]"
-              placeholder="<h1>Hi!</h1><p>...</p>"
+              placeholder="<p>Здравей,</p><p>Благодарим ти…</p>"
             />
           </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Текст на бутона (по избор)">
+              <Input
+                value={email.cta_label}
+                onChange={(e) => setEmail({ ...email, cta_label: e.target.value })}
+                placeholder="Запиши безплатен разговор"
+              />
+            </Field>
+            <Field label="Линк на бутона (по избор)">
+              <Input
+                type="url"
+                value={email.cta_url}
+                onChange={(e) => setEmail({ ...email, cta_url: e.target.value })}
+                placeholder="https://www.healthyandconfident.co.uk/bg#contact"
+              />
+            </Field>
+          </div>
+          <EmailTemplatePreview
+            bodyHtml={email.html}
+            ctaLabel={email.cta_label}
+            ctaUrl={email.cta_url}
+            locale={email.audience.locale === "en" ? "en" : "bg"}
+          />
           <AudiencePicker
             segments={segments}
             subscriberTags={subscriberTags}

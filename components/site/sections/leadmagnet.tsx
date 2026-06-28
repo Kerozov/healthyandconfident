@@ -9,18 +9,18 @@ export function LeadMagnet({ dict, locale }: { dict: Dictionary; locale: Locale 
   return (
     <section id="lead" className="scroll-mt-24 py-24">
       <Container>
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-forest-600 px-7 py-14 text-cream sm:px-14">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-coral-400/30 blur-3xl" />
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-rose-400 to-[#F0527A] px-7 py-14 text-white sm:px-14">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
           <div className="relative mx-auto max-w-2xl text-center">
-            <span className="eyebrow justify-center text-coral-300">
+            <span className="eyebrow justify-center text-white/90">
               <Gift className="h-4 w-4" />
               {locale === "bg" ? "Безплатен подарък" : "Free gift"}
             </span>
             <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
               {leadMagnet.title}
             </h2>
-            <p className="mt-4 text-cream/80">{leadMagnet.subtitle}</p>
-            <div className="mt-8 [&_p]:text-cream/60">
+            <p className="mt-4 text-white/90">{leadMagnet.subtitle}</p>
+            <div className="mt-8">
               <LeadForm
                 locale={locale}
                 placeholder={leadMagnet.placeholder}
@@ -30,6 +30,7 @@ export function LeadMagnet({ dict, locale }: { dict: Dictionary; locale: Locale 
                 error={leadMagnet.error}
                 segmentTag="weight-loss"
                 source="lead-magnet"
+                variant="gradient"
               />
             </div>
           </div>

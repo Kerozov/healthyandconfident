@@ -10,6 +10,7 @@ import { Outcomes } from "@/components/site/sections/outcomes";
 import { Programs } from "@/components/site/sections/programs";
 import { About } from "@/components/site/sections/about";
 import { Testimonials } from "@/components/site/sections/testimonials";
+import { GoogleReviews } from "@/components/site/sections/google-reviews";
 import { EventsSection } from "@/components/site/sections/events";
 import { ShopSection } from "@/components/site/sections/shop";
 import { LeadMagnet } from "@/components/site/sections/leadmagnet";
@@ -40,7 +41,7 @@ export default async function HomePage({
       <Marquee locale={l} />
       <Problems dict={dict} />
       <Method dict={dict} />
-      <Outcomes dict={dict} />
+      <Outcomes dict={dict} locale={l} />
       <Programs dict={dict} locale={l} {...offerProps} />
       {eventsSection && site.events.length > 0 && (
         <EventsSection
@@ -61,6 +62,7 @@ export default async function HomePage({
       )}
       <About dict={dict} locale={l} {...offerProps} />
       <Testimonials dict={dict} locale={l} />
+      <GoogleReviews dict={dict} />
       <LeadMagnet dict={dict} locale={l} />
       <Faq dict={dict} />
       <Contact dict={dict} locale={l} {...offerProps} />

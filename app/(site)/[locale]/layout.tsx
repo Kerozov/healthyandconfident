@@ -76,7 +76,7 @@ export default async function SiteLayout({
       lang={localeHtmlLang[l]}
       className={`${geistSans.variable} ${fraunces.variable}`}
     >
-      <body className="min-h-screen bg-bg-primary text-text-primary">
+      <body className="min-h-screen">
         <Navbar
           locale={l}
           items={dict.nav.items}

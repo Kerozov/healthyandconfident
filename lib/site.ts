@@ -13,6 +13,10 @@ export const siteConfig = {
   viber: "viber://chat?number=%2B447876565263",
   facebook: "https://www.facebook.com/",
   instagram: "https://www.instagram.com/",
+  /** Link to Google Business profile / write a review */
+  googleReviewsUrl:
+    process.env.NEXT_PUBLIC_GOOGLE_REVIEWS_URL ??
+    "https://www.google.com/search?q=Vessie+Ney+Healthy+and+Confident+reviews",
   // Default OG image (place a real asset in /public/og)
   ogImage: "/og/default.jpg",
 } as const;

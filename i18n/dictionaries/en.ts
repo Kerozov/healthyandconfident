@@ -24,6 +24,7 @@ export const en: Dictionary = {
       { label: "Method", href: "#method" },
       { label: "Programs", href: "#programs" },
       { label: "Results", href: "#results" },
+      { label: "Google", href: "#google-reviews" },
       { label: "Blog", href: "/en/blog" },
       { label: "Contact", href: "#contact" },
     ],
@@ -189,6 +190,47 @@ export const en: Dictionary = {
       },
     ],
   },
+  googleReviews: {
+    title: "Google Reviews",
+    subtitle:
+      "Real ratings from Vessie Ney's clients — published directly on Google.",
+    aggregateRating: "5.0",
+    reviewCount: "12+",
+    reviewCountLabel: "Google reviews",
+    verifiedLabel: "Verified Google reviews",
+    postedOnLabel: "Google",
+    ctaLabel: "See all reviews on Google",
+    items: [
+      {
+        name: "Kate M.",
+        rating: 5,
+        date: "3 months ago",
+        quote:
+          "What I like most about Vessie is her attentiveness. She listens to my problems (poor sleep, stress, changing hormones) and tailors advice to my needs. I changed my pre-bedtime routine and already wake up fresher and more energised.",
+      },
+      {
+        name: "Sarah L.",
+        rating: 5,
+        date: "5 months ago",
+        quote:
+          "I always thought I ate healthily until I met Vessie. She completely transformed how I think about food — my energy returned and my endurance increased noticeably. Professional, sincere and very knowledgeable.",
+      },
+      {
+        name: "Helen R.",
+        rating: 5,
+        date: "8 months ago",
+        quote:
+          "I struggled with menopause symptoms for four years — hot flashes, brain fog, terrible mood swings. A friend recommended Vessie. After the second week I started feeling better. Diet really was a game-changer.",
+      },
+      {
+        name: "Maria P.",
+        rating: 5,
+        date: "1 year ago",
+        quote:
+          "The approach is holistic — not just a menu but a mindset shift. I feel genuine support at every step. Results come quickly and last. Highly recommend for anyone with insulin resistance.",
+      },
+    ],
+  },
   leadMagnet: {
     title: "Free: your colourful 2-day slimming menu",
     subtitle:
@@ -262,6 +304,8 @@ export const en: Dictionary = {
         links: [
           { label: "About", href: "/en#about" },
           { label: "Programs", href: "/en#programs" },
+          { label: "Results", href: "/en#results" },
+          { label: "Google reviews", href: "/en#google-reviews" },
           { label: "Blog", href: "/en/blog" },
           { label: "Contact", href: "/en#contact" },
         ],

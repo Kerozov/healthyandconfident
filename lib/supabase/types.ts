@@ -91,6 +91,10 @@ export type Automation = {
   html_bg: string;
   subject_en: string;
   html_en: string;
+  cta_label_bg: string;
+  cta_url_bg: string;
+  cta_label_en: string;
+  cta_url_en: string;
   sms_bg: string;
   sms_en: string;
   sort_order: number;
@@ -141,6 +145,8 @@ export type EmailCampaign = {
   id: string;
   subject: string;
   html: string;
+  cta_label: string;
+  cta_url: string;
   locale: Locale | null;
   segment_tag: string;
   recipients_count: number;

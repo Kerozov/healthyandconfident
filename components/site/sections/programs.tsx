@@ -20,16 +20,16 @@ export function Programs({
 }) {
   const { programs } = dict;
   return (
-    <section id="programs" className="scroll-mt-24 py-24">
+    <section id="programs" className="scroll-mt-24 bg-white py-24">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow text-coral-500">
+          <span className="eyebrow text-rose-500">
             <Star className="h-4 w-4" /> {locale === "bg" ? "Програми" : "Programs"}
           </span>
-          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-warm-900 sm:text-4xl">
             {programs.title}
           </h2>
-          <p className="mt-4 text-ink-soft">{programs.subtitle}</p>
+          <p className="mt-4 text-warm-800">{programs.subtitle}</p>
         </div>
 
         <div className="mt-14 grid gap-6 lg:grid-cols-3">
@@ -37,10 +37,10 @@ export function Programs({
             <div
               key={p.title}
               className={cn(
-                "relative flex flex-col rounded-3xl border p-8 transition-all hover:-translate-y-1",
+                "relative flex flex-col rounded-2xl border p-8 transition-all hover:-translate-y-1",
                 p.highlight
-                  ? "border-coral-400 bg-forest-700 text-cream shadow-soft lg:-mt-4 lg:mb-4"
-                  : "border-ink/10 bg-bg-card",
+                  ? "border-2 border-rose-400 bg-white shadow-lg lg:-mt-4 lg:mb-4"
+                  : "border-[#F0D5CC] bg-warm-50",
               )}
             >
               {p.badge && (
@@ -48,49 +48,32 @@ export function Programs({
                   className={cn(
                     "absolute -top-3 left-8 rounded-full px-3 py-1 text-xs font-semibold",
                     p.highlight
-                      ? "bg-coral-500 text-white"
-                      : "bg-forest-50 text-forest-600",
+                      ? "bg-rose-400 text-white"
+                      : "bg-sage-50 text-sage-600",
                   )}
                 >
                   {p.badge}
                 </span>
               )}
-              <h3 className="font-display text-2xl font-semibold">{p.title}</h3>
-              <p
-                className={cn(
-                  "mt-1 text-xs uppercase tracking-wider",
-                  p.highlight ? "text-cream/60" : "text-ink-soft/70",
-                )}
-              >
+              <h3 className="font-display text-2xl font-semibold text-warm-900">{p.title}</h3>
+              <span className="mt-2 inline-flex w-fit rounded-full bg-sage-50 px-3 py-1 text-xs text-sage-600">
                 {p.duration}
-              </p>
-              <p className="mt-5 font-display text-3xl font-semibold text-coral-500">
+              </span>
+              <p className="mt-5 font-display text-3xl font-semibold text-rose-500">
                 {p.price}
               </p>
-              <p
-                className={cn(
-                  "mt-4 text-sm leading-relaxed",
-                  p.highlight ? "text-cream/80" : "text-ink-soft",
-                )}
-              >
-                {p.description}
-              </p>
-              <ul className="mt-6 flex-1 space-y-3 text-sm">
+              <p className="mt-4 text-sm leading-relaxed text-warm-800">{p.description}</p>
+              <ul className="mt-6 flex-1 space-y-3 text-sm text-warm-800">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
-                    <Check
-                      className={cn(
-                        "mt-0.5 h-4 w-4 shrink-0",
-                        p.highlight ? "text-coral-300" : "text-forest-500",
-                      )}
-                    />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-sage-500" />
                     {f}
                   </li>
                 ))}
               </ul>
               <Button
                 href={`/${locale}${p.href}`}
-                variant="primary"
+                variant={p.highlight ? "primary" : "secondary"}
                 className="mt-8 w-full"
               >
                 {p.cta}

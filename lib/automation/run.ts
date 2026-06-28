@@ -3,6 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale, Segment } from "@/lib/supabase/types";
 import { expandSegmentKeys } from "@/lib/segments/hierarchy";
+import { buildBrandedEmail } from "@/lib/email/compose";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { scheduledAtAfterDays, scheduledAtOnDate } from "@/lib/datetime";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
@@ -230,7 +231,14 @@ async function scheduleAutomation(
   if (!subjectRaw.trim() || !htmlRaw.trim()) return false;
 
   const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
-  const html = renderEmailTemplate(htmlRaw, { name: ctx.name, email });
+  const ctaLabel = locale === "en" ? automation.cta_label_en : automation.cta_label_bg;
+  const ctaUrl = locale === "en" ? automation.cta_url_en : automation.cta_url_bg;
+  const html = buildBrandedEmail({
+    bodyHtml: htmlRaw,
+    locale,
+    cta: ctaLabel && ctaUrl ? { label: ctaLabel, href: ctaUrl } : null,
+    vars: { name: ctx.name, email },
+  });
 
   const res = await scheduleEmail({
     subject,
@@ -302,7 +310,14 @@ async function sendAutomationNow(
   if (!subjectRaw.trim() || !htmlRaw.trim()) return false;
 
   const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
-  const html = renderEmailTemplate(htmlRaw, { name: ctx.name, email });
+  const ctaLabel = locale === "en" ? automation.cta_label_en : automation.cta_label_bg;
+  const ctaUrl = locale === "en" ? automation.cta_url_en : automation.cta_url_bg;
+  const html = buildBrandedEmail({
+    bodyHtml: htmlRaw,
+    locale,
+    cta: ctaLabel && ctaUrl ? { label: ctaLabel, href: ctaUrl } : null,
+    vars: { name: ctx.name, email },
+  });
 
   const res = await sendEmail({ subject, html, recipients: [email] });
   await recordDelivery({
