@@ -984,7 +984,11 @@ export function ProgramLanding({
                 <div className="overflow-hidden rounded-3xl shadow-lg">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/images/program-banner.png"
+                    src={
+                      content.galleries?.[0]?.images[0] ??
+                      content.hero.image ??
+                      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=750&fit=crop"
+                    }
                     alt=""
                     className="aspect-[16/10] w-full object-cover"
                   />

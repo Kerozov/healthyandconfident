@@ -113,10 +113,6 @@ export type Dictionary = {
     success: string;
     error: string;
   };
-  menuBanner: {
-    text: string;
-    cta: string;
-  };
   bioBanner: {
     title: string;
     credentials: string[];

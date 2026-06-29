@@ -246,10 +246,6 @@ export const en: Dictionary = {
     success: "Check your inbox — your menu is on the way! 🎉",
     error: "Something went wrong. Please try again.",
   },
-  menuBanner: {
-    text: "Get your colourful, delicious 2-day GIFT MENU for a SLIM figure here:",
-    cta: "Get the menu",
-  },
   bioBanner: {
     title: "Vessie Ney",
     credentials: [

@@ -56,7 +56,7 @@ export function Challenge21Section({
             </div>
 
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
-              <div className="relative max-w-[85%] border-2 border-forest-900 bg-white px-5 py-5 text-center shadow-xl sm:px-7 sm:py-6">
+              <div className="relative max-w-[85%] rounded-3xl border border-white/30 bg-white/95 px-5 py-5 text-center shadow-2xl backdrop-blur-sm sm:px-7 sm:py-6">
                 <span className="absolute -left-3 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-coral-500 text-sm font-bold text-white shadow-lg sm:-left-5 sm:h-16 sm:w-16 sm:text-base">
                   {challenge21.discount}
                 </span>

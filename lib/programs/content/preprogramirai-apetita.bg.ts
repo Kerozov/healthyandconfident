@@ -33,7 +33,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
     secondaryCta: "Какво включва клубът",
     secondaryHref: "#includes",
     placementKey: "programs_2",
-    image: "/images/program-banner.png",
+    image: FOOD[0],
   },
   galleries: [{ title: "Препрограмирай апетита", titleAccent: "с вкусна храна", images: FOOD }],
   audience: {
@@ -97,7 +97,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
       "Кутия с изненади",
     ],
     footer: "ВСИЧКО НУЖНО — НАЙ-ПОСЛЕ ЛЕСНО — НА 1 МЯСТО — 24/7",
-    image: "/images/program-banner.png",
+    image: FOOD[0],
   },
   valueStack: {
     title: "Какво включва:",

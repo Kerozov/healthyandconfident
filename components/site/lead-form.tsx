@@ -27,7 +27,7 @@ export function LeadForm({
   error: string;
   segmentTag?: string;
   source?: string;
-  variant?: "default" | "gradient";
+  variant?: "default" | "gradient" | "light";
   /** When set, shows upsell popup after successful subscribe (lead magnet section). */
   offerPlacementKey?: string;
 }) {
@@ -95,13 +95,24 @@ export function LeadForm({
       <p
         className={cn(
           "mt-3 text-xs",
-          variant === "gradient" ? "text-green-100" : "text-green-600",
+          variant === "gradient"
+            ? "text-green-100"
+            : variant === "light"
+              ? "text-forest-600/80"
+              : "text-green-600",
         )}
       >
         {consent}
       </p>
       {state === "error" && (
-        <p className="mt-2 text-sm text-gold-400">{error}</p>
+        <p
+          className={cn(
+            "mt-2 text-sm",
+            variant === "gradient" ? "text-gold-400" : "text-coral-600",
+          )}
+        >
+          {error}
+        </p>
       )}
     </form>
   );

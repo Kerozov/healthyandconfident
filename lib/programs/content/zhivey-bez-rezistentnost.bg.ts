@@ -40,7 +40,7 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
     secondaryCta: "Виж какво включва",
     secondaryHref: "#includes",
     placementKey: "programs_1",
-    image: "/images/program-banner.png",
+    image: FOOD[0],
   },
   galleries: [
     { title: "Хранейки се", titleAccent: "така", images: FOOD },
