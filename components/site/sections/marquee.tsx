@@ -1,42 +1,53 @@
+import { Check } from "lucide-react";
 import type { Locale } from "@/i18n/config";
+import { Container } from "@/components/ui/container";
+
+const TOPICS = {
+  bg: [
+    "Инсулинова резистентност",
+    "Трайно отслабване",
+    "Диабет тип 2",
+    "Балансирана кръвна захар",
+    "Повече енергия",
+    "Увереност",
+    "Без диети",
+    "Холистичен подход",
+  ],
+  en: [
+    "Insulin resistance",
+    "Lasting weight loss",
+    "Type 2 Diabetes",
+    "Balanced blood sugar",
+    "More energy",
+    "Confidence",
+    "No more diets",
+    "Holistic approach",
+  ],
+} as const;
 
 export function Marquee({ locale }: { locale: Locale }) {
-  const words =
-    locale === "bg"
-      ? [
-          "Инсулинова резистентност",
-          "Трайно отслабване",
-          "Диабет тип 2",
-          "Балансирана кръвна захар",
-          "Повече енергия",
-          "Увереност",
-          "Без диети",
-          "Холистичен подход",
-        ]
-      : [
-          "Insulin resistance",
-          "Lasting weight loss",
-          "Type 2 Diabetes",
-          "Balanced blood sugar",
-          "More energy",
-          "Confidence",
-          "No more diets",
-          "Holistic approach",
-        ];
-  const row = [...words, ...words];
+  const topics = locale === "bg" ? TOPICS.bg : TOPICS.en;
+  const label =
+    locale === "bg" ? "С фокус върху" : "Focused on";
+
   return (
-    <div className="border-y border-green-800 bg-green-700 py-4 text-green-100">
-      <div className="flex w-max animate-marquee gap-10 whitespace-nowrap">
-        {row.map((w, i) => (
-          <span
-            key={i}
-            className="flex items-center gap-10 font-display text-lg font-medium tracking-tight"
-          >
-            {w}
-            <span className="text-gold-400">✦</span>
-          </span>
-        ))}
-      </div>
-    </div>
+    <section className="border-y border-green-100 bg-gradient-to-b from-green-50/80 to-white py-8">
+      <Container>
+        <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-green-600">
+          {label}
+        </p>
+        <ul className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+          {topics.map((topic) => (
+            <li
+              key={topic}
+              className="inline-flex items-center gap-1.5 rounded-full border border-green-100 bg-white px-3.5 py-2 text-sm font-medium text-forest-800 shadow-sm transition-colors hover:border-green-200 hover:bg-green-50"
+            >
+              <Check className="h-3.5 w-3.5 shrink-0 text-green-500" aria-hidden />
+              {topic}
+            </li>
+          ))}
+        </ul>
+      </Container>
+    </section>
   );
 }

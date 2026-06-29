@@ -83,7 +83,7 @@ export function ShopSection({
                   >
                     {product.offer_type ?? "upsell"}
                   </span>
-                  <h3 className="mt-2 font-display text-xl font-semibold leading-snug transition-colors group-hover:text-coral-600">
+                  <h3 className="mt-2 font-display text-xl font-semibold leading-snug transition-colors group-hover:text-green-600">
                     {productTitle}
                   </h3>
                   {description && (
@@ -91,7 +91,7 @@ export function ShopSection({
                       {description}
                     </p>
                   )}
-                  <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-coral-600">
+                  <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-green-600">
                     {dict.shop.cta} <ArrowUpRight className="h-4 w-4" />
                   </span>
                 </div>
