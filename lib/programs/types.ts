@@ -20,6 +20,7 @@ export type ProgramLandingContent = {
     titleAccent?: string;
     subtitle: string;
     bullets?: string[];
+    priceLine?: string;
     primaryCta: string;
     primaryHref: string;
     secondaryCta?: string;
@@ -33,7 +34,43 @@ export type ProgramLandingContent = {
   audience?: {
     eyebrow?: string;
     title: string;
-    items: { title: string; text: string }[];
+    items: { title: string; text: string; bullets?: string[] }[];
+    closing?: string;
+  };
+  visualize?: { title: string; items: string[]; image?: string };
+  education?: {
+    sections: { title: string; bullets: string[]; image?: string }[];
+  };
+  comparison?: {
+    title: string;
+    positive: { title: string; bullets: string[] };
+    negative: { title: string; bullets: string[]; closing?: string };
+  };
+  transformation?: {
+    title?: string;
+    couple: string;
+    before: string[];
+    after: string[];
+    beforeImage?: string;
+    afterImage?: string;
+    audienceTitle?: string;
+    audienceBullets?: string[];
+  };
+  valueStack?: {
+    title: string;
+    modules: { title: string; value: string; text: string; image?: string }[];
+    bonusesTitle: string;
+    bonuses: { title: string; value: string; text: string; image?: string }[];
+    totalValue: string;
+    totalNote?: string;
+  };
+  promoStrip?: {
+    title: string;
+    subtitle: string;
+    stat: string;
+    checklist: string[];
+    footer?: string;
+    image?: string;
   };
   outcomes?: { eyebrow?: string; title: string; items: { title: string; text: string }[] };
   curriculum?: {
@@ -45,15 +82,28 @@ export type ProgramLandingContent = {
   };
   pillars?: { title: string; items: { title: string; text: string }[] };
   includes?: { title: string; items: { title: string; text: string }[] };
-  testimonials?: { quote: string; name: string }[];
+  testimonials?: { headline?: string; quote: string; name: string }[];
   faq?: { q: string; a: string }[];
   pricing?: {
     title: string;
     titleAccent?: string;
     subtitle: string;
-    options: { label: string; price: string; note: string; cta: string; href?: string }[];
+    audienceTitle?: string;
+    audienceBullets?: string[];
+    includesList?: { title: string; value: string }[];
+    options: {
+      label: string;
+      badge?: string;
+      price: string;
+      note: string;
+      cta: string;
+      href?: string;
+      qrColor?: string;
+      showQr?: boolean;
+    }[];
     ps?: string;
     showCountdown?: boolean;
+    showMainQr?: boolean;
   };
   trust?: {
     title: string;

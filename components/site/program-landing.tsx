@@ -30,6 +30,31 @@ import { cn } from "@/lib/utils";
 const pillarIcons = [Flame, Heart, Zap];
 const audienceIcons = [Scale, Droplets, Leaf, Shield, Stethoscope, Sun, Moon];
 
+function QrCode({
+  url,
+  color = "000000",
+  size = 160,
+  className,
+}: {
+  url: string;
+  color?: string;
+  size?: number;
+  className?: string;
+}) {
+  const src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&color=${color}`;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      className={cn("rounded-xl border border-green-100 bg-white p-2 shadow-sm", className)}
+      loading="lazy"
+    />
+  );
+}
+
 function SectionTitle({
   title,
   accent,
@@ -147,6 +172,12 @@ export function ProgramLanding({
                 </ul>
               )}
 
+              {hero.priceLine && (
+                <p className="mt-8 font-display text-2xl font-bold tracking-wide text-gold-200 sm:text-3xl">
+                  {hero.priceLine}
+                </p>
+              )}
+
               <div className="mt-10 flex flex-wrap gap-4">
                 <CtaLink
                   placementKey={placementKey}
@@ -229,25 +260,383 @@ export function ProgramLanding({
               eyebrow={content.audience.eyebrow}
               title={content.audience.title}
             />
-            <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-14 grid gap-5 md:grid-cols-3">
               {content.audience.items.map((item, i) => {
                 const Icon = audienceIcons[i] ?? Heart;
                 return (
                   <div
                     key={item.title}
-                    className="rounded-2xl border border-green-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                    className="rounded-2xl border-2 border-rose-200/80 bg-white p-6 shadow-sm"
                   >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-green-100 text-green-700">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 text-rose-600">
                       <Icon className="h-5 w-5" />
                     </span>
                     <h3 className="mt-4 font-display text-base font-semibold leading-snug text-forest-900">
                       {item.title}
                     </h3>
                     <p className="mt-2 text-sm text-forest-700">{item.text}</p>
+                    {item.bullets && item.bullets.length > 0 && (
+                      <ul className="mt-3 space-y-1 text-sm text-forest-700">
+                        {item.bullets.map((b) => (
+                          <li key={b} className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                            {b}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 );
               })}
             </div>
+            {content.audience.closing && (
+              <p className="mx-auto mt-12 max-w-3xl text-center text-lg font-medium leading-relaxed text-forest-800">
+                {content.audience.closing}
+              </p>
+            )}
+          </Container>
+        </section>
+      )}
+
+      {/* Представи си */}
+      {content.visualize && (
+        <section className="bg-white py-20">
+          <Container className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
+                {content.visualize.title}
+              </h2>
+              <ul className="mt-8 space-y-3">
+                {content.visualize.items.map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-lg text-forest-800">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-green-600" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {content.visualize.image && (
+              <div className="overflow-hidden rounded-3xl shadow-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={content.visualize.image}
+                  alt=""
+                  className="aspect-[4/3] w-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+            )}
+          </Container>
+        </section>
+      )}
+
+      {/* Testimonials — early */}
+      {content.testimonials && content.testimonials.length > 0 && (
+        <section className="bg-forest-100 py-24">
+          <Container>
+            <h2 className="text-center font-display text-3xl font-semibold text-forest-900">
+              {locale === "bg" ? "Истински резултати" : "Real results"}
+            </h2>
+            <div className="mt-14 grid gap-6 lg:grid-cols-2">
+              {content.testimonials.map((t) => (
+                <blockquote
+                  key={t.name}
+                  className="rounded-3xl border border-green-200/60 bg-white p-8 shadow-sm"
+                >
+                  <div className="flex gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-gold-400 text-gold-400" />
+                    ))}
+                  </div>
+                  {t.headline && (
+                    <p className="mt-4 font-display text-lg font-semibold uppercase leading-snug text-forest-900">
+                      „{t.headline}“
+                    </p>
+                  )}
+                  <p className="mt-4 text-sm leading-relaxed text-forest-700">
+                    {t.quote}
+                  </p>
+                  <footer className="mt-4 text-sm font-semibold text-green-700">
+                    — {t.name}
+                  </footer>
+                </blockquote>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
+
+      {/* Promo strip — 94% */}
+      {content.promoStrip && (
+        <section className="bg-cream-50 py-20">
+          <Container className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-widest text-green-600">
+                {content.promoStrip.subtitle}
+              </p>
+              <h2 className="mt-2 font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
+                {content.promoStrip.title}
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-forest-700">
+                {content.promoStrip.stat}
+              </p>
+              <ul className="mt-8 space-y-3">
+                {content.promoStrip.checklist.map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-forest-800">
+                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              {content.promoStrip.footer && (
+                <p className="mt-6 text-sm font-bold uppercase tracking-wide text-gold-700">
+                  {content.promoStrip.footer}
+                </p>
+              )}
+            </div>
+            {content.promoStrip.image && (
+              <div className="overflow-hidden rounded-3xl shadow-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={content.promoStrip.image}
+                  alt=""
+                  className="aspect-[4/3] w-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+            )}
+          </Container>
+        </section>
+      )}
+
+      {/* Value stack — модули и бонуси */}
+      {content.valueStack && (
+        <section id="includes" className="scroll-mt-24 bg-white py-24">
+          <Container>
+            <SectionTitle title={content.valueStack.title} />
+            <div className="mt-14 grid gap-8 md:grid-cols-3">
+              {content.valueStack.modules.map((mod) => (
+                <div
+                  key={mod.title}
+                  className="overflow-hidden rounded-3xl border border-green-100 bg-cream-50/50 shadow-sm"
+                >
+                  {mod.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={mod.image}
+                      alt=""
+                      className="aspect-[3/2] w-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="p-6">
+                    <h3 className="font-display text-lg font-semibold text-forest-900">
+                      {mod.title}
+                    </h3>
+                    <p className="mt-1 text-sm font-semibold text-rose-600">{mod.value}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-forest-700">{mod.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <h3 className="mt-16 text-center font-display text-2xl font-semibold text-forest-900">
+              {content.valueStack.bonusesTitle}
+            </h3>
+            <div className="mt-10 grid gap-8 md:grid-cols-3">
+              {content.valueStack.bonuses.map((bonus) => (
+                <div
+                  key={bonus.title}
+                  className="overflow-hidden rounded-3xl border border-gold-200/60 bg-gold-50/30 shadow-sm"
+                >
+                  {bonus.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={bonus.image}
+                      alt=""
+                      className="aspect-[3/2] w-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="p-6">
+                    <h3 className="font-display text-lg font-semibold text-forest-900">
+                      {bonus.title}
+                    </h3>
+                    <p className="mt-1 text-sm font-semibold text-rose-600">{bonus.value}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-forest-700">{bonus.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mx-auto mt-12 max-w-xl text-center">
+              <p className="font-display text-2xl font-bold text-forest-900">
+                {content.valueStack.totalValue}
+              </p>
+              {content.valueStack.totalNote && (
+                <p className="mt-2 text-lg text-green-700">{content.valueStack.totalNote}</p>
+              )}
+            </div>
+          </Container>
+        </section>
+      )}
+
+      {/* Education — наука зад метода */}
+      {content.education && (
+        <section className="bg-cream-50 py-24">
+          <Container className="space-y-16">
+            {content.education.sections.map((section) => (
+              <div
+                key={section.title}
+                className="grid items-center gap-10 lg:grid-cols-2"
+              >
+                <div>
+                  <h2 className="font-display text-2xl font-semibold text-forest-900 sm:text-3xl">
+                    {section.title}
+                  </h2>
+                  <ul className="mt-6 space-y-4">
+                    {section.bullets.map((b) => (
+                      <li key={b} className="flex items-start gap-3 text-forest-800">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-green-600" />
+                        <span className="leading-relaxed">{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {section.image && (
+                  <div className="overflow-hidden rounded-3xl shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={section.image}
+                      alt=""
+                      className="aspect-[4/3] w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </Container>
+        </section>
+      )}
+
+      {/* Comparison — за кого е / не е */}
+      {content.comparison && (
+        <section className="bg-white py-24">
+          <Container>
+            <SectionTitle title={content.comparison.title} />
+            <div className="mt-14 grid gap-6 lg:grid-cols-2">
+              <div className="rounded-3xl border border-green-200 bg-green-50/40 p-8">
+                <h3 className="font-display text-lg font-semibold leading-snug text-forest-900">
+                  {content.comparison.positive.title}
+                </h3>
+                <ul className="mt-6 space-y-2">
+                  {content.comparison.positive.bullets.map((b) => (
+                    <li key={b} className="flex items-start gap-2 text-sm text-forest-800">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-3xl border border-rose-200 bg-rose-50/30 p-8">
+                <h3 className="font-display text-lg font-semibold leading-snug text-forest-900">
+                  {content.comparison.negative.title}
+                </h3>
+                <ul className="mt-6 space-y-2">
+                  {content.comparison.negative.bullets.map((b) => (
+                    <li key={b} className="text-sm leading-relaxed text-forest-800">
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+                {content.comparison.negative.closing && (
+                  <p className="mt-6 border-t border-rose-200 pt-6 text-sm font-medium leading-relaxed text-green-800">
+                    {content.comparison.negative.closing}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Container>
+        </section>
+      )}
+
+      {/* Transformation — преди/след */}
+      {content.transformation && (
+        <section className="bg-forest-100 py-24">
+          <Container>
+            {content.transformation.title && (
+              <SectionTitle title={content.transformation.title} className="mb-14" />
+            )}
+            <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto_1fr]">
+              <div className="text-center">
+                <p className="font-display text-4xl font-bold tracking-widest text-forest-400">
+                  ПРЕДИ
+                </p>
+                {content.transformation.beforeImage && (
+                  <div className="mt-4 overflow-hidden rounded-2xl shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={content.transformation.beforeImage}
+                      alt=""
+                      className="aspect-[3/4] w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="max-w-md text-center lg:px-4">
+                <p className="font-display text-xl font-semibold text-forest-900">
+                  {content.transformation.couple}
+                </p>
+                <div className="mt-6 space-y-4 text-left text-sm leading-relaxed">
+                  <div>
+                    <p className="font-semibold text-rose-700">Преди:</p>
+                    <ul className="mt-2 space-y-1 text-forest-700">
+                      {content.transformation.before.map((b) => (
+                        <li key={b}>— {b}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-700">Сега:</p>
+                    <ul className="mt-2 space-y-1 text-forest-700">
+                      {content.transformation.after.map((a) => (
+                        <li key={a}>— {a}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="font-display text-4xl font-bold tracking-widest text-green-600">
+                  СЛЕД
+                </p>
+                {content.transformation.afterImage && (
+                  <div className="mt-4 overflow-hidden rounded-2xl shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={content.transformation.afterImage}
+                      alt=""
+                      className="aspect-[3/4] w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            {content.transformation.audienceTitle && content.transformation.audienceBullets && (
+              <div className="mx-auto mt-14 max-w-md rounded-2xl border border-green-200 bg-white p-6">
+                <p className="font-display text-lg font-semibold text-forest-900">
+                  {content.transformation.audienceTitle}
+                </p>
+                <ul className="mt-3 space-y-1 text-sm text-forest-700">
+                  {content.transformation.audienceBullets.map((b) => (
+                    <li key={b}>— {b}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </Container>
         </section>
       )}
@@ -358,8 +747,8 @@ export function ProgramLanding({
         </section>
       )}
 
-      {/* Includes */}
-      {content.includes && (
+      {/* Includes — детайлен списък */}
+      {content.includes && !content.valueStack && (
         <section id="includes" className="scroll-mt-24 bg-white py-24">
           <Container>
             <h2 className="text-center font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
@@ -380,25 +769,21 @@ export function ProgramLanding({
         </section>
       )}
 
-      {/* Testimonials */}
-      {content.testimonials && content.testimonials.length > 0 && (
-        <section className="bg-forest-100 py-24">
+      {content.includes && content.valueStack && (
+        <section id="club-details" className="scroll-mt-24 bg-white py-24">
           <Container>
-            <h2 className="text-center font-display text-3xl font-semibold text-forest-900">
-              {locale === "bg" ? "Истински резултати" : "Real results"}
+            <h2 className="text-center font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
+              {content.includes.title}
             </h2>
-            <div className="mt-14 grid gap-6 sm:grid-cols-2">
-              {content.testimonials.map((t) => (
-                <blockquote
-                  key={t.name}
-                  className="rounded-3xl border border-green-200/60 bg-white p-8 shadow-sm"
-                >
-                  <Star className="h-5 w-5 text-gold-400" />
-                  <p className="mt-4 font-display text-lg leading-relaxed text-forest-800">
-                    &ldquo;{t.quote}&rdquo;
-                  </p>
-                  <footer className="mt-4 text-sm font-semibold text-green-700">— {t.name}</footer>
-                </blockquote>
+            <div className="mx-auto mt-14 max-w-3xl divide-y divide-green-100 rounded-3xl border border-green-100 bg-cream-50/50">
+              {content.includes.items.map((item) => (
+                <details key={item.title} className="group">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 font-semibold text-forest-900 transition-colors hover:text-green-700 [&::-webkit-details-marker]:hidden">
+                    <span className="font-display text-lg">{item.title}</span>
+                    <ChevronDown className="h-5 w-5 shrink-0 text-green-600 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <p className="px-6 pb-5 text-sm leading-relaxed text-forest-700">{item.text}</p>
+                </details>
               ))}
             </div>
           </Container>
@@ -448,41 +833,49 @@ export function ProgramLanding({
       {/* Pricing */}
       {content.pricing && (
         <section className="bg-gradient-to-br from-cream-50 via-white to-green-50 py-24">
-          <Container className="max-w-4xl text-center">
-            <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
-              {content.pricing.title}{" "}
-              {content.pricing.titleAccent ? (
-                <span className="text-green-600">{content.pricing.titleAccent}</span>
-              ) : null}
-              {/готова|ready/i.test(content.pricing.title) ? "?" : ""}
-            </h2>
-            <p className="mt-4 text-lg leading-relaxed text-forest-700">{content.pricing.subtitle}</p>
-
-            <div className="mx-auto mt-10 max-w-xl space-y-4">
-              {content.pricing.options.map((opt, i) => {
-                const href = opt.href ?? hero.primaryHref;
-                return (
-                  <CtaLink
-                    key={opt.label}
-                    placementKey={placementKey}
-                    href={href}
-                    variant="forest"
-                    size="lg"
-                    className="w-full whitespace-normal px-6 py-5 text-base leading-snug sm:text-lg"
-                    target={href.startsWith("http") ? "_blank" : undefined}
-                    rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
-                  >
-                    <span className="block font-bold">{opt.cta}</span>
-                    <span className="mt-1 block text-sm font-normal text-green-100">
-                      {opt.price} · {opt.note}
-                    </span>
-                  </CtaLink>
-                );
-              })}
+          <Container className="max-w-5xl">
+            <div className="text-center">
+              <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
+                {content.pricing.title}{" "}
+                {content.pricing.titleAccent ? (
+                  <span className="text-green-600">{content.pricing.titleAccent}</span>
+                ) : null}
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-forest-700">
+                {content.pricing.subtitle}
+              </p>
             </div>
 
-            {content.pricing.ps && (
-              <p className="mt-6 text-sm font-semibold text-forest-700">{content.pricing.ps}</p>
+            {(content.pricing.audienceTitle || content.pricing.includesList) && (
+              <div className="mt-12 grid gap-8 lg:grid-cols-2">
+                {content.pricing.audienceTitle && content.pricing.audienceBullets && (
+                  <div className="rounded-2xl border border-green-100 bg-white p-6">
+                    <p className="font-display text-lg font-semibold text-forest-900">
+                      {content.pricing.audienceTitle}
+                    </p>
+                    <ul className="mt-4 space-y-2 text-sm text-forest-700">
+                      {content.pricing.audienceBullets.map((b) => (
+                        <li key={b}>— {b}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {content.pricing.includesList && (
+                  <div className="rounded-2xl border border-green-100 bg-white p-6">
+                    <p className="font-display text-lg font-semibold text-forest-900">
+                      {locale === "bg" ? "Включва:" : "Includes:"}
+                    </p>
+                    <ul className="mt-4 space-y-2 text-sm text-forest-700">
+                      {content.pricing.includesList.map((item) => (
+                        <li key={item.title} className="flex justify-between gap-4">
+                          <span>{item.title}</span>
+                          <span className="shrink-0 text-rose-500 line-through">{item.value}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
 
             {content.pricing.showCountdown && (
@@ -497,31 +890,63 @@ export function ProgramLanding({
               </div>
             )}
 
-            {content.pricing.options.length > 1 && !content.pricing.showCountdown && (
-              <div
-                className={cn(
-                  "mt-12 grid gap-6",
-                  "md:grid-cols-2",
-                )}
-              >
-                {content.pricing.options.map((opt, i) => (
+            <div
+              className={cn(
+                "mt-12 grid gap-6",
+                content.pricing.options.length > 1 ? "md:grid-cols-2 lg:grid-cols-3" : "max-w-md mx-auto",
+              )}
+            >
+              {content.pricing.options.map((opt, i) => {
+                const href = opt.href ?? hero.primaryHref;
+                return (
                   <div
                     key={opt.label}
                     className={cn(
-                      "rounded-3xl border-2 bg-white p-8 shadow-lg",
-                      i === 0 ? "border-gold-400" : "border-green-300",
+                      "flex flex-col rounded-3xl border-2 bg-white p-6 shadow-lg",
+                      i === 0 && content.pricing!.options.length > 2
+                        ? "border-forest-300 md:col-span-2 lg:col-span-3"
+                        : i === 0
+                          ? "border-gold-400"
+                          : "border-green-200",
                     )}
                   >
-                    <p className="text-sm font-semibold uppercase tracking-wider text-green-600">
-                      {opt.label}
-                    </p>
-                    <p className="mt-3 font-display text-4xl font-bold text-forest-900">
+                    {opt.badge && (
+                      <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
+                        {opt.badge}
+                      </p>
+                    )}
+                    <p className="mt-1 text-sm font-semibold text-forest-600">{opt.label}</p>
+                    <p className="mt-2 font-display text-3xl font-bold text-forest-900">
                       {opt.price}
                     </p>
-                    <p className="mt-2 text-sm text-forest-600">{opt.note}</p>
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-forest-600">
+                      {opt.note}
+                    </p>
+                    {opt.showQr && href && (
+                      <div className="mt-4 flex justify-center">
+                        <QrCode url={href} color={opt.qrColor ?? "000000"} size={140} />
+                      </div>
+                    )}
+                    <CtaLink
+                      placementKey={placementKey}
+                      href={href}
+                      variant={i === 0 ? "gold" : "forest"}
+                      size="lg"
+                      className="mt-4 w-full whitespace-normal px-4 py-4 text-sm font-bold sm:text-base"
+                      target={href.startsWith("http") ? "_blank" : undefined}
+                      rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                    >
+                      {opt.cta}
+                    </CtaLink>
                   </div>
-                ))}
-              </div>
+                );
+              })}
+            </div>
+
+            {content.pricing.ps && (
+              <p className="mt-8 text-center text-sm font-medium text-forest-700">
+                {content.pricing.ps}
+              </p>
             )}
           </Container>
         </section>

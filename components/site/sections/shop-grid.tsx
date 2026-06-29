@@ -1,41 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
-import type { Segment, SiteProduct } from "@/lib/supabase/types";
-import { offerMatchesVisitor } from "@/lib/site/audience";
+import type { SiteProduct } from "@/lib/supabase/types";
 import { productPlacementKey } from "@/lib/site/product-placement";
 import { useOfferPopup } from "@/components/site/offer-popup";
-import { readVisitorTags } from "@/lib/site/visitor-tags";
-import { cn } from "@/lib/utils";
 
 export function ShopProductGrid({
   products,
-  segments,
   locale,
   shopEyebrow,
   shopCta,
 }: {
   products: SiteProduct[];
-  segments: Segment[];
   locale: Locale;
   shopEyebrow: string;
   shopCta: string;
 }) {
   const { tryOpenPlacement } = useOfferPopup();
-  const [visitorTags, setVisitorTags] = useState<string[]>([]);
 
-  useEffect(() => {
-    setVisitorTags(readVisitorTags());
-  }, []);
-
-  const visible = useMemo(
-    () => products.filter((p) => offerMatchesVisitor(p, visitorTags, segments)),
-    [products, visitorTags, segments],
-  );
-
-  if (visible.length === 0) return null;
+  if (products.length === 0) return null;
 
   function openProduct(product: SiteProduct) {
     const checkoutUrl = product.stripe_url?.trim() ?? "";
@@ -48,7 +32,7 @@ export function ShopProductGrid({
 
   return (
     <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-      {visible.map((product) => {
+      {products.map((product) => {
         const productTitle = locale === "bg" ? product.title_bg : product.title_en;
         const description =
           locale === "bg" ? product.description_bg : product.description_en;
@@ -84,16 +68,6 @@ export function ShopProductGrid({
                   {price}
                 </p>
               )}
-              <span
-                className={cn(
-                  "mb-2 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
-                  (product.offer_type ?? "upsell") === "downsell"
-                    ? "bg-gold-400/20 text-gold-700"
-                    : "bg-green-500/15 text-green-600",
-                )}
-              >
-                {product.offer_type ?? "upsell"}
-              </span>
               <h3 className="mt-2 font-display text-xl font-semibold leading-snug transition-colors group-hover:text-green-600">
                 {productTitle}
               </h3>

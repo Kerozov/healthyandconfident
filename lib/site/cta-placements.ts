@@ -1,7 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 
-/** Placements where upsell/downsell popups are allowed (not hero or nav). */
+/** Placements where upsell/downsell popups are allowed (not hero, nav, or contact). */
 export const UPSELL_SECTION_PLACEMENT_KEYS = [
   "programs_0",
   "programs_1",
@@ -9,7 +9,6 @@ export const UPSELL_SECTION_PLACEMENT_KEYS = [
   "about_cta",
   "outcomes_cta",
   "leadmagnet_cta",
-  "contact_cta",
 ] as const;
 
 export type UpsellSectionPlacementKey = (typeof UPSELL_SECTION_PLACEMENT_KEYS)[number];
@@ -103,4 +102,42 @@ export function getPlacementOffer(
 
 export function placementLabel(placement: SiteCtaPlacement, locale: Locale): string {
   return locale === "bg" ? placement.label_bg : placement.label_en;
+}
+
+/** Human-readable labels for admin (also applied via migration 017). */
+export const SPEAKING_PLACEMENT_LABELS: Record<
+  string,
+  { label_bg: string; label_en: string }
+> = {
+  programs_0: {
+    label_bg: "Програма „Балансирано хранене 21 дни“ — бутон „Вземи днес“",
+    label_en: "Program “Balanced Nutrition 21 Days” — “Get started” button",
+  },
+  programs_1: {
+    label_bg: "Програма „Живей без резистентност“ — бутон „Кандидатствай“",
+    label_en: "Program “Live Without Resistance” — “Apply now” button",
+  },
+  programs_2: {
+    label_bg: "Програма „Препрограмирай апетита“ — бутон „Научи повече“",
+    label_en: "Program “Reprogram Your Appetite” — “Learn more” button",
+  },
+  about_cta: {
+    label_bg: "Секция „За мен“ — бутон „Работи с мен“",
+    label_en: "About section — “Work with me” button",
+  },
+  outcomes_cta: {
+    label_bg: "Секция „Резултати“ — бутон „Запиши безплатен разговор“",
+    label_en: "Outcomes section — “Book a free call” button",
+  },
+  leadmagnet_cta: {
+    label_bg: "Безплатно 2-дневно меню — popup след запис на имейл",
+    label_en: "Free 2-day menu — popup after email signup",
+  },
+};
+
+export function productPlacementLabel(title_bg: string, title_en: string) {
+  return {
+    label_bg: `Магазин: „${title_bg}“ — доп. оферта преди Stripe`,
+    label_en: `Shop: “${title_en}” — extra offer before Stripe checkout`,
+  };
 }

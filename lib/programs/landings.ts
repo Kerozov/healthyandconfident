@@ -186,52 +186,91 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "preprogramirai-apetita": {
     ...preprogramiraiApetitaBg,
     meta: {
-      title: "Reprogram Your Appetite | Club — Vessie Ney",
-      description: "7–10 minutes a day. Release stress, blocks and food cravings.",
+      title: "Reprogram Your Appetite | Slim & Light Club — Vessie Ney",
+      description:
+        "7–10 minutes a day. Release stress, emotional eating and cravings. 94% success method. From €38/month.",
     },
     hero: {
       ...preprogramiraiApetitaBg.hero,
+      eyebrow: "Club for a slender figure and lightness",
       title: "Reprogram your",
       titleAccent: "appetite",
-      subtitle: "Just 7–10 minutes a day. Release stress, blocks and cravings — without another diet.",
-      bullets: ["Daily micro-practices", "Stress & emotional eating", "Less cravings, more calm", "Fits a busy schedule"],
-      primaryCta: "Start today",
-      secondaryCta: "How the club works",
+      subtitle:
+        "Easy solutions for smart busy women — low energy, bloated belly, strong appetite.",
+      bullets: ["10 minutes a day that bring back lightness and calm"],
+      priceLine: "EVERYTHING FOR ONLY €38/MONTH",
+      primaryCta: "YES, I WANT TO HANDLE IT",
+      secondaryCta: "What's included",
     },
-    pain: {
-      title: "Sound familiar?",
-      paragraphs: preprogramiraiApetitaBg.pain!.paragraphs,
-      hook: "There's a way to make appetite your ally.",
-    },
-    vision: {
-      title: "What is the Reprogram Your Appetite club",
-      paragraphs: preprogramiraiApetitaBg.vision!.paragraphs,
-    },
-    outcomes: {
-      title: "What you'll feel",
-      items: preprogramiraiApetitaBg.outcomes!.items.map((item, i) => ({
-        title: ["Fewer cravings", "Less stress", "More control"][i],
-        text: item.text,
+    audience: {
+      title: "Reprogram Your Appetite is for you if…",
+      items: preprogramiraiApetitaBg.audience!.items.map((item, i) => ({
+        ...item,
+        title: ["Problem 1 – Stress", "Problem 2 – Temptations", "Problem 3 – No time"][i],
       })),
+      closing: preprogramiraiApetitaBg.audience!.closing,
     },
-    pillars: {
-      title: "How it works",
-      items: preprogramiraiApetitaBg.pillars!.items,
+    visualize: {
+      title: "Imagine:",
+      items: preprogramiraiApetitaBg.visualize!.items,
+      image: preprogramiraiApetitaBg.visualize!.image,
     },
+    testimonials: preprogramiraiApetitaBg.testimonials,
+    promoStrip: {
+      ...preprogramiraiApetitaBg.promoStrip!,
+      title: "Reprogram your appetite",
+      subtitle: "Club for a SLIM figure and lightness",
+      stat: "A method with 94% success, changing thousands of lives in England and Bulgaria.",
+      checklist: preprogramiraiApetitaBg.promoStrip!.checklist,
+      footer: "EVERYTHING YOU NEED — FINALLY EASY — IN 1 PLACE — 24/7",
+    },
+    valueStack: {
+      ...preprogramiraiApetitaBg.valueStack!,
+      title: "What's included:",
+      bonusesTitle: "Plus bonus extras",
+    },
+    education: preprogramiraiApetitaBg.education,
+    comparison: {
+      title: "Wondering if it's for you?",
+      positive: {
+        title: preprogramiraiApetitaBg.comparison!.positive.title,
+        bullets: preprogramiraiApetitaBg.comparison!.positive.bullets,
+      },
+      negative: {
+        title: preprogramiraiApetitaBg.comparison!.negative.title,
+        bullets: preprogramiraiApetitaBg.comparison!.negative.bullets,
+        closing: preprogramiraiApetitaBg.comparison!.negative.closing,
+      },
+    },
+    transformation: preprogramiraiApetitaBg.transformation,
     includes: {
-      title: "What you get",
+      title: "SLIM & LIGHT Club — Reprogram your appetite",
       items: preprogramiraiApetitaBg.includes!.items,
     },
-    faq: preprogramiraiApetitaBg.faq,
     trust: {
       ...preprogramiraiApetitaBg.trust!,
-      title: "Why with Vessie Ney",
-      greeting: "Led by a proven specialist",
+      title: "Why trust me?",
+      greeting: "Hello! I'm Vessie Ney!",
     },
+    pricing: {
+      ...preprogramiraiApetitaBg.pricing!,
+      title: "SLIM & LIGHT Club",
+      titleAccent: "Reprogram your appetite",
+      subtitle: "Join the club now — everything in one place, 24/7 from your phone",
+      audienceTitle: "Who is it for:",
+      options: preprogramiraiApetitaBg.pricing!.options.map((o, i) => ({
+        ...o,
+        label: ["Monthly access", "Option 1", "Option 2"][i],
+        badge: i === 1 ? "Best value" : i === 2 ? "Most popular" : undefined,
+        cta: "I WANT ACCESS NOW",
+      })),
+      ps: "Scan the QR code or tap the button — we'll guide you to payment and Skool access.",
+    },
+    faq: preprogramiraiApetitaBg.faq,
     finalCta: {
-      title: "Ready to make appetite your ally?",
-      cta: "Start today",
-      href: "/#contact",
+      title: "I'M READY!",
+      cta: "I WANT ACCESS NOW",
+      href: preprogramiraiApetitaBg.finalCta!.href,
     },
   },
   "balansirano-hranene-21": {

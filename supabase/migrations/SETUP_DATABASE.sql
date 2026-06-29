@@ -299,13 +299,13 @@ create table if not exists public.site_cta_placements (
 );
 
 insert into public.site_cta_placements (key, label_bg, label_en) values
-  ('programs_0', 'Програми — бутон на първата карта', 'Programs — first program card button'),
-  ('programs_1', 'Програми — бутон на втората карта', 'Programs — second program card button'),
-  ('programs_2', 'Програми — бутон на третата карта', 'Programs — third program card button'),
-  ('about_cta', 'За мен — бутон „Работи с мен“', 'About — work with me button'),
-  ('outcomes_cta', 'Резултати — бутон „Запиши безплатен разговор“', 'Outcomes — book a free call button'),
-  ('leadmagnet_cta', 'Безплатно меню — след изпращане на имейл', 'Lead magnet — after email submit'),
-  ('contact_cta', 'Контакти — бутон „Запиши безплатен разговор“', 'Contact section — main booking button'),
+  ('programs_0', 'Програма „Балансирано хранене 21 дни“ — бутон „Вземи днес“', 'Program “Balanced Nutrition 21 Days” — “Get started” button'),
+  ('programs_1', 'Програма „Живей без резистентност“ — бутон „Кандидатствай“', 'Program “Live Without Resistance” — “Apply now” button'),
+  ('programs_2', 'Програма „Препрограмирай апетита“ — бутон „Научи повече“', 'Program “Reprogram Your Appetite” — “Learn more” button'),
+  ('about_cta', 'Секция „За мен“ — бутон „Работи с мен“', 'About section — “Work with me” button'),
+  ('outcomes_cta', 'Секция „Резултати“ — бутон „Запиши безплатен разговор“', 'Outcomes section — “Book a free call” button'),
+  ('leadmagnet_cta', 'Безплатно 2-дневно меню — popup след запис на имейл', 'Free 2-day menu — popup after email signup'),
+  ('contact_cta', 'Контакти — WhatsApp (без popup)', 'Contact — WhatsApp (no popup)'),
   ('hero_primary', 'Hero — основен бутон (без popup)', 'Hero — primary button (no popup)'),
   ('hero_secondary', 'Hero — втори бутон (без popup)', 'Hero — secondary button (no popup)'),
   ('nav_cta', 'Горно меню (без popup)', 'Top navigation (no popup)')

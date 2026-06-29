@@ -1,7 +1,7 @@
 import { Mail, Phone, MessageCircle, CalendarHeart } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import { Container } from "@/components/ui/container";
-import { CtaLink } from "@/components/site/cta-link";
+import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
 
 export function Contact({
@@ -23,8 +23,7 @@ export function Contact({
               {contact.title}
             </h2>
             <p className="mt-4 max-w-md text-green-300">{contact.subtitle}</p>
-            <CtaLink
-              placementKey="contact_cta"
+            <Button
               href={siteConfig.whatsapp}
               target="_blank"
               rel="noopener noreferrer"
@@ -32,7 +31,7 @@ export function Contact({
               className="mt-8 bg-gold-400 px-10 py-4 text-lg font-bold text-forest-900 shadow-xl hover:bg-gold-500 hover:shadow-2xl"
             >
               <CalendarHeart className="h-5 w-5" /> {contact.cta}
-            </CtaLink>
+            </Button>
           </div>
 
           <div className="space-y-4">

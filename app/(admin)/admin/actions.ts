@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import { productPlacementKey } from "@/lib/site/product-placement";
+import { productPlacementLabel } from "@/lib/site/cta-placements";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
   sendEmail,
@@ -1633,8 +1634,7 @@ async function syncProductPlacement(
   await supabase.from("site_cta_placements").upsert(
     {
       key: productPlacementKey(productId),
-      label_bg: `Магазин — ${title_bg}`,
-      label_en: `Shop — ${title_en}`,
+      ...productPlacementLabel(title_bg, title_en),
       updated_at: new Date().toISOString(),
     },
     { onConflict: "key" },
@@ -1740,7 +1740,6 @@ export async function saveSiteProduct(input: {
   headline_en?: string;
   cta_label_bg?: string;
   cta_label_en?: string;
-  audience_tags?: string[];
   enabled?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
@@ -1760,9 +1759,7 @@ export async function saveSiteProduct(input: {
     headline_en: input.headline_en?.trim() ?? "",
     cta_label_bg: input.cta_label_bg?.trim() ?? "",
     cta_label_en: input.cta_label_en?.trim() ?? "",
-    audience_tags: Array.from(
-      new Set((input.audience_tags ?? []).map((t) => t.trim()).filter(Boolean)),
-    ),
+    audience_tags: [] as string[],
     enabled: input.enabled ?? true,
     sort_order: input.sort_order ?? 0,
     updated_at: new Date().toISOString(),

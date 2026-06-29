@@ -81,7 +81,6 @@ export default async function SiteLayout({
         <OfferPopupProvider
           placements={site.ctaPlacements}
           offersById={site.offersById}
-          segments={site.segments}
           locale={l}
         >
           <Navbar locale={l} items={dict.nav.items} cta={dict.nav.cta} />

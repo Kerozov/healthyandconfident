@@ -1,4 +1,4 @@
-import type { SiteProduct, SiteSection, Segment } from "@/lib/supabase/types";
+import type { SiteProduct, SiteSection } from "@/lib/supabase/types";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
@@ -10,13 +10,11 @@ export function ShopSection({
   locale,
   section,
   products,
-  segments,
 }: {
   dict: Dictionary;
   locale: Locale;
   section: SiteSection;
   products: SiteProduct[];
-  segments: Segment[];
 }) {
   if (products.length === 0) return null;
 
@@ -40,7 +38,6 @@ export function ShopSection({
 
         <ShopProductGrid
           products={products}
-          segments={segments}
           locale={locale}
           shopEyebrow={dict.shop.eyebrow}
           shopCta={dict.shop.cta}

@@ -24,7 +24,7 @@ function OfferSelect({
       <option value="">— Без оферта —</option>
       {offers.map((o) => (
         <option key={o.id} value={o.id}>
-          [{o.offer_type === "downsell" ? "Downsell" : "Upsell"}] {o.title_bg}
+          [{o.offer_type === "downsell" ? "По-ниска оферта" : "Доп. оферта"}] {o.title_bg}
           {!o.enabled ? " (скрит)" : ""}
         </option>
       ))}
@@ -187,9 +187,9 @@ export function CtaPlacementsPanel({
   return (
     <div className="space-y-6">
       <p className="text-sm text-ink-soft">
-        Upsell/downsell popup само при клик в секциите <strong>Програми</strong>,{" "}
-        <strong>Резултати</strong>, <strong>За мен</strong>, <strong>Безплатно меню</strong>,{" "}
-        <strong>Контакти</strong> и <strong>Магазин</strong>. Hero и горното меню нямат popup.
+        Popup с допълнителна оферта при клик в: <strong>Програми</strong>, <strong>Резултати</strong>,{" "}
+        <strong>За мен</strong>, <strong>Безплатно меню</strong> и <strong>Магазин</strong>. Hero,
+        менюто и контактите отварят директно линка — без popup.
       </p>
       {offers.length === 0 && (
         <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">

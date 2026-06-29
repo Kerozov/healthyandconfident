@@ -4,17 +4,14 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
 import { X, ArrowUpRight, Sparkles } from "lucide-react";
 import type { Locale } from "@/i18n/config";
-import type { Segment, SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
-import { offerMatchesVisitor } from "@/lib/site/audience";
+import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { resolveOffer, resolveOfferHeadline, resolveOfferCta, normalizeOfferType } from "@/lib/site/cta-placements";
-import { readVisitorTags } from "@/lib/site/visitor-tags";
 import { cn } from "@/lib/utils";
 
 type PopupState = {
@@ -50,22 +47,15 @@ export function OfferPopupProvider({
   children,
   placements,
   offersById,
-  segments,
   locale,
 }: {
   children: React.ReactNode;
   placements: Record<string, SiteCtaPlacement>;
   offersById: Record<string, SiteProduct>;
-  segments: Segment[];
   locale: Locale;
 }) {
   const router = useRouter();
-  const [visitorTags, setVisitorTags] = useState<string[]>([]);
   const [popup, setPopup] = useState<PopupState | null>(null);
-
-  useEffect(() => {
-    setVisitorTags(readVisitorTags());
-  }, []);
 
   const resolveForPlacement = useCallback(
     (placementKey: string): PopupState | null => {
@@ -73,7 +63,7 @@ export function OfferPopupProvider({
       if (!placement?.offer_enabled) return null;
 
       const offer = resolveOffer(placement.offer_id, offersById);
-      if (!offer || !offerMatchesVisitor(offer, visitorTags, segments)) return null;
+      if (!offer) return null;
 
       const customHeadline =
         locale === "bg" ? placement.offer_headline_bg : placement.offer_headline_en;
@@ -84,7 +74,7 @@ export function OfferPopupProvider({
         continueHref: "",
       };
     },
-    [placements, offersById, visitorTags, segments, locale],
+    [placements, offersById, locale],
   );
 
   const tryOpenPlacement = useCallback(

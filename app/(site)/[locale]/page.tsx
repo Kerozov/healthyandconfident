@@ -53,7 +53,6 @@ export default async function HomePage({
           locale={l}
           section={productsSection}
           products={site.products}
-          segments={site.segments}
         />
       )}
       <About dict={dict} locale={l} />
