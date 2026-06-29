@@ -105,28 +105,6 @@ function SectionToggle({
   );
 }
 
-function OfferPicker({
-  offers,
-  value,
-  onChange,
-}: {
-  offers: SiteProduct[];
-  value: string;
-  onChange: (id: string) => void;
-}) {
-  return (
-    <Select value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">— Без оферта —</option>
-      {offers.map((o) => (
-        <option key={o.id} value={o.id}>
-          [{o.offer_type === "downsell" ? "Downsell" : "Upsell"}] {o.title_bg}
-          {!o.enabled ? " (скрит)" : ""}
-        </option>
-      ))}
-    </Select>
-  );
-}
-
 const EMPTY_EVENT = {
   title_bg: "",
   title_en: "",
@@ -298,8 +276,6 @@ export function WebsiteManager({
       refresh();
     });
   }
-
-  const selectedEventOffer = products.find((p) => p.id === eventForm.offer_id);
 
   return (
     <div className="space-y-6">
@@ -580,7 +556,8 @@ export function WebsiteManager({
       {tab === "events" && (
         <Card title="Предстоящи събития">
           <p className="mb-4 text-sm text-ink-soft">
-            Всяко събитие може да показва upsell/downsell с персонален текст.
+            Събития с линк към записване. Upsell popup не се показва при събития — само при
+            бутони и продукти в магазина.
           </p>
           <SectionToggle section={eventsSection} onSaved={refresh} />
 
@@ -659,54 +636,6 @@ export function WebsiteManager({
                 </Field>
               </div>
 
-              <div className="rounded-xl border border-coral-400/20 bg-coral-500/5 p-4 space-y-4">
-                <p className="text-sm font-semibold">Upsell / Downsell при това събитие</p>
-                <label className="flex items-center gap-2 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={eventForm.offer_enabled}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, offer_enabled: e.target.checked })
-                    }
-                  />
-                  Покажи оферта на картичката
-                </label>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Коя оферта">
-                    <OfferPicker
-                      offers={products}
-                      value={eventForm.offer_id}
-                      onChange={(offer_id) => setEventForm({ ...eventForm, offer_id })}
-                    />
-                  </Field>
-                  <Field
-                    label="Текст BG"
-                    hint={
-                      selectedEventOffer
-                        ? `По подразбиране: ${DEFAULT_OFFER_HEADLINES[selectedEventOffer.offer_type ?? "upsell"].bg}`
-                        : undefined
-                    }
-                  >
-                    <Input
-                      value={eventForm.offer_headline_bg}
-                      onChange={(e) =>
-                        setEventForm({ ...eventForm, offer_headline_bg: e.target.value })
-                      }
-                      placeholder="Мислим, че може да ти хареса…"
-                    />
-                  </Field>
-                  <Field label="Текст EN">
-                    <Input
-                      value={eventForm.offer_headline_en}
-                      onChange={(e) =>
-                        setEventForm({ ...eventForm, offer_headline_en: e.target.value })
-                      }
-                      placeholder="We think you might like this…"
-                    />
-                  </Field>
-                </div>
-              </div>
-
               <label className="flex items-center gap-2 text-sm font-medium">
                 <input
                   type="checkbox"
@@ -761,11 +690,6 @@ export function WebsiteManager({
                     <div className="flex flex-wrap items-center gap-2">
                       <Calendar className="h-4 w-4 text-forest-600" />
                       <p className="font-medium">{event.title_bg}</p>
-                      {event.offer_enabled && event.offer_id && (
-                        <span className="rounded-full bg-coral-500/15 px-2 py-0.5 text-[11px] font-medium text-coral-600">
-                          + оферта
-                        </span>
-                      )}
                     </div>
                     <p className="mt-1 text-xs text-ink-soft">{event.url}</p>
                   </div>

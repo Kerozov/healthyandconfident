@@ -29,29 +29,22 @@ export default async function HomePage({
   const [dict, site] = await Promise.all([getDictionary(l), getPublicSiteContent()]);
   const eventsSection = site.sections.events;
   const productsSection = site.sections.products;
-  const offerProps = {
-    placements: site.ctaPlacements,
-    offersById: site.offersById,
-    segments: site.segments,
-  };
 
   return (
     <>
       <HomeJsonLd dict={dict} locale={l} />
-      <Hero dict={dict} locale={l} {...offerProps} />
+      <Hero dict={dict} locale={l} />
       <Marquee locale={l} />
       <Problems dict={dict} />
       <Method dict={dict} />
       <Outcomes dict={dict} locale={l} />
-      <Programs dict={dict} locale={l} {...offerProps} />
+      <Programs dict={dict} locale={l} />
       {eventsSection && site.events.length > 0 && (
         <EventsSection
           dict={dict}
           locale={l}
           section={eventsSection}
           events={site.events}
-          offersById={site.offersById}
-          segments={site.segments}
         />
       )}
       {productsSection && site.products.length > 0 && (
@@ -63,12 +56,12 @@ export default async function HomePage({
           segments={site.segments}
         />
       )}
-      <About dict={dict} locale={l} {...offerProps} />
+      <About dict={dict} locale={l} />
       <Testimonials dict={dict} locale={l} />
       <GoogleReviews dict={dict} />
       <LeadMagnet dict={dict} locale={l} />
       <Faq dict={dict} />
-      <Contact dict={dict} locale={l} {...offerProps} />
+      <Contact dict={dict} />
     </>
   );
 }

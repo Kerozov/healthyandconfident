@@ -299,14 +299,14 @@ create table if not exists public.site_cta_placements (
 );
 
 insert into public.site_cta_placements (key, label_bg, label_en) values
-  ('hero_primary', 'Hero — основен бутон', 'Hero — primary button'),
-  ('hero_secondary', 'Hero — втори бутон', 'Hero — secondary button'),
-  ('nav_cta', 'Навигация — CTA', 'Navigation — CTA'),
-  ('contact_cta', 'Контакти — бутон', 'Contact — button'),
-  ('about_cta', 'За мен — бутон', 'About — button'),
-  ('programs_0', 'Програма 1 — бутон', 'Program 1 — button'),
-  ('programs_1', 'Програма 2 — бутон', 'Program 2 — button'),
-  ('programs_2', 'Програма 3 — бутон', 'Program 3 — button')
+  ('hero_primary', 'Начало — златен бутон „Виж програмите“ (hero)', 'Home — gold “View programs” button (hero)'),
+  ('hero_secondary', 'Начало — втори бутон „Безплатен наръчник“ (hero)', 'Home — secondary lead magnet button (hero)'),
+  ('nav_cta', 'Горно меню — „Запиши безплатен разговор“', 'Top navigation — book a free call CTA'),
+  ('contact_cta', 'Контакти — основен бутон (WhatsApp / запис)', 'Contact section — main booking button'),
+  ('about_cta', 'За мен — бутон към контакт', 'About section — button to contact'),
+  ('programs_0', 'Програми — бутон на първата карта', 'Programs — first program card button'),
+  ('programs_1', 'Програми — бутон на втората карта', 'Programs — second program card button'),
+  ('programs_2', 'Програми — бутон на третата карта', 'Programs — third program card button')
 on conflict (key) do nothing;
 
 -- ── Email campaigns ────────────────────────────────────────────

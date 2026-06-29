@@ -1,23 +1,15 @@
 import { BadgeCheck, Star } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
-import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
-import { Button } from "@/components/ui/button";
-import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
+import { CtaLink } from "@/components/site/cta-link";
 
 export function About({
   dict,
   locale,
-  placements,
-  offersById,
-  segments,
 }: {
   dict: Dictionary;
   locale: Locale;
-  placements: Record<string, SiteCtaPlacement>;
-  offersById: Record<string, SiteProduct>;
-  segments: Segment[];
 }) {
   const { about } = dict;
   return (
@@ -61,21 +53,14 @@ export function About({
               <p key={i}>{p}</p>
             ))}
           </div>
-          <Button
+          <CtaLink
+            placementKey="about_cta"
             href={`/${locale}#contact`}
             className="mt-8 px-8 py-3.5 font-bold"
             size="lg"
           >
             {about.cta}
-          </Button>
-          <CtaOfferSlot
-            placementKey="about_cta"
-            placements={placements}
-            offersById={offersById}
-            segments={segments}
-            locale={locale}
-            className="mt-4 max-w-lg"
-          />
+          </CtaLink>
         </div>
       </Container>
     </section>

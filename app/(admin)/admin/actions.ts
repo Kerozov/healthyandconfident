@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
+import { productPlacementKey } from "@/lib/site/product-placement";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
   sendEmail,
@@ -1623,6 +1624,23 @@ function revalidateSitePaths() {
   revalidatePath("/en");
 }
 
+async function syncProductPlacement(
+  supabase: ReturnType<typeof getAdminClient>,
+  productId: string,
+  title_bg: string,
+  title_en: string,
+) {
+  await supabase.from("site_cta_placements").upsert(
+    {
+      key: productPlacementKey(productId),
+      label_bg: `Магазин — ${title_bg}`,
+      label_en: `Shop — ${title_en}`,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "key" },
+  );
+}
+
 export async function saveSiteSection(input: {
   key: "events" | "products";
   enabled: boolean;
@@ -1753,6 +1771,7 @@ export async function saveSiteProduct(input: {
   if (input.id) {
     const { error } = await supabase.from("site_products").update(row).eq("id", input.id);
     if (error) return { ok: false, message: error.message };
+    await syncProductPlacement(supabase, input.id, row.title_bg, row.title_en);
     revalidateSitePaths();
     return { ok: true, id: input.id };
   }
@@ -1763,8 +1782,10 @@ export async function saveSiteProduct(input: {
     .select("id")
     .single();
   if (error) return { ok: false, message: error.message };
+  const productId = (data as { id: string }).id;
+  await syncProductPlacement(supabase, productId, row.title_bg, row.title_en);
   revalidateSitePaths();
-  return { ok: true, id: (data as { id: string }).id };
+  return { ok: true, id: productId };
 }
 
 export async function deleteSiteProduct(id: string): Promise<ActionResult> {
@@ -1772,6 +1793,10 @@ export async function deleteSiteProduct(id: string): Promise<ActionResult> {
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_products").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
+  await supabase
+    .from("site_cta_placements")
+    .delete()
+    .eq("key", productPlacementKey(id));
   revalidateSitePaths();
   return { ok: true };
 }

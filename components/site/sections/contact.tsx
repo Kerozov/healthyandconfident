@@ -1,24 +1,13 @@
 import { Mail, Phone, MessageCircle, CalendarHeart } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
-import type { Locale } from "@/i18n/config";
-import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
-import { Button } from "@/components/ui/button";
+import { CtaLink } from "@/components/site/cta-link";
 import { siteConfig } from "@/lib/site";
-import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
 
 export function Contact({
   dict,
-  locale,
-  placements,
-  offersById,
-  segments,
 }: {
   dict: Dictionary;
-  locale: Locale;
-  placements: Record<string, SiteCtaPlacement>;
-  offersById: Record<string, SiteProduct>;
-  segments: Segment[];
 }) {
   const { contact } = dict;
   return (
@@ -34,21 +23,16 @@ export function Contact({
               {contact.title}
             </h2>
             <p className="mt-4 max-w-md text-green-300">{contact.subtitle}</p>
-            <Button
+            <CtaLink
+              placementKey="contact_cta"
               href={siteConfig.whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
               size="lg"
               className="mt-8 bg-gold-400 px-10 py-4 text-lg font-bold text-forest-900 shadow-xl hover:bg-gold-500 hover:shadow-2xl"
             >
               <CalendarHeart className="h-5 w-5" /> {contact.cta}
-            </Button>
-            <CtaOfferSlot
-              placementKey="contact_cta"
-              placements={placements}
-              offersById={offersById}
-              segments={segments}
-              locale={locale}
-              className="mt-4"
-            />
+            </CtaLink>
           </div>
 
           <div className="space-y-4">

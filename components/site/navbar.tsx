@@ -6,27 +6,19 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Leaf } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
-import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
-import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
-import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
 
 export function Navbar({
   locale,
   items,
   cta,
-  placements,
-  offersById,
-  segments,
 }: {
   locale: Locale;
   items: NavItem[];
   cta: string;
-  placements: Record<string, SiteCtaPlacement>;
-  offersById: Record<string, SiteProduct>;
-  segments: Segment[];
 }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -86,13 +78,14 @@ export function Navbar({
           >
             {other}
           </Link>
-          <Button
+          <CtaLink
+            placementKey="nav_cta"
             href={`/${locale}#contact`}
             size="sm"
             className="bg-gold-400 font-semibold text-forest-900 shadow-sm hover:bg-gold-500"
           >
             {cta}
-          </Button>
+          </CtaLink>
         </div>
 
         <button
@@ -125,19 +118,15 @@ export function Navbar({
               >
                 {other}
               </Link>
-              <Button href={`/${locale}#contact`} size="sm" className="flex-1">
+              <CtaLink
+                placementKey="nav_cta"
+                href={`/${locale}#contact`}
+                size="sm"
+                className="flex-1"
+              >
                 {cta}
-              </Button>
+              </CtaLink>
             </div>
-            <CtaOfferSlot
-              placementKey="nav_cta"
-              placements={placements}
-              offersById={offersById}
-              segments={segments}
-              locale={locale}
-              compact
-              className="mt-3"
-            />
           </Container>
         </div>
       )}

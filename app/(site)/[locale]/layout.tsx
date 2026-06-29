@@ -9,6 +9,7 @@ import { siteConfig } from "@/lib/site";
 import { Navbar } from "@/components/site/navbar";
 import { Footer } from "@/components/site/footer";
 import { Popup } from "@/components/site/popup";
+import { OfferPopupProvider } from "@/components/site/offer-popup";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -77,17 +78,17 @@ export default async function SiteLayout({
       className={`${geistSans.variable} ${fraunces.variable}`}
     >
       <body className="min-h-screen">
-        <Navbar
-          locale={l}
-          items={dict.nav.items}
-          cta={dict.nav.cta}
+        <OfferPopupProvider
           placements={site.ctaPlacements}
           offersById={site.offersById}
           segments={site.segments}
-        />
-        <main>{children}</main>
-        <Footer locale={l} dict={dict} />
-        <Popup locale={l} />
+          locale={l}
+        >
+          <Navbar locale={l} items={dict.nav.items} cta={dict.nav.cta} />
+          <main>{children}</main>
+          <Footer locale={l} dict={dict} />
+          <Popup locale={l} />
+        </OfferPopupProvider>
       </body>
     </html>
   );

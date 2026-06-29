@@ -6,7 +6,8 @@ import { Save, Check } from "lucide-react";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { saveCtaPlacement } from "@/app/(admin)/admin/actions";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
-import { DEFAULT_OFFER_HEADLINES, normalizeOfferType } from "@/lib/site/cta-placements";
+import { DEFAULT_OFFER_HEADLINES, normalizeOfferType, CTA_PLACEMENT_KEYS } from "@/lib/site/cta-placements";
+import { isProductPlacementKey } from "@/lib/site/product-placement";
 import { cn } from "@/lib/utils";
 
 function OfferSelect({
@@ -89,7 +90,7 @@ function PlacementEditor({
               setSaved(false);
             }}
           />
-          Покажи оферта
+          Покажи popup оферта
         </label>
       </div>
 
@@ -157,6 +158,21 @@ export function CtaPlacementsPanel({
 }) {
   const router = useRouter();
 
+  const sortedPlacements = [...placements].sort((a, b) => {
+    const aProduct = isProductPlacementKey(a.key);
+    const bProduct = isProductPlacementKey(b.key);
+    if (aProduct !== bProduct) return aProduct ? 1 : -1;
+    const aIndex = CTA_PLACEMENT_KEYS.indexOf(a.key as (typeof CTA_PLACEMENT_KEYS)[number]);
+    const bIndex = CTA_PLACEMENT_KEYS.indexOf(b.key as (typeof CTA_PLACEMENT_KEYS)[number]);
+    if (aIndex >= 0 && bIndex >= 0) return aIndex - bIndex;
+    if (aIndex >= 0) return -1;
+    if (bIndex >= 0) return 1;
+    return a.label_bg.localeCompare(b.label_bg, "bg");
+  });
+
+  const sitePlacements = sortedPlacements.filter((p) => !isProductPlacementKey(p.key));
+  const productPlacements = sortedPlacements.filter((p) => isProductPlacementKey(p.key));
+
   if (placements.length === 0) {
     return (
       <p className="text-sm text-ink-soft">
@@ -167,24 +183,49 @@ export function CtaPlacementsPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <p className="text-sm text-ink-soft">
-        За всеки бутон на сайта избери кой upsell или downsell да се показва под/до
-        него, с персонален текст.
+        При клик на съответния бутон или продукт се показва <strong>popup</strong> с
+        upsell/downsell (ако е включено). „Не, благодаря“ продължава към оригиналната
+        дестинация.
       </p>
       {offers.length === 0 && (
         <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
           Първо създай поне една оферта в таб „Оферти“.
         </p>
       )}
-      {placements.map((p) => (
-        <PlacementEditor
-          key={p.key}
-          placement={p}
-          offers={offers}
-          onSaved={() => router.refresh()}
-        />
-      ))}
+
+      {sitePlacements.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-ink">Бутони на сайта</h3>
+          {sitePlacements.map((p) => (
+            <PlacementEditor
+              key={p.key}
+              placement={p}
+              offers={offers}
+              onSaved={() => router.refresh()}
+            />
+          ))}
+        </div>
+      )}
+
+      {productPlacements.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-ink">Продукти в магазина</h3>
+          <p className="text-xs text-ink-soft">
+            Popup при клик върху продукт от секцията „Магазин“. Записват се автоматично при
+            добавяне на продукт.
+          </p>
+          {productPlacements.map((p) => (
+            <PlacementEditor
+              key={p.key}
+              placement={p}
+              offers={offers}
+              onSaved={() => router.refresh()}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { Segment, SiteProduct } from "@/lib/supabase/types";
 import { offerMatchesVisitor } from "@/lib/site/audience";
+import { productPlacementKey } from "@/lib/site/product-placement";
+import { useOfferPopup } from "@/components/site/offer-popup";
 import { readVisitorTags } from "@/lib/site/visitor-tags";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ export function ShopProductGrid({
   shopEyebrow: string;
   shopCta: string;
 }) {
+  const { tryOpenPlacement } = useOfferPopup();
   const [visitorTags, setVisitorTags] = useState<string[]>([]);
 
   useEffect(() => {
@@ -35,6 +37,15 @@ export function ShopProductGrid({
 
   if (visible.length === 0) return null;
 
+  function openProduct(product: SiteProduct) {
+    const checkoutUrl = product.stripe_url?.trim() ?? "";
+    if (!checkoutUrl) return;
+    const placementKey = productPlacementKey(product.id);
+    if (!tryOpenPlacement(placementKey, checkoutUrl)) {
+      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+    }
+  }
+
   return (
     <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       {visible.map((product) => {
@@ -46,9 +57,12 @@ export function ShopProductGrid({
         const checkoutUrl = product.stripe_url?.trim() ?? "";
 
         return (
-          <div
+          <button
             key={product.id}
-            className="group flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-bg-card transition-all hover:-translate-y-1 hover:shadow-soft"
+            type="button"
+            onClick={() => openProduct(product)}
+            disabled={!checkoutUrl}
+            className="group flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-bg-card text-left transition-all hover:-translate-y-1 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             <div className="relative aspect-[16/10] overflow-hidden bg-green-100">
               {product.image_url ? (
@@ -88,22 +102,11 @@ export function ShopProductGrid({
                   {description}
                 </p>
               )}
-              {checkoutUrl ? (
-                <Link
-                  href={checkoutUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-green-600"
-                >
-                  {shopCta} <ArrowUpRight className="h-4 w-4" />
-                </Link>
-              ) : (
-                <span className="mt-5 text-sm text-ink-soft">
-                  {locale === "bg" ? "Линк скоро" : "Link soon"}
-                </span>
-              )}
+              <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-green-600">
+                {shopCta} <ArrowUpRight className="h-4 w-4" />
+              </span>
             </div>
-          </div>
+          </button>
         );
       })}
     </div>

@@ -1,23 +1,15 @@
 import { Check, Sparkles, TrendingUp } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
-import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
-import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
 
 export function Hero({
   dict,
   locale,
-  placements,
-  offersById,
-  segments,
 }: {
   dict: Dictionary;
   locale: Locale;
-  placements: Record<string, SiteCtaPlacement>;
-  offersById: Record<string, SiteProduct>;
-  segments: Segment[];
 }) {
   const { hero } = dict;
   return (
@@ -77,30 +69,23 @@ export function Hero({
             ))}
           </ul>
 
-          <div className="mt-9 space-y-3">
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button href={`/${locale}#programs`} variant="gold" size="lg">
-                {hero.primaryCta}
-              </Button>
-              <Button href={`/${locale}#lead`} size="lg" variant="secondary">
-                {hero.secondaryCta}
-              </Button>
-            </div>
-            <CtaOfferSlot
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <CtaLink
               placementKey="hero_primary"
-              placements={placements}
-              offersById={offersById}
-              segments={segments}
-              locale={locale}
-            />
-            <CtaOfferSlot
+              href={`/${locale}#programs`}
+              variant="gold"
+              size="lg"
+            >
+              {hero.primaryCta}
+            </CtaLink>
+            <CtaLink
               placementKey="hero_secondary"
-              placements={placements}
-              offersById={offersById}
-              segments={segments}
-              locale={locale}
-              compact
-            />
+              href={`/${locale}#lead`}
+              size="lg"
+              variant="secondary"
+            >
+              {hero.secondaryCta}
+            </CtaLink>
           </div>
 
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-green-100 pt-8">

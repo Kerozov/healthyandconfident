@@ -1,24 +1,16 @@
 import { Check, Star } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
-import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
-import { Button } from "@/components/ui/button";
+import { CtaLink } from "@/components/site/cta-link";
 import { cn } from "@/lib/utils";
-import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
 
 export function Programs({
   dict,
   locale,
-  placements,
-  offersById,
-  segments,
 }: {
   dict: Dictionary;
   locale: Locale;
-  placements: Record<string, SiteCtaPlacement>;
-  offersById: Record<string, SiteProduct>;
-  segments: Segment[];
 }) {
   const { programs } = dict;
   return (
@@ -73,22 +65,14 @@ export function Programs({
                   </li>
                 ))}
               </ul>
-              <Button
+              <CtaLink
+                placementKey={`programs_${index}`}
                 href={`/${locale}${p.href}`}
                 variant={p.highlight ? "primary" : "outline"}
                 className={cn("mt-8 w-full py-3", p.highlight && "font-semibold")}
               >
                 {p.cta}
-              </Button>
-              <CtaOfferSlot
-                placementKey={`programs_${index}`}
-                placements={placements}
-                offersById={offersById}
-                segments={segments}
-                locale={locale}
-                compact
-                className="mt-4"
-              />
+              </CtaLink>
             </div>
           ))}
         </div>
