@@ -45,11 +45,11 @@ export function BlogCard({
             <span>{formatDate(post.published_at, locale)}</span>
           )}
         </div>
-        <h3 className="mt-3 font-display text-xl font-semibold leading-snug transition-colors group-hover:text-coral-600">
+        <h3 className="mt-3 font-display text-xl font-semibold leading-snug transition-colors group-hover:text-green-600">
           {post.title}
         </h3>
         <p className="mt-2 line-clamp-3 flex-1 text-sm text-ink-soft">{post.excerpt}</p>
-        <div className="mt-5 flex items-center justify-between text-sm font-semibold text-coral-600">
+        <div className="mt-5 flex items-center justify-between text-sm font-semibold text-green-600">
           <span className="inline-flex items-center gap-1.5">
             {readMore} <ArrowUpRight className="h-4 w-4" />
           </span>

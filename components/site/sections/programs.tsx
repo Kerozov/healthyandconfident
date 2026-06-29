@@ -20,16 +20,16 @@ export function Programs({
 }) {
   const { programs } = dict;
   return (
-    <section id="programs" className="scroll-mt-24 bg-white py-24">
+    <section id="programs" className="scroll-mt-24 bg-forest-100 py-24">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow text-rose-500">
+          <span className="eyebrow text-green-600">
             <Star className="h-4 w-4" /> {locale === "bg" ? "Програми" : "Programs"}
           </span>
-          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-warm-900 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-forest-800 sm:text-4xl">
             {programs.title}
           </h2>
-          <p className="mt-4 text-warm-800">{programs.subtitle}</p>
+          <p className="mt-4 text-forest-800">{programs.subtitle}</p>
         </div>
 
         <div className="mt-14 grid gap-6 lg:grid-cols-3">
@@ -37,10 +37,10 @@ export function Programs({
             <div
               key={p.title}
               className={cn(
-                "relative flex flex-col rounded-2xl border p-8 transition-all hover:-translate-y-1",
+                "relative flex flex-col rounded-2xl border p-6 transition-all",
                 p.highlight
-                  ? "border-2 border-rose-400 bg-white shadow-lg lg:-mt-4 lg:mb-4"
-                  : "border-[#F0D5CC] bg-warm-50",
+                  ? "scale-[1.02] border-2 border-green-500 bg-white shadow-lg"
+                  : "border-green-100 bg-white hover:border-green-300 hover:shadow-md",
               )}
             >
               {p.badge && (
@@ -48,33 +48,33 @@ export function Programs({
                   className={cn(
                     "absolute -top-3 left-8 rounded-full px-3 py-1 text-xs font-semibold",
                     p.highlight
-                      ? "bg-rose-400 text-white"
-                      : "bg-sage-50 text-sage-600",
+                      ? "bg-green-600 text-white"
+                      : "bg-green-100 text-green-700",
                   )}
                 >
                   {p.badge}
                 </span>
               )}
-              <h3 className="font-display text-2xl font-semibold text-warm-900">{p.title}</h3>
-              <span className="mt-2 inline-flex w-fit rounded-full bg-sage-50 px-3 py-1 text-xs text-sage-600">
+              <h3 className="font-display text-2xl font-semibold text-forest-800">{p.title}</h3>
+              <span className="mt-2 inline-flex w-fit rounded-full bg-green-100 px-3 py-1 text-xs text-green-700">
                 {p.duration}
               </span>
-              <p className="mt-5 font-display text-3xl font-semibold text-rose-500">
+              <span className="mt-3 inline-flex w-fit rounded-full bg-cream-100 px-3 py-1 text-xs text-green-800">
                 {p.price}
-              </p>
-              <p className="mt-4 text-sm leading-relaxed text-warm-800">{p.description}</p>
-              <ul className="mt-6 flex-1 space-y-3 text-sm text-warm-800">
+              </span>
+              <p className="mt-4 text-sm leading-relaxed text-forest-800">{p.description}</p>
+              <ul className="mt-6 flex-1 space-y-3 text-sm text-forest-800">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-sage-500" />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
                     {f}
                   </li>
                 ))}
               </ul>
               <Button
                 href={`/${locale}${p.href}`}
-                variant={p.highlight ? "primary" : "secondary"}
-                className="mt-8 w-full"
+                variant={p.highlight ? "primary" : "outline"}
+                className={cn("mt-8 w-full py-3", p.highlight && "font-semibold")}
               >
                 {p.cta}
               </Button>

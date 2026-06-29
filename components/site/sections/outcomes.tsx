@@ -1,4 +1,3 @@
-import { Check } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
@@ -13,14 +12,18 @@ export function Outcomes({
 }) {
   const { outcomes } = dict;
   return (
-    <section className="bg-rose-50 py-24">
+    <section className="bg-gradient-to-r from-green-700 to-green-800 py-24 text-white">
       <Container className="grid items-center gap-14 lg:grid-cols-2">
         <div>
-          <h2 className="font-display text-3xl font-semibold tracking-tight text-warm-900 sm:text-4xl">
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             {outcomes.title}
           </h2>
-          <p className="mt-4 max-w-md text-warm-800">{outcomes.subtitle}</p>
-          <Button href={`/${locale}#contact`} size="lg" className="mt-8">
+          <p className="mt-4 max-w-md text-white">{outcomes.subtitle}</p>
+          <Button
+            href={`/${locale}#contact`}
+            size="lg"
+            className="mt-8 bg-gold-400 px-8 py-4 font-bold text-forest-900 shadow-lg hover:bg-gold-500 hover:shadow-xl"
+          >
             {dict.contact.cta}
           </Button>
         </div>
@@ -29,9 +32,9 @@ export function Outcomes({
           {outcomes.items.map((item) => (
             <li
               key={item}
-              className="flex items-start gap-3 rounded-2xl border border-[#F0D5CC] bg-white p-4 text-sm font-medium text-warm-800"
+              className="flex items-start gap-3 rounded-2xl border border-green-600/40 bg-green-800/30 p-4 text-sm font-medium text-green-100"
             >
-              <span className="mt-0.5 shrink-0 text-sage-500">✓</span>
+              <span className="mt-0.5 shrink-0 text-gold-400">✓</span>
               {item}
             </li>
           ))}

@@ -28,7 +28,7 @@ export function ShopSection({
     <section id="shop" className="scroll-mt-24 py-24">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow text-coral-500">
+          <span className="eyebrow text-green-600">
             <ShoppingBag className="h-4 w-4" /> {dict.shop.eyebrow}
           </span>
           <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -53,7 +53,7 @@ export function ShopSection({
                 rel="noopener noreferrer"
                 className="group flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-bg-card transition-all hover:-translate-y-1 hover:shadow-soft"
               >
-                <div className="relative aspect-[16/10] overflow-hidden bg-coral-100">
+                <div className="relative aspect-[16/10] overflow-hidden bg-green-100">
                   {product.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -62,14 +62,14 @@ export function ShopSection({
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-coral-400 to-coral-600 font-display text-xl text-white/90">
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-green-500 to-green-700 font-display text-xl text-white/90">
                       {dict.shop.eyebrow}
                     </div>
                   )}
                 </div>
                 <div className="flex flex-1 flex-col p-6">
                   {price && (
-                    <p className="font-display text-2xl font-semibold text-coral-500">
+                    <p className="font-display text-2xl font-semibold text-green-600">
                       {price}
                     </p>
                   )}
@@ -78,7 +78,7 @@ export function ShopSection({
                       "mb-2 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
                       (product.offer_type ?? "upsell") === "downsell"
                         ? "bg-gold-400/20 text-gold-700"
-                        : "bg-coral-500/15 text-coral-600",
+                        : "bg-green-500/15 text-green-600",
                     )}
                   >
                     {product.offer_type ?? "upsell"}

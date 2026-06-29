@@ -25,7 +25,7 @@ export function Marquee({ locale }: { locale: Locale }) {
         ];
   const row = [...words, ...words];
   return (
-    <div className="border-y border-sage-100 bg-sage-600 py-4 text-white">
+    <div className="border-y border-green-800 bg-green-700 py-4 text-green-100">
       <div className="flex w-max animate-marquee gap-10 whitespace-nowrap">
         {row.map((w, i) => (
           <span
@@ -33,7 +33,7 @@ export function Marquee({ locale }: { locale: Locale }) {
             className="flex items-center gap-10 font-display text-lg font-medium tracking-tight"
           >
             {w}
-            <span className="text-rose-300">✦</span>
+            <span className="text-gold-400">✦</span>
           </span>
         ))}
       </div>

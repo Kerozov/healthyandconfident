@@ -31,14 +31,14 @@ export function OfferPitch({
         "rounded-2xl border p-4",
         isDownsell
           ? "border-gold-400/40 bg-gold-400/10"
-          : "border-coral-400/30 bg-coral-500/5",
+          : "border-green-300/50 bg-green-50",
         className,
       )}
     >
       <p
         className={cn(
           "flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider",
-          isDownsell ? "text-gold-700" : "text-coral-600",
+          isDownsell ? "text-gold-700" : "text-green-600",
         )}
       >
         <Sparkles className="h-3.5 w-3.5" />
@@ -50,7 +50,7 @@ export function OfferPitch({
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-display text-base font-semibold leading-snug">{title}</p>
             {price && (
-              <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold text-coral-600">
+              <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold text-green-700">
                 {price}
               </span>
             )}
@@ -65,10 +65,10 @@ export function OfferPitch({
           target="_blank"
           rel="noopener noreferrer"
           className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-white transition-colors",
+            "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
             isDownsell
-              ? "bg-gold-600 hover:bg-gold-700"
-              : "bg-coral-500 hover:bg-coral-600",
+              ? "bg-gold-600 text-white hover:bg-gold-700"
+              : "bg-gold-400 text-forest-900 hover:bg-gold-500",
             compact && "text-xs",
           )}
         >

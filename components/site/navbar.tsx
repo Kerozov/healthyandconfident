@@ -43,7 +43,7 @@ export function Navbar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 border-b border-rose-100 bg-white/90 backdrop-blur-md transition-all duration-300",
+        "sticky top-0 z-50 border-b border-green-100 bg-white/95 backdrop-blur-md transition-all duration-300",
         scrolled && "shadow-sm",
       )}
     >
@@ -52,14 +52,14 @@ export function Navbar({
           href={`/${locale}`}
           className="flex items-center gap-2.5 font-display tracking-tight"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-400 text-white">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
             <Leaf className="h-5 w-5" />
           </span>
           <span className="leading-tight">
-            <span className="block text-lg font-semibold text-rose-500">
+            <span className="block text-lg font-semibold text-green-700">
               {siteConfig.brand}
             </span>
-            <span className="block text-[11px] font-medium uppercase tracking-wider text-warm-800/70">
+            <span className="block text-[11px] font-medium uppercase tracking-wider text-forest-800/70">
               {siteConfig.tagline}
             </span>
           </span>
@@ -70,7 +70,7 @@ export function Navbar({
             <Link
               key={item.href}
               href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
-              className="text-sm font-medium text-warm-800 transition-colors hover:text-rose-500"
+              className="text-sm font-medium text-forest-800 transition-colors hover:text-green-600"
             >
               {item.label}
             </Link>
@@ -80,17 +80,21 @@ export function Navbar({
         <div className="hidden items-center gap-3 lg:flex">
           <Link
             href={switchHref}
-            className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-warm-800 transition-colors hover:border-rose-300 hover:bg-rose-50"
+            className="rounded-full border border-green-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-forest-800 transition-colors hover:border-green-300 hover:bg-green-50"
           >
             {other}
           </Link>
-          <Button href={`/${locale}#contact`} size="sm">
+          <Button
+            href={`/${locale}#contact`}
+            size="sm"
+            className="bg-gold-400 font-semibold text-forest-900 shadow-sm hover:bg-gold-500"
+          >
             {cta}
           </Button>
         </div>
 
         <button
-          className="text-warm-800 lg:hidden"
+          className="text-forest-800 lg:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label="Menu"
         >
@@ -99,14 +103,14 @@ export function Navbar({
       </Container>
 
       {open && (
-        <div className="border-t border-rose-100 bg-white lg:hidden">
+        <div className="border-t border-green-100 bg-white lg:hidden">
           <Container className="flex flex-col gap-1 py-4">
             {items.map((item) => (
               <Link
                 key={item.href}
                 href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-3 text-base font-medium text-warm-800 hover:bg-rose-50"
+                className="rounded-lg px-2 py-3 text-base font-medium text-forest-800 hover:bg-green-50"
               >
                 {item.label}
               </Link>
@@ -115,7 +119,7 @@ export function Navbar({
               <Link
                 href={switchHref}
                 onClick={() => setOpen(false)}
-                className="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-warm-800"
+                className="rounded-full border border-green-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-forest-800"
               >
                 {other}
               </Link>

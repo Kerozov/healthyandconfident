@@ -72,18 +72,18 @@ export function Popup({ locale }: { locale: Locale }) {
   if (!open || !data) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-ink/50 p-4 backdrop-blur-sm sm:items-center">
-      <div className="animate-fade-up relative w-full max-w-lg overflow-hidden rounded-3xl bg-cream shadow-2xl">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-forest-900/50 p-4 backdrop-blur-sm sm:items-center">
+      <div className="animate-fade-up relative w-full max-w-lg overflow-hidden rounded-3xl bg-cream-50 shadow-2xl">
         <button
           onClick={dismiss}
           aria-label="Close"
-          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-ink/5 text-ink transition-colors hover:bg-ink/10"
+          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-forest-800/5 text-forest-800 transition-colors hover:bg-forest-800/10"
         >
           <X className="h-5 w-5" />
         </button>
 
-        <div className="bg-forest-600 px-7 py-6 text-cream">
-          <span className="eyebrow text-coral-300">
+        <div className="bg-green-700 px-7 py-6 text-white">
+          <span className="eyebrow text-gold-400">
             <Gift className="h-4 w-4" /> {locale === "bg" ? "Подарък" : "Free gift"}
           </span>
           <h3 className="mt-2 font-display text-2xl font-semibold leading-tight">
@@ -93,12 +93,12 @@ export function Popup({ locale }: { locale: Locale }) {
 
         <div className="px-7 py-6">
           {state === "done" ? (
-            <p className="py-6 text-center font-display text-xl text-forest-600">
+            <p className="py-6 text-center font-display text-xl text-green-700">
               {data.success_message}
             </p>
           ) : (
             <>
-              <p className="text-sm leading-relaxed text-ink-soft">{data.message}</p>
+              <p className="text-sm leading-relaxed text-green-800">{data.message}</p>
               <form onSubmit={submit} className="mt-5 flex flex-col gap-3">
                 <input
                   type="email"
@@ -106,19 +106,19 @@ export function Popup({ locale }: { locale: Locale }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={locale === "bg" ? "Твоят имейл" : "Your best email"}
-                  className="h-12 rounded-full border border-ink/15 bg-white px-5 text-sm outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-400/30"
+                  className="h-12 rounded-full border border-green-100 bg-white px-5 text-sm text-forest-800 outline-none focus:border-green-400 focus:ring-2 focus:ring-gold-400/50"
                 />
                 <button
                   type="submit"
                   disabled={state === "loading"}
-                  className="h-12 rounded-full bg-coral-500 font-semibold text-white transition-colors hover:bg-coral-600 disabled:opacity-60"
+                  className="h-12 rounded-full bg-gold-400 font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
                 >
                   {state === "loading"
                     ? "..."
                     : data.cta_label}
                 </button>
                 {state === "error" && (
-                  <p className="text-center text-sm text-coral-600">
+                  <p className="text-center text-sm text-green-600">
                     {locale === "bg" ? "Нещо се обърка. Опитай пак." : "Something went wrong. Try again."}
                   </p>
                 )}

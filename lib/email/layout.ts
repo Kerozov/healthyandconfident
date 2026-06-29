@@ -12,14 +12,15 @@ export type ComposeEmailOptions = {
 };
 
 const COLORS = {
-  bgPrimary: "#FFF5F7",
+  bgPrimary: "#F7FBF7",
   bgCard: "#FFFFFF",
-  sage: "#2D6A4F",
-  rose: "#FF6B8A",
-  roseDark: "#E8527A",
-  textPrimary: "#3D2B1F",
-  textMuted: "#9B7B6A",
-  footerBg: "#F9F9F9",
+  green: "#2D7A47",
+  greenDark: "#1F5C34",
+  gold: "#F0B429",
+  goldDark: "#D99B0F",
+  textPrimary: "#1A2E1A",
+  textMuted: "#5A7A5A",
+  footerBg: "#EEF7EE",
 } as const;
 
 const MARKER = "<!-- hc-email-template -->";
@@ -51,7 +52,7 @@ function ctaBlock(cta: EmailCta): string {
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:28px">
   <tr>
     <td align="center">
-      <a href="${href}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background-color:${COLORS.rose};color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:10px;mso-padding-alt:0">
+      <a href="${href}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background-color:${COLORS.gold};color:${COLORS.textPrimary};font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:10px;mso-padding-alt:0">
         <!--[if mso]><i style="letter-spacing:32px;mso-font-width:-100%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
         <span style="mso-text-raise:15pt">${label}</span>
         <!--[if mso]><i style="letter-spacing:32px;mso-font-width:-100%">&nbsp;</i><![endif]-->
@@ -89,7 +90,7 @@ ${MARKER}
     <td align="center" style="padding:32px 16px">
       <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:${COLORS.bgCard};border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(61,43,31,0.08)">
         <tr>
-          <td style="background-color:${COLORS.sage};padding:36px 28px;text-align:center">
+          <td style="background-color:${COLORS.green};padding:36px 28px;text-align:center">
             <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:600;color:#ffffff;line-height:1.2">
               ${escapeHtml(siteConfig.brand)}
             </p>
@@ -110,7 +111,7 @@ ${MARKER}
         <tr>
           <td style="background-color:${COLORS.footerBg};padding:24px 28px;text-align:center;border-top:1px solid rgba(155,123,106,0.15)">
             <p style="margin:0 0 8px;font-size:14px">
-              <a href="${siteUrl}" style="color:${COLORS.sage};text-decoration:none;font-weight:600">www.healthyandconfident.co.uk</a>
+              <a href="${siteUrl}" style="color:${COLORS.green};text-decoration:none;font-weight:600">www.healthyandconfident.co.uk</a>
             </p>
             <p style="margin:0;font-size:12px;color:${COLORS.textMuted};line-height:1.5">
               © ${year} ${escapeHtml(siteConfig.brand)} · ${escapeHtml(siteConfig.tagline)}

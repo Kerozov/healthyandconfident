@@ -8,23 +8,38 @@
 
   --radius-xl2: 1.75rem;
 
-  --shadow-soft: 0 24px 60px -28px rgba(42, 26, 16, 0.12);
+  --shadow-soft: 0 24px 60px -28px rgba(13, 43, 24, 0.12);
 }
 
 :root {
-  --bg-page: #fff5f0;
-  --bg-card: #fffbf7;
-  --color-primary: #ff6b8a;
-  --color-primary-dark: #d93d65;
-  --color-secondary: #2d6a4f;
-  --color-accent: #ffb347;
-  --text-main: #3d2b1f;
-  --text-muted: #8b6a5a;
-  --border-soft: #f0d5cc;
+  --bg-page: #f7fbf7;
+  --bg-card: #ffffff;
+  --bg-warm: #fafdf7;
+  --bg-section-alt: #eef7ee;
+  --green-50: #f0f9f0;
+  --green-100: #d6eed6;
+  --green-200: #aadcaa;
+  --green-500: #3a9b5c;
+  --green-600: #2d7a47;
+  --green-700: #1f5c34;
+  --green-800: #154025;
+  --green-900: #0d2b18;
+  --gold-400: #f0b429;
+  --gold-500: #d99b0f;
+  --gold-600: #b87d08;
+  --cream-50: #fffdf5;
+  --cream-100: #fff8e6;
+  --cream-200: #faefc8;
+  --text-main: #1a2e1a;
+  --text-body: #2d4a2d;
+  --text-muted: #5a7a5a;
+  --text-subtle: #8aaa8a;
+  --border-light: #d0e8d0;
+  --border-card: #e2f0e2;
 }
 
 * {
-  border-color: var(--border-soft);
+  border-color: var(--border-light);
 }
 
 html {
@@ -40,7 +55,7 @@ body {
 }
 
 ::selection {
-  background: #ffd6de;
+  background: #d6eed6;
   color: var(--text-main);
 }
 
@@ -99,11 +114,11 @@ body {
 }
 
 .prose-hc {
-  --tw-prose-body: #8b6a5a;
-  --tw-prose-headings: #3d2b1f;
-  --tw-prose-links: #d93d65;
-  --tw-prose-bold: #3d2b1f;
-  --tw-prose-quotes: #2d6a4f;
-  --tw-prose-quote-borders: #ff6b8a;
-  --tw-prose-bullets: #4a9b7f;
+  --tw-prose-body: #2d4a2d;
+  --tw-prose-headings: #1a2e1a;
+  --tw-prose-links: #2d7a47;
+  --tw-prose-bold: #1a2e1a;
+  --tw-prose-quotes: #1f5c34;
+  --tw-prose-quote-borders: #3a9b5c;
+  --tw-prose-bullets: #3a9b5c;
 }

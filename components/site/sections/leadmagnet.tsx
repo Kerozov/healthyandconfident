@@ -9,10 +9,10 @@ export function LeadMagnet({ dict, locale }: { dict: Dictionary; locale: Locale 
   return (
     <section id="lead" className="scroll-mt-24 py-24">
       <Container>
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-rose-400 to-[#F0527A] px-7 py-14 text-white sm:px-14">
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-green-700 to-green-800 px-7 py-14 text-white sm:px-14">
           <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
           <div className="relative mx-auto max-w-2xl text-center">
-            <span className="eyebrow justify-center text-white/90">
+            <span className="eyebrow justify-center text-green-100">
               <Gift className="h-4 w-4" />
               {locale === "bg" ? "Безплатен подарък" : "Free gift"}
             </span>

@@ -53,7 +53,7 @@ export function LeadForm({
           "flex items-center gap-3 rounded-2xl px-6 py-5",
           variant === "gradient"
             ? "bg-white/15 text-white"
-            : "bg-sage-50 text-sage-600",
+            : "bg-green-50 text-green-700",
         )}
       >
         <CheckCircle2 className="h-6 w-6 shrink-0" />
@@ -71,12 +71,12 @@ export function LeadForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={placeholder}
-          className="h-14 flex-1 rounded-full bg-white px-5 py-3 text-sm text-warm-800 outline-none focus:ring-2 focus:ring-white/50"
+          className="h-14 flex-1 rounded-full border border-green-100 bg-white px-5 py-3 text-sm text-forest-800 outline-none focus:ring-2 focus:ring-gold-400"
         />
         <button
           type="submit"
           disabled={state === "loading"}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-warm-900 px-6 py-3 font-medium text-white transition-colors hover:bg-warm-800 disabled:opacity-60"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 py-3 font-bold text-forest-900 transition-all hover:bg-gold-500 disabled:opacity-60"
         >
           {state === "loading" ? "..." : button}
           <ArrowRight className="h-4 w-4" />
@@ -85,13 +85,13 @@ export function LeadForm({
       <p
         className={cn(
           "mt-3 text-xs",
-          variant === "gradient" ? "text-white/70" : "text-[#8B6A5A]",
+          variant === "gradient" ? "text-green-100" : "text-green-600",
         )}
       >
         {consent}
       </p>
       {state === "error" && (
-        <p className="mt-2 text-sm text-rose-100">{error}</p>
+        <p className="mt-2 text-sm text-gold-400">{error}</p>
       )}
     </form>
   );

@@ -4,25 +4,26 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         primary:
-          "bg-rose-400 text-white shadow-sm hover:bg-rose-500 hover:shadow-md",
+          "bg-gold-400 font-semibold text-forest-900 shadow-sm hover:bg-gold-500 hover:shadow-md",
         secondary:
-          "border border-rose-300 bg-transparent text-rose-500 hover:bg-rose-50",
+          "border-2 border-green-500 bg-transparent font-medium text-green-700 hover:bg-green-50",
         forest:
-          "bg-sage-600 text-white hover:bg-sage-800",
+          "bg-green-600 font-semibold text-white hover:bg-green-700",
         outline:
-          "border border-rose-300 bg-transparent text-rose-500 hover:bg-rose-50",
-        ghost: "text-warm-800 hover:bg-rose-50",
-        gold: "bg-peach-400 text-warm-900 hover:bg-peach-500",
+          "border border-green-400 bg-transparent font-medium text-green-700 hover:bg-green-50",
+        ghost: "text-forest-800 hover:bg-green-50",
+        gold:
+          "bg-gold-400 font-bold text-forest-900 shadow-md hover:bg-gold-500 hover:shadow-lg",
       },
       size: {
-        sm: "h-9 px-5 py-2 text-sm",
-        md: "h-11 px-6 text-sm",
-        lg: "px-8 py-3.5 text-base",
+        sm: "h-9 px-5 py-2 text-sm font-semibold",
+        md: "h-11 px-6 text-sm font-semibold",
+        lg: "px-8 py-4 text-lg font-bold",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },

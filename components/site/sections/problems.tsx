@@ -8,27 +8,27 @@ export function Problems({ dict }: { dict: Dictionary }) {
     <section className="bg-white py-20">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-semibold tracking-tight text-warm-900 sm:text-4xl">
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-forest-800 sm:text-4xl">
             {problems.title}
           </h2>
-          <p className="mt-4 text-warm-800">{problems.subtitle}</p>
+          <p className="mt-4 text-forest-800">{problems.subtitle}</p>
         </div>
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {problems.items.map((p) => (
             <div
               key={p.text}
-              className="rounded-2xl border border-[#F0D5CC] bg-warm-50 p-4 transition-all hover:border-rose-300 hover:shadow-sm"
+              className="rounded-2xl border border-green-100 bg-forest-100 p-4 transition-all hover:border-green-300 hover:shadow-sm"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-rose-400">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-green-500">
                 <Icon name={p.icon} className="h-6 w-6" />
               </span>
-              <p className="mt-4 text-sm font-medium leading-snug text-warm-800">{p.text}</p>
+              <p className="mt-4 text-sm font-medium leading-snug text-forest-800">{p.text}</p>
             </div>
           ))}
         </div>
 
-        <p className="mx-auto mt-10 max-w-2xl rounded-2xl border border-[#F0D5CC] bg-warm-50 px-6 py-5 text-center text-sm text-warm-800">
+        <p className="mx-auto mt-10 max-w-2xl rounded-2xl border border-green-100 bg-forest-100 px-6 py-5 text-center text-sm text-forest-800">
           {problems.note}
         </p>
       </Container>
