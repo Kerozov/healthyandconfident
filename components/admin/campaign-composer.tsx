@@ -37,6 +37,7 @@ export function CampaignComposer({
     audience: { ...EMPTY_AUDIENCE } as AudienceInput,
     scheduled_at: "",
   });
+  const [showButton, setShowButton] = useState(false);
   const [sms, setSms] = useState({
     message: "",
     audience: { ...EMPTY_AUDIENCE } as AudienceInput,
@@ -66,6 +67,7 @@ export function CampaignComposer({
           audience: { ...EMPTY_AUDIENCE },
           scheduled_at: "",
         });
+        setShowButton(false);
         router.refresh();
       }
     });
@@ -118,29 +120,57 @@ export function CampaignComposer({
               placeholder="<p>Здравей,</p><p>Благодарим ти…</p>"
             />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Текст на бутона (по избор)">
-              <Input
-                value={email.cta_label}
-                onChange={(e) => setEmail({ ...email, cta_label: e.target.value })}
-                placeholder="Запиши безплатен разговор"
+          <div className="rounded-xl border border-ink/10 p-4">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={showButton}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setShowButton(on);
+                  if (!on) {
+                    setEmail({ ...email, cta_label: "", cta_url: "" });
+                  }
+                }}
+                className="h-4 w-4 rounded border-ink/20 text-coral-500 focus:ring-coral-500"
               />
-            </Field>
-            <Field label="Линк на бутона (по избор)">
-              <Input
-                type="url"
-                value={email.cta_url}
-                onChange={(e) => setEmail({ ...email, cta_url: e.target.value })}
-                placeholder="https://www.healthyandconfident.co.uk/bg#contact"
-              />
-            </Field>
+              <span className="text-sm font-medium text-ink">Добави бутон</span>
+            </label>
+            {showButton && (
+              <div className="mt-4 space-y-4">
+                <p className="text-xs text-ink-soft/80">
+                  Текстът остава същият в имейла. Линкът може да се смени след
+                  изпращане от списъка с кампании — без повторно изпращане.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Текст на бутона">
+                    <Input
+                      value={email.cta_label}
+                      onChange={(e) =>
+                        setEmail({ ...email, cta_label: e.target.value })
+                      }
+                      placeholder="Виж събитията"
+                    />
+                  </Field>
+                  <Field label="Линк (дестинация)">
+                    <Input
+                      value={email.cta_url}
+                      onChange={(e) =>
+                        setEmail({ ...email, cta_url: e.target.value })
+                      }
+                      placeholder="/bg#events или https://www.healthyandconfident.co.uk/bg#contact"
+                    />
+                  </Field>
+                </div>
+                <EmailTemplatePreview
+                  bodyHtml={email.html}
+                  ctaLabel={email.cta_label}
+                  ctaUrl={email.cta_url}
+                  locale={email.audience.locale === "en" ? "en" : "bg"}
+                />
+              </div>
+            )}
           </div>
-          <EmailTemplatePreview
-            bodyHtml={email.html}
-            ctaLabel={email.cta_label}
-            ctaUrl={email.cta_url}
-            locale={email.audience.locale === "en" ? "en" : "bg"}
-          />
           <AudiencePicker
             segments={segments}
             subscriberTags={subscriberTags}

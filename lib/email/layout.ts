@@ -35,7 +35,9 @@ function escapeHtml(text: string): string {
 
 function isSafeHref(href: string): boolean {
   const trimmed = href.trim();
-  return /^(https?:\/\/|mailto:|tel:)/i.test(trimmed);
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(trimmed)) return true;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return true;
+  return false;
 }
 
 function headerSubtitle(locale: "bg" | "en"): string {

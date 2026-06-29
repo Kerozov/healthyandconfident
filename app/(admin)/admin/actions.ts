@@ -15,6 +15,10 @@ import {
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
 import { runAutomations } from "@/lib/automation/send";
 import { composeBrandedEmail } from "@/lib/email/layout";
+import {
+  campaignCtaRedirectUrl,
+  isSafeCtaTarget,
+} from "@/lib/email/cta-redirect";
 import { cancelAutomationScheduledJobs } from "@/lib/automation/cancel";
 import {
   syncAutomationDeliveries,
@@ -912,10 +916,50 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
 
   const ctaLabel = input.cta_label?.trim() ?? "";
   const ctaUrl = input.cta_url?.trim() ?? "";
+
+  if (ctaUrl && !isSafeCtaTarget(ctaUrl)) {
+    return { ok: false, message: "Invalid button link." };
+  }
+
+  const initialStatus: CampaignStatus = input.scheduledAt ? "scheduled" : "queued";
+  let scheduledAtIso: string | null = null;
+  if (input.scheduledAt) {
+    scheduledAtIso = parseScheduledAt(input.scheduledAt);
+    if (!scheduledAtIso) {
+      return { ok: false, message: "Invalid schedule time." };
+    }
+  }
+
+  const { data: draft, error: draftError } = await supabase
+    .from("email_campaigns")
+    .insert({
+      subject: input.subject,
+      html: input.html,
+      cta_label: ctaLabel,
+      cta_url: ctaUrl,
+      locale: input.locale,
+      segment_tag: input.segment_tag,
+      target_tags: input.target_tags,
+      recipients_count: total,
+      total_count: total,
+      status: initialStatus,
+      scheduled_at: scheduledAtIso,
+      parent_campaign_id: input.parentCampaignId || null,
+    })
+    .select("id")
+    .single();
+
+  if (draftError || !draft) {
+    return { ok: false, message: draftError?.message ?? "Could not create campaign." };
+  }
+
+  const campaignId = (draft as { id: string }).id;
+  const ctaHref =
+    ctaLabel && ctaUrl ? campaignCtaRedirectUrl(campaignId) : null;
   const wrappedHtml = composeBrandedEmail({
     bodyHtml: input.html,
     locale: input.locale === "en" ? "en" : "bg",
-    cta: ctaLabel && ctaUrl ? { label: ctaLabel, href: ctaUrl } : null,
+    cta: ctaHref ? { label: ctaLabel, href: ctaHref } : null,
   });
 
   try {
@@ -924,13 +968,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     let sent = 0;
     let failed = 0;
 
-    let scheduledAtIso: string | null = null;
-
-    if (input.scheduledAt) {
-      scheduledAtIso = parseScheduledAt(input.scheduledAt);
-      if (!scheduledAtIso) {
-        return { ok: false, message: "Invalid schedule time." };
-      }
+    if (scheduledAtIso) {
       const res = await scheduleEmail({
         subject: input.subject,
         html: wrappedHtml,
@@ -958,37 +996,21 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
       Boolean(scheduledAtIso),
     );
 
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from("email_campaigns")
-      .insert({
-        subject: input.subject,
-        html: input.html,
-        cta_label: ctaLabel,
-        cta_url: ctaUrl,
-        locale: input.locale,
-        segment_tag: input.segment_tag,
-        target_tags: input.target_tags,
-        recipients_count: total,
+      .update({
         worker_job_id: jobId,
         status,
         scheduled_at: scheduledAtIso,
         sent_at: scheduledAtIso ? null : new Date().toISOString(),
         sent_count: sent,
         failed_count: failed,
-        total_count: total,
-        not_opened_count: 0,
-        bounced_count: 0,
-        opened_count: 0,
-        delivered_count: 0,
         last_synced_at: new Date().toISOString(),
-        parent_campaign_id: input.parentCampaignId || null,
       })
-      .select("id")
-      .single();
+      .eq("id", campaignId);
 
-    if (error) return { ok: false, message: error.message };
+    if (updateError) return { ok: false, message: updateError.message };
 
-    const campaignId = (data as { id: string }).id;
     if (jobId && !scheduledAtIso) {
       await persistCampaignSync(campaignId, jobId, null, total);
     }
@@ -1007,25 +1029,51 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     return {
       ok: status !== "failed",
       message: msg,
-      id: (data as { id: string }).id,
+      id: campaignId,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Send failed";
-    await supabase.from("email_campaigns").insert({
-      subject: input.subject,
-      html: input.html,
-      locale: input.locale,
-      segment_tag: input.segment_tag,
-      target_tags: input.target_tags,
-      recipients_count: total,
-      total_count: total,
-      status: "failed",
-      error: message,
-      parent_campaign_id: input.parentCampaignId || null,
-    });
+    await supabase
+      .from("email_campaigns")
+      .update({
+        status: "failed",
+        error: message,
+      })
+      .eq("id", campaignId);
     revalidatePath("/admin/campaigns");
     return { ok: false, message };
   }
+}
+
+export async function updateEmailCampaignCta(
+  id: string,
+  input: { cta_label: string; cta_url: string },
+): Promise<ActionResult> {
+  await requireAdmin();
+  const ctaLabel = input.cta_label.trim();
+  const ctaUrl = input.cta_url.trim();
+
+  if (ctaLabel && !ctaUrl) {
+    return { ok: false, message: "Add a link for the button, or clear the label." };
+  }
+  if (ctaUrl && !isSafeCtaTarget(ctaUrl)) {
+    return { ok: false, message: "Invalid button link." };
+  }
+
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("email_campaigns")
+    .update({ cta_label: ctaLabel, cta_url: ctaUrl })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/campaigns");
+  return {
+    ok: true,
+    message: ctaUrl
+      ? "Линкът е обновен — вече изпратените имейли ще пренасочват към новия адрес."
+      : "Бутонът е премахнат от тази кампания.",
+  };
 }
 
 export async function sendEmailCampaign(input: {
@@ -1037,6 +1085,14 @@ export async function sendEmailCampaign(input: {
   scheduled_at?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
+  const ctaLabel = input.cta_label?.trim() ?? "";
+  const ctaUrl = input.cta_url?.trim() ?? "";
+  if (ctaLabel && !ctaUrl) {
+    return { ok: false, message: "Добави линк за бутона или махни текста." };
+  }
+  if (ctaUrl && !ctaLabel) {
+    return { ok: false, message: "Добави текст за бутона." };
+  }
   const locale = input.audience.locale || undefined;
   const audience = await resolveAudience(input.audience);
 

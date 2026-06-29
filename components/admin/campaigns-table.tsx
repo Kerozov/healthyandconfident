@@ -22,6 +22,7 @@ import {
   cancelEmailCampaign,
   getCampaignRecipientReport,
 } from "@/app/(admin)/admin/actions";
+import { CampaignCtaEditor } from "@/components/admin/campaign-cta-editor";
 import type { RecipientRow } from "@/lib/worker/email";
 import { formatDate } from "@/lib/utils";
 import { formatScheduledAt } from "@/lib/datetime";
@@ -416,6 +417,12 @@ export function CampaignsTable({
                     )}
                   </div>
                 )}
+
+                <CampaignCtaEditor
+                  campaignId={c.id}
+                  initialLabel={c.cta_label ?? ""}
+                  initialUrl={c.cta_url ?? ""}
+                />
 
                 {canResend && (
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-cream-2/50 px-4 py-3">

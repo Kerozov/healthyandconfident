@@ -793,17 +793,19 @@ export function AutomationsManager({
                       onChange={(e) =>
                         setForm({ ...form, cta_label_bg: e.target.value })
                       }
-                      placeholder="Запиши безплатен разговор"
+                      placeholder="Виж събитията"
                     />
                   </Field>
-                  <Field label="Линк на бутона (по избор)">
+                  <Field
+                    label="Линк на бутона (по избор)"
+                    hint="Смени по всяко време — вече изпратените имейли ще пренасочват към новия линк."
+                  >
                     <Input
-                      type="url"
                       value={form.cta_url_bg}
                       onChange={(e) =>
                         setForm({ ...form, cta_url_bg: e.target.value })
                       }
-                      placeholder="https://www.healthyandconfident.co.uk/bg#contact"
+                      placeholder="/bg#events или https://www.healthyandconfident.co.uk/bg#contact"
                     />
                   </Field>
                   <EmailTemplatePreview
@@ -842,14 +844,16 @@ export function AutomationsManager({
                       placeholder="Book a free call"
                     />
                   </Field>
-                  <Field label="Button link (optional)">
+                  <Field
+                    label="Button link (optional)"
+                    hint="Change anytime — already-sent emails redirect to the new link."
+                  >
                     <Input
-                      type="url"
                       value={form.cta_url_en}
                       onChange={(e) =>
                         setForm({ ...form, cta_url_en: e.target.value })
                       }
-                      placeholder="https://www.healthyandconfident.co.uk/en#contact"
+                      placeholder="/en#events or https://www.healthyandconfident.co.uk/en#contact"
                     />
                   </Field>
                   <EmailTemplatePreview
