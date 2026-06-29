@@ -7,7 +7,8 @@
 --   blog, subscribers, segments, popup
 --   automations (email/SMS, delay_days, send_time, send_date)
 --   automation_deliveries (scheduled, opens, bounces)
---   site_sections / site_events / site_products (Admin → Website)
+--   site_sections / site_events / site_products / site_cta_placements
+--   stripe_price_id, popup upsell placements, media storage bucket
 --   email_campaigns, sms_campaigns
 -- ═══════════════════════════════════════════════════════════════
 
@@ -237,7 +238,7 @@ create table if not exists public.site_sections (
 insert into public.site_sections (key, enabled, title_bg, title_en)
 values
   ('events', false, 'Предстоящи събития', 'Upcoming events'),
-  ('products', false, 'Upsell / Downsell', 'Upsell / Downsell')
+  ('products', false, 'Специални програми', 'Programs & products')
 on conflict (key) do nothing;
 
 create table if not exists public.site_events (
@@ -269,6 +270,7 @@ create table if not exists public.site_products (
   description_bg  text not null default '',
   description_en  text not null default '',
   stripe_url      text not null,
+  stripe_price_id text not null default '',
   price_label_bg  text not null default '',
   price_label_en  text not null default '',
   image_url       text,
@@ -299,17 +301,21 @@ create table if not exists public.site_cta_placements (
 );
 
 insert into public.site_cta_placements (key, label_bg, label_en) values
-  ('programs_0', 'Програма „Балансирано хранене 21 дни“ — бутон „Вземи днес“', 'Program “Balanced Nutrition 21 Days” — “Get started” button'),
+  ('programs_0', 'Програми — картичка „21 дни“ (води към събития)', 'Programs — “21 days” card (links to events)'),
   ('programs_1', 'Програма „Живей без резистентност“ — бутон „Кандидатствай“', 'Program “Live Without Resistance” — “Apply now” button'),
   ('programs_2', 'Програма „Препрограмирай апетита“ — бутон „Научи повече“', 'Program “Reprogram Your Appetite” — “Learn more” button'),
   ('about_cta', 'Секция „За мен“ — бутон „Работи с мен“', 'About section — “Work with me” button'),
   ('outcomes_cta', 'Секция „Резултати“ — бутон „Запиши безплатен разговор“', 'Outcomes section — “Book a free call” button'),
   ('leadmagnet_cta', 'Безплатно 2-дневно меню — popup след запис на имейл', 'Free 2-day menu — popup after email signup'),
   ('contact_cta', 'Контакти — WhatsApp (без popup)', 'Contact — WhatsApp (no popup)'),
-  ('hero_primary', 'Hero — основен бутон (без popup)', 'Hero — primary button (no popup)'),
-  ('hero_secondary', 'Hero — втори бутон (без popup)', 'Hero — secondary button (no popup)'),
-  ('nav_cta', 'Горно меню (без popup)', 'Top navigation (no popup)')
+  ('hero_primary', 'Начало — златен бутон „Виж програмите“ (hero)', 'Home — gold “View programs” button (hero)'),
+  ('hero_secondary', 'Начало — втори бутон „Безплатен наръчник“ (hero)', 'Home — secondary lead magnet button (hero)'),
+  ('nav_cta', 'Горно меню — „Запиши безплатен разговор“', 'Top navigation — book a free call CTA')
 on conflict (key) do nothing;
+
+update public.site_cta_placements
+set offer_enabled = false, offer_id = null
+where key in ('hero_primary', 'hero_secondary', 'nav_cta', 'contact_cta');
 
 -- ── Email campaigns ────────────────────────────────────────────
 create table if not exists public.email_campaigns (
@@ -398,6 +404,26 @@ create trigger site_sections_updated_at before update on public.site_sections
 drop trigger if exists site_cta_placements_updated_at on public.site_cta_placements;
 create trigger site_cta_placements_updated_at before update on public.site_cta_placements
   for each row execute function public.set_updated_at();
+
+-- ── Supabase Storage (site images) ───────────────────────────
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'media',
+  'media',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "media public read" on storage.objects;
+create policy "media public read"
+on storage.objects for select
+to public
+using (bucket_id = 'media');
 
 notify pgrst, 'reload schema';
 

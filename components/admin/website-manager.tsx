@@ -24,6 +24,7 @@ import {
   deleteSiteProduct,
 } from "@/app/(admin)/admin/actions";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { cn } from "@/lib/utils";
 
 function SectionToggle({
@@ -279,8 +280,9 @@ export function WebsiteManager({
           <p className="font-semibold text-coral-700">Първо пусни миграцията в Supabase</p>
           <p className="mt-1 text-ink-soft">
             Изпълни{" "}
-            <code className="text-xs">supabase/migrations/013_offers_upsell_downsell.sql</code>{" "}
-            (и 012 ако още не си).
+            <code className="text-xs">supabase/migrations/RUN_PENDING_MIGRATIONS.sql</code>{" "}
+            или целия{" "}
+            <code className="text-xs">SETUP_DATABASE.sql</code> в Supabase SQL Editor.
           </p>
           {dbError && <p className="mt-2 font-mono text-xs text-coral-600">{dbError}</p>}
         </div>
@@ -305,8 +307,9 @@ export function WebsiteManager({
           }
         >
           <p className="mb-4 text-sm text-ink-soft">
-            Продукти със Stripe линк, показвани в секцията „Магазин“ на сайта. В таб{" "}
-            <strong>Popup upsell</strong> избираш кой продукт да излиза като popup при клик.
+            Продукти със Stripe линк — показват се като картички в секцията „Програми“ на
+            началната страница (напр. Гарнитури €3). В таб <strong>Popup upsell</strong>{" "}
+            избираш кой продукт да излиза като popup при клик.
           </p>
           <SectionToggle section={productsSection} onSaved={refresh} />
 
@@ -333,7 +336,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Име — EN">
+                <Field label="Име — EN" hint="По избор — ако е празно, копира се от BG">
                   <Input
                     value={productForm.title_en}
                     onChange={(e) =>
@@ -380,14 +383,12 @@ export function WebsiteManager({
                     placeholder="price_1ABC..."
                   />
                 </Field>
-                <Field label="Снимка URL">
-                  <Input
-                    value={productForm.image_url}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, image_url: e.target.value })
-                    }
-                  />
-                </Field>
+                <ImageUploadField
+                  label="Снимка"
+                  value={productForm.image_url}
+                  onChange={(url) => setProductForm({ ...productForm, image_url: url })}
+                  folder="products"
+                />
                 <Field label="Цена — BG">
                   <Input
                     value={productForm.price_label_bg}
@@ -457,10 +458,7 @@ export function WebsiteManager({
                   type="button"
                   onClick={saveProduct}
                   disabled={
-                    pending ||
-                    !productForm.title_bg ||
-                    !productForm.title_en ||
-                    !productForm.stripe_url
+                    pending || !productForm.title_bg.trim() || !productForm.stripe_url.trim()
                   }
                   className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
                 >
@@ -474,6 +472,7 @@ export function WebsiteManager({
                   <X className="h-4 w-4" /> Отказ
                 </button>
               </div>
+              {error && <p className="text-sm text-coral-600">{error}</p>}
             </div>
           ) : null}
 
@@ -606,14 +605,12 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Снимка URL">
-                  <Input
-                    value={eventForm.image_url}
-                    onChange={(e) =>
-                      setEventForm({ ...eventForm, image_url: e.target.value })
-                    }
-                  />
-                </Field>
+                <ImageUploadField
+                  label="Снимка"
+                  value={eventForm.image_url}
+                  onChange={(url) => setEventForm({ ...eventForm, image_url: url })}
+                  folder="events"
+                />
                 <Field label="Ред">
                   <Input
                     type="number"

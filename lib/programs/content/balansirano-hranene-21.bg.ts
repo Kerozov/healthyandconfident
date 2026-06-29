@@ -30,7 +30,8 @@ export const balansiranoHranene21Bg: ProgramLandingContent = {
     ],
     primaryCta: "Включи се сега",
     primaryHref: contact,
-    placementKey: "programs_0",
+    secondaryCta: "Виж събитията",
+    secondaryHref: "#events",
   },
   galleries: [{ title: "Вкусна храна, с която отслабваш", images: FOOD }],
   pain: {

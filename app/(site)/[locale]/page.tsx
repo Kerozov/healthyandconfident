@@ -12,7 +12,6 @@ import { About } from "@/components/site/sections/about";
 import { Testimonials } from "@/components/site/sections/testimonials";
 import { GoogleReviews } from "@/components/site/sections/google-reviews";
 import { EventsSection } from "@/components/site/sections/events";
-import { ShopSection } from "@/components/site/sections/shop";
 import { LeadMagnet } from "@/components/site/sections/leadmagnet";
 import { Faq } from "@/components/site/sections/faq";
 import { Contact } from "@/components/site/sections/contact";
@@ -28,7 +27,6 @@ export default async function HomePage({
   const l = locale as Locale;
   const [dict, site] = await Promise.all([getDictionary(l), getPublicSiteContent()]);
   const eventsSection = site.sections.events;
-  const productsSection = site.sections.products;
 
   return (
     <>
@@ -38,21 +36,13 @@ export default async function HomePage({
       <Problems dict={dict} />
       <Method dict={dict} />
       <Outcomes dict={dict} locale={l} />
-      <Programs dict={dict} locale={l} />
+      <Programs dict={dict} locale={l} products={site.products} />
       {eventsSection && site.events.length > 0 && (
         <EventsSection
           dict={dict}
           locale={l}
           section={eventsSection}
           events={site.events}
-        />
-      )}
-      {productsSection && site.products.length > 0 && (
-        <ShopSection
-          dict={dict}
-          locale={l}
-          section={productsSection}
-          products={site.products}
         />
       )}
       <About dict={dict} locale={l} />

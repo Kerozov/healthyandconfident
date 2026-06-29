@@ -6,6 +6,7 @@ import { Eye, Save, Send } from "lucide-react";
 import type { BlogPost } from "@/lib/supabase/types";
 import { savePost } from "@/app/(admin)/admin/actions";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { Markdown } from "@/components/site/markdown";
 import { slugify } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -196,13 +197,13 @@ export function PostEditor({ post }: { post?: BlogPost }) {
           </Card>
 
           <Card title="Media & taxonomy">
-            <Field label="Cover image URL">
-              <Input
-                value={form.cover_image}
-                onChange={(e) => set("cover_image", e.target.value)}
-                placeholder="https://..."
-              />
-            </Field>
+            <ImageUploadField
+              label="Корица"
+              hint="JPEG, PNG, WebP — до 5 MB"
+              value={form.cover_image}
+              onChange={(url) => set("cover_image", url)}
+              folder="blog"
+            />
             <div className="mt-4">
               <Field label="Tags" hint="Comma separated">
                 <Input

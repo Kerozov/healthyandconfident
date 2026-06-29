@@ -195,6 +195,151 @@ alter table public.segments
 
 create index if not exists segments_parent_idx on public.segments (parent_id);
 
+-- 013: upsell placements + product popup fields
+alter table public.site_products
+  add column if not exists offer_type text not null default 'upsell'
+    check (offer_type in ('upsell', 'downsell'));
+
+alter table public.site_products
+  add column if not exists headline_bg text not null default '',
+  add column if not exists headline_en text not null default '',
+  add column if not exists cta_label_bg text not null default '',
+  add column if not exists cta_label_en text not null default '';
+
+alter table public.site_events
+  add column if not exists offer_id uuid references public.site_products(id) on delete set null,
+  add column if not exists offer_headline_bg text not null default '',
+  add column if not exists offer_headline_en text not null default '',
+  add column if not exists offer_enabled boolean not null default false;
+
+create table if not exists public.site_cta_placements (
+  key               text primary key,
+  label_bg          text not null,
+  label_en          text not null,
+  offer_id          uuid references public.site_products(id) on delete set null,
+  offer_headline_bg text not null default '',
+  offer_headline_en text not null default '',
+  offer_enabled     boolean not null default false,
+  updated_at        timestamptz not null default now()
+);
+
+insert into public.site_cta_placements (key, label_bg, label_en) values
+  ('hero_primary', 'Hero — основен бутон', 'Hero — primary button'),
+  ('hero_secondary', 'Hero — втори бутон', 'Hero — secondary button'),
+  ('nav_cta', 'Навигация — CTA', 'Navigation — CTA'),
+  ('contact_cta', 'Контакти — бутон', 'Contact — button'),
+  ('about_cta', 'За мен — бутон', 'About — button'),
+  ('programs_0', 'Програма 1 — бутон', 'Program 1 — button'),
+  ('programs_1', 'Програма 2 — бутон', 'Program 2 — button'),
+  ('programs_2', 'Програма 3 — бутон', 'Program 3 — button')
+on conflict (key) do nothing;
+
+drop trigger if exists site_cta_placements_updated_at on public.site_cta_placements;
+create trigger site_cta_placements_updated_at before update on public.site_cta_placements
+  for each row execute function public.set_updated_at();
+
+-- 014: audience tags (legacy column, kept for compatibility)
+alter table public.site_products
+  add column if not exists audience_tags text[] not null default '{}';
+
+-- 015–017: speaking placement labels
+update public.site_cta_placements set
+  label_bg = 'Начало — златен бутон „Виж програмите“ (hero)',
+  label_en = 'Home — gold “View programs” button (hero)'
+where key = 'hero_primary';
+
+update public.site_cta_placements set
+  label_bg = 'Начало — втори бутон „Безплатен наръчник“ (hero)',
+  label_en = 'Home — secondary lead magnet button (hero)'
+where key = 'hero_secondary';
+
+update public.site_cta_placements set
+  label_bg = 'Горно меню — „Запиши безплатен разговор“',
+  label_en = 'Top navigation — book a free call CTA'
+where key = 'nav_cta';
+
+update public.site_cta_placements set
+  label_bg = 'Контакти — WhatsApp (без popup)',
+  label_en = 'Contact — WhatsApp (no popup)',
+  offer_enabled = false,
+  offer_id = null
+where key = 'contact_cta';
+
+update public.site_cta_placements set
+  label_bg = 'Секция „За мен“ — бутон „Работи с мен“',
+  label_en = 'About section — “Work with me” button'
+where key = 'about_cta';
+
+insert into public.site_cta_placements (key, label_bg, label_en) values
+  ('outcomes_cta', 'Секция „Резултати“ — бутон „Запиши безплатен разговор“', 'Outcomes section — “Book a free call” button'),
+  ('leadmagnet_cta', 'Безплатно 2-дневно меню — popup след запис на имейл', 'Free 2-day menu — popup after email signup')
+on conflict (key) do nothing;
+
+update public.site_cta_placements
+set offer_enabled = false, offer_id = null
+where key in ('hero_primary', 'hero_secondary', 'nav_cta');
+
+-- 018: clear audience tags
+update public.site_products set audience_tags = '{}';
+
+-- 019: Stripe Price ID (required for product save in admin)
+alter table public.site_products
+  add column if not exists stripe_price_id text not null default '';
+
+-- 020: rename products section
+update public.site_sections
+set
+  title_bg = 'Специални програми',
+  title_en = 'Programs & products'
+where key = 'products';
+
+-- 021: 21-day card → events
+update public.site_cta_placements set
+  label_bg = 'Програми — картичка „21 дни“ (води към събития)',
+  label_en = 'Programs — “21 days” card (links to events)'
+where key = 'programs_0';
+
+update public.site_cta_placements set
+  label_bg = 'Програма „Живей без резистентност“ — бутон „Кандидатствай“',
+  label_en = 'Program “Live Without Resistance” — “Apply now” button'
+where key = 'programs_1';
+
+update public.site_cta_placements set
+  label_bg = 'Програма „Препрограмирай апетита“ — бутон „Научи повече“',
+  label_en = 'Program “Reprogram Your Appetite” — “Learn more” button',
+  offer_enabled = coalesce(offer_enabled, false)
+where key = 'programs_2';
+
+insert into public.site_cta_placements (key, label_bg, label_en)
+select
+  'product_' || id::text,
+  'Магазин: „' || title_bg || '“ — доп. оферта преди Stripe',
+  'Shop: “' || title_en || '” — extra offer before Stripe checkout'
+from public.site_products
+on conflict (key) do update set
+  label_bg = excluded.label_bg,
+  label_en = excluded.label_en;
+
+-- 022: Supabase Storage for uploaded images
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'media',
+  'media',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "media public read" on storage.objects;
+create policy "media public read"
+on storage.objects for select
+to public
+using (bucket_id = 'media');
+
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete — also run 007_automations.sql if not yet applied' as result;
+select 'Upgrade complete (012–022 applied). Also run 007_automations.sql if not yet applied.' as result;

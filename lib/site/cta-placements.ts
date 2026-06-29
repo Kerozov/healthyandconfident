@@ -113,8 +113,8 @@ export const SPEAKING_PLACEMENT_LABELS: Record<
   { label_bg: string; label_en: string }
 > = {
   programs_0: {
-    label_bg: "Програма „Балансирано хранене 21 дни“ — бутон „Вземи днес“",
-    label_en: "Program “Balanced Nutrition 21 Days” — “Get started” button",
+    label_bg: "Програми — картичка „21 дни“ (води към събития)",
+    label_en: "Programs — “21 days” card (links to events)",
   },
   programs_1: {
     label_bg: "Програма „Живей без резистентност“ — бутон „Кандидатствай“",

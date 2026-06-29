@@ -14,6 +14,12 @@ export type Program = {
   cta: string;
   href: string;
   highlight?: boolean;
+  /** Card image (path or uploaded URL) */
+  image?: string;
+  /** e.g. -52% on the 21-day card */
+  discountBadge?: string;
+  /** Lines shown in the cream footer under the CTA button */
+  footerLines?: string[];
 };
 
 export type Testimonial = {

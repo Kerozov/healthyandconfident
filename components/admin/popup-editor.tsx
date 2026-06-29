@@ -5,6 +5,7 @@ import { Save, Check } from "lucide-react";
 import type { PopupConfig, Segment } from "@/lib/supabase/types";
 import { savePopup } from "@/app/(admin)/admin/actions";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { ImageUploadField } from "@/components/admin/image-upload-field";
 
 export function PopupEditor({
   popup,
@@ -82,7 +83,7 @@ export function PopupEditor({
           />
         </Field>
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Save to segment">
           <Select
             value={form.segment_tag}
@@ -103,13 +104,13 @@ export function PopupEditor({
             onChange={(e) => set("delay_seconds", Number(e.target.value))}
           />
         </Field>
-        <Field label="Image URL (optional)">
-          <Input
-            value={form.image_url}
-            onChange={(e) => set("image_url", e.target.value)}
-          />
-        </Field>
       </div>
+      <ImageUploadField
+        label="Снимка (по избор)"
+        value={form.image_url}
+        onChange={(url) => set("image_url", url)}
+        folder="popup"
+      />
 
       {error && <p className="text-sm text-coral-600">{error}</p>}
 

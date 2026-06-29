@@ -117,22 +117,30 @@ export const en: Dictionary = {
   },
   programs: {
     title: "Perfect solutions for you",
-    subtitle: "Choose the support that matches where you are right now.",
+    subtitle: "Programs, events and special products — all in one place.",
     items: [
       {
-        badge: "Quick start",
+        badge: "Upcoming event",
         title: "Balanced Nutrition — 21 Days",
         duration: "21 days",
         price: "52% off today",
         description:
-          "Lose 3–5 kg sustainably and learn balanced eating for life — end the diet cycle.",
+          "A 21-day challenge with tasty recipes and videos — learn balanced eating for life.",
         features: [
           "Tasty recipes for breakfast, lunch and dinner",
           "Videos on balanced eating + bonuses",
           "How to combine foods for a lean body",
         ],
-        cta: "Get started",
-        href: "/programs/balansirano-hranene-21",
+        cta: "Join in",
+        href: "#events",
+        image:
+          "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&h=800&fit=crop",
+        discountBadge: "-52%",
+        footerLines: [
+          "Lose 3–5 kg sustainably",
+          "Learn the magic of balanced, tasty eating for life",
+          "52% off today",
+        ],
       },
       {
         badge: "Most popular",
@@ -146,9 +154,15 @@ export const en: Dictionary = {
           "No hours in the kitchen",
           "Structure, motivation and support",
         ],
-        cta: "Apply now",
+        cta: "Learn more",
         href: "/programs/zhivey-bez-rezistentnost",
         highlight: true,
+        image:
+          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&h=800&fit=crop",
+        footerLines: [
+          "Lose 5 – 10 – 15 kg sustainably",
+          "And/or tackle insulin resistance",
+        ],
       },
       {
         badge: "7–10 min/day",
@@ -162,8 +176,10 @@ export const en: Dictionary = {
           "Life without constant cravings",
           "Calm and control",
         ],
-        cta: "Learn more",
+        cta: "Start today",
         href: "/programs/preprogramirai-apetita",
+        image: "/images/program-banner.png",
+        footerLines: ["The program", "“Reprogram Your Appetite”"],
       },
     ],
   },

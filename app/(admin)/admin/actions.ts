@@ -26,6 +26,8 @@ import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment } from "@/lib/supabase/types";
 import { expandSegmentKeys, isDescendantOf } from "@/lib/segments/hierarchy";
+import { uploadMediaImage } from "@/lib/supabase/media";
+import { MEDIA_FOLDERS, type MediaFolder } from "@/lib/media/folders";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string };
 
@@ -1630,8 +1632,8 @@ async function syncProductPlacement(
   productId: string,
   title_bg: string,
   title_en: string,
-) {
-  await supabase.from("site_cta_placements").upsert(
+): Promise<ActionResult> {
+  const { error } = await supabase.from("site_cta_placements").upsert(
     {
       key: productPlacementKey(productId),
       ...productPlacementLabel(title_bg, title_en),
@@ -1639,6 +1641,8 @@ async function syncProductPlacement(
     },
     { onConflict: "key" },
   );
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
 }
 
 export async function saveSiteSection(input: {
@@ -1745,9 +1749,18 @@ export async function saveSiteProduct(input: {
 }): Promise<ActionResult & { id?: string }> {
   await requireAdmin();
   const supabase = getAdminClient();
+  const titleBg = input.title_bg.trim();
+  const titleEn = input.title_en.trim() || titleBg;
+  if (!titleBg) {
+    return { ok: false, message: "Попълни име на продукта (BG)." };
+  }
+  if (!input.stripe_url?.trim()) {
+    return { ok: false, message: "Попълни Stripe линк." };
+  }
+
   const row = {
-    title_bg: input.title_bg.trim(),
-    title_en: input.title_en.trim(),
+    title_bg: titleBg,
+    title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
     description_en: input.description_en?.trim() ?? "",
     stripe_url: input.stripe_url.trim(),
@@ -1769,7 +1782,8 @@ export async function saveSiteProduct(input: {
   if (input.id) {
     const { error } = await supabase.from("site_products").update(row).eq("id", input.id);
     if (error) return { ok: false, message: error.message };
-    await syncProductPlacement(supabase, input.id, row.title_bg, row.title_en);
+    const sync = await syncProductPlacement(supabase, input.id, row.title_bg, row.title_en);
+    if (!sync.ok) return sync;
     revalidateSitePaths();
     return { ok: true, id: input.id };
   }
@@ -1781,7 +1795,8 @@ export async function saveSiteProduct(input: {
     .single();
   if (error) return { ok: false, message: error.message };
   const productId = (data as { id: string }).id;
-  await syncProductPlacement(supabase, productId, row.title_bg, row.title_en);
+  const sync = await syncProductPlacement(supabase, productId, row.title_bg, row.title_en);
+  if (!sync.ok) return sync;
   revalidateSitePaths();
   return { ok: true, id: productId };
 }
@@ -1821,4 +1836,25 @@ export async function saveCtaPlacement(input: {
   if (error) return { ok: false, message: error.message };
   revalidateSitePaths();
   return { ok: true };
+}
+
+// ── Media uploads ───────────────────────────────────────────
+export async function uploadSiteImage(
+  formData: FormData,
+): Promise<ActionResult & { url?: string }> {
+  await requireAdmin();
+
+  const file = formData.get("file");
+  const folder = formData.get("folder");
+
+  if (!(file instanceof File)) {
+    return { ok: false, message: "Липсва файл." };
+  }
+  if (typeof folder !== "string" || !MEDIA_FOLDERS.includes(folder as MediaFolder)) {
+    return { ok: false, message: "Невалидна папка за качване." };
+  }
+
+  const result = await uploadMediaImage(file, folder as MediaFolder);
+  if (!result.ok) return { ok: false, message: result.message };
+  return { ok: true, url: result.url };
 }
