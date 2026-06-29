@@ -11,6 +11,7 @@ import type {
   SiteSection,
   SiteEvent,
   SiteProduct,
+  SiteVideo,
   SiteCtaPlacement,
 } from "@/lib/supabase/types";
 
@@ -36,6 +37,7 @@ export type Database = {
       site_sections: TableShape<SiteSection>;
       site_events: TableShape<SiteEvent>;
       site_products: TableShape<SiteProduct>;
+      site_videos: TableShape<SiteVideo>;
       site_cta_placements: TableShape<SiteCtaPlacement>;
     };
     Views: Record<string, never>;

@@ -11,8 +11,9 @@ import {
   Check,
   Calendar,
   ShoppingBag,
+  Play,
 } from "lucide-react";
-import type { SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection } from "@/lib/supabase/types";
+import type { SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection, SiteVideo } from "@/lib/supabase/types";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
 import { CtaPlacementsPanel, WebsiteTabs } from "@/components/admin/website-cta-panel";
@@ -20,6 +21,8 @@ import {
   saveSiteSection,
   saveSiteEvent,
   deleteSiteEvent,
+  saveSiteVideo,
+  deleteSiteVideo,
   saveSiteProduct,
   deleteSiteProduct,
 } from "@/app/(admin)/admin/actions";
@@ -121,6 +124,14 @@ const EMPTY_EVENT = {
   sort_order: 0,
 };
 
+const EMPTY_VIDEO = {
+  title_bg: "",
+  title_en: "",
+  youtube_url: "",
+  enabled: true,
+  sort_order: 0,
+};
+
 const EMPTY_PRODUCT = {
   title_bg: "",
   title_en: "",
@@ -143,6 +154,7 @@ export function WebsiteManager({
   sections,
   events,
   products,
+  videos,
   ctaPlacements,
   dbReady = true,
   dbError,
@@ -150,6 +162,7 @@ export function WebsiteManager({
   sections: Record<string, SiteSection>;
   events: SiteEvent[];
   products: SiteProduct[];
+  videos: SiteVideo[];
   ctaPlacements: SiteCtaPlacement[];
   dbReady?: boolean;
   dbError?: string;
@@ -159,12 +172,15 @@ export function WebsiteManager({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | "new" | null>(null);
+  const [editingVideoId, setEditingVideoId] = useState<string | "new" | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | "new" | null>(null);
   const [eventForm, setEventForm] = useState(EMPTY_EVENT);
+  const [videoForm, setVideoForm] = useState(EMPTY_VIDEO);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
 
   const eventsSection = sections.events ?? DEFAULT_SITE_SECTIONS.events;
   const productsSection = sections.products ?? DEFAULT_SITE_SECTIONS.products;
+  const videosSection = sections.videos ?? DEFAULT_SITE_SECTIONS.videos;
 
   function refresh() {
     router.refresh();
@@ -217,6 +233,48 @@ export function WebsiteManager({
     if (!confirm(`Изтрий събитие „${title}"?`)) return;
     startTransition(async () => {
       await deleteSiteEvent(id);
+      refresh();
+    });
+  }
+
+  function openNewVideo() {
+    setEditingVideoId("new");
+    setVideoForm({ ...EMPTY_VIDEO, sort_order: (videos.length + 1) * 10 });
+    setError(null);
+  }
+
+  function openEditVideo(video: SiteVideo) {
+    setEditingVideoId(video.id);
+    setVideoForm({
+      title_bg: video.title_bg,
+      title_en: video.title_en,
+      youtube_url: video.youtube_url,
+      enabled: video.enabled,
+      sort_order: video.sort_order,
+    });
+    setError(null);
+  }
+
+  function saveVideo() {
+    setError(null);
+    startTransition(async () => {
+      const res = await saveSiteVideo({
+        id: editingVideoId === "new" ? undefined : editingVideoId!,
+        ...videoForm,
+      });
+      if (!res.ok) {
+        setError(res.message || "Failed");
+        return;
+      }
+      setEditingVideoId(null);
+      refresh();
+    });
+  }
+
+  function removeVideo(id: string, title: string) {
+    if (!confirm(`Изтрий видео „${title || "без заглавие"}"?`)) return;
+    startTransition(async () => {
+      await deleteSiteVideo(id);
       refresh();
     });
   }
@@ -684,6 +742,152 @@ export function WebsiteManager({
                     </button>
                     <button
                       onClick={() => removeEvent(event.id, event.title_bg)}
+                      disabled={pending}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      )}
+
+      {tab === "videos" && (
+        <Card
+          title="YouTube видеа"
+          action={
+            editingVideoId !== "new" ? (
+              <button
+                type="button"
+                onClick={openNewVideo}
+                disabled={pending}
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-coral-500 px-5 text-sm font-semibold text-white shadow-sm hover:bg-coral-600 disabled:opacity-60"
+              >
+                <Plus className="h-4 w-4" /> Ново видео
+              </button>
+            ) : null
+          }
+        >
+          <p className="mb-4 text-sm text-ink-soft">
+            Вдъхновяващи истории и ревюта — постави YouTube линк (watch, youtu.be или embed).
+          </p>
+          <SectionToggle section={videosSection} onSaved={refresh} />
+
+          {editingVideoId ? (
+            <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Заглавие — BG (по избор)">
+                  <Input
+                    value={videoForm.title_bg}
+                    onChange={(e) =>
+                      setVideoForm({ ...videoForm, title_bg: e.target.value })
+                    }
+                    placeholder="Ревю — Юлия, програмата Живей без резистентност"
+                  />
+                </Field>
+                <Field label="Заглавие — EN (optional)">
+                  <Input
+                    value={videoForm.title_en}
+                    onChange={(e) =>
+                      setVideoForm({ ...videoForm, title_en: e.target.value })
+                    }
+                  />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="YouTube линк">
+                    <Input
+                      value={videoForm.youtube_url}
+                      onChange={(e) =>
+                        setVideoForm({ ...videoForm, youtube_url: e.target.value })
+                      }
+                      placeholder="https://www.youtube.com/watch?v=..."
+                    />
+                  </Field>
+                </div>
+                <Field label="Ред">
+                  <Input
+                    type="number"
+                    value={videoForm.sort_order}
+                    onChange={(e) =>
+                      setVideoForm({
+                        ...videoForm,
+                        sort_order: Number(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={videoForm.enabled}
+                  onChange={(e) =>
+                    setVideoForm({ ...videoForm, enabled: e.target.checked })
+                  }
+                />
+                Покажи на сайта
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={saveVideo}
+                  disabled={pending || !videoForm.youtube_url}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
+                >
+                  <Save className="h-4 w-4" /> Запази
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingVideoId(null)}
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-medium hover:bg-ink/5"
+                >
+                  <X className="h-4 w-4" /> Отказ
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
+            {videos.length === 0 ? (
+              <p className="p-4 text-sm text-ink-soft">
+                Няма видеа. Натисни <strong>Ново видео</strong> горе вдясно.
+              </p>
+            ) : (
+              videos.map((video) => (
+                <div
+                  key={video.id}
+                  className="flex items-start justify-between gap-4 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Play className="h-4 w-4 shrink-0 text-forest-600" />
+                      <p className="font-medium">
+                        {video.title_bg || video.title_en || "Без заглавие"}
+                      </p>
+                      {!video.enabled && (
+                        <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[11px] text-ink-soft">
+                          скрито
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 truncate text-xs text-ink-soft">{video.youtube_url}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      onClick={() => openEditVideo(video)}
+                      disabled={pending}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        removeVideo(video.id, video.title_bg || video.title_en)
+                      }
                       disabled={pending}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600"
                     >

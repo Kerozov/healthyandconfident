@@ -8,8 +8,10 @@ import { Problems } from "@/components/site/sections/problems";
 import { Method } from "@/components/site/sections/method";
 import { Outcomes } from "@/components/site/sections/outcomes";
 import { Programs } from "@/components/site/sections/programs";
+import { Challenge21Section } from "@/components/site/sections/challenge-21";
 import { About } from "@/components/site/sections/about";
 import { Testimonials } from "@/components/site/sections/testimonials";
+import { VideosSection } from "@/components/site/sections/videos";
 import { GoogleReviews } from "@/components/site/sections/google-reviews";
 import { EventsSection } from "@/components/site/sections/events";
 import { ShopSection } from "@/components/site/sections/shop";
@@ -33,6 +35,7 @@ export default async function HomePage({
   const [dict, site] = await Promise.all([getDictionary(l), getPublicSiteContent()]);
   const eventsSection = site.sections.events;
   const productsSection = site.sections.products;
+  const videosSection = site.sections.videos;
 
   return (
     <>
@@ -43,6 +46,7 @@ export default async function HomePage({
       <Method dict={dict} />
       <Outcomes dict={dict} locale={l} />
       <Programs dict={dict} locale={l} />
+      <Challenge21Section dict={dict} locale={l} />
       <MenuGiftBanner dict={dict} locale={l} />
       {eventsSection && site.events.length > 0 && (
         <EventsSection
@@ -63,6 +67,14 @@ export default async function HomePage({
       <About dict={dict} locale={l} />
       <BioCommunityBanner dict={dict} locale={l} />
       <Testimonials dict={dict} locale={l} />
+      {videosSection && site.videos.length > 0 && (
+        <VideosSection
+          dict={dict}
+          locale={l}
+          section={videosSection}
+          videos={site.videos}
+        />
+      )}
       <GoogleReviews dict={dict} />
       <LeadMagnet dict={dict} locale={l} />
       <Faq dict={dict} />

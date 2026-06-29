@@ -157,6 +157,21 @@ export type Dictionary = {
     subtitle: string;
     cta: string;
   };
+  videos: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+  };
+  challenge21: {
+    title: string;
+    subtitle: string;
+    discount: string;
+    cardLine1: string;
+    cardLine2: string;
+    cardSignature: string;
+    bullets: string[];
+    cta: string;
+  };
   footer: {
     tagline: string;
     rights: string;

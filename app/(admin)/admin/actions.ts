@@ -32,6 +32,7 @@ import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment } from "
 import { expandSegmentKeys, isDescendantOf } from "@/lib/segments/hierarchy";
 import { uploadMediaImage } from "@/lib/supabase/media";
 import { MEDIA_FOLDERS, type MediaFolder } from "@/lib/media/folders";
+import { parseYoutubeVideoId } from "@/lib/youtube";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string };
 
@@ -1702,7 +1703,7 @@ async function syncProductPlacement(
 }
 
 export async function saveSiteSection(input: {
-  key: "events" | "products";
+  key: "events" | "products" | "videos";
   enabled: boolean;
   title_bg?: string;
   title_en?: string;
@@ -1780,6 +1781,52 @@ export async function deleteSiteEvent(id: string): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_events").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true };
+}
+
+export async function saveSiteVideo(input: {
+  id?: string;
+  title_bg?: string;
+  title_en?: string;
+  youtube_url: string;
+  enabled?: boolean;
+  sort_order?: number;
+}): Promise<ActionResult & { id?: string }> {
+  await requireAdmin();
+  const youtubeUrl = input.youtube_url.trim();
+  if (!parseYoutubeVideoId(youtubeUrl)) {
+    return { ok: false, message: "Невалиден YouTube линк." };
+  }
+
+  const supabase = getAdminClient();
+  const row = {
+    title_bg: input.title_bg?.trim() ?? "",
+    title_en: input.title_en?.trim() ?? "",
+    youtube_url: youtubeUrl,
+    enabled: input.enabled ?? true,
+    sort_order: input.sort_order ?? 0,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { error } = await supabase.from("site_videos").update(row).eq("id", input.id);
+    if (error) return { ok: false, message: error.message };
+    revalidateSitePaths();
+    return { ok: true, id: input.id };
+  }
+
+  const { data, error } = await supabase.from("site_videos").insert(row).select("id").single();
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function deleteSiteVideo(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("site_videos").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidateSitePaths();
   return { ok: true };

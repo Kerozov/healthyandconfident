@@ -136,6 +136,10 @@ export const SPEAKING_PLACEMENT_LABELS: Record<
     label_bg: "Безплатно 2-дневно меню — popup след запис на имейл",
     label_en: "Free 2-day menu — popup after email signup",
   },
+  challenge_21_cta: {
+    label_bg: "21-дневно предизвикателство — бутон „Вземи днес“",
+    label_en: "21-day challenge — “Get it today” button",
+  },
 };
 
 export function productPlacementLabel(title_bg: string, title_en: string) {

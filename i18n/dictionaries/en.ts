@@ -315,6 +315,34 @@ export const en: Dictionary = {
     subtitle: "Choose a product and pay securely via Stripe.",
     cta: "Buy now",
   },
+  videos: {
+    eyebrow: "Videos",
+    title: "Inspiring stories",
+    subtitle: "Real reviews and results from Vessie's clients.",
+  },
+  challenge21: {
+    title: "Where to start?",
+    subtitle:
+      "Step 1 — Master balanced eating. Lose 3–5 kg sustainably in 21 days — no more yo-yo dieting!",
+    discount: "-52%",
+    cardLine1: "Lose 3–5 kg for good — end the diets",
+    cardLine2: "21-day challenge",
+    cardSignature: "With Vessie Ney",
+    bullets: [
+      "Lose 3–5 kg sustainably and learn the magic of BALANCED, delicious eating",
+      "Learn how to combine foods for a slimmer figure",
+      "Say goodbye to bloating — your favourite clothes will fit again",
+      "More energy for work and family",
+      "Support for insulin resistance and Type 2 Diabetes",
+      "No typical diets and no drowning in information overload",
+      "Learn how to eat for life",
+      "Recipes for every meal included",
+      "Videos on balanced eating plus bonuses",
+      "Easy, tasty and family-friendly",
+      "Step-by-step support and structure",
+    ],
+    cta: "21 days · 52% off · Get it today",
+  },
   footer: {
     tagline:
       "Holistic Nutritionist & NHS Diabetes Practitioner. Lasting weight loss, balanced blood sugar and confidence — from the inside out.",
@@ -335,7 +363,7 @@ export const en: Dictionary = {
         title: "Programs",
         links: [
           { label: "Side dishes guide", href: "/en/programs/garnituri" },
-          { label: "Balanced Nutrition 21 Days", href: "/en#events" },
+          { label: "Balanced Nutrition 21 Days", href: "/en#challenge-21" },
           { label: "Live Without Resistance", href: "/en/programs/zhivey-bez-rezistentnost" },
           { label: "Reprogram Your Appetite", href: "/en/programs/preprogramirai-apetita" },
         ],

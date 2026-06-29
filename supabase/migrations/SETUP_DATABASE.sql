@@ -238,7 +238,8 @@ create table if not exists public.site_sections (
 insert into public.site_sections (key, enabled, title_bg, title_en)
 values
   ('events', false, 'Предстоящи събития', 'Upcoming events'),
-  ('products', false, 'Специални програми', 'Programs & products')
+  ('products', false, 'Специални програми', 'Programs & products'),
+  ('videos', false, 'Вдъхновяващи истории', 'Inspiring stories')
 on conflict (key) do nothing;
 
 create table if not exists public.site_products (
@@ -266,6 +267,20 @@ create table if not exists public.site_products (
 
 create index if not exists site_products_sort_idx
   on public.site_products (enabled, sort_order, created_at desc);
+
+create table if not exists public.site_videos (
+  id           uuid primary key default gen_random_uuid(),
+  title_bg     text not null default '',
+  title_en     text not null default '',
+  youtube_url  text not null,
+  enabled      boolean not null default true,
+  sort_order   int not null default 0,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create index if not exists site_videos_sort_idx
+  on public.site_videos (enabled, sort_order, created_at desc);
 
 create table if not exists public.site_events (
   id              uuid primary key default gen_random_uuid(),
@@ -405,6 +420,10 @@ create trigger site_events_updated_at before update on public.site_events
 
 drop trigger if exists site_products_updated_at on public.site_products;
 create trigger site_products_updated_at before update on public.site_products
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists site_videos_updated_at on public.site_videos;
+create trigger site_videos_updated_at before update on public.site_videos
   for each row execute function public.set_updated_at();
 
 drop trigger if exists site_sections_updated_at on public.site_sections;

@@ -208,7 +208,7 @@ export type SmsCampaign = {
   created_at: string;
 };
 
-export type SiteSectionKey = "events" | "products";
+export type SiteSectionKey = "events" | "products" | "videos";
 
 export type SiteSection = {
   key: SiteSectionKey;
@@ -231,6 +231,17 @@ export type SiteEvent = {
   offer_headline_bg: string;
   offer_headline_en: string;
   offer_enabled: boolean;
+  enabled: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SiteVideo = {
+  id: string;
+  title_bg: string;
+  title_en: string;
+  youtube_url: string;
   enabled: boolean;
   sort_order: number;
   created_at: string;
