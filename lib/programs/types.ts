@@ -98,12 +98,9 @@ export type ProgramLandingContent = {
       note: string;
       cta: string;
       href?: string;
-      qrColor?: string;
-      showQr?: boolean;
     }[];
     ps?: string;
     showCountdown?: boolean;
-    showMainQr?: boolean;
   };
   trust?: {
     title: string;

@@ -5,6 +5,7 @@ import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export function EventsSection({
   dict,
@@ -25,19 +26,29 @@ export function EventsSection({
       : section.title_en || dict.events.title;
 
   return (
-    <section id="events" className="scroll-mt-24 bg-cream-2 py-24">
+    <section
+      id="events"
+      className="scroll-mt-24 border-y border-forest-200/50 bg-forest-50 py-24"
+    >
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow text-forest-600">
             <Calendar className="h-4 w-4" /> {dict.events.eyebrow}
           </span>
-          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-forest-900 sm:text-4xl">
             {title}
           </h2>
-          <p className="mt-4 text-ink-soft">{dict.events.subtitle}</p>
+          <p className="mt-4 text-forest-700/80">{dict.events.subtitle}</p>
         </div>
 
-        <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div
+          className={cn(
+            "mt-14 grid gap-8",
+            events.length === 1 && "mx-auto max-w-sm",
+            events.length === 2 && "mx-auto max-w-4xl md:grid-cols-2",
+            events.length > 2 && "md:grid-cols-2 xl:grid-cols-3",
+          )}
+        >
           {events.map((event) => {
             const eventTitle = locale === "bg" ? event.title_bg : event.title_en;
             const description =
@@ -50,7 +61,7 @@ export function EventsSection({
             return (
               <div
                 key={event.id}
-                className="flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-bg-card transition-all hover:-translate-y-1 hover:shadow-soft"
+                className="flex flex-col overflow-hidden rounded-3xl border border-forest-200/80 bg-white shadow-lg ring-1 ring-forest-900/5 transition-all hover:-translate-y-1 hover:shadow-xl"
               >
                 <Link
                   href={event.url}

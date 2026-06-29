@@ -296,7 +296,6 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
       { title: "Бонус #2: „кутия“ с полезности", value: "€70" },
       { title: "Бонус #3: Движение", value: "€30" },
     ],
-    showMainQr: true,
     options: [
       {
         label: "Месечен достъп",
@@ -304,7 +303,6 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         note: "Първите 100 души — после таксата се увеличава · Обща стойност €530",
         cta: "ИСКАМ ДОСТЪП СЕГА",
         href: checkout38,
-        showQr: true,
       },
       {
         label: "Вариант 1",
@@ -313,8 +311,6 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         note: "Абонамент за 12 месеца с 25% отстъпка — само за 336€, вместо 456€",
         cta: "ИСКАМ ДОСТЪП СЕГА",
         href: checkout12m,
-        qrColor: "16a34a",
-        showQr: true,
       },
       {
         label: "Вариант 2",
@@ -323,11 +319,9 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         note: "Абонамент за 3 месеца с 20% отстъпка — само за 90€, вместо 114€",
         cta: "ИСКАМ ДОСТЪП СЕГА",
         href: checkout3m,
-        qrColor: "dc2626",
-        showQr: true,
       },
     ],
-    ps: "Сканирай QR кода или натисни бутона — ще те насочим към плащане и достъп до Skool.",
+    ps: "Натисни бутона — ще те насочим към плащане и достъп до Skool.",
   },
   faq: [
     {

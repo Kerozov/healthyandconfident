@@ -30,31 +30,6 @@ import { cn } from "@/lib/utils";
 const pillarIcons = [Flame, Heart, Zap];
 const audienceIcons = [Scale, Droplets, Leaf, Shield, Stethoscope, Sun, Moon];
 
-function QrCode({
-  url,
-  color = "000000",
-  size = 160,
-  className,
-}: {
-  url: string;
-  color?: string;
-  size?: number;
-  className?: string;
-}) {
-  const src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&color=${color}`;
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt=""
-      width={size}
-      height={size}
-      className={cn("rounded-xl border border-green-100 bg-white p-2 shadow-sm", className)}
-      loading="lazy"
-    />
-  );
-}
-
 function SectionTitle({
   title,
   accent,
@@ -926,11 +901,6 @@ export function ProgramLanding({
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-forest-600">
                       {opt.note}
                     </p>
-                    {opt.showQr && href && (
-                      <div className="mt-4 flex justify-center">
-                        <QrCode url={href} color={opt.qrColor ?? "000000"} size={140} />
-                      </div>
-                    )}
                     <CtaLink
                       placementKey={placementKey}
                       href={href}

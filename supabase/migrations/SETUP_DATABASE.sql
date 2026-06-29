@@ -241,28 +241,6 @@ values
   ('products', false, 'Специални програми', 'Programs & products')
 on conflict (key) do nothing;
 
-create table if not exists public.site_events (
-  id              uuid primary key default gen_random_uuid(),
-  title_bg        text not null,
-  title_en        text not null,
-  description_bg  text not null default '',
-  description_en  text not null default '',
-  url             text not null,
-  image_url       text,
-  event_date      date,
-  offer_id        uuid references public.site_products(id) on delete set null,
-  offer_headline_bg text not null default '',
-  offer_headline_en text not null default '',
-  offer_enabled   boolean not null default false,
-  enabled         boolean not null default true,
-  sort_order      int not null default 0,
-  created_at      timestamptz not null default now(),
-  updated_at      timestamptz not null default now()
-);
-
-create index if not exists site_events_sort_idx
-  on public.site_events (enabled, sort_order, created_at desc);
-
 create table if not exists public.site_products (
   id              uuid primary key default gen_random_uuid(),
   title_bg        text not null,
@@ -288,6 +266,28 @@ create table if not exists public.site_products (
 
 create index if not exists site_products_sort_idx
   on public.site_products (enabled, sort_order, created_at desc);
+
+create table if not exists public.site_events (
+  id              uuid primary key default gen_random_uuid(),
+  title_bg        text not null,
+  title_en        text not null,
+  description_bg  text not null default '',
+  description_en  text not null default '',
+  url             text not null,
+  image_url       text,
+  event_date      date,
+  offer_id        uuid references public.site_products(id) on delete set null,
+  offer_headline_bg text not null default '',
+  offer_headline_en text not null default '',
+  offer_enabled   boolean not null default false,
+  enabled         boolean not null default true,
+  sort_order      int not null default 0,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+create index if not exists site_events_sort_idx
+  on public.site_events (enabled, sort_order, created_at desc);
 
 create table if not exists public.site_cta_placements (
   key               text primary key,
@@ -316,6 +316,16 @@ on conflict (key) do nothing;
 update public.site_cta_placements
 set offer_enabled = false, offer_id = null
 where key in ('hero_primary', 'hero_secondary', 'nav_cta', 'contact_cta');
+
+insert into public.site_cta_placements (key, label_bg, label_en)
+select
+  'product_' || id::text,
+  'Магазин: „' || title_bg || '“ — доп. оферта преди Stripe',
+  'Shop: “' || title_en || '” — extra offer before Stripe checkout'
+from public.site_products
+on conflict (key) do update set
+  label_bg = excluded.label_bg,
+  label_en = excluded.label_en;
 
 -- ── Email campaigns ────────────────────────────────────────────
 create table if not exists public.email_campaigns (

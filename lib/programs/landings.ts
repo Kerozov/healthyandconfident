@@ -264,7 +264,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
         badge: i === 1 ? "Best value" : i === 2 ? "Most popular" : undefined,
         cta: "I WANT ACCESS NOW",
       })),
-      ps: "Scan the QR code or tap the button — we'll guide you to payment and Skool access.",
+      ps: "Tap the button — we'll guide you to payment and Skool access.",
     },
     faq: preprogramiraiApetitaBg.faq,
     finalCta: {
