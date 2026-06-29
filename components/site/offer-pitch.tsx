@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Sparkles } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
-import { resolveOfferCta, resolveOfferHeadline } from "@/lib/site/cta-placements";
+import { resolveOfferCta, resolveOfferHeadline, normalizeOfferType } from "@/lib/site/cta-placements";
 import { cn } from "@/lib/utils";
 
 export function OfferPitch({
@@ -23,7 +23,8 @@ export function OfferPitch({
   const price = locale === "bg" ? offer.price_label_bg : offer.price_label_en;
   const pitch = resolveOfferHeadline(locale, offer, headline);
   const cta = resolveOfferCta(locale, offer);
-  const isDownsell = offer.offer_type === "downsell";
+  const checkoutUrl = offer.stripe_url?.trim() ?? "";
+  const isDownsell = normalizeOfferType(offer.offer_type) === "downsell";
 
   return (
     <div
@@ -60,21 +61,32 @@ export function OfferPitch({
           )}
         </div>
 
-        <Link
-          href={offer.stripe_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
-            isDownsell
-              ? "bg-gold-600 text-white hover:bg-gold-700"
-              : "bg-gold-400 text-forest-900 hover:bg-gold-500",
-            compact && "text-xs",
-          )}
-        >
-          {cta}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
+        {checkoutUrl ? (
+          <Link
+            href={checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+              isDownsell
+                ? "bg-gold-600 text-white hover:bg-gold-700"
+                : "bg-gold-400 text-forest-900 hover:bg-gold-500",
+              compact && "text-xs",
+            )}
+          >
+            {cta}
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        ) : (
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center rounded-full bg-ink/10 px-4 py-2 text-sm font-semibold text-ink-soft",
+              compact && "text-xs",
+            )}
+          >
+            {locale === "bg" ? "Линк скоро" : "Link soon"}
+          </span>
+        )}
       </div>
     </div>
   );

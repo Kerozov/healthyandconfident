@@ -30,6 +30,12 @@ export const DEFAULT_OFFER_CTA = {
   en: "View offer",
 } as const;
 
+export function normalizeOfferType(
+  type: SiteProduct["offer_type"] | null | undefined,
+): SiteProduct["offer_type"] {
+  return type === "downsell" ? "downsell" : "upsell";
+}
+
 export function resolveOffer(
   offerId: string | null | undefined,
   offersById: Record<string, SiteProduct>,
@@ -45,20 +51,23 @@ export function resolveOfferHeadline(
   offer: SiteProduct,
   customHeadline?: string,
 ): string {
-  const trimmed = customHeadline?.trim();
+  const trimmed = customHeadline?.trim() ?? "";
   if (trimmed) return trimmed;
 
-  const fromOffer =
-    locale === "bg" ? offer.headline_bg : offer.headline_en;
-  if (fromOffer.trim()) return fromOffer.trim();
+  const fromOffer = (
+    locale === "bg" ? offer.headline_bg : offer.headline_en
+  )?.trim() ?? "";
+  if (fromOffer) return fromOffer;
 
-  const defaults = DEFAULT_OFFER_HEADLINES[offer.offer_type];
+  const defaults = DEFAULT_OFFER_HEADLINES[normalizeOfferType(offer.offer_type)];
   return locale === "bg" ? defaults.bg : defaults.en;
 }
 
 export function resolveOfferCta(locale: Locale, offer: SiteProduct): string {
-  const label = locale === "bg" ? offer.cta_label_bg : offer.cta_label_en;
-  if (label.trim()) return label.trim();
+  const label = (
+    locale === "bg" ? offer.cta_label_bg : offer.cta_label_en
+  )?.trim() ?? "";
+  if (label) return label;
   return locale === "bg" ? DEFAULT_OFFER_CTA.bg : DEFAULT_OFFER_CTA.en;
 }
 

@@ -6,7 +6,7 @@ import { Save, Check } from "lucide-react";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { saveCtaPlacement } from "@/app/(admin)/admin/actions";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
-import { DEFAULT_OFFER_HEADLINES } from "@/lib/site/cta-placements";
+import { DEFAULT_OFFER_HEADLINES, normalizeOfferType } from "@/lib/site/cta-placements";
 import { cn } from "@/lib/utils";
 
 function OfferSelect({
@@ -108,7 +108,7 @@ function PlacementEditor({
           label="Заглавие BG"
           hint={
             selected
-              ? `По подразбиране: ${DEFAULT_OFFER_HEADLINES[selected.offer_type].bg}`
+              ? `По подразбиране: ${DEFAULT_OFFER_HEADLINES[normalizeOfferType(selected.offer_type)].bg}`
               : "Празно = текст от офертата или по подразбиране"
           }
         >
