@@ -133,7 +133,7 @@ export const bg: Dictionary = {
           "Как да комбинираш храните за стройна фигура",
         ],
         cta: "Вземи днес",
-        href: "#contact",
+        href: "/programs/balansirano-hranene-21",
       },
       {
         badge: "Най-избирана",
@@ -148,7 +148,7 @@ export const bg: Dictionary = {
           "Структура, мотивация и подкрепа",
         ],
         cta: "Кандидатствай",
-        href: "#contact",
+        href: "/programs/zhivey-bez-rezistentnost",
         highlight: true,
       },
       {
@@ -164,7 +164,7 @@ export const bg: Dictionary = {
           "Спокойствие и контрол",
         ],
         cta: "Научи повече",
-        href: "#contact",
+        href: "/programs/preprogramirai-apetita",
       },
     ],
   },
@@ -315,9 +315,9 @@ export const bg: Dictionary = {
       {
         title: "Програми",
         links: [
-          { label: "Балансирано хранене 21 дни", href: "/bg#programs" },
-          { label: "Живей без резистентност", href: "/bg#programs" },
-          { label: "Препрограмирай апетита", href: "/bg#programs" },
+          { label: "Балансирано хранене 21 дни", href: "/bg/programs/balansirano-hranene-21" },
+          { label: "Живей без резистентност", href: "/bg/programs/zhivey-bez-rezistentnost" },
+          { label: "Препрограмирай апетита", href: "/bg/programs/preprogramirai-apetita" },
         ],
       },
     ],

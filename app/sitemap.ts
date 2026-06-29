@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { locales } from "@/i18n/config";
 import { siteConfig } from "@/lib/site";
 import { getAllPublishedSlugs } from "@/lib/blog";
+import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteConfig.domain;
@@ -26,6 +27,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
       },
     );
+    for (const slug of PROGRAM_LANDING_SLUGS) {
+      staticEntries.push({
+        url: `${base}/${locale}/programs/${slug}`,
+        lastModified: now,
+        changeFrequency: "monthly",
+        priority: 0.9,
+      });
+    }
   }
 
   const slugs = await getAllPublishedSlugs();

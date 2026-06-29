@@ -42,6 +42,10 @@ export function EventsSection({
             const eventTitle = locale === "bg" ? event.title_bg : event.title_en;
             const description =
               locale === "bg" ? event.description_bg : event.description_en;
+            const isExternal =
+              event.url.startsWith("http") ||
+              event.url.startsWith("mailto:") ||
+              event.url.startsWith("tel:");
 
             return (
               <div
@@ -50,8 +54,9 @@ export function EventsSection({
               >
                 <Link
                   href={event.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  {...(isExternal
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
                   className="group flex flex-1 flex-col"
                 >
                 <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">
