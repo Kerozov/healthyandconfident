@@ -879,7 +879,7 @@ export function ProgramLanding({
             )}
 
             {content.pricing.showCountdown && (
-              <div className="mt-12">
+              <div className="mt-12 flex justify-center">
                 <ProgramCountdown
                   labels={
                     locale === "bg"
@@ -893,7 +893,11 @@ export function ProgramLanding({
             <div
               className={cn(
                 "mt-12 grid gap-6",
-                content.pricing.options.length > 1 ? "md:grid-cols-2 lg:grid-cols-3" : "max-w-md mx-auto",
+                content.pricing.options.length === 1 && "mx-auto max-w-md",
+                content.pricing.options.length === 2 &&
+                  "mx-auto max-w-3xl md:grid-cols-2",
+                content.pricing.options.length > 2 &&
+                  "md:grid-cols-2 lg:grid-cols-3",
               )}
             >
               {content.pricing.options.map((opt, i) => {
