@@ -14,6 +14,10 @@ import { GoogleReviews } from "@/components/site/sections/google-reviews";
 import { EventsSection } from "@/components/site/sections/events";
 import { ShopSection } from "@/components/site/sections/shop";
 import { LeadMagnet } from "@/components/site/sections/leadmagnet";
+import {
+  BioCommunityBanner,
+  MenuGiftBanner,
+} from "@/components/site/sections/home-banners";
 import { Faq } from "@/components/site/sections/faq";
 import { Contact } from "@/components/site/sections/contact";
 import { HomeJsonLd } from "@/components/seo/json-ld";
@@ -39,6 +43,7 @@ export default async function HomePage({
       <Method dict={dict} />
       <Outcomes dict={dict} locale={l} />
       <Programs dict={dict} locale={l} />
+      <MenuGiftBanner dict={dict} locale={l} />
       {eventsSection && site.events.length > 0 && (
         <EventsSection
           dict={dict}
@@ -56,6 +61,7 @@ export default async function HomePage({
         />
       )}
       <About dict={dict} locale={l} />
+      <BioCommunityBanner dict={dict} locale={l} />
       <Testimonials dict={dict} locale={l} />
       <GoogleReviews dict={dict} />
       <LeadMagnet dict={dict} locale={l} />

@@ -246,6 +246,23 @@ export const en: Dictionary = {
     success: "Check your inbox — your menu is on the way! 🎉",
     error: "Something went wrong. Please try again.",
   },
+  menuBanner: {
+    text: "Get your colourful, delicious 2-day GIFT MENU for a SLIM figure here:",
+    cta: "Get the menu",
+  },
+  bioBanner: {
+    title: "Vessie Ney",
+    credentials: [
+      "Holistic Nutritionist, B.Med.Sc. (Hons)",
+      "Insulin Resistance Specialist",
+      "Type 2 Diabetes, Cambridge DEP (overweight & sustainable weight loss)",
+      "Speaker & motivational team coach — banks, colleges, private companies & more",
+    ],
+    invite:
+      "Welcome to my space — daily tips, menus, advice and practical tricks:",
+    cta: "Join the community",
+    href: "/{locale}/programs/preprogramirai-apetita",
+  },
   faq: {
     title: "Frequently asked questions",
     subtitle: "Everything you might be wondering before we start.",
