@@ -301,7 +301,7 @@ create table if not exists public.site_cta_placements (
 );
 
 insert into public.site_cta_placements (key, label_bg, label_en) values
-  ('programs_0', 'Програми — картичка „21 дни“ (води към събития)', 'Programs — “21 days” card (links to events)'),
+  ('programs_0', 'Програми — картичка „Гарнитури“ (€3)', 'Programs — “Side dishes” card (€3)'),
   ('programs_1', 'Програма „Живей без резистентност“ — бутон „Кандидатствай“', 'Program “Live Without Resistance” — “Apply now” button'),
   ('programs_2', 'Програма „Препрограмирай апетита“ — бутон „Научи повече“', 'Program “Reprogram Your Appetite” — “Learn more” button'),
   ('about_cta', 'Секция „За мен“ — бутон „Работи с мен“', 'About section — “Work with me” button'),

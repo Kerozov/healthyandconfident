@@ -117,22 +117,22 @@ export const en: Dictionary = {
   },
   programs: {
     title: "Perfect solutions for you",
-    subtitle: "Two programs plus upcoming events.",
+    subtitle: "Three options — programs and a special product.",
     items: [
       {
-        badge: "Upcoming event",
-        title: "Balanced Nutrition — 21 Days",
-        duration: "21 days",
-        price: "52% off today",
+        badge: "Low carb",
+        title: "Side dishes for your waistline",
+        duration: "guide",
+        price: "€3",
         description:
-          "A 21-day challenge with tasty recipes and videos — learn balanced eating for life. See dates in the Events section.",
+          "Easy, filling low-carb ideas — when rice, pasta or potatoes are not the best choice.",
         features: [
-          "Tasty recipes for breakfast, lunch and dinner",
-          "Videos on balanced eating + bonuses",
-          "How to combine foods for a lean body",
+          "Good for insulin resistance and Type 2 Diabetes",
+          "Aromatic recipes instead of classic sides",
+          "Digital access right after purchase",
         ],
-        cta: "See events",
-        href: "#events",
+        cta: "Buy here – €3",
+        href: "/programs/garnituri",
       },
       {
         badge: "Most popular",
@@ -317,7 +317,8 @@ export const en: Dictionary = {
       {
         title: "Programs",
         links: [
-          { label: "Balanced Nutrition 21 Days", href: "/en/programs/balansirano-hranene-21" },
+          { label: "Side dishes guide", href: "/en/programs/garnituri" },
+          { label: "Balanced Nutrition 21 Days", href: "/en#events" },
           { label: "Live Without Resistance", href: "/en/programs/zhivey-bez-rezistentnost" },
           { label: "Reprogram Your Appetite", href: "/en/programs/preprogramirai-apetita" },
         ],

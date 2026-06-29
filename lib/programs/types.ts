@@ -3,12 +3,12 @@ import type { Locale } from "@/i18n/config";
 export type ProgramLandingSlug =
   | "zhivey-bez-rezistentnost"
   | "preprogramirai-apetita"
-  | "balansirano-hranene-21";
+  | "garnituri";
 
 export const PROGRAM_LANDING_SLUGS: ProgramLandingSlug[] = [
   "zhivey-bez-rezistentnost",
   "preprogramirai-apetita",
-  "balansirano-hranene-21",
+  "garnituri",
 ];
 
 export type ProgramLandingContent = {

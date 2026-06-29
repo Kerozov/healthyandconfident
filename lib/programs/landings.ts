@@ -2,14 +2,14 @@ import type { Locale } from "@/i18n/config";
 import type { ProgramLandingContent, ProgramLandingSlug } from "./types";
 import { zhiveyBezRezistentnostBg } from "./content/zhivey-bez-rezistentnost.bg";
 import { preprogramiraiApetitaBg } from "./content/preprogramirai-apetita.bg";
-import { balansiranoHranene21Bg } from "./content/balansirano-hranene-21.bg";
+import { garnituriBg } from "./content/garnituri.bg";
 
 const whatsapp = "https://wa.me/447876565263";
 
 const bg: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "zhivey-bez-rezistentnost": zhiveyBezRezistentnostBg,
   "preprogramirai-apetita": preprogramiraiApetitaBg,
-  "balansirano-hranene-21": balansiranoHranene21Bg,
+  "garnituri": garnituriBg,
 };
 
 const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
@@ -273,41 +273,67 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       href: preprogramiraiApetitaBg.finalCta!.href,
     },
   },
-  "balansirano-hranene-21": {
-    ...balansiranoHranene21Bg,
+  "garnituri": {
+    ...garnituriBg,
     meta: {
-      title: "Balanced Nutrition 21 Days — Vessie Ney",
-      description: "Lose 3–5 kg in 21 days. Learn balanced eating for life.",
+      title: "Side Dishes for Your Waistline | Low-Carb — Vessie Ney",
+      description:
+        "Easy, filling low-carb side dish ideas for insulin resistance, weight loss and Type 2 Diabetes. €3.",
     },
     hero: {
-      ...balansiranoHranene21Bg.hero,
-      title: "Lose",
-      titleAccent: "3–5 kg in 21 days",
-      subtitle: "End the diet cycle with tasty recipes, videos and structure.",
-      bullets: ["Tasty recipes", "Videos & bonuses", "Food combining skills", "No hunger"],
-      primaryCta: "Join now",
+      ...garnituriBg.hero,
+      eyebrow: "Low carb · €3",
+      title: "Side dishes",
+      titleAccent: "good for your waistline",
+      subtitle:
+        "Easy, filling low-carb ideas — when rice, pasta or potatoes are not the best choice, try these aromatic recipes.",
+      bullets: [
+        "Good for insulin resistance, weight loss and Type 2 Diabetes",
+        "Easy with everyday ingredients",
+        "Satisfying without heavy carbs",
+      ],
+      priceLine: "Only €3",
+      primaryCta: "Buy here – €3",
     },
-    galleries: [{ title: "Tasty food that helps you lose weight", images: balansiranoHranene21Bg.galleries![0].images }],
     pain: {
-      title: "Tired of diets?",
-      paragraphs: balansiranoHranene21Bg.pain!.paragraphs,
-      hook: "21 days is enough for real change — with the right structure.",
+      title: "Tired of eating only salad?",
+      paragraphs: garnituriBg.pain!.paragraphs,
+      hook: "This guide was made exactly for that.",
     },
-    vision: balansiranoHranene21Bg.vision,
-    outcomes: balansiranoHranene21Bg.outcomes,
-    includes: balansiranoHranene21Bg.includes,
-    faq: balansiranoHranene21Bg.faq,
+    vision: {
+      title: "What you get",
+      paragraphs: [
+        "Selected low-carb side dishes — aromatic, easy and family-friendly.",
+        "Ideas that make your plate feel complete without excess carbs.",
+        "Practical format at an accessible price.",
+      ],
+    },
+    outcomes: {
+      title: "Who it's for",
+      items: garnituriBg.outcomes!.items.map((item, i) => ({
+        title: ["Insulin resistance", "Weight loss", "Type 2 Diabetes"][i],
+        text: item.text,
+      })),
+    },
+    includes: {
+      title: "Inside the guide",
+      items: garnituriBg.includes!.items.map((item, i) => ({
+        title: ["Low-carb recipes", "Easy every day", "Digital access"][i],
+        text: item.text,
+      })),
+    },
+    faq: garnituriBg.faq,
     pricing: {
-      ...balansiranoHranene21Bg.pricing!,
-      title: "Special price",
-      titleAccent: "52% off today",
-      subtitle: "Join the 21-day challenge with a limited discount.",
-      options: [{ ...balansiranoHranene21Bg.pricing!.options[0], cta: "Join now" }],
+      ...garnituriBg.pricing!,
+      title: "Get side dishes",
+      titleAccent: "good for your waistline",
+      subtitle: "Low-carb ideas — only €3.",
+      options: [{ ...garnituriBg.pricing!.options[0], cta: "Buy here – €3" }],
     },
     finalCta: {
-      title: "Ready for a fast start?",
-      cta: "Join now",
-      href: "/#contact",
+      title: "Ready for tasty new side dishes?",
+      cta: "Buy here – €3",
+      href: "/#shop",
     },
   },
 };
@@ -326,8 +352,11 @@ function localizeHrefs(
   content: ProgramLandingContent,
   locale: Locale,
 ): ProgramLandingContent {
-  const fix = (href: string) =>
-    href === "/#contact" ? `/${locale}#contact` : href;
+  const fix = (href: string) => {
+    if (href === "/#contact") return `/${locale}#contact`;
+    if (href === "/#shop") return `/${locale}#shop`;
+    return href;
+  };
 
   return {
     ...content,

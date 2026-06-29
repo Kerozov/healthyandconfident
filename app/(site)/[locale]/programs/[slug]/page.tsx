@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { isLocale, locales, type Locale } from "@/i18n/config";
 import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
 import { getProgramLanding } from "@/lib/programs/landings";
@@ -45,6 +45,9 @@ export default async function ProgramPage({
 }) {
   const { locale, slug } = await params;
   if (!isLocale(locale)) notFound();
+  if (slug === "balansirano-hranene-21") {
+    redirect(`/${locale}/programs/garnituri`);
+  }
   const content = getProgramLanding(locale as Locale, slug);
   if (!content) notFound();
 

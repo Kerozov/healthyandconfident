@@ -1,8 +1,8 @@
 -- 21-day: programs card → events; keep 3 program popup slots
 
 update public.site_cta_placements set
-  label_bg = 'Програми — картичка „21 дни“ (води към събития)',
-  label_en = 'Programs — “21 days” card (links to events)'
+  label_bg = 'Програми — картичка „Гарнитури“ (€3)',
+  label_en = 'Programs — “Side dishes” card (€3)'
 where key = 'programs_0';
 
 update public.site_cta_placements set
