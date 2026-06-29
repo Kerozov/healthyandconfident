@@ -25,19 +25,51 @@ export type ProgramLandingContent = {
     secondaryCta?: string;
     secondaryHref?: string;
     placementKey?: string;
+    image?: string;
   };
+  galleries?: { title: string; titleAccent?: string; images: string[] }[];
   pain?: { title: string; paragraphs: string[]; hook: string };
   vision?: { title: string; paragraphs: string[] };
-  outcomes?: { title: string; items: { title: string; text: string }[] };
+  audience?: {
+    eyebrow?: string;
+    title: string;
+    items: { title: string; text: string }[];
+  };
+  outcomes?: { eyebrow?: string; title: string; items: { title: string; text: string }[] };
+  curriculum?: {
+    intro?: string;
+    title: string;
+    items: { title: string; text: string }[];
+    bonuses?: string[];
+    closing?: string;
+  };
   pillars?: { title: string; items: { title: string; text: string }[] };
   includes?: { title: string; items: { title: string; text: string }[] };
   testimonials?: { quote: string; name: string }[];
   faq?: { q: string; a: string }[];
   pricing?: {
     title: string;
+    titleAccent?: string;
     subtitle: string;
-    options: { label: string; price: string; note: string; cta: string }[];
+    options: { label: string; price: string; note: string; cta: string; href?: string }[];
     ps?: string;
+    showCountdown?: boolean;
+  };
+  trust?: {
+    title: string;
+    greeting: string;
+    credentials: string[];
+    accolades: string[];
+    image?: string;
+  };
+  video?: { title: string; titleAccent?: string; cta: string; href: string };
+  newsletter?: {
+    title: string;
+    placeholder: string;
+    button: string;
+    consent: string;
+    success: string;
+    error: string;
   };
   finalCta?: { title: string; cta: string; href: string };
 };
