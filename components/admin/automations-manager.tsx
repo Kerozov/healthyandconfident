@@ -359,9 +359,13 @@ export function AutomationsManager({
 
   const scheduleMode = getScheduleMode(form);
 
-  function openNew() {
+  function openNew(channel: AutomationChannel = "email") {
     setEditingId("new");
-    setForm({ ...EMPTY_FORM, sort_order: (automations.length + 1) * 10 });
+    setForm({
+      ...EMPTY_FORM,
+      channel,
+      sort_order: (automations.length + 1) * 10,
+    });
     setError(null);
     setSaved(false);
   }
@@ -507,15 +511,23 @@ export function AutomationsManager({
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
-            Refresh stats
+            Обнови статистика
           </button>
           <button
             type="button"
-            onClick={openNew}
+            onClick={() => openNew("email")}
             disabled={pending || editingId !== null}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-coral-500 px-5 font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-gold-400 px-5 font-semibold text-forest-900 hover:bg-gold-500 disabled:opacity-60"
           >
-            <Plus className="h-4 w-4" /> New automation
+            <Plus className="h-4 w-4" /> Нов имейл
+          </button>
+          <button
+            type="button"
+            onClick={() => openNew("sms")}
+            disabled={pending || editingId !== null}
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-green-300 bg-white px-5 font-semibold text-green-700 hover:bg-green-50 disabled:opacity-60"
+          >
+            <Plus className="h-4 w-4" /> Нов SMS
           </button>
         </div>
       </div>
@@ -893,10 +905,30 @@ export function AutomationsManager({
 
       <div className="space-y-3">
         {automations.length === 0 ? (
-          <p className="rounded-2xl border border-ink/10 bg-white p-8 text-center text-sm text-ink-soft">
-            No automations yet. Create a welcome email, segment SMS, or post-purchase
-            series.
-          </p>
+          <div className="rounded-2xl border border-ink/10 bg-white p-8 text-center">
+            <p className="text-sm text-ink-soft">
+              Няма автоматизации. Създай welcome имейл, SMS по сегмент или серия след
+              покупка.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => openNew("email")}
+                disabled={pending || editingId !== null}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-gold-400 px-6 font-semibold text-forest-900 hover:bg-gold-500 disabled:opacity-60"
+              >
+                <Plus className="h-4 w-4" /> Нова имейл автоматизация
+              </button>
+              <button
+                type="button"
+                onClick={() => openNew("sms")}
+                disabled={pending || editingId !== null}
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-green-300 px-6 font-semibold text-green-700 hover:bg-green-50 disabled:opacity-60"
+              >
+                <Plus className="h-4 w-4" /> Нова SMS автоматизация
+              </button>
+            </div>
+          </div>
         ) : (
           automations.map((a) => {
             const rate = openRate(a);
