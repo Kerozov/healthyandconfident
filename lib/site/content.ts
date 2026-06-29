@@ -72,7 +72,7 @@ export async function getPublicSiteContent(): Promise<SiteContent> {
   return {
     sections: sectionMap,
     events: sectionMap.events?.enabled ? events : [],
-    products,
+    products: sectionMap.products?.enabled ? products : [],
     offersById,
     ctaPlacements: indexPlacements(placements),
     segments,

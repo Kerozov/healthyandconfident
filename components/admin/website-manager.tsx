@@ -307,9 +307,8 @@ export function WebsiteManager({
           }
         >
           <p className="mb-4 text-sm text-ink-soft">
-            Продукти със Stripe линк — показват се като картички в секцията „Програми“ на
-            началната страница (напр. Гарнитури €3). В таб <strong>Popup upsell</strong>{" "}
-            избираш кой продукт да излиза като popup при клик.
+            Продукти със Stripe линк, показвани в отделна секция „Магазин“ на сайта. В таб{" "}
+            <strong>Popup upsell</strong> избираш кой продукт да излиза като popup при клик.
           </p>
           <SectionToggle section={productsSection} onSaved={refresh} />
 

@@ -117,7 +117,7 @@ export const en: Dictionary = {
   },
   programs: {
     title: "Perfect solutions for you",
-    subtitle: "Programs, events and special products — all in one place.",
+    subtitle: "Two programs plus upcoming events.",
     items: [
       {
         badge: "Upcoming event",
@@ -125,22 +125,14 @@ export const en: Dictionary = {
         duration: "21 days",
         price: "52% off today",
         description:
-          "A 21-day challenge with tasty recipes and videos — learn balanced eating for life.",
+          "A 21-day challenge with tasty recipes and videos — learn balanced eating for life. See dates in the Events section.",
         features: [
           "Tasty recipes for breakfast, lunch and dinner",
           "Videos on balanced eating + bonuses",
           "How to combine foods for a lean body",
         ],
-        cta: "Join in",
+        cta: "See events",
         href: "#events",
-        image:
-          "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&h=800&fit=crop",
-        discountBadge: "-52%",
-        footerLines: [
-          "Lose 3–5 kg sustainably",
-          "Learn the magic of balanced, tasty eating for life",
-          "52% off today",
-        ],
       },
       {
         badge: "Most popular",
@@ -154,15 +146,9 @@ export const en: Dictionary = {
           "No hours in the kitchen",
           "Structure, motivation and support",
         ],
-        cta: "Learn more",
+        cta: "Apply now",
         href: "/programs/zhivey-bez-rezistentnost",
         highlight: true,
-        image:
-          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&h=800&fit=crop",
-        footerLines: [
-          "Lose 5 – 10 – 15 kg sustainably",
-          "And/or tackle insulin resistance",
-        ],
       },
       {
         badge: "7–10 min/day",
@@ -176,10 +162,8 @@ export const en: Dictionary = {
           "Life without constant cravings",
           "Calm and control",
         ],
-        cta: "Start today",
+        cta: "Learn more",
         href: "/programs/preprogramirai-apetita",
-        image: "/images/program-banner.png",
-        footerLines: ["The program", "“Reprogram Your Appetite”"],
       },
     ],
   },
