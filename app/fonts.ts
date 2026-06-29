@@ -9,7 +9,7 @@ export const geistSans = Geist({
 
 export const fraunces = Fraunces({
   variable: "--font-fraunces",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
   display: "swap",

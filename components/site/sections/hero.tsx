@@ -30,12 +30,14 @@ export function Hero({
           </span>
 
           {locale === "bg" ? (
-            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-forest-800 sm:text-6xl lg:text-[4.2rem]">
-              <span className="mb-2 block text-sm font-medium text-green-700">
+            <>
+              <p className="mt-5 font-sans text-base font-semibold leading-snug tracking-normal text-green-800 sm:text-lg">
                 Веси Ней — Холистичен диетолог
-              </span>
-              Свали трайно 5-10-15 кг и се почувствай уверена
-            </h1>
+              </p>
+              <h1 className="mt-3 font-sans text-[2rem] font-bold leading-[1.1] tracking-tight text-forest-900 sm:text-5xl lg:text-[3.5rem]">
+                Свали трайно 5-10-15 кг и се почувствай уверена
+              </h1>
+            </>
           ) : (
             <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-forest-800 sm:text-6xl lg:text-[4.2rem]">
               {hero.title}{" "}
@@ -108,16 +110,19 @@ export function Hero({
         </div>
 
         <div className="relative mx-auto w-full max-w-md">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-green-500 via-green-600 to-green-800 shadow-soft">
-            <img
-              src="/images/vessie.jpg"
-              alt="Веси Ней — холистичен диетолог, специалист по инсулинова резистентност"
-              className="absolute inset-0 h-full w-full object-cover object-center opacity-90"
+          <div
+            className="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-green-500 via-green-600 to-green-800 shadow-soft"
+            role="img"
+            aria-label="Веси Ней — холистичен диетолог, специалист по инсулинова резистентност"
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: "url('/images/vessie.jpg')" }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-green-800/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-green-900/70 via-green-800/20 to-transparent" />
             <div className="absolute bottom-6 left-6 right-6 text-white">
               <p className="font-display text-2xl font-semibold">Vessie Ney</p>
-              <p className="text-sm text-green-100">{hero.imageAlt}</p>
+              <p className="mt-1 text-sm leading-relaxed text-green-50">{hero.imageAlt}</p>
             </div>
           </div>
 
