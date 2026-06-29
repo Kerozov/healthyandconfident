@@ -244,7 +244,7 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
       "Автор на системата „Живей без резистентност“",
       "Национален приз за принос в борба с инсулиновата резистентност",
     ],
-    image: "/images/vessie-award.png",
+    image: "/images/vessie-trust-award.png",
   },
   faq: [
     {

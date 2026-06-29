@@ -35,16 +35,23 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 
 export function Card({
   title,
+  action,
   children,
   className,
 }: {
   title?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("rounded-2xl border border-ink/10 bg-white p-6", className)}>
-      {title && <h2 className="mb-4 font-display text-lg font-semibold">{title}</h2>}
+      {(title || action) && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {title ? <h2 className="font-display text-lg font-semibold">{title}</h2> : <span />}
+          {action}
+        </div>
+      )}
       {children}
     </div>
   );

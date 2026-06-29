@@ -10,7 +10,7 @@ export default async function AdminWebsitePage() {
     <div>
       <h1 className="font-display text-3xl font-semibold">Website</h1>
       <p className="mt-1 text-sm text-ink-soft">
-        Upsell / Downsell оферти, събития и настройка на бутони.
+        Продукти в магазина, събития и popup upsell при клик на бутон/продукт.
       </p>
 
       <div className="mt-8">

@@ -246,6 +246,7 @@ export type SiteProduct = {
   description_bg: string;
   description_en: string;
   stripe_url: string;
+  stripe_price_id: string;
   price_label_bg: string;
   price_label_en: string;
   image_url: string | null;

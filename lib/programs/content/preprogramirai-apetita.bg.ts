@@ -275,7 +275,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
       "Автор на системата „ЖИВЕЙ без резистентност“",
       "Национален Приз за „Принос в борба с Инсулинова резистентност“",
     ],
-    image: "/images/vessie-award.png",
+    image: "/images/vessie-trust-award.png",
   },
   pricing: {
     title: "Клуб СТРОЙНА и ЛЕКА",

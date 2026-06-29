@@ -22,8 +22,8 @@ export const DEFAULT_SITE_SECTIONS: Record<SiteSectionKey, SiteSection> = {
   products: {
     key: "products",
     enabled: false,
-    title_bg: "Upsell / Downsell",
-    title_en: "Upsell / Downsell",
+    title_bg: "Оферти",
+    title_en: "Offers",
     updated_at: new Date().toISOString(),
   },
 };

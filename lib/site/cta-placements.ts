@@ -30,11 +30,14 @@ export function isUpsellSectionPlacement(key: string): boolean {
   );
 }
 
+export const DEFAULT_OFFER_HEADLINE = {
+  bg: "Мислим, че може да ти хареса",
+  en: "We think you might like this",
+} as const;
+
+/** @deprecated Use DEFAULT_OFFER_HEADLINE — product type is not shown in admin */
 export const DEFAULT_OFFER_HEADLINES = {
-  upsell: {
-    bg: "Мислим, че може да ти хареса",
-    en: "We think you might like this",
-  },
+  upsell: DEFAULT_OFFER_HEADLINE,
   downsell: {
     bg: "Специална оферта за теб",
     en: "A special offer for you",
@@ -75,7 +78,7 @@ export function resolveOfferHeadline(
   )?.trim() ?? "";
   if (fromOffer) return fromOffer;
 
-  const defaults = DEFAULT_OFFER_HEADLINES[normalizeOfferType(offer.offer_type)];
+  const defaults = DEFAULT_OFFER_HEADLINE;
   return locale === "bg" ? defaults.bg : defaults.en;
 }
 

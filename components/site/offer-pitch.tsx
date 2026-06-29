@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Sparkles } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
-import { resolveOfferCta, resolveOfferHeadline, normalizeOfferType } from "@/lib/site/cta-placements";
+import { resolveOfferCta, resolveOfferHeadline } from "@/lib/site/cta-placements";
 import { cn } from "@/lib/utils";
 
 export function OfferPitch({
@@ -24,24 +24,15 @@ export function OfferPitch({
   const pitch = resolveOfferHeadline(locale, offer, headline);
   const cta = resolveOfferCta(locale, offer);
   const checkoutUrl = offer.stripe_url?.trim() ?? "";
-  const isDownsell = normalizeOfferType(offer.offer_type) === "downsell";
 
   return (
     <div
       className={cn(
-        "rounded-2xl border p-4",
-        isDownsell
-          ? "border-gold-400/40 bg-gold-400/10"
-          : "border-green-300/50 bg-green-50",
+        "rounded-2xl border border-green-300/50 bg-green-50 p-4",
         className,
       )}
     >
-      <p
-        className={cn(
-          "flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider",
-          isDownsell ? "text-gold-700" : "text-green-600",
-        )}
-      >
+      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-green-600">
         <Sparkles className="h-3.5 w-3.5" />
         {pitch}
       </p>
@@ -67,10 +58,7 @@ export function OfferPitch({
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
-              isDownsell
-                ? "bg-gold-600 text-white hover:bg-gold-700"
-                : "bg-gold-400 text-forest-900 hover:bg-gold-500",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gold-400 px-4 py-2 text-sm font-semibold text-forest-900 transition-colors hover:bg-gold-500",
               compact && "text-xs",
             )}
           >

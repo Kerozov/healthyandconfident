@@ -25,7 +25,7 @@ export function ShopProductGrid({
     const checkoutUrl = product.stripe_url?.trim() ?? "";
     if (!checkoutUrl) return;
     const placementKey = productPlacementKey(product.id);
-    if (!tryOpenPlacement(placementKey, checkoutUrl)) {
+    if (!tryOpenPlacement(placementKey, checkoutUrl, product)) {
       window.open(checkoutUrl, "_blank", "noopener,noreferrer");
     }
   }

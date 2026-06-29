@@ -124,7 +124,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
         "Mentor and coach, trained in England",
       ],
       accolades: zhiveyBezRezistentnostBg.trust!.accolades,
-      image: "/images/vessie-award.png",
+      image: "/images/vessie-trust-award.png",
     },
     faq: [
       {

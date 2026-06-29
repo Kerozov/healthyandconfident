@@ -1732,10 +1732,10 @@ export async function saveSiteProduct(input: {
   description_bg?: string;
   description_en?: string;
   stripe_url: string;
+  stripe_price_id?: string;
   price_label_bg?: string;
   price_label_en?: string;
   image_url?: string;
-  offer_type?: "upsell" | "downsell";
   headline_bg?: string;
   headline_en?: string;
   cta_label_bg?: string;
@@ -1751,10 +1751,11 @@ export async function saveSiteProduct(input: {
     description_bg: input.description_bg?.trim() ?? "",
     description_en: input.description_en?.trim() ?? "",
     stripe_url: input.stripe_url.trim(),
+    stripe_price_id: input.stripe_price_id?.trim() ?? "",
     price_label_bg: input.price_label_bg?.trim() ?? "",
     price_label_en: input.price_label_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
-    offer_type: (input.offer_type === "downsell" ? "downsell" : "upsell") as "upsell" | "downsell",
+    offer_type: "upsell" as const,
     headline_bg: input.headline_bg?.trim() ?? "",
     headline_en: input.headline_en?.trim() ?? "",
     cta_label_bg: input.cta_label_bg?.trim() ?? "",

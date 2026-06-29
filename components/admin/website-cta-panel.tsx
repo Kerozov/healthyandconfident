@@ -6,7 +6,7 @@ import { Save, Check } from "lucide-react";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { saveCtaPlacement } from "@/app/(admin)/admin/actions";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
-import { DEFAULT_OFFER_HEADLINES, normalizeOfferType, CTA_PLACEMENT_KEYS, isUpsellSectionPlacement } from "@/lib/site/cta-placements";
+import { DEFAULT_OFFER_HEADLINE, CTA_PLACEMENT_KEYS, isUpsellSectionPlacement } from "@/lib/site/cta-placements";
 import { isProductPlacementKey } from "@/lib/site/product-placement";
 import { cn } from "@/lib/utils";
 
@@ -21,10 +21,10 @@ function OfferSelect({
 }) {
   return (
     <Select value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">— Без оферта —</option>
+      <option value="">— Без popup —</option>
       {offers.map((o) => (
         <option key={o.id} value={o.id}>
-          [{o.offer_type === "downsell" ? "По-ниска оферта" : "Доп. оферта"}] {o.title_bg}
+          {o.title_bg}
           {!o.enabled ? " (скрит)" : ""}
         </option>
       ))}
@@ -95,7 +95,7 @@ function PlacementEditor({
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <Field label="Upsell / Downsell">
+        <Field label="Продукт за popup">
           <OfferSelect
             offers={offers}
             value={form.offer_id}
@@ -109,7 +109,7 @@ function PlacementEditor({
           label="Заглавие BG"
           hint={
             selected
-              ? `По подразбиране: ${DEFAULT_OFFER_HEADLINES[normalizeOfferType(selected.offer_type)].bg}`
+              ? `По подразбиране: ${DEFAULT_OFFER_HEADLINE.bg}`
               : "Празно = текст от офертата или по подразбиране"
           }
         >
@@ -187,13 +187,13 @@ export function CtaPlacementsPanel({
   return (
     <div className="space-y-6">
       <p className="text-sm text-ink-soft">
-        Popup с допълнителна оферта при клик в: <strong>Програми</strong>, <strong>Резултати</strong>,{" "}
-        <strong>За мен</strong>, <strong>Безплатно меню</strong> и <strong>Магазин</strong>. Hero,
-        менюто и контактите отварят директно линка — без popup.
+        Popup с допълнителна оферта при клик. Ако и двата продукта имат{" "}
+        <strong>Stripe Price ID</strong>, бутонът „Да, искам и двете“ отваря една сметка с
+        общата цена (продукт + upsell).
       </p>
       {offers.length === 0 && (
         <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
-          Първо създай поне една оферта в таб „Оферти“.
+          Първо създай поне един продукт в таб „Продукти“.
         </p>
       )}
 
@@ -240,9 +240,9 @@ export function WebsiteTabs({
   onChange: (tab: string) => void;
 }) {
   const tabs = [
-    { id: "offers", label: "Оферти" },
+    { id: "products", label: "Продукти" },
     { id: "events", label: "Събития" },
-    { id: "buttons", label: "Бутони" },
+    { id: "buttons", label: "Popup upsell" },
   ];
 
   return (

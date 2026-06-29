@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection } from "@/lib/supabase/types";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
-import { DEFAULT_OFFER_HEADLINES } from "@/lib/site/cta-placements";
+import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
 import { CtaPlacementsPanel, WebsiteTabs } from "@/components/admin/website-cta-panel";
 import {
   saveSiteSection,
@@ -126,10 +126,10 @@ const EMPTY_PRODUCT = {
   description_bg: "",
   description_en: "",
   stripe_url: "",
+  stripe_price_id: "",
   price_label_bg: "",
   price_label_en: "",
   image_url: "",
-  offer_type: "upsell" as "upsell" | "downsell",
   headline_bg: "",
   headline_en: "",
   cta_label_bg: "",
@@ -154,7 +154,7 @@ export function WebsiteManager({
   dbError?: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState("offers");
+  const [tab, setTab] = useState("products");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | "new" | null>(null);
@@ -234,10 +234,10 @@ export function WebsiteManager({
       description_bg: product.description_bg,
       description_en: product.description_en,
       stripe_url: product.stripe_url,
+      stripe_price_id: product.stripe_price_id ?? "",
       price_label_bg: product.price_label_bg,
       price_label_en: product.price_label_en,
       image_url: product.image_url ?? "",
-      offer_type: product.offer_type ?? "upsell",
       headline_bg: product.headline_bg ?? "",
       headline_en: product.headline_en ?? "",
       cta_label_bg: product.cta_label_bg ?? "",
@@ -265,7 +265,7 @@ export function WebsiteManager({
   }
 
   function removeProduct(id: string, title: string) {
-    if (!confirm(`Изтрий оферта „${title}"?`)) return;
+    if (!confirm(`Изтрий продукт „${title}"?`)) return;
     startTransition(async () => {
       await deleteSiteProduct(id);
       refresh();
@@ -288,31 +288,31 @@ export function WebsiteManager({
 
       <WebsiteTabs tab={tab} onChange={setTab} />
 
-      {tab === "offers" && (
-        <Card title="Upsell / Downsell оферти">
+      {tab === "products" && (
+        <Card
+          title="Продукти в магазина"
+          action={
+            editingProductId !== "new" ? (
+              <button
+                type="button"
+                onClick={openNewProduct}
+                disabled={pending}
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-coral-500 px-5 text-sm font-semibold text-white shadow-sm hover:bg-coral-600 disabled:opacity-60"
+              >
+                <Plus className="h-4 w-4" /> Нов продукт
+              </button>
+            ) : null
+          }
+        >
           <p className="mb-4 text-sm text-ink-soft">
-            Каталог от оферти със Stripe линк. Използват се на началната страница, при
-            събития и до бутоните.
+            Продукти със Stripe линк, показвани в секцията „Магазин“ на сайта. В таб{" "}
+            <strong>Popup upsell</strong> избираш кой продукт да излиза като popup при клик.
           </p>
           <SectionToggle section={productsSection} onSaved={refresh} />
 
           {editingProductId ? (
             <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Тип">
-                  <Select
-                    value={productForm.offer_type}
-                    onChange={(e) =>
-                      setProductForm({
-                        ...productForm,
-                        offer_type: e.target.value as "upsell" | "downsell",
-                      })
-                    }
-                  >
-                    <option value="upsell">Допълнителна оферта (по-скъпа)</option>
-                    <option value="downsell">По-ниска алтернатива</option>
-                  </Select>
-                </Field>
                 <Field label="Ред">
                   <Input
                     type="number"
@@ -368,6 +368,18 @@ export function WebsiteManager({
                     placeholder="https://buy.stripe.com/..."
                   />
                 </Field>
+                <Field
+                  label="Stripe Price ID"
+                  hint="price_… от Stripe Dashboard — за комбинирано плащане (продукт + upsell)"
+                >
+                  <Input
+                    value={productForm.stripe_price_id}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, stripe_price_id: e.target.value })
+                    }
+                    placeholder="price_1ABC..."
+                  />
+                </Field>
                 <Field label="Снимка URL">
                   <Input
                     value={productForm.image_url}
@@ -394,7 +406,7 @@ export function WebsiteManager({
                 </Field>
                 <Field
                   label="Заглавие по подразбиране — BG"
-                  hint={`Празно = ${DEFAULT_OFFER_HEADLINES[productForm.offer_type].bg}`}
+                  hint={`Празно = ${DEFAULT_OFFER_HEADLINE.bg}`}
                 >
                   <Input
                     value={productForm.headline_bg}
@@ -438,7 +450,7 @@ export function WebsiteManager({
                     setProductForm({ ...productForm, enabled: e.target.checked })
                   }
                 />
-                Активна оферта
+                Активен продукт
               </label>
               <div className="flex gap-2">
                 <button
@@ -463,20 +475,13 @@ export function WebsiteManager({
                 </button>
               </div>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={openNewProduct}
-              disabled={pending}
-              className="mb-4 inline-flex h-10 items-center gap-2 rounded-full bg-coral-500 px-5 text-sm font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
-            >
-              <Plus className="h-4 w-4" /> Нова оферта
-            </button>
-          )}
+          ) : null}
 
           <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
             {products.length === 0 ? (
-              <p className="p-4 text-sm text-ink-soft">Няма оферти.</p>
+              <p className="p-4 text-sm text-ink-soft">
+                Няма продукти. Натисни <strong>Нов продукт</strong> горе вдясно.
+              </p>
             ) : (
               products.map((product) => (
                 <div
@@ -487,11 +492,6 @@ export function WebsiteManager({
                     <div className="flex flex-wrap items-center gap-2">
                       <ShoppingBag className="h-4 w-4 text-coral-500" />
                       <p className="font-medium">{product.title_bg}</p>
-                      {(product.offer_type ?? "upsell") === "downsell" ? (
-                        <span className="rounded-full bg-gold-400/20 px-2 py-0.5 text-[11px] font-medium text-gold-800">
-                          По-ниска оферта
-                        </span>
-                      ) : null}
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[11px] font-medium",
@@ -532,9 +532,23 @@ export function WebsiteManager({
       )}
 
       {tab === "events" && (
-        <Card title="Предстоящи събития">
+        <Card
+          title="Предстоящи събития"
+          action={
+            editingEventId !== "new" ? (
+              <button
+                type="button"
+                onClick={openNewEvent}
+                disabled={pending}
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-coral-500 px-5 text-sm font-semibold text-white shadow-sm hover:bg-coral-600 disabled:opacity-60"
+              >
+                <Plus className="h-4 w-4" /> Ново събитие
+              </button>
+            ) : null
+          }
+        >
           <p className="mb-4 text-sm text-ink-soft">
-            Събития с линк към записване. Upsell popup не се показва при събития — само при
+            Събития с линк към записване. Popup upsell не се показва при събития — само при
             бутони и продукти в магазина.
           </p>
           <SectionToggle section={eventsSection} onSaved={refresh} />
@@ -644,20 +658,13 @@ export function WebsiteManager({
                 </button>
               </div>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={openNewEvent}
-              disabled={pending}
-              className="mb-4 inline-flex h-10 items-center gap-2 rounded-full bg-coral-500 px-5 text-sm font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
-            >
-              <Plus className="h-4 w-4" /> Ново събитие
-            </button>
-          )}
+          ) : null}
 
           <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
             {events.length === 0 ? (
-              <p className="p-4 text-sm text-ink-soft">Няма събития.</p>
+              <p className="p-4 text-sm text-ink-soft">
+                Няма събития. Натисни <strong>Ново събитие</strong> горе вдясно.
+              </p>
             ) : (
               events.map((event) => (
                 <div
@@ -695,7 +702,7 @@ export function WebsiteManager({
       )}
 
       {tab === "buttons" && (
-        <Card title="Бутони на сайта">
+        <Card title="Popup upsell">
           <CtaPlacementsPanel placements={ctaPlacements} offers={products} />
         </Card>
       )}
