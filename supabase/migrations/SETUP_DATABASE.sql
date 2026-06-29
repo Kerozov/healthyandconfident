@@ -299,14 +299,16 @@ create table if not exists public.site_cta_placements (
 );
 
 insert into public.site_cta_placements (key, label_bg, label_en) values
-  ('hero_primary', 'Начало — златен бутон „Виж програмите“ (hero)', 'Home — gold “View programs” button (hero)'),
-  ('hero_secondary', 'Начало — втори бутон „Безплатен наръчник“ (hero)', 'Home — secondary lead magnet button (hero)'),
-  ('nav_cta', 'Горно меню — „Запиши безплатен разговор“', 'Top navigation — book a free call CTA'),
-  ('contact_cta', 'Контакти — основен бутон (WhatsApp / запис)', 'Contact section — main booking button'),
-  ('about_cta', 'За мен — бутон към контакт', 'About section — button to contact'),
   ('programs_0', 'Програми — бутон на първата карта', 'Programs — first program card button'),
   ('programs_1', 'Програми — бутон на втората карта', 'Programs — second program card button'),
-  ('programs_2', 'Програми — бутон на третата карта', 'Programs — third program card button')
+  ('programs_2', 'Програми — бутон на третата карта', 'Programs — third program card button'),
+  ('about_cta', 'За мен — бутон „Работи с мен“', 'About — work with me button'),
+  ('outcomes_cta', 'Резултати — бутон „Запиши безплатен разговор“', 'Outcomes — book a free call button'),
+  ('leadmagnet_cta', 'Безплатно меню — след изпращане на имейл', 'Lead magnet — after email submit'),
+  ('contact_cta', 'Контакти — бутон „Запиши безплатен разговор“', 'Contact section — main booking button'),
+  ('hero_primary', 'Hero — основен бутон (без popup)', 'Hero — primary button (no popup)'),
+  ('hero_secondary', 'Hero — втори бутон (без popup)', 'Hero — secondary button (no popup)'),
+  ('nav_cta', 'Горно меню (без popup)', 'Top navigation (no popup)')
 on conflict (key) do nothing;
 
 -- ── Email campaigns ────────────────────────────────────────────

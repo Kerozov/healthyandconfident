@@ -6,7 +6,7 @@ import { Save, Check } from "lucide-react";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { saveCtaPlacement } from "@/app/(admin)/admin/actions";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
-import { DEFAULT_OFFER_HEADLINES, normalizeOfferType, CTA_PLACEMENT_KEYS } from "@/lib/site/cta-placements";
+import { DEFAULT_OFFER_HEADLINES, normalizeOfferType, CTA_PLACEMENT_KEYS, isUpsellSectionPlacement } from "@/lib/site/cta-placements";
 import { isProductPlacementKey } from "@/lib/site/product-placement";
 import { cn } from "@/lib/utils";
 
@@ -170,7 +170,9 @@ export function CtaPlacementsPanel({
     return a.label_bg.localeCompare(b.label_bg, "bg");
   });
 
-  const sitePlacements = sortedPlacements.filter((p) => !isProductPlacementKey(p.key));
+  const sitePlacements = sortedPlacements.filter(
+    (p) => !isProductPlacementKey(p.key) && isUpsellSectionPlacement(p.key),
+  );
   const productPlacements = sortedPlacements.filter((p) => isProductPlacementKey(p.key));
 
   if (placements.length === 0) {
@@ -185,9 +187,9 @@ export function CtaPlacementsPanel({
   return (
     <div className="space-y-6">
       <p className="text-sm text-ink-soft">
-        При клик на съответния бутон или продукт се показва <strong>popup</strong> с
-        upsell/downsell (ако е включено). „Не, благодаря“ продължава към оригиналната
-        дестинация.
+        Upsell/downsell popup само при клик в секциите <strong>Програми</strong>,{" "}
+        <strong>Резултати</strong>, <strong>За мен</strong>, <strong>Безплатно меню</strong>,{" "}
+        <strong>Контакти</strong> и <strong>Магазин</strong>. Hero и горното меню нямат popup.
       </p>
       {offers.length === 0 && (
         <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
@@ -197,7 +199,7 @@ export function CtaPlacementsPanel({
 
       {sitePlacements.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-ink">Бутони на сайта</h3>
+          <h3 className="text-sm font-semibold text-ink">Секции на сайта</h3>
           {sitePlacements.map((p) => (
             <PlacementEditor
               key={p.key}

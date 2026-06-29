@@ -5,6 +5,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 import { mergeVisitorTags } from "@/lib/site/visitor-tags";
+import { useOfferPopup } from "@/components/site/offer-popup";
 
 export function LeadForm({
   locale,
@@ -16,6 +17,7 @@ export function LeadForm({
   segmentTag = "all",
   source = "lead-magnet",
   variant = "default",
+  offerPlacementKey,
 }: {
   locale: Locale;
   placeholder: string;
@@ -26,7 +28,10 @@ export function LeadForm({
   segmentTag?: string;
   source?: string;
   variant?: "default" | "gradient";
+  /** When set, shows upsell popup after successful subscribe (lead magnet section). */
+  offerPlacementKey?: string;
 }) {
+  const { tryOpenPlacement } = useOfferPopup();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
 
@@ -42,6 +47,9 @@ export function LeadForm({
       });
       if (!res.ok) throw new Error();
       mergeVisitorTags([segmentTag]);
+      if (offerPlacementKey) {
+        tryOpenPlacement(offerPlacementKey, "");
+      }
       setState("done");
     } catch {
       setState("error");

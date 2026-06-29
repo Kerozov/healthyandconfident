@@ -70,22 +70,12 @@ export function Hero({
           </ul>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <CtaLink
-              placementKey="hero_primary"
-              href={`/${locale}#programs`}
-              variant="gold"
-              size="lg"
-            >
+            <Button href={`/${locale}#programs`} variant="gold" size="lg">
               {hero.primaryCta}
-            </CtaLink>
-            <CtaLink
-              placementKey="hero_secondary"
-              href={`/${locale}#lead`}
-              size="lg"
-              variant="secondary"
-            >
+            </Button>
+            <Button href={`/${locale}#lead`} size="lg" variant="secondary">
               {hero.secondaryCta}
-            </CtaLink>
+            </Button>
           </div>
 
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-green-100 pt-8">

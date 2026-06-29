@@ -1,18 +1,35 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 
-export const CTA_PLACEMENT_KEYS = [
-  "hero_primary",
-  "hero_secondary",
-  "nav_cta",
-  "contact_cta",
-  "about_cta",
+/** Placements where upsell/downsell popups are allowed (not hero or nav). */
+export const UPSELL_SECTION_PLACEMENT_KEYS = [
   "programs_0",
   "programs_1",
   "programs_2",
+  "about_cta",
+  "outcomes_cta",
+  "leadmagnet_cta",
+  "contact_cta",
+] as const;
+
+export type UpsellSectionPlacementKey = (typeof UPSELL_SECTION_PLACEMENT_KEYS)[number];
+
+/** @deprecated Use UPSELL_SECTION_PLACEMENT_KEYS — kept for migrations */
+export const CTA_PLACEMENT_KEYS = [
+  ...UPSELL_SECTION_PLACEMENT_KEYS,
+  "hero_primary",
+  "hero_secondary",
+  "nav_cta",
 ] as const;
 
 export type CtaPlacementKey = (typeof CTA_PLACEMENT_KEYS)[number];
+
+export function isUpsellSectionPlacement(key: string): boolean {
+  return (
+    key.startsWith("product_") ||
+    (UPSELL_SECTION_PLACEMENT_KEYS as readonly string[]).includes(key)
+  );
+}
 
 export const DEFAULT_OFFER_HEADLINES = {
   upsell: {

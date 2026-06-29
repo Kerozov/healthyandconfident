@@ -31,6 +31,7 @@ export function LeadMagnet({ dict, locale }: { dict: Dictionary; locale: Locale 
                 segmentTag="weight-loss"
                 source="lead-magnet"
                 variant="gradient"
+                offerPlacementKey="leadmagnet_cta"
               />
             </div>
           </div>

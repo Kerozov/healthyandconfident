@@ -1,7 +1,7 @@
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
-import { Button } from "@/components/ui/button";
+import { CtaLink } from "@/components/site/cta-link";
 
 export function Outcomes({
   dict,
@@ -19,13 +19,14 @@ export function Outcomes({
             {outcomes.title}
           </h2>
           <p className="mt-4 max-w-md text-white">{outcomes.subtitle}</p>
-          <Button
+          <CtaLink
+            placementKey="outcomes_cta"
             href={`/${locale}#contact`}
             size="lg"
             className="mt-8 bg-gold-400 px-8 py-4 font-bold text-forest-900 shadow-lg hover:bg-gold-500 hover:shadow-xl"
           >
             {dict.contact.cta}
-          </Button>
+          </CtaLink>
         </div>
 
         <ul className="grid gap-3 sm:grid-cols-2">

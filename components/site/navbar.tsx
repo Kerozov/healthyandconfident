@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Leaf } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
-import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -78,14 +78,13 @@ export function Navbar({
           >
             {other}
           </Link>
-          <CtaLink
-            placementKey="nav_cta"
+          <Button
             href={`/${locale}#contact`}
             size="sm"
             className="bg-gold-400 font-semibold text-forest-900 shadow-sm hover:bg-gold-500"
           >
             {cta}
-          </CtaLink>
+          </Button>
         </div>
 
         <button
@@ -118,14 +117,9 @@ export function Navbar({
               >
                 {other}
               </Link>
-              <CtaLink
-                placementKey="nav_cta"
-                href={`/${locale}#contact`}
-                size="sm"
-                className="flex-1"
-              >
+              <Button href={`/${locale}#contact`} size="sm" className="flex-1">
                 {cta}
-              </CtaLink>
+              </Button>
             </div>
           </Container>
         </div>

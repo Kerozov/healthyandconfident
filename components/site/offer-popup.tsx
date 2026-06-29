@@ -38,6 +38,7 @@ export function useOfferPopup(): OfferPopupContextValue {
 }
 
 function navigateTo(href: string, router: ReturnType<typeof useRouter>) {
+  if (!href.trim()) return;
   if (href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:")) {
     window.open(href, href.startsWith("http") ? "_blank" : "_self", "noopener,noreferrer");
     return;
