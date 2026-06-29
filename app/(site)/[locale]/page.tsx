@@ -32,6 +32,7 @@ export default async function HomePage({
   const offerProps = {
     placements: site.ctaPlacements,
     offersById: site.offersById,
+    segments: site.segments,
   };
 
   return (
@@ -50,6 +51,7 @@ export default async function HomePage({
           section={eventsSection}
           events={site.events}
           offersById={site.offersById}
+          segments={site.segments}
         />
       )}
       {productsSection && site.products.length > 0 && (
@@ -58,6 +60,7 @@ export default async function HomePage({
           locale={l}
           section={productsSection}
           products={site.products}
+          segments={site.segments}
         />
       )}
       <About dict={dict} locale={l} {...offerProps} />

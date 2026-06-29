@@ -12,7 +12,7 @@ import {
   Calendar,
   ShoppingBag,
 } from "lucide-react";
-import type { SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection } from "@/lib/supabase/types";
+import type { SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection, Segment } from "@/lib/supabase/types";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { DEFAULT_OFFER_HEADLINES } from "@/lib/site/cta-placements";
 import { CtaPlacementsPanel, WebsiteTabs } from "@/components/admin/website-cta-panel";
@@ -24,6 +24,7 @@ import {
   deleteSiteProduct,
 } from "@/app/(admin)/admin/actions";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { SegmentChecklist } from "@/components/admin/segment-checklist";
 import { cn } from "@/lib/utils";
 
 function SectionToggle({
@@ -156,6 +157,7 @@ const EMPTY_PRODUCT = {
   headline_en: "",
   cta_label_bg: "",
   cta_label_en: "",
+  audience_tags: [] as string[],
   enabled: true,
   sort_order: 0,
 };
@@ -165,6 +167,7 @@ export function WebsiteManager({
   events,
   products,
   ctaPlacements,
+  segments,
   dbReady = true,
   dbError,
 }: {
@@ -172,6 +175,7 @@ export function WebsiteManager({
   events: SiteEvent[];
   products: SiteProduct[];
   ctaPlacements: SiteCtaPlacement[];
+  segments: Segment[];
   dbReady?: boolean;
   dbError?: string;
 }) {
@@ -264,6 +268,7 @@ export function WebsiteManager({
       headline_en: product.headline_en ?? "",
       cta_label_bg: product.cta_label_bg ?? "",
       cta_label_en: product.cta_label_en ?? "",
+      audience_tags: product.audience_tags ?? [],
       enabled: product.enabled,
       sort_order: product.sort_order,
     });
@@ -454,6 +459,19 @@ export function WebsiteManager({
                   />
                 </Field>
               </div>
+              <Field
+                label="Кой вижда офертата"
+                hint="Празно = всички посетители. Избери сегменти — офертата се показва само на хора, записали се с този таг (popup, форма). Родителска група включва подгрупите."
+              >
+                <SegmentChecklist
+                  segments={segments}
+                  selected={productForm.audience_tags}
+                  onChange={(audience_tags) =>
+                    setProductForm({ ...productForm, audience_tags })
+                  }
+                  disabled={pending}
+                />
+              </Field>
               <label className="flex items-center gap-2 text-sm font-medium">
                 <input
                   type="checkbox"
@@ -528,6 +546,12 @@ export function WebsiteManager({
                     <p className="mt-1 text-xs text-ink-soft">
                       {product.stripe_url}
                       {product.price_label_bg ? ` · ${product.price_label_bg}` : ""}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-soft">
+                      Аудитория:{" "}
+                      {(product.audience_tags ?? []).length > 0
+                        ? (product.audience_tags ?? []).join(", ")
+                        : "всички"}
                     </p>
                   </div>
                   <div className="flex gap-1">

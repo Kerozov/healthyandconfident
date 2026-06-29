@@ -1,7 +1,7 @@
 import { Mail, Phone, MessageCircle, CalendarHeart } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
-import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
+import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
@@ -12,11 +12,13 @@ export function Contact({
   locale,
   placements,
   offersById,
+  segments,
 }: {
   dict: Dictionary;
   locale: Locale;
   placements: Record<string, SiteCtaPlacement>;
   offersById: Record<string, SiteProduct>;
+  segments: Segment[];
 }) {
   const { contact } = dict;
   return (
@@ -43,6 +45,7 @@ export function Contact({
               placementKey="contact_cta"
               placements={placements}
               offersById={offersById}
+              segments={segments}
               locale={locale}
               className="mt-4"
             />

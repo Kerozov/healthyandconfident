@@ -1,7 +1,7 @@
 import { Check, Sparkles, TrendingUp } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
-import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
+import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { CtaOfferSlot } from "@/components/site/cta-offer-slot";
@@ -11,11 +11,13 @@ export function Hero({
   locale,
   placements,
   offersById,
+  segments,
 }: {
   dict: Dictionary;
   locale: Locale;
   placements: Record<string, SiteCtaPlacement>;
   offersById: Record<string, SiteProduct>;
+  segments: Segment[];
 }) {
   const { hero } = dict;
   return (
@@ -88,12 +90,14 @@ export function Hero({
               placementKey="hero_primary"
               placements={placements}
               offersById={offersById}
+              segments={segments}
               locale={locale}
             />
             <CtaOfferSlot
               placementKey="hero_secondary"
               placements={placements}
               offersById={offersById}
+              segments={segments}
               locale={locale}
               compact
             />

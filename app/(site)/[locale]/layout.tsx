@@ -83,6 +83,7 @@ export default async function SiteLayout({
           cta={dict.nav.cta}
           placements={site.ctaPlacements}
           offersById={site.offersById}
+          segments={site.segments}
         />
         <main>{children}</main>
         <Footer locale={l} dict={dict} />

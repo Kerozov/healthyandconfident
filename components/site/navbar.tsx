@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Leaf } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
-import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
+import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/lib/site";
@@ -19,12 +19,14 @@ export function Navbar({
   cta,
   placements,
   offersById,
+  segments,
 }: {
   locale: Locale;
   items: NavItem[];
   cta: string;
   placements: Record<string, SiteCtaPlacement>;
   offersById: Record<string, SiteProduct>;
+  segments: Segment[];
 }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -131,6 +133,7 @@ export function Navbar({
               placementKey="nav_cta"
               placements={placements}
               offersById={offersById}
+              segments={segments}
               locale={locale}
               compact
               className="mt-3"

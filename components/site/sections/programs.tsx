@@ -1,7 +1,7 @@
 import { Check, Star } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
-import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
+import type { SiteCtaPlacement, SiteProduct, Segment } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,11 +12,13 @@ export function Programs({
   locale,
   placements,
   offersById,
+  segments,
 }: {
   dict: Dictionary;
   locale: Locale;
   placements: Record<string, SiteCtaPlacement>;
   offersById: Record<string, SiteProduct>;
+  segments: Segment[];
 }) {
   const { programs } = dict;
   return (
@@ -82,6 +84,7 @@ export function Programs({
                 placementKey={`programs_${index}`}
                 placements={placements}
                 offersById={offersById}
+                segments={segments}
                 locale={locale}
                 compact
                 className="mt-4"

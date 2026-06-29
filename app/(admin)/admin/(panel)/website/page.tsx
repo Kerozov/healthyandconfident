@@ -19,6 +19,7 @@ export default async function AdminWebsitePage() {
           events={content.events}
           products={content.products}
           ctaPlacements={Object.values(content.ctaPlacements)}
+          segments={content.segments}
           dbReady={content.dbReady}
           dbError={content.dbError}
         />

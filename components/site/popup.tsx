@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Gift } from "lucide-react";
+import { mergeVisitorTags } from "@/lib/site/visitor-tags";
 import type { Locale } from "@/i18n/config";
 
 type PopupData = {
@@ -63,6 +64,9 @@ export function Popup({ locale }: { locale: Locale }) {
       if (!res.ok) throw new Error();
       setState("done");
       localStorage.setItem(storageKey, "subscribed");
+      if (data?.segment_tag) {
+        mergeVisitorTags([data.segment_tag]);
+      }
       setTimeout(() => setOpen(false), 2500);
     } catch {
       setState("error");

@@ -2,7 +2,7 @@ import "server-only";
 
 import { getPublicClient } from "@/lib/supabase/public";
 import { getAdminClient } from "@/lib/supabase/admin";
-import type { SiteEvent, SiteProduct, SiteSection, SiteCtaPlacement } from "@/lib/supabase/types";
+import type { SiteEvent, SiteProduct, SiteSection, SiteCtaPlacement, Segment } from "@/lib/supabase/types";
 import { mergeSiteSections, type SiteContent } from "@/lib/site/defaults";
 
 export type { SiteContent };
@@ -13,6 +13,12 @@ function indexOffers(products: SiteProduct[]): Record<string, SiteProduct> {
 
 function indexPlacements(rows: SiteCtaPlacement[]): Record<string, SiteCtaPlacement> {
   return Object.fromEntries(rows.map((p) => [p.key, p]));
+}
+
+export async function getSiteSegments(): Promise<Segment[]> {
+  const supabase = getPublicClient();
+  const { data } = await supabase.from("segments").select("*").order("name");
+  return (data as Segment[]) ?? [];
 }
 
 export async function getCtaPlacements(): Promise<SiteCtaPlacement[]> {
@@ -52,11 +58,12 @@ export async function getSiteProducts(includeDisabled = false): Promise<SiteProd
 }
 
 export async function getPublicSiteContent(): Promise<SiteContent> {
-  const [sections, events, products, placements] = await Promise.all([
+  const [sections, events, products, placements, segments] = await Promise.all([
     getSiteSections(),
     getSiteEvents(),
     getSiteProducts(),
     getCtaPlacements(),
+    getSiteSegments(),
   ]);
 
   const sectionMap = mergeSiteSections(sections);
@@ -68,13 +75,14 @@ export async function getPublicSiteContent(): Promise<SiteContent> {
     products: sectionMap.products?.enabled ? products : [],
     offersById,
     ctaPlacements: indexPlacements(placements),
+    segments,
     dbReady: true,
   };
 }
 
 export async function getAdminSiteContent(): Promise<SiteContent> {
   const supabase = getAdminClient();
-  const [sectionsRes, eventsRes, productsRes, placementsRes] = await Promise.all([
+  const [sectionsRes, eventsRes, productsRes, placementsRes, segmentsRes] = await Promise.all([
     supabase.from("site_sections").select("*").order("key"),
     supabase
       .from("site_events")
@@ -87,13 +95,15 @@ export async function getAdminSiteContent(): Promise<SiteContent> {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
     supabase.from("site_cta_placements").select("*").order("key"),
+    supabase.from("segments").select("*").order("name"),
   ]);
 
   const dbError =
     sectionsRes.error?.message ??
     eventsRes.error?.message ??
     productsRes.error?.message ??
-    placementsRes.error?.message;
+    placementsRes.error?.message ??
+    segmentsRes.error?.message;
 
   const products = (productsRes.data as SiteProduct[]) ?? [];
 
@@ -103,6 +113,7 @@ export async function getAdminSiteContent(): Promise<SiteContent> {
     products,
     offersById: indexOffers(products),
     ctaPlacements: indexPlacements((placementsRes.data as SiteCtaPlacement[]) ?? []),
+    segments: (segmentsRes.data as Segment[]) ?? [],
     dbReady: !dbError,
     dbError,
   };

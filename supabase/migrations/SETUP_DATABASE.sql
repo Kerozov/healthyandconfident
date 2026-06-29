@@ -277,6 +277,7 @@ create table if not exists public.site_products (
   headline_en     text not null default '',
   cta_label_bg    text not null default '',
   cta_label_en    text not null default '',
+  audience_tags   text[] not null default '{}',
   enabled         boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),

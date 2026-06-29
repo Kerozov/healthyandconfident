@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
+import { mergeVisitorTags } from "@/lib/site/visitor-tags";
 
 export function LeadForm({
   locale,
@@ -40,6 +41,7 @@ export function LeadForm({
         body: JSON.stringify({ email, locale, source, tags: [segmentTag] }),
       });
       if (!res.ok) throw new Error();
+      mergeVisitorTags([segmentTag]);
       setState("done");
     } catch {
       setState("error");

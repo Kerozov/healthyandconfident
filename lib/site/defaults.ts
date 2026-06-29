@@ -1,4 +1,4 @@
-import type { SiteEvent, SiteProduct, SiteSection, SiteSectionKey, SiteCtaPlacement } from "@/lib/supabase/types";
+import type { SiteEvent, SiteProduct, SiteSection, SiteSectionKey, SiteCtaPlacement, Segment } from "@/lib/supabase/types";
 
 export type SiteContent = {
   sections: Record<string, SiteSection>;
@@ -6,6 +6,7 @@ export type SiteContent = {
   products: SiteProduct[];
   offersById: Record<string, SiteProduct>;
   ctaPlacements: Record<string, SiteCtaPlacement>;
+  segments: Segment[];
   dbReady: boolean;
   dbError?: string;
 };

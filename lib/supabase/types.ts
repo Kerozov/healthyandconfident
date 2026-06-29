@@ -254,6 +254,7 @@ export type SiteProduct = {
   headline_en: string;
   cta_label_bg: string;
   cta_label_en: string;
+  audience_tags: string[];
   enabled: boolean;
   sort_order: number;
   created_at: string;
