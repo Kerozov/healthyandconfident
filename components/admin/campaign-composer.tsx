@@ -3,24 +3,29 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
-import type { AudienceInput, Segment } from "@/lib/supabase/types";
+import type { AudienceInput, Segment, SegmentGroup, SiteProduct } from "@/lib/supabase/types";
 import {
   sendEmailCampaign,
   sendSmsCampaign,
 } from "@/app/(admin)/admin/actions";
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
+import { EmailProductPicker } from "@/components/admin/email-product-picker";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { datetimeLocalToIso } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
 export function CampaignComposer({
   segments,
+  groups,
+  products,
   subscriberTags,
   workerConfigured,
   tab,
 }: {
   segments: Segment[];
+  groups: SegmentGroup[];
+  products: SiteProduct[];
   subscriberTags: string[];
   workerConfigured: boolean;
   tab: "email" | "sms";
@@ -121,6 +126,23 @@ export function CampaignComposer({
             />
           </Field>
           <div className="rounded-xl border border-ink/10 p-4">
+            <p className="mb-3 text-sm font-medium text-ink">Продукти в имейла</p>
+            <EmailProductPicker
+              products={products}
+              locale={email.audience.locale === "en" ? "en" : "bg"}
+              html={email.html}
+              onInsert={(html) => setEmail({ ...email, html })}
+              disabled={pending}
+            />
+          </div>
+          <EmailTemplatePreview
+            bodyHtml={email.html}
+            ctaLabel={showButton ? email.cta_label : ""}
+            ctaUrl={showButton ? email.cta_url : ""}
+            locale={email.audience.locale === "en" ? "en" : "bg"}
+            products={products}
+          />
+          <div className="rounded-xl border border-ink/10 p-4">
             <label className="flex cursor-pointer items-center gap-3">
               <input
                 type="checkbox"
@@ -162,17 +184,12 @@ export function CampaignComposer({
                     />
                   </Field>
                 </div>
-                <EmailTemplatePreview
-                  bodyHtml={email.html}
-                  ctaLabel={email.cta_label}
-                  ctaUrl={email.cta_url}
-                  locale={email.audience.locale === "en" ? "en" : "bg"}
-                />
               </div>
             )}
           </div>
           <AudiencePicker
             segments={segments}
+            groups={groups}
             subscriberTags={subscriberTags}
             value={email.audience}
             onChange={(audience) => setEmail({ ...email, audience })}
@@ -211,6 +228,7 @@ export function CampaignComposer({
           </Field>
           <AudiencePicker
             segments={segments}
+            groups={groups}
             subscriberTags={subscriberTags}
             value={sms.audience}
             onChange={(audience) => setSms({ ...sms, audience })}

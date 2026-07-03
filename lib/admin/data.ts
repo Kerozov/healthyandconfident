@@ -4,12 +4,13 @@ import type {
   BlogPost,
   Subscriber,
   Segment,
+  SegmentGroup,
   PopupConfig,
   EmailCampaign,
   SmsCampaign,
   AutomatedEmail,
 } from "@/lib/supabase/types";
-import { flattenSegmentTree } from "@/lib/segments/hierarchy";
+import { assignableSegments } from "@/lib/segments/hierarchy";
 
 export async function getDashboardStats() {
   const supabase = getAdminClient();
@@ -65,10 +66,16 @@ export async function getSubscribers(filter?: {
   return (data as Subscriber[]) ?? [];
 }
 
+export async function getSegmentGroups(): Promise<SegmentGroup[]> {
+  const supabase = getAdminClient();
+  const { data } = await supabase.from("segment_groups").select("*").order("name");
+  return (data as SegmentGroup[]) ?? [];
+}
+
 export async function getSegments(): Promise<Segment[]> {
   const supabase = getAdminClient();
-  const { data } = await supabase.from("segments").select("*");
-  return flattenSegmentTree((data as Segment[]) ?? []);
+  const { data } = await supabase.from("segments").select("*").order("name");
+  return assignableSegments((data as Segment[]) ?? []);
 }
 
 /** All unique tags currently assigned to subscribers (for tag-based targeting). */

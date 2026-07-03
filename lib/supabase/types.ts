@@ -35,12 +35,20 @@ export type Subscriber = {
   updated_at: string;
 };
 
+export type SegmentGroup = {
+  id: string;
+  name: string;
+  description: string | null;
+  parent_id: string | null;
+  created_at: string;
+};
+
 export type Segment = {
   id: string;
   key: string;
   name: string;
   description: string | null;
-  parent_id: string | null;
+  group_id: string | null;
   created_at: string;
 };
 
@@ -80,6 +88,12 @@ export type Automation = {
   trigger_event: AutomationTrigger;
   enabled: boolean;
   segment_keys: string[];
+  /** Target everyone in these groups (includes nested subgroups). */
+  group_ids: string[];
+  /** any = OR between rules, all = AND (every group/segment required). */
+  audience_logic: "any" | "all";
+  exclude_group_ids: string[];
+  exclude_segment_keys: string[];
   new_subscribers_only: boolean;
   after_automation_id: string | null;
   delay_days: number;
@@ -117,6 +131,8 @@ export type AutomationDelivery = {
   recipient_status: string | null;
   opened_at: string | null;
   delivered_at: string | null;
+  click_count: number;
+  first_clicked_at: string | null;
   last_synced_at: string | null;
 };
 
@@ -128,6 +144,25 @@ export type AutomationStats = {
   delivered_count: number;
   bounced_count: number;
   not_opened_count: number;
+  clicked_count: number;
+  unique_clickers_count: number;
+  total_clicks: number;
+  last_synced_at: string | null;
+};
+
+export type CampaignDelivery = {
+  id: string;
+  campaign_id: string;
+  subscriber_id: string | null;
+  email: string;
+  worker_job_id: string | null;
+  status: "scheduled" | "sent" | "failed" | "canceled";
+  recipient_status: string | null;
+  opened_at: string | null;
+  delivered_at: string | null;
+  click_count: number;
+  first_clicked_at: string | null;
+  sent_at: string;
   last_synced_at: string | null;
 };
 
@@ -165,6 +200,7 @@ export type EmailCampaign = {
   not_opened_count: number;
   bounced_count: number;
   total_count: number;
+  clicked_count: number;
   last_synced_at: string | null;
   parent_campaign_id: string | null;
   target_tags: string[] | null;
@@ -178,6 +214,8 @@ export type AudienceInput = {
   segment_key?: string;
   /** One or more segments (OR) — subscriber must match at least one. */
   segment_keys?: string[];
+  /** Groups (OR) — expands to all segments in each group and nested subgroups. */
+  group_ids?: string[];
   tags?: string[];
   locale?: "bg" | "en" | "";
 };

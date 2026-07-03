@@ -3,25 +3,17 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
-import type { Segment } from "@/lib/supabase/types";
-import {
-  flattenSegmentTreeWithDepth,
-  getDescendantKeys,
-  isDescendantOf,
-} from "@/lib/segments/hierarchy";
+import type { Segment, SegmentGroup } from "@/lib/supabase/types";
 import { createSegment, deleteSegment, updateSegment } from "@/app/(admin)/admin/actions";
 import { Field, Input, Card, Select } from "@/components/admin/fields";
 
-function validParentOptions(segmentId: string | null, segments: Segment[]): Segment[] {
-  return segments.filter(
-    (s) =>
-      s.key !== "all" &&
-      s.id !== segmentId &&
-      (segmentId ? !isDescendantOf(s.id, segmentId, segments) : true),
-  );
-}
-
-export function SegmentsManager({ segments }: { segments: Segment[] }) {
+export function SegmentsManager({
+  segments,
+  groups,
+}: {
+  segments: Segment[];
+  groups: SegmentGroup[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -29,16 +21,19 @@ export function SegmentsManager({ segments }: { segments: Segment[] }) {
     key: "",
     name: "",
     description: "",
-    parent_id: "",
+    group_id: "",
   });
 
-  const tree = useMemo(
-    () => flattenSegmentTreeWithDepth(segments.filter((s) => s.key !== "all")),
-    [segments],
+  const groupNameById = useMemo(
+    () => new Map(groups.map((group) => [group.id, group.name])),
+    [groups],
   );
 
-  const parentOptions = useMemo(
-    () => validParentOptions(null, segments),
+  const sortedSegments = useMemo(
+    () =>
+      [...segments.filter((s) => s.key !== "all")].sort((a, b) =>
+        a.name.localeCompare(b.name, "bg"),
+      ),
     [segments],
   );
 
@@ -50,13 +45,13 @@ export function SegmentsManager({ segments }: { segments: Segment[] }) {
         key: form.key || form.name,
         name: form.name,
         description: form.description || undefined,
-        parent_id: form.parent_id || null,
+        group_id: form.group_id || null,
       });
       if (!res.ok) {
         setError(res.message || "Грешка");
         return;
       }
-      setForm({ key: "", name: "", description: "", parent_id: "" });
+      setForm({ key: "", name: "", description: "", group_id: "" });
       router.refresh();
     });
   }
@@ -75,10 +70,10 @@ export function SegmentsManager({ segments }: { segments: Segment[] }) {
     });
   }
 
-  function changeParent(id: string, parentId: string | null) {
+  function changeGroup(id: string, groupId: string | null) {
     startTransition(async () => {
-      const res = await updateSegment({ id, parent_id: parentId });
-      if (!res.ok) setError(res.message || "Грешка при промяна на родител");
+      const res = await updateSegment({ id, group_id: groupId });
+      if (!res.ok) setError(res.message || "Грешка при промяна на група");
       else router.refresh();
     });
   }
@@ -86,10 +81,9 @@ export function SegmentsManager({ segments }: { segments: Segment[] }) {
   return (
     <Card title="Сегменти">
       <p className="mb-4 text-sm text-ink-soft">
-        Сегментите се използват за кампании и автоматизации. Абонатите получават{" "}
-        <code className="text-xs">key</code> на сегмента като таг. Можете да
-        създавате подгрупи — при избор на родителска група се включват и всички
-        нейни подгрупи.
+        Сегментите са тагове, които се присвояват на абонати (popup, форма,
+        ръчно). Използват се за кампании и автоматизации. Групата е само за
+        организация — не се записва на абоната.
       </p>
 
       <form onSubmit={submit} className="mb-6 grid gap-4 md:grid-cols-5">
@@ -108,15 +102,15 @@ export function SegmentsManager({ segments }: { segments: Segment[] }) {
             placeholder="vip-klienti"
           />
         </Field>
-        <Field label="Родителска група">
+        <Field label="Група">
           <Select
-            value={form.parent_id}
-            onChange={(e) => setForm({ ...form, parent_id: e.target.value })}
+            value={form.group_id}
+            onChange={(e) => setForm({ ...form, group_id: e.target.value })}
           >
-            <option value="">— Главна група —</option>
-            {parentOptions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
+            <option value="">— Без група —</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
               </option>
             ))}
           </Select>
@@ -142,48 +136,40 @@ export function SegmentsManager({ segments }: { segments: Segment[] }) {
       {error && <p className="mb-4 text-sm text-coral-600">{error}</p>}
 
       <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
-        {tree.map(({ segment: s, depth }) => {
-          const childCount = getDescendantKeys(s.key, segments).length;
-          const parents = validParentOptions(s.id, segments);
-          return (
+        {sortedSegments.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-ink-soft">Няма сегменти.</p>
+        ) : (
+          sortedSegments.map((segment) => (
             <div
-              key={s.id}
+              key={segment.id}
               className="flex flex-wrap items-center justify-between gap-4 px-4 py-3"
-              style={{ paddingLeft: 16 + depth * 20 }}
             >
               <div className="min-w-0 flex-1">
-                <p className="font-medium">
-                  {depth > 0 && (
-                    <span className="mr-1 text-ink-soft/50">↳</span>
-                  )}
-                  {s.name}
-                  {childCount > 0 && (
-                    <span className="ml-2 text-xs font-normal text-ink-soft">
-                      ({childCount} подгруп{childCount === 1 ? "а" : "и"})
-                    </span>
-                  )}
-                </p>
+                <p className="font-medium">{segment.name}</p>
                 <p className="text-xs text-ink-soft">
-                  <code>{s.key}</code>
-                  {s.description ? ` · ${s.description}` : ""}
+                  <code>{segment.key}</code>
+                  {segment.group_id
+                    ? ` · група: ${groupNameById.get(segment.group_id) ?? "—"}`
+                    : " · без група"}
+                  {segment.description ? ` · ${segment.description}` : ""}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <Select
-                  value={s.parent_id ?? ""}
-                  onChange={(e) => changeParent(s.id, e.target.value || null)}
+                  value={segment.group_id ?? ""}
+                  onChange={(e) => changeGroup(segment.id, e.target.value || null)}
                   disabled={pending}
                   className="h-9 min-w-[10rem] text-xs"
                 >
-                  <option value="">Главна група</option>
-                  {parents.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
+                  <option value="">Без група</option>
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
                     </option>
                   ))}
                 </Select>
                 <button
-                  onClick={() => remove(s.id, s.name)}
+                  onClick={() => remove(segment.id, segment.name)}
                   disabled={pending}
                   className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600 disabled:opacity-40"
                 >
@@ -191,8 +177,8 @@ export function SegmentsManager({ segments }: { segments: Segment[] }) {
                 </button>
               </div>
             </div>
-          );
-        })}
+          ))
+        )}
       </div>
     </Card>
   );

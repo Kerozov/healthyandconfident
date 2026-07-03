@@ -189,12 +189,6 @@ drop trigger if exists site_sections_updated_at on public.site_sections;
 create trigger site_sections_updated_at before update on public.site_sections
   for each row execute function public.set_updated_at();
 
--- 014: segment subgroups (parent → child)
-alter table public.segments
-  add column if not exists parent_id uuid references public.segments(id) on delete set null;
-
-create index if not exists segments_parent_idx on public.segments (parent_id);
-
 -- 013: upsell placements + product popup fields
 alter table public.site_products
   add column if not exists offer_type text not null default 'upsell'
@@ -363,6 +357,194 @@ drop trigger if exists site_videos_updated_at on public.site_videos;
 create trigger site_videos_updated_at before update on public.site_videos
   for each row execute function public.set_updated_at();
 
+-- 014: segment hierarchy (legacy — converted to groups in 024)
+alter table public.segments
+  add column if not exists parent_id uuid references public.segments(id) on delete set null;
+
+create index if not exists segments_parent_idx on public.segments (parent_id);
+
+-- 024: segment groups (containers) vs segments (assignable tags)
+create table if not exists public.segment_groups (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  description text,
+  parent_id   uuid references public.segment_groups(id) on delete set null,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists segment_groups_parent_idx
+  on public.segment_groups (parent_id);
+
+alter table public.segments
+  add column if not exists group_id uuid references public.segment_groups(id) on delete set null;
+
+create index if not exists segments_group_idx on public.segments (group_id);
+
+do $$
+declare
+  seg record;
+  new_group_id uuid;
+  parent_group_id uuid;
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'segments'
+      and column_name = 'parent_id'
+  ) then
+    return;
+  end if;
+
+  create temp table _segment_group_map (
+    segment_id uuid primary key,
+    group_id uuid not null
+  ) on commit drop;
+
+  for seg in
+    select s.*
+    from public.segments s
+    where exists (select 1 from public.segments c where c.parent_id = s.id)
+    order by s.created_at
+  loop
+    parent_group_id := null;
+    if seg.parent_id is not null then
+      select group_id into parent_group_id
+      from _segment_group_map
+      where segment_id = seg.parent_id;
+    end if;
+
+    insert into public.segment_groups (name, description, parent_id)
+    values (seg.name, seg.description, parent_group_id)
+    returning id into new_group_id;
+
+    insert into _segment_group_map (segment_id, group_id)
+    values (seg.id, new_group_id);
+  end loop;
+
+  update public.segments s
+  set group_id = m.group_id
+  from _segment_group_map m
+  where s.parent_id = m.segment_id;
+
+  delete from public.segments s
+  where exists (select 1 from public.segments c where c.parent_id = s.id);
+
+  alter table public.segments drop column if exists parent_id;
+  drop index if exists public.segments_parent_idx;
+end $$;
+
+alter table public.automations
+  add column if not exists group_ids uuid[] not null default '{}';
+
+-- 025: automation audience AND/OR + exclude rules
+alter table public.automations
+  add column if not exists audience_logic text not null default 'any'
+    check (audience_logic in ('any', 'all'));
+
+alter table public.automations
+  add column if not exists exclude_group_ids uuid[] not null default '{}';
+
+alter table public.automations
+  add column if not exists exclude_segment_keys text[] not null default '{}';
+
+-- 026: email engagement (opens per delivery already exist; add click tracking)
+alter table public.automation_deliveries
+  add column if not exists click_count int not null default 0;
+
+alter table public.automation_deliveries
+  add column if not exists first_clicked_at timestamptz;
+
+alter table public.email_campaigns
+  add column if not exists clicked_count int not null default 0;
+
+create table if not exists public.campaign_deliveries (
+  id               uuid primary key default gen_random_uuid(),
+  campaign_id      uuid not null references public.email_campaigns(id) on delete cascade,
+  subscriber_id    uuid references public.subscribers(id) on delete set null,
+  email            text not null,
+  worker_job_id    text,
+  status           text not null default 'sent'
+    check (status in ('scheduled', 'sent', 'failed', 'canceled')),
+  recipient_status text,
+  opened_at        timestamptz,
+  delivered_at     timestamptz,
+  click_count      int not null default 0,
+  first_clicked_at timestamptz,
+  sent_at          timestamptz not null default now(),
+  last_synced_at   timestamptz
+);
+
+create index if not exists campaign_deliveries_campaign_idx
+  on public.campaign_deliveries (campaign_id);
+
+create index if not exists campaign_deliveries_email_idx
+  on public.campaign_deliveries (email);
+
+create unique index if not exists campaign_deliveries_job_uidx
+  on public.campaign_deliveries (worker_job_id)
+  where worker_job_id is not null;
+
+create table if not exists public.email_link_clicks (
+  id            uuid primary key default gen_random_uuid(),
+  source_type   text not null check (source_type in ('campaign', 'automation')),
+  source_id     uuid not null,
+  email         text not null,
+  subscriber_id uuid references public.subscribers(id) on delete set null,
+  target_url    text,
+  clicked_at    timestamptz not null default now()
+);
+
+create index if not exists email_link_clicks_email_idx
+  on public.email_link_clicks (email);
+
+create index if not exists email_link_clicks_source_idx
+  on public.email_link_clicks (source_type, source_id);
+
+-- 027: dynamic forms
+create table if not exists public.form_templates (
+  id               uuid primary key default gen_random_uuid(),
+  name             text not null,
+  slug             text not null unique,
+  title_bg         text not null default '',
+  title_en         text not null default '',
+  description_bg   text not null default '',
+  description_en   text not null default '',
+  fields           jsonb not null default '[]',
+  settings         jsonb not null default '{}',
+  email_subject_bg text not null default '',
+  email_subject_en text not null default '',
+  email_intro_bg   text not null default '',
+  email_intro_en   text not null default '',
+  enabled          boolean not null default true,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+create table if not exists public.form_submissions (
+  id            uuid primary key default gen_random_uuid(),
+  form_id       uuid not null references public.form_templates(id) on delete cascade,
+  subscriber_id uuid references public.subscribers(id) on delete set null,
+  email         text,
+  answers       jsonb not null default '{}',
+  submitted_at  timestamptz not null default now()
+);
+
+create index if not exists form_submissions_form_idx
+  on public.form_submissions (form_id, submitted_at desc);
+
+create table if not exists public.form_invitations (
+  id            uuid primary key default gen_random_uuid(),
+  form_id       uuid not null references public.form_templates(id) on delete cascade,
+  subscriber_id uuid references public.subscribers(id) on delete set null,
+  email         text not null,
+  token         text not null unique,
+  sent_at       timestamptz not null default now(),
+  completed_at  timestamptz
+);
+
+create index if not exists form_invitations_form_idx
+  on public.form_invitations (form_id, sent_at desc);
+
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–023 applied). Also run 007_automations.sql if not yet applied.' as result;
+select 'Upgrade complete (012–027 applied). Also run 007_automations.sql if not yet applied.' as result;

@@ -1,12 +1,16 @@
-import type { Segment } from "@/lib/supabase/types";
+import type { Segment, SegmentGroup } from "@/lib/supabase/types";
+  return segments.filter((s) => s.key !== "all");
+}
 
-export function segmentsByParent(segments: Segment[]): Map<string | null, Segment[]> {
-  const map = new Map<string | null, Segment[]>();
-  for (const s of segments) {
-    const pid = s.parent_id ?? null;
-    const list = map.get(pid) ?? [];
-    list.push(s);
-    map.set(pid, list);
+export function groupsByParent(
+  groups: SegmentGroup[],
+): Map<string | null, SegmentGroup[]> {
+  const map = new Map<string | null, SegmentGroup[]>();
+  for (const group of groups) {
+    const parentId = group.parent_id ?? null;
+    const list = map.get(parentId) ?? [];
+    list.push(group);
+    map.set(parentId, list);
   }
   for (const list of map.values()) {
     list.sort((a, b) => a.name.localeCompare(b.name, "bg"));
@@ -14,48 +18,102 @@ export function segmentsByParent(segments: Segment[]): Map<string | null, Segmen
   return map;
 }
 
-export function getDescendantKeys(key: string, segments: Segment[]): string[] {
-  const byKey = new Map(segments.map((s) => [s.key, s]));
-  const root = byKey.get(key);
-  if (!root) return [];
+export function segmentsByGroupId(segments: Segment[]): Map<string | null, Segment[]> {
+  const map = new Map<string | null, Segment[]>();
+  for (const segment of assignableSegments(segments)) {
+    const groupId = segment.group_id ?? null;
+    const list = map.get(groupId) ?? [];
+    list.push(segment);
+    map.set(groupId, list);
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name, "bg"));
+  }
+  return map;
+}
 
-  const keys: string[] = [];
+export function flattenGroupTreeWithDepth(
+  groups: SegmentGroup[],
+): { group: SegmentGroup; depth: number }[] {
+  const byParent = groupsByParent(groups);
+  const out: { group: SegmentGroup; depth: number }[] = [];
+
+  function walk(parentId: string | null, depth: number) {
+    for (const group of byParent.get(parentId) ?? []) {
+      out.push({ group, depth });
+      walk(group.id, depth + 1);
+    }
+  }
+
+  walk(null, 0);
+  return out;
+}
+
+export function getDescendantGroupIds(
+  groupId: string,
+  groups: SegmentGroup[],
+): string[] {
+  const ids: string[] = [];
   function walk(parentId: string) {
-    for (const child of segments.filter((s) => s.parent_id === parentId)) {
-      keys.push(child.key);
+    for (const child of groups.filter((g) => g.parent_id === parentId)) {
+      ids.push(child.id);
       walk(child.id);
     }
   }
-  walk(root.id);
-  return keys;
+  walk(groupId);
+  return ids;
 }
 
-/** Parent selection includes all nested subgroup keys. */
-export function expandSegmentKeys(keys: string[], segments: Segment[]): string[] {
+export function getSegmentKeysForGroup(
+  groupId: string,
+  groups: SegmentGroup[],
+  segments: Segment[],
+): string[] {
+  const groupIds = new Set([groupId, ...getDescendantGroupIds(groupId, groups)]);
+  return assignableSegments(segments)
+    .filter((segment) => segment.group_id && groupIds.has(segment.group_id))
+    .map((segment) => segment.key);
+}
+
+export function getSegmentKeysForGroups(
+  groupIds: string[],
+  groups: SegmentGroup[],
+  segments: Segment[],
+): string[] {
   const out = new Set<string>();
-  for (const key of keys) {
-    if (!key || key === "all") continue;
-    out.add(key);
-    for (const childKey of getDescendantKeys(key, segments)) {
-      out.add(childKey);
+  for (const groupId of groupIds) {
+    if (!groupId) continue;
+    for (const key of getSegmentKeysForGroup(groupId, groups, segments)) {
+      out.add(key);
     }
   }
   return [...out];
 }
 
-export function segmentLabelWithChildren(key: string, segments: Segment[]): string {
-  const descendants = getDescendantKeys(key, segments);
-  if (descendants.length === 0) return key;
-  return `${key} (+${descendants.length} подгрупи)`;
+/** Resolve selected segments + groups into subscriber tag keys. */
+export function expandAudienceKeys(
+  segmentKeys: string[],
+  groupIds: string[],
+  groups: SegmentGroup[],
+  segments: Segment[],
+): string[] {
+  const out = new Set<string>();
+  for (const key of segmentKeys) {
+    if (key && key !== "all") out.add(key);
+  }
+  for (const key of getSegmentKeysForGroups(groupIds, groups, segments)) {
+    out.add(key);
+  }
+  return [...out];
 }
 
-export function isDescendantOf(
-  segmentId: string,
+export function isDescendantGroup(
+  groupId: string,
   ancestorId: string,
-  segments: Segment[],
+  groups: SegmentGroup[],
 ): boolean {
-  const byId = new Map(segments.map((s) => [s.id, s]));
-  let current = byId.get(segmentId);
+  const byId = new Map(groups.map((group) => [group.id, group]));
+  let current = byId.get(groupId);
   while (current?.parent_id) {
     if (current.parent_id === ancestorId) return true;
     current = byId.get(current.parent_id);
@@ -63,22 +121,55 @@ export function isDescendantOf(
   return false;
 }
 
-export function flattenSegmentTreeWithDepth(
-  segments: Segment[],
-): { segment: Segment; depth: number }[] {
-  const byParent = segmentsByParent(segments);
-  const out: { segment: Segment; depth: number }[] = [];
+export type GroupedSegmentRow = {
+  type: "group" | "segment";
+  group?: SegmentGroup;
+  segment?: Segment;
+  depth: number;
+};
 
-  function walk(parentId: string | null, depth: number) {
-    for (const s of byParent.get(parentId) ?? []) {
-      out.push({ segment: s, depth });
-      walk(s.id, depth + 1);
+export function buildSegmentPickerRows(
+  groups: SegmentGroup[],
+  segments: Segment[],
+): GroupedSegmentRow[] {
+  const byGroup = segmentsByGroupId(segments);
+  const out: GroupedSegmentRow[] = [];
+
+  function walkGroups(parentGroupId: string | null, depth: number) {
+    for (const group of groupsByParent(groups).get(parentGroupId) ?? []) {
+      out.push({ type: "group", group, depth });
+      for (const segment of byGroup.get(group.id) ?? []) {
+        out.push({ type: "segment", segment, depth: depth + 1 });
+      }
+      walkGroups(group.id, depth + 1);
     }
   }
-  walk(null, 0);
+
+  for (const segment of byGroup.get(null) ?? []) {
+    out.push({ type: "segment", segment, depth: 0 });
+  }
+  walkGroups(null, 0);
   return out;
 }
 
+/** @deprecated Use expandAudienceKeys with groups. */
+export function expandSegmentKeys(keys: string[], segments: Segment[]): string[] {
+  return expandAudienceKeys(keys, [], [], segments);
+}
+
+/** @deprecated Segment hierarchy removed — groups replace parent segments. */
+export function flattenSegmentTreeWithDepth(
+  segments: Segment[],
+): { segment: Segment; depth: number }[] {
+  return assignableSegments(segments).map((segment) => ({ segment, depth: 0 }));
+}
+
+/** @deprecated */
 export function flattenSegmentTree(segments: Segment[]): Segment[] {
-  return flattenSegmentTreeWithDepth(segments).map((row) => row.segment);
+  return assignableSegments(segments);
+}
+
+/** @deprecated */
+export function getDescendantKeys(_key: string, _segments: Segment[]): string[] {
+  return [];
 }

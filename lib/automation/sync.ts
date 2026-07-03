@@ -132,6 +132,9 @@ export function aggregateAutomationStats(
   let delivered_count = 0;
   let bounced_count = 0;
   let not_opened_count = 0;
+  let clicked_count = 0;
+  let unique_clickers_count = 0;
+  let total_clicks = 0;
   let last_synced_at: string | null = null;
 
   for (const d of deliveries) {
@@ -162,7 +165,14 @@ export function aggregateAutomationStats(
     if (!opened && !bounced && d.recipient_status !== "failed") {
       not_opened_count += 1;
     }
+    const clicks = d.click_count ?? 0;
+    if (clicks > 0) {
+      unique_clickers_count += 1;
+      total_clicks += clicks;
+    }
   }
+
+  clicked_count = unique_clickers_count;
 
   return {
     sent_count,
@@ -172,6 +182,9 @@ export function aggregateAutomationStats(
     delivered_count,
     bounced_count,
     not_opened_count,
+    clicked_count,
+    unique_clickers_count,
+    total_clicks,
     last_synced_at,
   };
 }

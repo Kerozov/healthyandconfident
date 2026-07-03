@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveCtaTarget, isSafeCtaTarget } from "@/lib/email/cta-redirect";
+import { verifyClickToken } from "@/lib/email/click-token";
+import { recordEmailLinkClick } from "@/lib/email/track-click";
 import { getAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(
@@ -7,8 +9,8 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const locale =
-    new URL(request.url).searchParams.get("locale") === "en" ? "en" : "bg";
+  const url = new URL(request.url);
+  const locale = url.searchParams.get("locale") === "en" ? "en" : "bg";
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -25,5 +27,24 @@ export async function GET(
     return NextResponse.json({ error: "Link not found" }, { status: 404 });
   }
 
-  return NextResponse.redirect(resolveCtaTarget(target), 302);
+  const resolved = resolveCtaTarget(target);
+  const tokenRaw = url.searchParams.get("t");
+  if (tokenRaw) {
+    const payload = verifyClickToken(tokenRaw);
+    if (payload && payload.s === "automation" && payload.i === id) {
+      try {
+        await recordEmailLinkClick({
+          sourceType: "automation",
+          sourceId: id,
+          email: payload.e,
+          subscriberId: payload.sid,
+          targetUrl: resolved,
+        });
+      } catch {
+        /* still redirect */
+      }
+    }
+  }
+
+  return NextResponse.redirect(resolved, 302);
 }

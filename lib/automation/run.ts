@@ -1,10 +1,12 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import type { Automation, AutomationTrigger, Locale, Segment } from "@/lib/supabase/types";
-import { expandSegmentKeys } from "@/lib/segments/hierarchy";
+import type { Automation, AutomationTrigger, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
+import { subscriberMatchesAutomationAudience } from "@/lib/automation/audience";
 import { buildBrandedEmail } from "@/lib/email/compose";
+import { expandEmailProducts } from "@/lib/email/expand-products";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
+import { unsubscribeLinkForEmail, isEmailUnsubscribed } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { scheduledAtAfterDays, scheduledAtOnDate } from "@/lib/datetime";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
@@ -39,11 +41,9 @@ function segmentMatches(
   automation: Automation,
   tags: string[],
   segments: Segment[],
+  groups: SegmentGroup[],
 ): boolean {
-  const required = automation.segment_keys.filter(Boolean);
-  if (required.length === 0) return true;
-  const expanded = expandSegmentKeys(required, segments);
-  return expanded.some((key) => tags.includes(key));
+  return subscriberMatchesAutomationAudience(automation, tags, segments, groups);
 }
 
 function sendAtAfterDays(
@@ -139,8 +139,12 @@ async function scheduleChainedFromParent(
   ctx: AutomationRunContext,
 ): Promise<void> {
   const supabase = getAdminClient();
-  const { data: segmentRows } = await supabase.from("segments").select("*");
+  const [{ data: segmentRows }, { data: groupRows }] = await Promise.all([
+    supabase.from("segments").select("*"),
+    supabase.from("segment_groups").select("*"),
+  ]);
   const segments = (segmentRows as Segment[]) ?? [];
+  const groups = (groupRows as SegmentGroup[]) ?? [];
 
   const { data } = await supabase
     .from("automations")
@@ -152,7 +156,7 @@ async function scheduleChainedFromParent(
   for (const rule of (data as Automation[]) ?? []) {
     const email = ctx.email.trim().toLowerCase();
     if (rule.new_subscribers_only && !ctx.isNew) continue;
-    if (!segmentMatches(rule, ctx.tags ?? [], segments)) continue;
+    if (!segmentMatches(rule, ctx.tags ?? [], segments, groups)) continue;
     if (await alreadyQueuedOrSent(rule.id, email)) continue;
     const childDelay = rule.delay_days ?? 0;
     try {
@@ -184,6 +188,17 @@ async function scheduleAutomation(
   sendAt: string,
 ): Promise<boolean> {
   const email = ctx.email.trim().toLowerCase();
+  if (await isEmailUnsubscribed(email)) {
+    await recordDelivery({
+      automationId: automation.id,
+      subscriberId: ctx.subscriberId,
+      email,
+      channel: automation.channel,
+      status: "skipped",
+      error: "Unsubscribed",
+    });
+    return false;
+  }
   const locale: Locale = ctx.locale === "en" ? "en" : "bg";
   const key = idempotencyKey(automation.id, email);
 
@@ -232,19 +247,26 @@ async function scheduleAutomation(
   if (!subjectRaw.trim() || !htmlRaw.trim()) return false;
 
   const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
+  const expandedHtml = await expandEmailProducts(htmlRaw, locale);
   const ctaLabel = locale === "en" ? automation.cta_label_en : automation.cta_label_bg;
   const ctaUrl = locale === "en" ? automation.cta_url_en : automation.cta_url_bg;
   const ctaHref =
     ctaLabel?.trim() && ctaUrl?.trim()
-      ? automationCtaRedirectUrl(automation.id, locale)
+      ? automationCtaRedirectUrl(
+          automation.id,
+          locale,
+          email,
+          ctx.subscriberId ?? undefined,
+        )
       : null;
   const html = buildBrandedEmail({
-    bodyHtml: htmlRaw,
+    bodyHtml: expandedHtml,
     locale,
     cta: ctaHref
       ? { label: ctaLabel.trim(), href: ctaHref }
       : null,
     vars: { name: ctx.name, email },
+    unsubscribeHref: unsubscribeLinkForEmail(email, locale),
   });
 
   const res = await scheduleEmail({
@@ -273,6 +295,17 @@ async function sendAutomationNow(
   ctx: AutomationRunContext,
 ): Promise<boolean> {
   const email = ctx.email.trim().toLowerCase();
+  if (await isEmailUnsubscribed(email)) {
+    await recordDelivery({
+      automationId: automation.id,
+      subscriberId: ctx.subscriberId,
+      email,
+      channel: automation.channel,
+      status: "skipped",
+      error: "Unsubscribed",
+    });
+    return false;
+  }
   const locale: Locale = ctx.locale === "en" ? "en" : "bg";
 
   if (automation.channel === "sms") {
@@ -317,19 +350,26 @@ async function sendAutomationNow(
   if (!subjectRaw.trim() || !htmlRaw.trim()) return false;
 
   const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
+  const expandedHtml = await expandEmailProducts(htmlRaw, locale);
   const ctaLabel = locale === "en" ? automation.cta_label_en : automation.cta_label_bg;
   const ctaUrl = locale === "en" ? automation.cta_url_en : automation.cta_url_bg;
   const ctaHref =
     ctaLabel?.trim() && ctaUrl?.trim()
-      ? automationCtaRedirectUrl(automation.id, locale)
+      ? automationCtaRedirectUrl(
+          automation.id,
+          locale,
+          email,
+          ctx.subscriberId ?? undefined,
+        )
       : null;
   const html = buildBrandedEmail({
-    bodyHtml: htmlRaw,
+    bodyHtml: expandedHtml,
     locale,
     cta: ctaHref
       ? { label: ctaLabel.trim(), href: ctaHref }
       : null,
     vars: { name: ctx.name, email },
+    unsubscribeHref: unsubscribeLinkForEmail(email, locale),
   });
 
   const res = await sendEmail({ subject, html, recipients: [email] });
@@ -349,13 +389,14 @@ async function executeAutomation(
   automation: Automation,
   ctx: AutomationRunContext,
   segments: Segment[],
+  groups: SegmentGroup[],
   opts?: { fromChain?: boolean },
 ): Promise<void> {
   const email = ctx.email.trim().toLowerCase();
   const tags = ctx.tags ?? [];
 
   if (automation.new_subscribers_only && !ctx.isNew) return;
-  if (!segmentMatches(automation, tags, segments)) return;
+  if (!segmentMatches(automation, tags, segments, groups)) return;
   if (await alreadyQueuedOrSent(automation.id, email)) return;
 
   if (automation.after_automation_id) {
@@ -404,12 +445,15 @@ async function executeAutomation(
 export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
   if (!isNotificationWorkerConfigured()) return;
 
+  const email = ctx.email.trim().toLowerCase();
+  if (await isEmailUnsubscribed(email)) return;
+
   const source = ctx.source ?? "popup";
   const events = resolveTriggerEvents(source, ctx.isNew);
   if (events.length === 0) return;
 
   const supabase = getAdminClient();
-  const [{ data, error }, { data: segmentRows }] = await Promise.all([
+  const [{ data, error }, { data: segmentRows }, { data: groupRows }] = await Promise.all([
     supabase
       .from("automations")
       .select("*")
@@ -417,6 +461,7 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
       .in("trigger_event", events)
       .order("sort_order", { ascending: true }),
     supabase.from("segments").select("*"),
+    supabase.from("segment_groups").select("*"),
   ]);
 
   if (error) {
@@ -425,10 +470,11 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
   }
 
   const segments = (segmentRows as Segment[]) ?? [];
+  const groups = (groupRows as SegmentGroup[]) ?? [];
   const rules = (data as Automation[]) ?? [];
   for (const rule of rules) {
     try {
-      await executeAutomation(rule, ctx, segments);
+      await executeAutomation(rule, ctx, segments, groups);
     } catch (err) {
       console.error(`[automation] rule ${rule.id}:`, err);
     }

@@ -1,15 +1,24 @@
-import { getSubscribers, getSegments, getSubscriberTags } from "@/lib/admin/data";
+import { getSubscribers, getSegments, getSegmentGroups, getSubscriberTags } from "@/lib/admin/data";
+import { getEngagementSummaryForEmails } from "@/lib/admin/engagement";
 import { SubscribersManager } from "@/components/admin/subscribers-manager";
 import { SegmentsManager } from "@/components/admin/segments-manager";
+import { GroupsManager } from "@/components/admin/groups-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSubscribersPage() {
-  const [subscribers, segments, subscriberTags] = await Promise.all([
+  const [subscribers, segments, groups, subscriberTags] = await Promise.all([
     getSubscribers(),
     getSegments(),
+    getSegmentGroups(),
     getSubscriberTags(),
   ]);
+
+  const engagementByEmail = Object.fromEntries(
+    (
+      await getEngagementSummaryForEmails(subscribers.map((s) => s.email))
+    ).entries(),
+  );
 
   return (
     <div>
@@ -18,11 +27,14 @@ export default async function AdminSubscribersPage() {
         Full control of your list — add manually, segment, export and manage status.
       </p>
       <div className="mt-8 space-y-8">
-        <SegmentsManager segments={segments} />
+        <GroupsManager groups={groups} />
+        <SegmentsManager segments={segments} groups={groups} />
         <SubscribersManager
           subscribers={subscribers}
           segments={segments}
+          groups={groups}
           subscriberTags={subscriberTags}
+          engagementByEmail={engagementByEmail}
         />
       </div>
     </div>

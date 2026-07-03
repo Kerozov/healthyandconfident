@@ -15,6 +15,10 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  GitBranch,
+  List,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import type {
   Automation,
@@ -23,6 +27,8 @@ import type {
   AutomationTrigger,
   AutomationStats,
   Segment,
+  SegmentGroup,
+  SiteProduct,
 } from "@/lib/supabase/types";
 import {
   createAutomation,
@@ -34,9 +40,11 @@ import {
   getAutomationDeliveriesReport,
   resendAutomationToNonOpeners,
 } from "@/app/(admin)/admin/actions";
-import { SegmentChecklist } from "@/components/admin/segment-checklist";
+import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
+import { AutomationFlowView } from "@/components/admin/automation-flow";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
+import { EmailProductPicker } from "@/components/admin/email-product-picker";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -207,6 +215,43 @@ function openRate(a: AutomationRow) {
   return Math.round((a.opened_count / a.sent_count) * 100);
 }
 
+function formatAutomationAudienceLine(
+  a: Automation,
+  groups: SegmentGroup[],
+  segments: Segment[],
+): string | null {
+  const includeParts: string[] = [];
+  for (const groupId of a.group_ids ?? []) {
+    const group = groups.find((g) => g.id === groupId);
+    if (group) includeParts.push(`група: ${group.name}`);
+  }
+  for (const key of a.segment_keys ?? []) {
+    const segment = segments.find((s) => s.key === key);
+    includeParts.push(segment?.name ?? key);
+  }
+
+  const excludeParts: string[] = [];
+  for (const groupId of a.exclude_group_ids ?? []) {
+    const group = groups.find((g) => g.id === groupId);
+    if (group) excludeParts.push(group.name);
+  }
+  for (const key of a.exclude_segment_keys ?? []) {
+    const segment = segments.find((s) => s.key === key);
+    excludeParts.push(segment?.name ?? key);
+  }
+
+  if (includeParts.length === 0 && excludeParts.length === 0) return null;
+
+  const logic = a.audience_logic === "all" ? " AND " : " | ";
+  const include =
+    includeParts.length > 0
+      ? includeParts.join(logic)
+      : "всички";
+  const exclude =
+    excludeParts.length > 0 ? ` · без: ${excludeParts.join(", ")}` : "";
+  return `${include}${exclude}`;
+}
+
 function Metric({
   label,
   value,
@@ -265,6 +310,10 @@ const EMPTY_FORM = {
   trigger_event: "new_subscriber" as AutomationTrigger,
   enabled: false,
   segment_keys: [] as string[],
+  group_ids: [] as string[],
+  audience_logic: "any" as "any" | "all",
+  exclude_group_ids: [] as string[],
+  exclude_segment_keys: [] as string[],
   new_subscribers_only: true,
   after_automation_id: "" as string,
   delay_days: 0,
@@ -290,6 +339,10 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     trigger_event: a.trigger_event,
     enabled: a.enabled,
     segment_keys: a.segment_keys ?? [],
+    group_ids: a.group_ids ?? [],
+    audience_logic: a.audience_logic === "all" ? "all" : "any",
+    exclude_group_ids: a.exclude_group_ids ?? [],
+    exclude_segment_keys: a.exclude_segment_keys ?? [],
     new_subscribers_only: a.new_subscribers_only,
     after_automation_id: a.after_automation_id ?? "",
     delay_days: a.delay_days ?? 0,
@@ -312,9 +365,13 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
 export function AutomationsManager({
   automations,
   segments,
+  groups,
+  products,
 }: {
   automations: AutomationRow[];
   segments: Segment[];
+  groups: SegmentGroup[];
+  products: SiteProduct[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -329,6 +386,7 @@ export function AutomationsManager({
   const [deliveries, setDeliveries] = useState<AutomationDelivery[] | null>(null);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>("all");
+  const [viewTab, setViewTab] = useState<"list" | "flow">("list");
 
   const hasTrackable = automations.some(
     (a) => a.sent_count > 0 || a.scheduled_count > 0,
@@ -532,6 +590,33 @@ export function AutomationsManager({
         </div>
       </div>
 
+      <div className="inline-flex gap-1 rounded-xl border border-ink/15 bg-white p-1">
+        <button
+          type="button"
+          onClick={() => setViewTab("list")}
+          className={cn(
+            "inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium transition",
+            viewTab === "list"
+              ? "bg-forest-600 text-cream"
+              : "text-ink-soft hover:bg-ink/5",
+          )}
+        >
+          <List className="h-4 w-4" /> Списък
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewTab("flow")}
+          className={cn(
+            "inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium transition",
+            viewTab === "flow"
+              ? "bg-forest-600 text-cream"
+              : "text-ink-soft hover:bg-ink/5",
+          )}
+        >
+          <GitBranch className="h-4 w-4" /> Пътища
+        </button>
+      </div>
+
       {editingId && (
         <Card title={editingId === "new" ? "Нова автоматизация" : "Редакция"}>
           <div className="space-y-5">
@@ -623,17 +708,90 @@ export function AutomationsManager({
               />
             </div>
 
-            <Field
-              label="Сегменти (по избор)"
-              hint="Празно = всички. Абонатът трябва да е в поне един избран сегмент."
-            >
-              <SegmentChecklist
-                segments={segments}
-                selected={form.segment_keys}
-                onChange={(segment_keys) => setForm({ ...form, segment_keys })}
-                disabled={pending}
-              />
-            </Field>
+            <div className="rounded-2xl border border-ink/10 bg-white p-5 space-y-5">
+              <div>
+                <p className="text-sm font-semibold text-ink">Аудитория — кой получава</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  Първо избери <strong>кого включваш</strong>, после по желание{" "}
+                  <strong>кого изключваш</strong>. Изключенията имат приоритет.
+                </p>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div className="rounded-xl border border-forest-500/25 bg-forest-50/30 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4 text-forest-600" />
+                    <p className="text-sm font-semibold text-forest-800">Включване</p>
+                  </div>
+                  <p className="text-xs text-ink-soft">
+                    Празно = всички абонати. Иначе само избраните групи/сегменти.
+                  </p>
+                  <div className="inline-flex flex-wrap gap-2 rounded-xl border border-ink/15 bg-white p-1">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => setForm({ ...form, audience_logic: "any" })}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
+                        form.audience_logic !== "all"
+                          ? "bg-forest-600 text-cream"
+                          : "text-ink-soft hover:bg-ink/5",
+                      )}
+                    >
+                      OR
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => setForm({ ...form, audience_logic: "all" })}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
+                        form.audience_logic === "all"
+                          ? "bg-forest-600 text-cream"
+                          : "text-ink-soft hover:bg-ink/5",
+                      )}
+                    >
+                      AND
+                    </button>
+                  </div>
+                  <AudienceTargetChecklist
+                    segments={segments}
+                    groups={groups}
+                    selectedSegmentKeys={form.segment_keys}
+                    selectedGroupIds={form.group_ids}
+                    onChangeSegments={(segment_keys) => setForm({ ...form, segment_keys })}
+                    onChangeGroups={(group_ids) => setForm({ ...form, group_ids })}
+                    disabled={pending}
+                    variant="include"
+                  />
+                </div>
+
+                <div className="rounded-xl border border-coral-500/30 bg-coral-500/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <UserMinus className="h-4 w-4 text-coral-600" />
+                    <p className="text-sm font-semibold text-coral-800">Изключване</p>
+                  </div>
+                  <p className="text-xs text-ink-soft">
+                    Ако е в тези групи/сегменти — <strong>няма</strong> да получи този
+                    имейл/SMS, дори да отговаря на включването.
+                  </p>
+                  <AudienceTargetChecklist
+                    segments={segments}
+                    groups={groups}
+                    selectedSegmentKeys={form.exclude_segment_keys}
+                    selectedGroupIds={form.exclude_group_ids}
+                    onChangeSegments={(exclude_segment_keys) =>
+                      setForm({ ...form, exclude_segment_keys })
+                    }
+                    onChangeGroups={(exclude_group_ids) =>
+                      setForm({ ...form, exclude_group_ids })
+                    }
+                    disabled={pending}
+                    variant="exclude"
+                  />
+                </div>
+              </div>
+            </div>
 
             <div className="rounded-2xl border border-ink/10 bg-cream-2/40 p-5 space-y-4">
               <div>
@@ -787,6 +945,13 @@ export function AutomationsManager({
                       }
                     />
                   </Field>
+                  <EmailProductPicker
+                    products={products}
+                    locale="bg"
+                    html={form.html_bg}
+                    onInsert={(html_bg) => setForm({ ...form, html_bg })}
+                    disabled={pending}
+                  />
                   <Field label="Текст на бутона (по избор)">
                     <Input
                       value={form.cta_label_bg}
@@ -813,6 +978,7 @@ export function AutomationsManager({
                     ctaLabel={form.cta_label_bg}
                     ctaUrl={form.cta_url_bg}
                     locale="bg"
+                    products={products}
                   />
                 </div>
                 <div className="space-y-3 rounded-xl border border-ink/10 p-4">
@@ -835,6 +1001,13 @@ export function AutomationsManager({
                       }
                     />
                   </Field>
+                  <EmailProductPicker
+                    products={products}
+                    locale="en"
+                    html={form.html_en}
+                    onInsert={(html_en) => setForm({ ...form, html_en })}
+                    disabled={pending}
+                  />
                   <Field label="Button text (optional)">
                     <Input
                       value={form.cta_label_en}
@@ -861,6 +1034,7 @@ export function AutomationsManager({
                     ctaLabel={form.cta_label_en}
                     ctaUrl={form.cta_url_en}
                     locale="en"
+                    products={products}
                   />
                 </div>
               </div>
@@ -907,6 +1081,15 @@ export function AutomationsManager({
         </Card>
       )}
 
+      {viewTab === "flow" ? (
+        <Card title="Визуализация на пътищата">
+          <AutomationFlowView
+            automations={automations}
+            groups={groups}
+            segments={segments}
+          />
+        </Card>
+      ) : (
       <div className="space-y-3">
         {automations.length === 0 ? (
           <div className="rounded-2xl border border-ink/10 bg-white p-8 text-center">
@@ -936,6 +1119,7 @@ export function AutomationsManager({
         ) : (
           automations.map((a) => {
             const rate = openRate(a);
+            const audienceLine = formatAutomationAudienceLine(a, groups, segments);
             const rowBusy = busyId === a.id && pending;
             const isExpanded = expandedId === a.id;
             const canResend =
@@ -971,8 +1155,7 @@ export function AutomationsManager({
                   </div>
                   <p className="mt-1 text-sm text-ink-soft">
                     {triggerSummary(a)}
-                    {a.segment_keys.length > 0 &&
-                      ` · сегменти: ${a.segment_keys.join(", ")}`}
+                    {audienceLine && ` · ${audienceLine}`}
                     {` · ${audienceSummary(a.new_subscribers_only)}`}
                   </p>
                   <p className="mt-1 text-sm font-medium text-forest-700">
@@ -1053,6 +1236,20 @@ export function AutomationsManager({
                         tone="good"
                       />
                       <Metric label="Not opened" value={a.not_opened_count} tone="muted" />
+                      {(a.total_clicks ?? 0) > 0 && (
+                        <Metric
+                          label="Clicks"
+                          value={
+                            <span>
+                              {a.total_clicks}
+                              <span className="ml-1 text-xs font-normal text-ink-soft/60">
+                                {a.unique_clickers_count} човека
+                              </span>
+                            </span>
+                          }
+                          tone="good"
+                        />
+                      )}
                     </>
                   )}
                   {a.bounced_count > 0 && (
@@ -1121,6 +1318,7 @@ export function AutomationsManager({
                             <th className="px-4 py-2">Status</th>
                             <th className="px-4 py-2">Sent</th>
                             <th className="px-4 py-2">Opened</th>
+                            <th className="px-4 py-2">Clicks</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1146,6 +1344,9 @@ export function AutomationsManager({
                               </td>
                               <td className="px-4 py-2 text-xs text-ink-soft">
                                 {d.opened_at ? formatDate(d.opened_at, "en") : "—"}
+                              </td>
+                              <td className="px-4 py-2 text-xs font-medium text-forest-700">
+                                {d.click_count ?? 0}
                               </td>
                             </tr>
                           ))}
@@ -1190,6 +1391,7 @@ export function AutomationsManager({
           })
         )}
       </div>
+      )}
     </div>
   );
 }

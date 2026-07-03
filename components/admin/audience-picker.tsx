@@ -1,28 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AudienceInput, Segment } from "@/lib/supabase/types";
+import type { AudienceInput, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { previewAudience } from "@/app/(admin)/admin/actions";
 import { Field, Select } from "@/components/admin/fields";
-import { SegmentChecklist } from "@/components/admin/segment-checklist";
+import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
 import { cn } from "@/lib/utils";
 
 const EMPTY_AUDIENCE: AudienceInput = {
   mode: "segment",
   segment_key: "all",
   segment_keys: [],
+  group_ids: [],
   tags: [],
   locale: "",
 };
 
 export function AudiencePicker({
   segments,
+  groups,
   subscriberTags,
   value,
   onChange,
   channel = "email",
 }: {
   segments: Segment[];
+  groups: SegmentGroup[];
   subscriberTags: string[];
   value: AudienceInput;
   onChange: (next: AudienceInput) => void;
@@ -107,14 +110,25 @@ export function AudiencePicker({
               <input
                 type="checkbox"
                 checked={
-                  value.segment_keys?.length === 0 &&
+                  (value.segment_keys?.length ?? 0) === 0 &&
+                  (value.group_ids?.length ?? 0) === 0 &&
                   (value.segment_key === "all" || !value.segment_key)
                 }
                 onChange={(e) => {
                   if (e.target.checked) {
-                    onChange({ ...value, segment_key: "all", segment_keys: [] });
+                    onChange({
+                      ...value,
+                      segment_key: "all",
+                      segment_keys: [],
+                      group_ids: [],
+                    });
                   } else {
-                    onChange({ ...value, segment_key: "", segment_keys: [] });
+                    onChange({
+                      ...value,
+                      segment_key: "",
+                      segment_keys: [],
+                      group_ids: [],
+                    });
                   }
                 }}
               />
@@ -122,19 +136,22 @@ export function AudiencePicker({
             </label>
           </Field>
           <Field
-            label="Сегменти"
-            hint="Изберете една или повече групи. Родителска група включва автоматично всички подгрупи (OR между избраните)."
+            label="Групи и сегменти"
+            hint="Групата обединява сегментите в нея. Можеш да избереш група, отделни сегменти, или и двете (OR)."
           >
-            <SegmentChecklist
+            <AudienceTargetChecklist
               segments={segments}
-              selected={value.segment_keys ?? []}
-              onChange={(segment_keys) =>
+              groups={groups}
+              selectedSegmentKeys={value.segment_keys ?? []}
+              selectedGroupIds={value.group_ids ?? []}
+              onChangeSegments={(segment_keys) =>
                 onChange({
                   ...value,
                   segment_key: segment_keys.length ? segment_keys[0] : "all",
                   segment_keys,
                 })
               }
+              onChangeGroups={(group_ids) => onChange({ ...value, group_ids })}
             />
           </Field>
         </div>

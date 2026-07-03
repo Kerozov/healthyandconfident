@@ -178,4 +178,18 @@ export type Dictionary = {
     defaultMessage: string;
     defaultCta: string;
   };
+  unsubscribe: {
+    title: string;
+    helpBody: string;
+    successTitle: string;
+    successBody: string;
+    alreadyTitle: string;
+    alreadyBody: string;
+    invalidTitle: string;
+    invalidBody: string;
+    notFoundTitle: string;
+    notFoundBody: string;
+    resubscribeHint: string;
+    backHome: string;
+  };
 };

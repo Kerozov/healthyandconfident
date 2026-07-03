@@ -25,16 +25,13 @@ export function ImageUploadField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   function pickFile() {
     inputRef.current?.click();
   }
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
+  function uploadFile(file: File) {
     setError(null);
     const formData = new FormData();
     formData.set("file", file);
@@ -50,23 +47,68 @@ export function ImageUploadField({
     });
   }
 
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    uploadFile(file);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file || pending) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Само изображения (JPEG, PNG, WebP…).");
+      return;
+    }
+    uploadFile(file);
+  }
+
   return (
     <Field label={label} hint={hint}>
       <div className={cn("space-y-3", className)}>
-        {value ? (
-          <div className="relative inline-block">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={value}
-              alt=""
-              className="max-h-40 rounded-xl border border-ink/10 object-cover"
-            />
-          </div>
-        ) : (
-          <div className="flex h-28 w-full max-w-xs items-center justify-center rounded-xl border border-dashed border-ink/20 bg-cream-2/40 text-xs text-ink-soft">
-            Няма снимка
-          </div>
-        )}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!pending) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          onClick={!value && !pending ? pickFile : undefined}
+          className={cn(
+            "relative overflow-hidden rounded-xl border transition",
+            value ? "border-ink/10" : "cursor-pointer border-dashed",
+            dragOver
+              ? "border-forest-500 bg-forest-50/50"
+              : value
+                ? "bg-white"
+                : "border-ink/20 bg-cream-2/40 hover:border-forest-500/40",
+          )}
+        >
+          {value ? (
+            <div className="relative inline-block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={value}
+                alt=""
+                className="max-h-40 rounded-xl object-cover"
+              />
+            </div>
+          ) : (
+            <div className="flex h-28 w-full max-w-xs flex-col items-center justify-center gap-1 px-4 text-center text-xs text-ink-soft">
+              {pending ? (
+                <Loader2 className="h-6 w-6 animate-spin text-forest-600" />
+              ) : (
+                <>
+                  <ImagePlus className="h-6 w-6 text-ink-soft/60" />
+                  <span>Пусни снимка тук или кликни</span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         <input
           ref={inputRef}

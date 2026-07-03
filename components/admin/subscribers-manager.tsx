@@ -1,17 +1,24 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Download, Upload, Trash2, Tag, UserMinus, UserCheck, X } from "lucide-react";
-import type { Subscriber, Segment } from "@/lib/supabase/types";
+import { Plus, Download, Upload, Trash2, Tag, UserMinus, UserCheck, X, ChevronDown, ChevronUp, BarChart3, Loader2 } from "lucide-react";
+import type { Subscriber, Segment, SegmentGroup } from "@/lib/supabase/types";
+import type { EmailEngagementSummary, EngagementActivityItem } from "@/lib/admin/engagement";
+import {
+  SegmentAssignChecklist,
+  assignableSegments,
+  mergeTags,
+  parseTagList,
+} from "@/components/admin/segment-checklist";
+import { getSegmentKeysForGroup } from "@/lib/segments/hierarchy";
 import {
   addSubscriber,
   updateSubscriber,
   deleteSubscriber,
   importSubscribers,
+  getSubscriberEngagementReport,
 } from "@/app/(admin)/admin/actions";
-import { SegmentChecklist, assignableSegments, mergeTags, parseTagList } from "@/components/admin/segment-checklist";
-import { expandSegmentKeys, flattenSegmentTreeWithDepth } from "@/lib/segments/hierarchy";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
 import {
   exportSubscribersCsv,
@@ -22,15 +29,20 @@ import {
   parseSubscriberFile,
   type ImportSubscriberRow,
 } from "@/lib/admin/import-subscribers";
+import { formatDate } from "@/lib/utils";
 
 export function SubscribersManager({
   subscribers,
   segments,
+  groups,
   subscriberTags = [],
+  engagementByEmail = {},
 }: {
   subscribers: Subscriber[];
   segments: Segment[];
+  groups: SegmentGroup[];
   subscriberTags?: string[];
+  engagementByEmail?: Record<string, EmailEngagementSummary>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -60,18 +72,32 @@ export function SubscribersManager({
     { line: number; reason: string }[]
   >([]);
   const [importNote, setImportNote] = useState<string | null>(null);
+  const [statsEmail, setStatsEmail] = useState<string | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsDetail, setStatsDetail] = useState<{
+    summary: EmailEngagementSummary;
+    activity: EngagementActivityItem[];
+  } | null>(null);
 
   const filtered = useMemo(() => {
-    const expandedTags =
-      tagFilter !== "all" ? expandSegmentKeys([tagFilter], segments) : null;
+    let expandedTags: string[] | null = null;
+    if (tagFilter.startsWith("group:")) {
+      expandedTags = getSegmentKeysForGroup(
+        tagFilter.slice("group:".length),
+        groups,
+        segments,
+      );
+    } else if (tagFilter !== "all") {
+      expandedTags = [tagFilter];
+    }
     return subscribers.filter((s) => {
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
-      if (expandedTags && !s.tags.some((t) => expandedTags.includes(t))) return false;
+      if (expandedTags && !s.tags.some((t) => expandedTags!.includes(t))) return false;
       if (search && !s.email.toLowerCase().includes(search.toLowerCase()))
         return false;
       return true;
     });
-  }, [subscribers, statusFilter, tagFilter, search, segments]);
+  }, [subscribers, statusFilter, tagFilter, search, segments, groups]);
 
   const segmentKeySet = useMemo(
     () => new Set(assignableSegments(segments).map((s) => s.key)),
@@ -156,6 +182,22 @@ export function SubscribersManager({
     });
   }
 
+  async function toggleStats(email: string) {
+    if (statsEmail === email) {
+      setStatsEmail(null);
+      setStatsDetail(null);
+      return;
+    }
+    setStatsEmail(email);
+    setStatsLoading(true);
+    setStatsDetail(null);
+    const res = await getSubscriberEngagementReport(email);
+    setStatsLoading(false);
+    if (res.ok) {
+      setStatsDetail({ summary: res.summary, activity: res.activity });
+    }
+  }
+
   async function handleImportFile(file: File | null) {
     setImportNote(null);
     setImportPreview(null);
@@ -237,8 +279,9 @@ export function SubscribersManager({
           </div>
 
           <Field label="Segments" hint="Tick one or more segments.">
-            <SegmentChecklist
+            <SegmentAssignChecklist
               segments={segments}
+              groups={groups}
               selected={add.tagKeys}
               onChange={(tagKeys) => setAdd({ ...add, tagKeys })}
               disabled={pending}
@@ -247,19 +290,32 @@ export function SubscribersManager({
 
           {customTagOptions.length > 0 && (
             <Field label="Existing tags" hint="Tags already used on other subscribers.">
-              <SegmentChecklist
-                segments={customTagOptions.map((key) => ({
-                  id: key,
-                  key,
-                  name: key,
-                  description: null,
-                  parent_id: null,
-                  created_at: "",
-                }))}
-                selected={add.tagKeys}
-                onChange={(tagKeys) => setAdd({ ...add, tagKeys })}
-              disabled={pending}
-              />
+              <div className="flex flex-wrap gap-2">
+                {customTagOptions.map((tag) => {
+                  const active = add.tagKeys.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() =>
+                        setAdd({
+                          ...add,
+                          tagKeys: active
+                            ? add.tagKeys.filter((k) => k !== tag)
+                            : [...add.tagKeys, tag],
+                        })
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-sm ${
+                        active
+                          ? "border-coral-400 bg-coral-500/10 text-coral-600"
+                          : "border-ink/15 text-ink-soft"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
             </Field>
           )}
 
@@ -296,8 +352,9 @@ export function SubscribersManager({
           label="Default segments"
           hint="Applied when a row has no segments column or it is empty."
         >
-          <SegmentChecklist
+          <SegmentAssignChecklist
             segments={segments}
+            groups={groups}
             selected={importSegments}
             onChange={setImportSegments}
             disabled={pending}
@@ -371,8 +428,9 @@ export function SubscribersManager({
       {editing && (
         <Card title={`Tags — ${editing.email}`}>
           <Field label="Segments">
-            <SegmentChecklist
+            <SegmentAssignChecklist
               segments={segments}
+              groups={groups}
               selected={editTagKeys}
               onChange={setEditTagKeys}
               disabled={pending}
@@ -382,19 +440,31 @@ export function SubscribersManager({
           {customTagOptions.length > 0 && (
             <div className="mt-4">
               <Field label="Existing tags">
-                <SegmentChecklist
-                  segments={customTagOptions.map((key) => ({
-                    id: key,
-                    key,
-                    name: key,
-                    description: null,
-                    parent_id: null,
-                    created_at: "",
-                  }))}
-                  selected={editTagKeys}
-                  onChange={setEditTagKeys}
-                  disabled={pending}
-                />
+                <div className="flex flex-wrap gap-2">
+                  {customTagOptions.map((tag) => {
+                    const active = editTagKeys.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() =>
+                          setEditTagKeys(
+                            active
+                              ? editTagKeys.filter((k) => k !== tag)
+                              : [...editTagKeys, tag],
+                          )
+                        }
+                        className={`rounded-full border px-3 py-1.5 text-sm ${
+                          active
+                            ? "border-coral-400 bg-coral-500/10 text-coral-600"
+                            : "border-ink/15 text-ink-soft"
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
               </Field>
             </div>
           )}
@@ -429,12 +499,17 @@ export function SubscribersManager({
 
       <Card>
         <div className="flex flex-wrap items-end gap-3">
-          <Field label="Segment">
+          <Field label="Filter">
             <Select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
-              <option value="all">Всички сегменти</option>
-              {flattenSegmentTreeWithDepth(segments).map(({ segment: s, depth }) => (
-                <option key={s.key} value={s.key}>
-                  {`${"— ".repeat(depth)}${s.name}`}
+              <option value="all">Всички</option>
+              {groups.map((group) => (
+                <option key={group.id} value={`group:${group.id}`}>
+                  Група: {group.name}
+                </option>
+              ))}
+              {assignableSegments(segments).map((segment) => (
+                <option key={segment.key} value={segment.key}>
+                  Сегмент: {segment.name}
                 </option>
               ))}
             </Select>
@@ -479,75 +554,180 @@ export function SubscribersManager({
                 <th className="py-2 pr-4">Segments</th>
                 <th className="py-2 pr-4">Source</th>
                 <th className="py-2 pr-4">Status</th>
+                <th className="py-2 pr-4 text-center">Отворени</th>
+                <th className="py-2 pr-4 text-center">Кликове</th>
                 <th className="py-2 pr-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s) => (
-                <tr key={s.id} className="border-b border-ink/5 last:border-0">
-                  <td className="py-3 pr-4 font-medium">{s.email}</td>
-                  <td className="py-3 pr-4 text-ink-soft">{s.name || "—"}</td>
-                  <td className="py-3 pr-4 text-ink-soft">{s.phone || "—"}</td>
-                  <td className="py-3 pr-4 uppercase text-ink-soft">{s.locale}</td>
-                  <td className="py-3 pr-4">
-                    <div className="flex flex-wrap gap-1">
-                      {s.tags.length === 0 ? (
-                        <span className="text-ink-soft/50">—</span>
-                      ) : (
-                        s.tags.map((t) => (
-                          <span
-                            key={t}
-                            className="rounded-full bg-forest-50 px-2 py-0.5 text-xs text-forest-600"
-                          >
-                            {segmentNameByKey(t)}
+              {filtered.map((s) => {
+                const stats = engagementByEmail[s.email.toLowerCase()];
+                const isStatsOpen = statsEmail === s.email;
+                return (
+                  <Fragment key={s.id}>
+                    <tr className="border-b border-ink/5">
+                      <td className="py-3 pr-4 font-medium">{s.email}</td>
+                      <td className="py-3 pr-4 text-ink-soft">{s.name || "—"}</td>
+                      <td className="py-3 pr-4 text-ink-soft">{s.phone || "—"}</td>
+                      <td className="py-3 pr-4 uppercase text-ink-soft">{s.locale}</td>
+                      <td className="py-3 pr-4">
+                        <div className="flex flex-wrap gap-1">
+                          {s.tags.length === 0 ? (
+                            <span className="text-ink-soft/50">—</span>
+                          ) : (
+                            s.tags.map((t) => (
+                              <span
+                                key={t}
+                                className="rounded-full bg-forest-50 px-2 py-0.5 text-xs text-forest-600"
+                              >
+                                {segmentNameByKey(t)}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4 text-ink-soft">{s.source}</td>
+                      <td className="py-3 pr-4">
+                        <span
+                          className={
+                            s.status === "subscribed"
+                              ? "rounded-full bg-forest-500/15 px-2.5 py-1 text-xs text-forest-600"
+                              : "rounded-full bg-ink/10 px-2.5 py-1 text-xs text-ink-soft"
+                          }
+                        >
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-center text-ink-soft">
+                        {stats?.emailsOpened ?? 0}
+                        {stats && stats.emailsSent > 0 && (
+                          <span className="block text-[10px] text-ink-soft/60">
+                            / {stats.emailsSent}
                           </span>
-                        ))
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4 text-ink-soft">{s.source}</td>
-                  <td className="py-3 pr-4">
-                    <span
-                      className={
-                        s.status === "subscribed"
-                          ? "rounded-full bg-forest-500/15 px-2.5 py-1 text-xs text-forest-600"
-                          : "rounded-full bg-ink/10 px-2.5 py-1 text-xs text-ink-soft"
-                      }
-                    >
-                      {s.status}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => openEditSegments(s)}
-                        title="Edit segments"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink"
-                      >
-                        <Tag className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => toggleStatus(s)}
-                        title="Toggle status"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink"
-                      >
-                        {s.status === "subscribed" ? (
-                          <UserMinus className="h-4 w-4" />
-                        ) : (
-                          <UserCheck className="h-4 w-4" />
                         )}
-                      </button>
-                      <button
-                        onClick={() => remove(s)}
-                        title="Delete"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </td>
+                      <td className="py-3 pr-4 text-center font-medium text-forest-700">
+                        {stats?.totalClicks ?? 0}
+                      </td>
+                      <td className="py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => toggleStats(s.email)}
+                            title="Статистика имейли"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-forest-500/10 hover:text-forest-700"
+                          >
+                            {isStatsOpen ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <BarChart3 className="h-4 w-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => openEditSegments(s)}
+                            title="Edit segments"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink"
+                          >
+                            <Tag className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => toggleStatus(s)}
+                            title="Toggle status"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink"
+                          >
+                            {s.status === "subscribed" ? (
+                              <UserMinus className="h-4 w-4" />
+                            ) : (
+                              <UserCheck className="h-4 w-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => remove(s)}
+                            title="Delete"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isStatsOpen && (
+                      <tr className="border-b border-ink/5 bg-cream-2/30">
+                        <td colSpan={10} className="px-4 py-4">
+                          {statsLoading ? (
+                            <p className="flex items-center gap-2 text-sm text-ink-soft">
+                              <Loader2 className="h-4 w-4 animate-spin" /> Зареждане…
+                            </p>
+                          ) : statsDetail ? (
+                            <div className="space-y-4">
+                              <div className="flex flex-wrap gap-6 text-sm">
+                                <p>
+                                  <span className="text-ink-soft">Изпратени:</span>{" "}
+                                  <strong>{statsDetail.summary.emailsSent}</strong>
+                                </p>
+                                <p>
+                                  <span className="text-ink-soft">Отворени:</span>{" "}
+                                  <strong>
+                                    {statsDetail.summary.emailsOpened} (
+                                    {statsDetail.summary.openRate}%)
+                                  </strong>
+                                </p>
+                                <p>
+                                  <span className="text-ink-soft">Кликове бутон:</span>{" "}
+                                  <strong>{statsDetail.summary.totalClicks}</strong>
+                                </p>
+                              </div>
+                              {statsDetail.activity.length > 0 ? (
+                                <div className="overflow-x-auto rounded-xl border border-ink/10 bg-white">
+                                  <table className="w-full text-sm">
+                                    <thead>
+                                      <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
+                                        <th className="px-3 py-2">Имейл</th>
+                                        <th className="px-3 py-2">Тип</th>
+                                        <th className="px-3 py-2">Изпратен</th>
+                                        <th className="px-3 py-2">Отворен</th>
+                                        <th className="px-3 py-2">Кликове</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {statsDetail.activity.map((item, i) => (
+                                        <tr key={`${item.title}-${item.sentAt}-${i}`} className="border-b border-ink/5 last:border-0">
+                                          <td className="px-3 py-2 font-medium">{item.title}</td>
+                                          <td className="px-3 py-2 text-ink-soft">
+                                            {item.kind === "campaign" ? "Кампания" : "Автоматизация"}
+                                          </td>
+                                          <td className="px-3 py-2 text-xs text-ink-soft">
+                                            {formatDate(item.sentAt, "bg")}
+                                          </td>
+                                          <td className="px-3 py-2 text-xs text-ink-soft">
+                                            {item.opened
+                                              ? item.openedAt
+                                                ? formatDate(item.openedAt, "bg")
+                                                : "Да"
+                                              : "—"}
+                                          </td>
+                                          <td className="px-3 py-2 font-medium text-forest-700">
+                                            {item.clicks}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-ink-soft">
+                                  Няма изпратени имейли към този адрес още.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-ink-soft">Няма данни.</p>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
           {filtered.length === 0 && (

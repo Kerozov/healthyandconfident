@@ -65,6 +65,12 @@ function openRate(c: EmailCampaign) {
   return Math.round((c.opened_count / base) * 100);
 }
 
+function clickRate(c: EmailCampaign) {
+  const base = c.sent_count || c.recipients_count;
+  if (!base) return 0;
+  return Math.round(((c.clicked_count ?? 0) / base) * 100);
+}
+
 function audienceLabel(c: EmailCampaign) {
   if (c.target_tags?.length) return `tags: ${c.target_tags.join(", ")}`;
   return c.segment_tag;
@@ -246,6 +252,7 @@ export function CampaignsTable({
         <div className="space-y-3">
           {campaigns.map((c) => {
             const rate = openRate(c);
+            const ctr = clickRate(c);
             const isResend = Boolean(c.parent_campaign_id);
             const canResend =
               Boolean(c.worker_job_id) &&
@@ -349,6 +356,18 @@ export function CampaignsTable({
                     }
                     tone="good"
                   />
+                  <Metric
+                    label="Clicks"
+                    value={
+                      <span>
+                        {c.clicked_count ?? 0}
+                        <span className="ml-1 text-xs font-normal text-ink-soft/60">
+                          {ctr}%
+                        </span>
+                      </span>
+                    }
+                    tone="good"
+                  />
                   <Metric label="Not opened" value={c.not_opened_count} tone="muted" />
                   {(c.bounced_count ?? 0) > 0 && (
                     <Metric label="Bounced" value={c.bounced_count} tone="bad" />
@@ -393,6 +412,7 @@ export function CampaignsTable({
                             <th className="px-4 py-2">Status</th>
                             <th className="px-4 py-2">Sent</th>
                             <th className="px-4 py-2">Opened</th>
+                            <th className="px-4 py-2">Clicks</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -407,6 +427,9 @@ export function CampaignsTable({
                               </td>
                               <td className="px-4 py-2 text-xs text-ink-soft">
                                 {r.openedAt ? formatDate(r.openedAt, "en") : "—"}
+                              </td>
+                              <td className="px-4 py-2 text-xs font-medium text-forest-700">
+                                {"clickCount" in r ? (r as { clickCount?: number }).clickCount ?? 0 : 0}
                               </td>
                             </tr>
                           ))}

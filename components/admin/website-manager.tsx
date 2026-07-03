@@ -10,7 +10,6 @@ import {
   X,
   Check,
   Calendar,
-  ShoppingBag,
   Play,
 } from "lucide-react";
 import type { SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection, SiteVideo } from "@/lib/supabase/types";
@@ -26,6 +25,7 @@ import {
   saveSiteProduct,
   deleteSiteProduct,
 } from "@/app/(admin)/admin/actions";
+import { ProductAdminGrid } from "@/components/admin/product-admin-grid";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { cn } from "@/lib/utils";
@@ -533,56 +533,14 @@ export function WebsiteManager({
             </div>
           ) : null}
 
-          <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
-            {products.length === 0 ? (
-              <p className="p-4 text-sm text-ink-soft">
-                Няма продукти. Натисни <strong>Нов продукт</strong> горе вдясно.
-              </p>
-            ) : (
-              products.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex items-start justify-between gap-4 px-4 py-3"
-                >
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <ShoppingBag className="h-4 w-4 text-coral-500" />
-                      <p className="font-medium">{product.title_bg}</p>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                          product.enabled
-                            ? "bg-forest-500/15 text-forest-600"
-                            : "bg-ink/10 text-ink-soft",
-                        )}
-                      >
-                        {product.enabled ? "Активна" : "Скрита"}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-ink-soft">
-                      {product.stripe_url}
-                      {product.price_label_bg ? ` · ${product.price_label_bg}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => openEditProduct(product)}
-                      disabled={pending}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => removeProduct(product.id, product.title_bg)}
-                      disabled={pending}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="mt-4">
+            <ProductAdminGrid
+              products={products}
+              onEdit={openEditProduct}
+              onDelete={removeProduct}
+              onReordered={refresh}
+              disabled={pending || editingProductId !== null}
+            />
           </div>
         </Card>
       )}

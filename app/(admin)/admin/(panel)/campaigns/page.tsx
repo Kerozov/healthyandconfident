@@ -2,6 +2,8 @@ import {
   getEmailCampaigns,
   getSmsCampaigns,
   getSegments,
+  getSegmentGroups,
+  getSiteProducts,
   getSubscriberTags,
 } from "@/lib/admin/data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
@@ -10,11 +12,13 @@ import { CampaignsWorkspace } from "@/components/admin/campaigns-workspace";
 export const dynamic = "force-dynamic";
 
 export default async function AdminCampaignsPage() {
-  const [emailCampaigns, smsCampaigns, segments, subscriberTags] =
+  const [emailCampaigns, smsCampaigns, segments, groups, products, subscriberTags] =
     await Promise.all([
       getEmailCampaigns(),
       getSmsCampaigns(),
       getSegments(),
+      getSegmentGroups(),
+      getSiteProducts(true),
       getSubscriberTags(),
     ]);
   const workerConfigured = isNotificationWorkerConfigured();
@@ -32,6 +36,8 @@ export default async function AdminCampaignsPage() {
           emailCampaigns={emailCampaigns}
           smsCampaigns={smsCampaigns}
           segments={segments}
+          groups={groups}
+          products={products}
           subscriberTags={subscriberTags}
           workerConfigured={workerConfigured}
         />

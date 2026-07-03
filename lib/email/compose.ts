@@ -9,6 +9,7 @@ export function buildBrandedEmail(input: {
   locale?: "bg" | "en";
   cta?: EmailCta | null;
   vars?: { name?: string | null; email: string };
+  unsubscribeHref?: string | null;
 }): string {
   const body = input.vars
     ? renderEmailTemplate(input.bodyHtml, input.vars)
@@ -23,5 +24,6 @@ export function buildBrandedEmail(input: {
     bodyHtml: body,
     locale: input.locale ?? "bg",
     cta,
+    unsubscribeHref: input.unsubscribeHref,
   });
 }

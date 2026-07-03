@@ -10,31 +10,50 @@ import {
   scheduleEmail,
   getJobReport,
   cancelEmailJob,
+  notOpenedRecipientEmails,
   type RecipientRow,
 } from "@/lib/worker/email";
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
 import { runAutomations } from "@/lib/automation/send";
 import { composeBrandedEmail } from "@/lib/email/layout";
+import { expandEmailProducts } from "@/lib/email/expand-products";
 import {
   campaignCtaRedirectUrl,
   isSafeCtaTarget,
 } from "@/lib/email/cta-redirect";
+import {
+  filterSubscribedEmails,
+  unsubscribeLinkForEmail,
+} from "@/lib/email/unsubscribe";
 import { cancelAutomationScheduledJobs } from "@/lib/automation/cancel";
 import {
   syncAutomationDeliveries,
 } from "@/lib/automation/sync";
+import {
+  syncCampaignDeliveries,
+  getCampaignClickCountsByEmail,
+} from "@/lib/campaign/sync-deliveries";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
 import type { Automation, AutomationDelivery } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
-import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment } from "@/lib/supabase/types";
-import { expandSegmentKeys, isDescendantOf } from "@/lib/segments/hierarchy";
+import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
+import { expandAudienceKeys, isDescendantGroup } from "@/lib/segments/hierarchy";
 import { uploadMediaImage } from "@/lib/supabase/media";
 import { MEDIA_FOLDERS, type MediaFolder } from "@/lib/media/folders";
-import { parseYoutubeVideoId } from "@/lib/youtube";
+import {
+  getEngagementOverview,
+  getEngagementSummaryForEmails,
+  getSubscriberEngagementDetail,
+} from "@/lib/admin/engagement";
+import type { FormField, FormSettings } from "@/lib/forms/types";
+import { getFormPreset, FORM_PRESETS } from "@/lib/forms/presets";
+import { getFormSubmissions } from "@/lib/admin/forms-data";
+import { publicFormUrl } from "@/lib/forms/urls";
+import { createFormInviteToken } from "@/lib/forms/form-invite-token";
 
-export type ActionResult = { ok: boolean; message?: string; id?: string };
+export type ActionResult = { ok: boolean; message?: string; id?: string; slug?: string };
 
 function readingMinutes(content: string) {
   const words = content.trim().split(/\s+/).length;
@@ -188,6 +207,10 @@ type AutomationInput = {
   trigger_event: "registration" | "purchase" | "new_subscriber";
   enabled: boolean;
   segment_keys: string[];
+  group_ids: string[];
+  audience_logic?: "any" | "all";
+  exclude_group_ids?: string[];
+  exclude_segment_keys?: string[];
   new_subscribers_only: boolean;
   after_automation_id?: string | null;
   delay_days?: number;
@@ -230,6 +253,9 @@ export async function createAutomation(
     .from("automations")
     .insert({
       ...input,
+      audience_logic: input.audience_logic === "all" ? "all" : "any",
+      exclude_group_ids: input.exclude_group_ids ?? [],
+      exclude_segment_keys: input.exclude_segment_keys ?? [],
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
       send_time: normalizeSendTime(input.send_time),
@@ -253,6 +279,9 @@ export async function updateAutomation(
     .from("automations")
     .update({
       ...input,
+      audience_logic: input.audience_logic === "all" ? "all" : "any",
+      exclude_group_ids: input.exclude_group_ids ?? [],
+      exclude_segment_keys: input.exclude_segment_keys ?? [],
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
       send_time: normalizeSendTime(input.send_time),
@@ -381,7 +410,14 @@ export async function resendAutomationToNonOpeners(
     };
   }
 
-  const emails = nonOpeners.map((d) => d.email);
+  const emails = await filterSubscribedEmails(nonOpeners.map((d) => d.email));
+  if (emails.length === 0) {
+    return {
+      ok: false,
+      message: "Everyone has opened (or bounced) — nobody to resend to.",
+    };
+  }
+
   const { data: subs } = await supabase
     .from("subscribers")
     .select("email, locale, name")
@@ -637,12 +673,109 @@ export async function deleteSubscriber(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+// ── Segment groups ──────────────────────────────────────────
+export async function createSegmentGroup(input: {
+  name: string;
+  description?: string;
+  parent_id?: string | null;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const name = input.name.trim();
+  if (!name) return { ok: false, message: "Group name is required." };
+
+  let parentId: string | null = input.parent_id?.trim() || null;
+  if (parentId) {
+    const { data: parent } = await supabase
+      .from("segment_groups")
+      .select("id")
+      .eq("id", parentId)
+      .maybeSingle();
+    if (!parent) return { ok: false, message: "Parent group not found." };
+  }
+
+  const { error } = await supabase.from("segment_groups").insert({
+    name,
+    description: input.description?.trim() || null,
+    parent_id: parentId,
+  });
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin/subscribers");
+  revalidatePath("/admin/campaigns");
+  return { ok: true, message: `Group "${name}" created.` };
+}
+
+export async function updateSegmentGroup(input: {
+  id: string;
+  name?: string;
+  description?: string | null;
+  parent_id?: string | null;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("segment_groups")
+    .select("*")
+    .eq("id", input.id)
+    .maybeSingle();
+  const group = row as SegmentGroup | null;
+  if (!group) return { ok: false, message: "Group not found." };
+
+  const patch: Partial<Pick<SegmentGroup, "name" | "description" | "parent_id">> = {};
+  if (input.name !== undefined) patch.name = input.name.trim();
+  if (input.description !== undefined) {
+    patch.description = input.description?.trim() || null;
+  }
+  if (input.parent_id !== undefined) {
+    const parentId = input.parent_id?.trim() || null;
+    if (parentId === input.id) {
+      return { ok: false, message: "A group cannot be its own parent." };
+    }
+    if (parentId) {
+      const { data: allRows } = await supabase.from("segment_groups").select("*");
+      const all = (allRows as SegmentGroup[]) ?? [];
+      if (!all.some((g) => g.id === parentId)) {
+        return { ok: false, message: "Parent group not found." };
+      }
+      if (isDescendantGroup(parentId, input.id, all)) {
+        return { ok: false, message: "Cannot nest a group under its own subgroup." };
+      }
+    }
+    patch.parent_id = parentId;
+  }
+
+  if (Object.keys(patch).length === 0) return { ok: true };
+
+  const { error } = await supabase
+    .from("segment_groups")
+    .update(patch)
+    .eq("id", input.id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin/subscribers");
+  revalidatePath("/admin/campaigns");
+  return { ok: true };
+}
+
+export async function deleteSegmentGroup(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("segment_groups").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin/subscribers");
+  revalidatePath("/admin/campaigns");
+  return { ok: true };
+}
+
 // ── Segments ────────────────────────────────────────────────
 export async function createSegment(input: {
   key: string;
   name: string;
   description?: string;
-  parent_id?: string | null;
+  group_id?: string | null;
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -651,26 +784,21 @@ export async function createSegment(input: {
     return { ok: false, message: "Invalid segment key." };
   }
 
-  let parentId: string | null = input.parent_id?.trim() || null;
-  if (parentId) {
-    const { data: parent } = await supabase
-      .from("segments")
-      .select("id, key")
-      .eq("id", parentId)
+  let groupId: string | null = input.group_id?.trim() || null;
+  if (groupId) {
+    const { data: group } = await supabase
+      .from("segment_groups")
+      .select("id")
+      .eq("id", groupId)
       .maybeSingle();
-    if (!parent) return { ok: false, message: "Parent segment not found." };
-    if ((parent as { key: string }).key === "all") {
-      return { ok: false, message: '"all" cannot be a parent segment.' };
-    }
-  } else {
-    parentId = null;
+    if (!group) return { ok: false, message: "Group not found." };
   }
 
   const { error } = await supabase.from("segments").insert({
     key,
     name: input.name.trim(),
     description: input.description?.trim() || null,
-    parent_id: parentId,
+    group_id: groupId,
   });
   if (error) return { ok: false, message: error.message };
 
@@ -683,7 +811,7 @@ export async function updateSegment(input: {
   id: string;
   name?: string;
   description?: string | null;
-  parent_id?: string | null;
+  group_id?: string | null;
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -699,31 +827,22 @@ export async function updateSegment(input: {
     return { ok: false, message: 'The "all" segment cannot be edited.' };
   }
 
-  const patch: Partial<Pick<Segment, "name" | "description" | "parent_id">> = {};
+  const patch: Partial<Pick<Segment, "name" | "description" | "group_id">> = {};
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.description !== undefined) {
     patch.description = input.description?.trim() || null;
   }
-  if (input.parent_id !== undefined) {
-    const parentId = input.parent_id?.trim() || null;
-    if (parentId === input.id) {
-      return { ok: false, message: "A segment cannot be its own parent." };
+  if (input.group_id !== undefined) {
+    const groupId = input.group_id?.trim() || null;
+    if (groupId) {
+      const { data: group } = await supabase
+        .from("segment_groups")
+        .select("id")
+        .eq("id", groupId)
+        .maybeSingle();
+      if (!group) return { ok: false, message: "Group not found." };
     }
-    if (parentId) {
-      const { data: allRows } = await supabase.from("segments").select("*");
-      const all = (allRows as Segment[]) ?? [];
-      if (!all.some((s) => s.id === parentId)) {
-        return { ok: false, message: "Parent segment not found." };
-      }
-      if (isDescendantOf(parentId, input.id, all)) {
-        return { ok: false, message: "Cannot nest a segment under its own subgroup." };
-      }
-      const parent = all.find((s) => s.id === parentId);
-      if (parent?.key === "all") {
-        return { ok: false, message: '"all" cannot be a parent segment.' };
-      }
-    }
-    patch.parent_id = parentId;
+    patch.group_id = groupId;
   }
 
   if (Object.keys(patch).length === 0) {
@@ -805,13 +924,11 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
     };
   }
 
-  const key = input.segment_key || "all";
-  const keys =
-    input.segment_keys && input.segment_keys.length > 0
-      ? input.segment_keys
-      : [key];
+  const segmentKeys = (input.segment_keys ?? []).map((k) => k.trim()).filter(Boolean);
+  const groupIds = (input.group_ids ?? []).map((id) => id.trim()).filter(Boolean);
+  const hasSelection = segmentKeys.length > 0 || groupIds.length > 0;
 
-  if (keys.length === 1 && keys[0] === "all") {
+  if (!hasSelection && (input.segment_key || "all") === "all") {
     const { data } = await q;
     const rows = (data as { email: string; phone: string | null }[]) ?? [];
     return {
@@ -823,10 +940,13 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
     };
   }
 
-  const { data: segmentRows } = await supabase.from("segments").select("*");
+  const [{ data: segmentRows }, { data: groupRows }] = await Promise.all([
+    supabase.from("segments").select("*"),
+    supabase.from("segment_groups").select("*"),
+  ]);
   const allSegments = (segmentRows as Segment[]) ?? [];
-  const rawKeys = keys.filter((k) => k && k !== "all");
-  const filtered = expandSegmentKeys(rawKeys, allSegments);
+  const allGroups = (groupRows as SegmentGroup[]) ?? [];
+  const filtered = expandAudienceKeys(segmentKeys, groupIds, allGroups, allSegments);
   if (filtered.length === 0) {
     return {
       emails: [],
@@ -838,8 +958,12 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
   }
 
   const nameByKey = new Map(allSegments.map((s) => [s.key, s.name]));
-  const labelParts = rawKeys.map((k) => nameByKey.get(k) ?? k);
-  const includesSubgroups = filtered.length > rawKeys.length;
+  const nameByGroupId = new Map(allGroups.map((g) => [g.id, g.name]));
+  const labelParts = [
+    ...groupIds.map((id) => nameByGroupId.get(id) ?? id),
+    ...segmentKeys.map((k) => nameByKey.get(k) ?? k),
+  ];
+  const includesGroups = groupIds.length > 0;
 
   q = q.overlaps("tags", filtered);
   const { data } = await q;
@@ -847,7 +971,7 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
   return {
     emails: rows.map((r) => r.email).filter(Boolean),
     phones: rows.map((r) => r.phone || "").filter(Boolean),
-    label: `segments: ${labelParts.join(", ")}${includesSubgroups ? " (вкл. подгрупи)" : ""}`,
+    label: `segments: ${labelParts.join(", ")}${includesGroups ? " (вкл. групи)" : ""}`,
     segment_tag: `segments:${filtered.join(",")}`,
     target_tags: filtered,
   };
@@ -890,6 +1014,66 @@ function deriveCampaignStatus(
       if (counts.sent === 0 && counts.failed > 0) return "failed";
       return "sent";
   }
+}
+
+function parseWorkerJobIds(workerJobId: string | null | undefined): string[] {
+  if (!workerJobId) return [];
+  return workerJobId
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+async function aggregateJobReports(jobIds: string[]) {
+  const reports = (
+    await Promise.all(jobIds.map((id) => getJobReport(id)))
+  ).filter(Boolean) as NonNullable<Awaited<ReturnType<typeof getJobReport>>>[];
+
+  if (reports.length === 0) return null;
+
+  const tracking = reports.reduce(
+    (acc, report) => ({
+      total: acc.total + report.tracking.total,
+      sent: acc.sent + report.tracking.sent,
+      failed: acc.failed + report.tracking.failed,
+      bounced: acc.bounced + report.tracking.bounced,
+      delivered: acc.delivered + report.tracking.delivered,
+      opened: acc.opened + report.tracking.opened,
+      notOpened: acc.notOpened + report.tracking.notOpened,
+      pending: acc.pending + report.tracking.pending,
+    }),
+    {
+      total: 0,
+      sent: 0,
+      failed: 0,
+      bounced: 0,
+      delivered: 0,
+      opened: 0,
+      notOpened: 0,
+      pending: 0,
+    },
+  );
+
+  const recipients = reports.flatMap((report) => report.recipients);
+  const status = reports.some((report) => report.status === "processing")
+    ? "processing"
+    : reports.every((report) => report.status === "canceled")
+      ? "canceled"
+      : reports.every((report) => report.status === "failed")
+        ? "failed"
+        : reports.every((report) => report.status === "pending")
+          ? "pending"
+          : reports.every((report) => report.status === "sent")
+            ? "sent"
+            : "sent";
+
+  return {
+    status,
+    sendAt: reports.find((report) => report.sendAt)?.sendAt ?? null,
+    sentAt: reports.find((report) => report.sentAt)?.sentAt ?? null,
+    tracking,
+    recipients,
+  };
 }
 
 type CampaignInsert = {
@@ -955,40 +1139,82 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
   }
 
   const campaignId = (draft as { id: string }).id;
-  const ctaHref =
-    ctaLabel && ctaUrl ? campaignCtaRedirectUrl(campaignId) : null;
-  const wrappedHtml = composeBrandedEmail({
-    bodyHtml: input.html,
-    locale: input.locale === "en" ? "en" : "bg",
-    cta: ctaHref ? { label: ctaLabel, href: ctaHref } : null,
-  });
+  const mailLocale = input.locale === "en" ? "en" : "bg";
+  const bodyHtml = await expandEmailProducts(input.html, mailLocale);
+
+  const { data: subs } = await supabase
+    .from("subscribers")
+    .select("id, email")
+    .in("email", input.recipients);
+  const subByEmail = new Map(
+    ((subs as { id: string; email: string }[] | null) ?? []).map((s) => [
+      s.email.toLowerCase(),
+      s.id,
+    ]),
+  );
 
   try {
-    let jobId = "";
-    let workerStatus = "pending";
+    const jobIds: string[] = [];
     let sent = 0;
     let failed = 0;
+    let workerStatus = "pending";
 
-    if (scheduledAtIso) {
-      const res = await scheduleEmail({
-        subject: input.subject,
-        html: wrappedHtml,
-        recipients: input.recipients,
-        sendAt: scheduledAtIso,
-        idempotencyKey: `camp-${Date.now()}`,
+    for (const recipient of input.recipients) {
+      const email = recipient.trim().toLowerCase();
+      const ctaHref =
+        ctaLabel && ctaUrl
+          ? campaignCtaRedirectUrl(campaignId, email, subByEmail.get(email))
+          : null;
+      const wrappedHtml = composeBrandedEmail({
+        bodyHtml,
+        locale: mailLocale,
+        cta: ctaHref ? { label: ctaLabel, href: ctaHref } : null,
+        unsubscribeHref: unsubscribeLinkForEmail(recipient, mailLocale),
       });
-      jobId = res.jobId;
-      workerStatus = res.status || "pending";
-    } else {
-      const res = await sendEmail({
-        subject: input.subject,
-        html: wrappedHtml,
-        recipients: input.recipients,
-      });
-      jobId = res.jobId;
-      workerStatus = res.status || "sent";
-      sent = res.sent ?? 0;
-      failed = res.failed ?? 0;
+
+      try {
+        if (scheduledAtIso) {
+          const res = await scheduleEmail({
+            subject: input.subject,
+            html: wrappedHtml,
+            recipients: [recipient],
+            sendAt: scheduledAtIso,
+            idempotencyKey: `camp-${campaignId}-${recipient}`,
+          });
+          jobIds.push(res.jobId);
+          workerStatus = res.status || "pending";
+          await supabase.from("campaign_deliveries").insert({
+            campaign_id: campaignId,
+            email,
+            subscriber_id: subByEmail.get(email) ?? null,
+            worker_job_id: res.jobId,
+            status: "scheduled",
+          });
+        } else {
+          const res = await sendEmail({
+            subject: input.subject,
+            html: wrappedHtml,
+            recipients: [recipient],
+          });
+          jobIds.push(res.jobId);
+          sent += res.sent ?? 1;
+          failed += res.failed ?? 0;
+          workerStatus = res.status || "sent";
+          await supabase.from("campaign_deliveries").insert({
+            campaign_id: campaignId,
+            email,
+            subscriber_id: subByEmail.get(email) ?? null,
+            worker_job_id: res.jobId,
+            status: "sent",
+          });
+        }
+      } catch {
+        failed += 1;
+      }
+    }
+
+    if (jobIds.length === 0 && failed > 0) {
+      workerStatus = "failed";
     }
 
     const status = deriveCampaignStatus(
@@ -1000,7 +1226,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     const { error: updateError } = await supabase
       .from("email_campaigns")
       .update({
-        worker_job_id: jobId,
+        worker_job_id: jobIds.join(",") || null,
         status,
         scheduled_at: scheduledAtIso,
         sent_at: scheduledAtIso ? null : new Date().toISOString(),
@@ -1012,8 +1238,8 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
 
     if (updateError) return { ok: false, message: updateError.message };
 
-    if (jobId && !scheduledAtIso) {
-      await persistCampaignSync(campaignId, jobId, null, total);
+    if (jobIds.length > 0 && !scheduledAtIso) {
+      await persistCampaignSync(campaignId, jobIds.join(","), null, total);
     }
 
     revalidatePath("/admin/campaigns");
@@ -1146,14 +1372,22 @@ async function persistCampaignSync(
   recipientsCount: number,
 ): Promise<ActionResult> {
   const supabase = getAdminClient();
-  const report = await getJobReport(workerJobId);
+  const jobIds = parseWorkerJobIds(workerJobId);
+  const aggregated =
+    jobIds.length > 1
+      ? await aggregateJobReports(jobIds)
+      : null;
+  const report =
+    aggregated ??
+    (jobIds[0] ? await getJobReport(jobIds[0]) : null);
+
   if (!report) {
     return { ok: false, message: "Could not reach the worker for this job." };
   }
 
-  const t = report.tracking;
+  const t = aggregated?.tracking ?? report.tracking;
   const status = deriveCampaignStatus(
-    report.status,
+    aggregated?.status ?? report.status,
     { sent: t.sent, failed: t.failed + t.bounced, total: t.total },
     Boolean(scheduledAt),
   );
@@ -1169,12 +1403,13 @@ async function persistCampaignSync(
       opened_count: t.opened,
       not_opened_count: t.notOpened,
       total_count: t.total || recipientsCount,
-      sent_at: report.sentAt,
+      sent_at: aggregated?.sentAt ?? report.sentAt,
       last_synced_at: new Date().toISOString(),
     })
     .eq("id", id);
 
   if (error) return { ok: false, message: error.message };
+  await syncCampaignDeliveries(id);
   return { ok: true };
 }
 
@@ -1236,8 +1471,10 @@ export async function resendToNonOpeners(input: {
     return { ok: false, message: "No worker job linked to this campaign." };
   }
 
-  const report = await getJobReport(parent.worker_job_id);
-  const emails = report?.notOpenedEmails ?? [];
+  const aggregated = await aggregateJobReports(parseWorkerJobIds(parent.worker_job_id));
+  const emails = await filterSubscribedEmails(
+    notOpenedRecipientEmails(aggregated?.recipients ?? []),
+  );
   if (emails.length === 0) {
     return {
       ok: false,
@@ -1284,12 +1521,41 @@ export async function getCampaignRecipientReport(
     return { ok: false, message: "No worker job linked." };
   }
 
-  const report = await getJobReport(campaign.worker_job_id);
-  if (!report) {
+  const jobIds = parseWorkerJobIds(campaign.worker_job_id);
+  const aggregated = await aggregateJobReports(jobIds);
+  if (!aggregated) {
     return { ok: false, message: "Could not load recipient report." };
   }
 
-  return { ok: true, recipients: report.recipients, tracking: report.tracking };
+  await syncCampaignDeliveries(campaignId);
+  const clickMap = await getCampaignClickCountsByEmail(campaignId);
+
+  return {
+    ok: true,
+    recipients: aggregated.recipients.map((r) => ({
+      ...r,
+      clickCount: clickMap.get(r.email.toLowerCase()) ?? 0,
+    })),
+    tracking: aggregated.tracking,
+  };
+}
+
+export async function getAdminEngagementOverview() {
+  await requireAdmin();
+  const overview = await getEngagementOverview();
+  return { ok: true as const, overview };
+}
+
+export async function getSubscriberEngagementReport(email: string) {
+  await requireAdmin();
+  const detail = await getSubscriberEngagementDetail(email);
+  return { ok: true as const, ...detail };
+}
+
+export async function getSubscribersEngagementSummaries(emails: string[]) {
+  await requireAdmin();
+  const map = await getEngagementSummaryForEmails(emails);
+  return Object.fromEntries(map);
 }
 
 const CANCELABLE_EMAIL_STATUSES: CampaignStatus[] = ["scheduled", "queued"];
@@ -1322,7 +1588,10 @@ export async function cancelEmailCampaign(id: string): Promise<ActionResult> {
 
   let workerCanceled = false;
   if (campaign.worker_job_id) {
-    workerCanceled = await cancelEmailJob(campaign.worker_job_id);
+    const results = await Promise.all(
+      parseWorkerJobIds(campaign.worker_job_id).map((jobId) => cancelEmailJob(jobId)),
+    );
+    workerCanceled = results.some(Boolean);
   }
 
   const { error: updateError } = await supabase
@@ -1363,7 +1632,9 @@ export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
     campaign?.worker_job_id &&
     CANCELABLE_EMAIL_STATUSES.includes(campaign.status)
   ) {
-    await cancelEmailJob(campaign.worker_job_id);
+    await Promise.all(
+      parseWorkerJobIds(campaign.worker_job_id).map((jobId) => cancelEmailJob(jobId)),
+    );
   }
 
   const { error } = await supabase.from("email_campaigns").delete().eq("id", id);
@@ -1917,6 +2188,21 @@ export async function deleteSiteProduct(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+export async function reorderSiteProducts(ids: string[]): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  await Promise.all(
+    ids.map((id, index) =>
+      supabase
+        .from("site_products")
+        .update({ sort_order: (index + 1) * 10, updated_at: new Date().toISOString() })
+        .eq("id", id),
+    ),
+  );
+  revalidateSitePaths();
+  return { ok: true };
+}
+
 export async function saveCtaPlacement(input: {
   key: string;
   offer_id?: string | null;
@@ -1961,3 +2247,219 @@ export async function uploadSiteImage(
   if (!result.ok) return { ok: false, message: result.message };
   return { ok: true, url: result.url };
 }
+
+// ── Forms ─────────────────────────────────────────────────────
+
+export async function createFormFromPreset(presetKey: string): Promise<ActionResult & { id?: string }> {
+  await requireAdmin();
+  const preset = getFormPreset(presetKey);
+  if (!preset) return { ok: false, message: "Шаблонът не е намерен." };
+
+  const supabase = getAdminClient();
+  let slug = preset.slug;
+  for (let i = 0; i < 20; i++) {
+    const candidate = i === 0 ? slug : `${slug}-${i + 1}`;
+    const { data: existing } = await supabase
+      .from("form_templates")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+    if (!existing) {
+      slug = candidate;
+      break;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("form_templates")
+    .insert({
+      name: preset.name,
+      slug,
+      title_bg: preset.title_bg,
+      title_en: preset.title_en,
+      description_bg: preset.description_bg,
+      description_en: preset.description_en,
+      fields: preset.fields,
+      settings: preset.settings,
+      email_subject_bg: preset.email_subject_bg,
+      email_subject_en: preset.email_subject_en,
+      email_intro_bg: preset.email_intro_bg,
+      email_intro_en: preset.email_intro_en,
+      enabled: true,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/forms");
+  return { ok: true, id: (data as { id: string }).id, slug };
+}
+
+export async function saveFormTemplate(input: {
+  id?: string;
+  name: string;
+  slug: string;
+  title_bg: string;
+  title_en: string;
+  description_bg: string;
+  description_en: string;
+  fields: FormField[];
+  settings: FormSettings;
+  email_subject_bg: string;
+  email_subject_en: string;
+  email_intro_bg: string;
+  email_intro_en: string;
+  enabled: boolean;
+}): Promise<ActionResult & { id?: string }> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const name = input.name.trim();
+  const slug = slugify(input.slug.trim() || name);
+  if (!name) return { ok: false, message: "Попълни име на формата." };
+  if (!slug) return { ok: false, message: "Невалиден URL адрес (slug)." };
+
+  const row = {
+    name,
+    slug,
+    title_bg: input.title_bg.trim(),
+    title_en: input.title_en.trim() || input.title_bg.trim(),
+    description_bg: input.description_bg.trim(),
+    description_en: input.description_en.trim(),
+    fields: input.fields,
+    settings: input.settings,
+    email_subject_bg: input.email_subject_bg.trim(),
+    email_subject_en: input.email_subject_en.trim() || input.email_subject_bg.trim(),
+    email_intro_bg: input.email_intro_bg.trim(),
+    email_intro_en: input.email_intro_en.trim(),
+    enabled: input.enabled,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { error } = await supabase.from("form_templates").update(row).eq("id", input.id);
+    if (error) return { ok: false, message: error.message };
+    revalidatePath("/admin/forms");
+    return { ok: true, id: input.id };
+  }
+
+  const { data, error } = await supabase
+    .from("form_templates")
+    .insert(row)
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/forms");
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function deleteFormTemplate(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("form_templates").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/forms");
+  return { ok: true };
+}
+
+export async function sendFormByEmail(input: {
+  formId: string;
+  audience: AudienceInput;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: row } = await supabase
+    .from("form_templates")
+    .select("*")
+    .eq("id", input.formId)
+    .maybeSingle();
+
+  const form = row as import("@/lib/forms/types").FormTemplateRecord | null;
+  if (!form) return { ok: false, message: "Формата не е намерена." };
+
+  const audience = await resolveAudience(input.audience);
+  if (audience.emails.length === 0) {
+    return { ok: false, message: "Няма получатели за избраната аудитория." };
+  }
+
+  const { data: subs } = await supabase
+    .from("subscribers")
+    .select("id, email, name, locale")
+    .in("email", audience.emails);
+
+  const subMap = new Map(
+    ((subs as { id: string; email: string; name: string | null; locale: string }[] | null) ?? []).map(
+      (s) => [s.email.toLowerCase(), s],
+    ),
+  );
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const email of audience.emails) {
+    const sub = subMap.get(email.toLowerCase());
+    const locale = sub?.locale === "en" ? "en" : "bg";
+    const token = createFormInviteToken({
+      f: form.id,
+      e: email,
+      sid: sub?.id,
+    });
+    if (!token) {
+      failed += 1;
+      continue;
+    }
+
+    await supabase.from("form_invitations").insert({
+      form_id: form.id,
+      subscriber_id: sub?.id ?? null,
+      email: email.toLowerCase(),
+      token,
+    });
+
+    const formUrl = publicFormUrl(form.slug, locale, form.id, email, sub?.id);
+    const subjectTpl =
+      locale === "en" ? form.email_subject_en : form.email_subject_bg;
+    const introTpl = locale === "en" ? form.email_intro_en : form.email_intro_bg;
+    const subject = renderEmailTemplate(subjectTpl, {
+      name: sub?.name,
+      email,
+    });
+    const bodyHtml = renderEmailTemplate(introTpl, {
+      name: sub?.name,
+      email,
+    });
+
+    const html = composeBrandedEmail({
+      bodyHtml,
+      locale,
+      cta: {
+        label: locale === "en" ? "Open form" : "Отвори формата",
+        href: formUrl,
+      },
+      unsubscribeHref: unsubscribeLinkForEmail(email, locale),
+    });
+
+    try {
+      await sendEmail({ subject, html, recipients: [email] });
+      sent += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  revalidatePath("/admin/forms");
+  return {
+    ok: sent > 0,
+    message:
+      failed > 0
+        ? `Изпратено до ${sent}, неуспешно ${failed} от ${audience.emails.length}.`
+        : `Формата е изпратена до ${sent} абонат(а).`,
+  };
+}
+
+export async function getFormSubmissionsReport(formId: string) {
+  await requireAdmin();
+  const submissions = await getFormSubmissions(formId);
+  return { ok: true as const, submissions };
+}
+

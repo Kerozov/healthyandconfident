@@ -67,21 +67,28 @@ create table if not exists public.subscribers (
 create index if not exists subscribers_status_idx on public.subscribers (status);
 create index if not exists subscribers_tags_idx on public.subscribers using gin (tags);
 
--- ── Segments ───────────────────────────────────────────────────
+-- ── Segment groups + segments ──────────────────────────────────
+create table if not exists public.segment_groups (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  description text,
+  parent_id   uuid references public.segment_groups(id) on delete set null,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists segment_groups_parent_idx
+  on public.segment_groups (parent_id);
+
 create table if not exists public.segments (
   id          uuid primary key default gen_random_uuid(),
   key         text not null unique,
   name        text not null,
   description text,
-  parent_id   uuid references public.segments(id) on delete set null,
+  group_id    uuid references public.segment_groups(id) on delete set null,
   created_at  timestamptz not null default now()
 );
 
--- Existing DBs: table may exist without parent_id from older schema
-alter table public.segments
-  add column if not exists parent_id uuid references public.segments(id) on delete set null;
-
-create index if not exists segments_parent_idx on public.segments (parent_id);
+create index if not exists segments_group_idx on public.segments (group_id);
 
 insert into public.segments (key, name, description) values
   ('all', 'All subscribers', 'Everyone who opted in'),
@@ -152,6 +159,11 @@ create table if not exists public.automations (
   )),
   enabled              boolean not null default false,
   segment_keys         text[] not null default '{}',
+  group_ids            uuid[] not null default '{}',
+  audience_logic       text not null default 'any'
+    check (audience_logic in ('any', 'all')),
+  exclude_group_ids    uuid[] not null default '{}',
+  exclude_segment_keys text[] not null default '{}',
   new_subscribers_only boolean not null default true,
   after_automation_id  uuid references public.automations(id) on delete set null,
   delay_days           int not null default 0,
@@ -189,6 +201,8 @@ create table if not exists public.automation_deliveries (
   recipient_status text,
   opened_at        timestamptz,
   delivered_at     timestamptz,
+  click_count      int not null default 0,
+  first_clicked_at timestamptz,
   last_synced_at   timestamptz,
   unique (automation_id, email)
 );
@@ -369,10 +383,54 @@ create table if not exists public.email_campaigns (
   not_opened_count     int not null default 0,
   bounced_count        int not null default 0,
   total_count          int not null default 0,
+  clicked_count        int not null default 0,
   last_synced_at       timestamptz,
   parent_campaign_id   uuid references public.email_campaigns(id) on delete set null,
   created_at           timestamptz not null default now()
 );
+
+create table if not exists public.campaign_deliveries (
+  id               uuid primary key default gen_random_uuid(),
+  campaign_id      uuid not null references public.email_campaigns(id) on delete cascade,
+  subscriber_id    uuid references public.subscribers(id) on delete set null,
+  email            text not null,
+  worker_job_id    text,
+  status           text not null default 'sent'
+    check (status in ('scheduled', 'sent', 'failed', 'canceled')),
+  recipient_status text,
+  opened_at        timestamptz,
+  delivered_at     timestamptz,
+  click_count      int not null default 0,
+  first_clicked_at timestamptz,
+  sent_at          timestamptz not null default now(),
+  last_synced_at   timestamptz
+);
+
+create index if not exists campaign_deliveries_campaign_idx
+  on public.campaign_deliveries (campaign_id);
+
+create index if not exists campaign_deliveries_email_idx
+  on public.campaign_deliveries (email);
+
+create unique index if not exists campaign_deliveries_job_uidx
+  on public.campaign_deliveries (worker_job_id)
+  where worker_job_id is not null;
+
+create table if not exists public.email_link_clicks (
+  id            uuid primary key default gen_random_uuid(),
+  source_type   text not null check (source_type in ('campaign', 'automation')),
+  source_id     uuid not null,
+  email         text not null,
+  subscriber_id uuid references public.subscribers(id) on delete set null,
+  target_url    text,
+  clicked_at    timestamptz not null default now()
+);
+
+create index if not exists email_link_clicks_email_idx
+  on public.email_link_clicks (email);
+
+create index if not exists email_link_clicks_source_idx
+  on public.email_link_clicks (source_type, source_id);
 
 create index if not exists email_campaigns_created_idx
   on public.email_campaigns (created_at desc);
@@ -453,6 +511,52 @@ create policy "media public read"
 on storage.objects for select
 to public
 using (bucket_id = 'media');
+
+-- ── Dynamic forms ───────────────────────────────────────────────
+create table if not exists public.form_templates (
+  id               uuid primary key default gen_random_uuid(),
+  name             text not null,
+  slug             text not null unique,
+  title_bg         text not null default '',
+  title_en         text not null default '',
+  description_bg   text not null default '',
+  description_en   text not null default '',
+  fields           jsonb not null default '[]',
+  settings         jsonb not null default '{}',
+  email_subject_bg text not null default '',
+  email_subject_en text not null default '',
+  email_intro_bg   text not null default '',
+  email_intro_en   text not null default '',
+  enabled          boolean not null default true,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+create table if not exists public.form_submissions (
+  id            uuid primary key default gen_random_uuid(),
+  form_id       uuid not null references public.form_templates(id) on delete cascade,
+  subscriber_id uuid references public.subscribers(id) on delete set null,
+  email         text,
+  answers       jsonb not null default '{}',
+  submitted_at  timestamptz not null default now()
+);
+
+create index if not exists form_submissions_form_idx
+  on public.form_submissions (form_id, submitted_at desc);
+
+create table if not exists public.form_invitations (
+  id            uuid primary key default gen_random_uuid(),
+  form_id       uuid not null references public.form_templates(id) on delete cascade,
+  subscriber_id uuid references public.subscribers(id) on delete set null,
+  email         text not null,
+  token         text not null unique,
+  sent_at       timestamptz not null default now(),
+  completed_at  timestamptz
+);
+
+drop trigger if exists form_templates_updated_at on public.form_templates;
+create trigger form_templates_updated_at before update on public.form_templates
+  for each row execute function public.set_updated_at();
 
 notify pgrst, 'reload schema';
 

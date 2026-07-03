@@ -372,4 +372,20 @@ export const en: Dictionary = {
       "Get the free 2-day slimming menu and learn how to set yourself free from cravings while improving your weight and blood sugar.",
     defaultCta: "Send it to me",
   },
+  unsubscribe: {
+    title: "Email unsubscribe",
+    helpBody: "Use the “Unsubscribe” link at the bottom of an email you received from us.",
+    successTitle: "You're unsubscribed",
+    successBody:
+      "You won't receive marketing emails from Healthy & Confident anymore. You may still get transactional messages when needed (e.g. order confirmations).",
+    alreadyTitle: "Already unsubscribed",
+    alreadyBody: "This email address is already off our mailing list.",
+    invalidTitle: "Invalid link",
+    invalidBody: "This link is invalid or broken. Please try again from your latest email.",
+    notFoundTitle: "Email not found",
+    notFoundBody:
+      "We couldn't find this address in our list. If you still receive emails, please contact us directly.",
+    resubscribeHint: "Changed your mind? You can sign up again using the form on our website.",
+    backHome: "Back to home",
+  },
 };

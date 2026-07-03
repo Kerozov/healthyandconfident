@@ -1,13 +1,15 @@
-import { getAutomations, getSegments } from "@/lib/admin/data";
+import { getAutomations, getSegments, getSegmentGroups, getSiteProducts } from "@/lib/admin/data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { AutomationsManager } from "@/components/admin/automations-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAutomationsPage() {
-  const [automations, segments] = await Promise.all([
+  const [automations, segments, groups, products] = await Promise.all([
     getAutomations(),
     getSegments(),
+    getSegmentGroups(),
+    getSiteProducts(true),
   ]);
   const workerOk = isNotificationWorkerConfigured();
 
@@ -26,7 +28,12 @@ export default async function AdminAutomationsPage() {
       )}
 
       <div className="mt-8">
-        <AutomationsManager automations={automations} segments={segments} />
+        <AutomationsManager
+          automations={automations}
+          segments={segments}
+          groups={groups}
+          products={products}
+        />
       </div>
 
       <div className="mt-10 rounded-2xl border border-ink/10 bg-white p-5 text-sm text-ink-soft">

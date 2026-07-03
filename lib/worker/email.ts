@@ -98,6 +98,10 @@ function canResendTo(r: RecipientRow): boolean {
   return !isOpened(r);
 }
 
+export function notOpenedRecipientEmails(recipients: RecipientRow[]): string[] {
+  return recipients.filter(canResendTo).map((r) => r.email);
+}
+
 function isDelivered(r: RecipientRow): boolean {
   return Boolean(r.deliveredAt) || r.status === "delivered" || r.status === "opened";
 }

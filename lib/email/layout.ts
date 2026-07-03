@@ -9,6 +9,7 @@ export type ComposeEmailOptions = {
   bodyHtml: string;
   locale?: "bg" | "en";
   cta?: EmailCta | null;
+  unsubscribeHref?: string | null;
 };
 
 const COLORS = {
@@ -64,9 +65,23 @@ function ctaBlock(cta: EmailCta): string {
 </table>`;
 }
 
+function footerUnsubscribe(locale: "bg" | "en", href: string): string {
+  const label = locale === "en" ? "Unsubscribe" : "Отписване";
+  const intro =
+    locale === "en"
+      ? "Don't want these emails?"
+      : "Не искаш повече имейли?";
+  const safeHref = escapeHtml(href.trim());
+  return `
+            <p style="margin:0 0 12px;font-size:12px;color:${COLORS.textMuted};line-height:1.5">
+              ${intro}
+              <a href="${safeHref}" style="color:${COLORS.green};text-decoration:underline;font-weight:600">${label}</a>
+            </p>`;
+}
+
 /** Full branded HTML email — header, body, optional CTA, footer. */
 export function composeBrandedEmail(options: ComposeEmailOptions): string {
-  const { bodyHtml, locale = "bg", cta } = options;
+  const { bodyHtml, locale = "bg", cta, unsubscribeHref } = options;
 
   if (bodyHtml.includes(MARKER)) {
     return bodyHtml;
@@ -76,6 +91,10 @@ export function composeBrandedEmail(options: ComposeEmailOptions): string {
   const year = new Date().getFullYear();
   const subtitle = headerSubtitle(locale);
   const button = cta ? ctaBlock(cta) : "";
+  const unsubscribe =
+    unsubscribeHref?.trim() && isSafeHref(unsubscribeHref)
+      ? footerUnsubscribe(locale, unsubscribeHref)
+      : "";
 
   return `<!DOCTYPE html>
 <html lang="${locale === "en" ? "en" : "bg"}">
@@ -115,6 +134,7 @@ ${MARKER}
             <p style="margin:0 0 8px;font-size:14px">
               <a href="${siteUrl}" style="color:${COLORS.green};text-decoration:none;font-weight:600">www.healthyandconfident.co.uk</a>
             </p>
+            ${unsubscribe}
             <p style="margin:0;font-size:12px;color:${COLORS.textMuted};line-height:1.5">
               © ${year} ${escapeHtml(siteConfig.brand)} · ${escapeHtml(siteConfig.tagline)}
             </p>

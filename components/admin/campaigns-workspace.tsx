@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Mail, MessageSquare } from "lucide-react";
-import type { EmailCampaign, Segment, SmsCampaign } from "@/lib/supabase/types";
+import type { EmailCampaign, Segment, SegmentGroup, SiteProduct, SmsCampaign } from "@/lib/supabase/types";
 import { CampaignComposer } from "@/components/admin/campaign-composer";
 import { CampaignsTable } from "@/components/admin/campaigns-table";
 import { SmsCampaignsTable } from "@/components/admin/sms-campaigns-table";
@@ -12,12 +12,16 @@ export function CampaignsWorkspace({
   emailCampaigns,
   smsCampaigns,
   segments,
+  groups,
+  products,
   subscriberTags,
   workerConfigured,
 }: {
   emailCampaigns: EmailCampaign[];
   smsCampaigns: SmsCampaign[];
   segments: Segment[];
+  groups: SegmentGroup[];
+  products: SiteProduct[];
   subscriberTags: string[];
   workerConfigured: boolean;
 }) {
@@ -56,6 +60,8 @@ export function CampaignsWorkspace({
 
       <CampaignComposer
         segments={segments}
+        groups={groups}
+        products={products}
         subscriberTags={subscriberTags}
         workerConfigured={workerConfigured}
         tab={tab}
