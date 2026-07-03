@@ -1,4 +1,6 @@
 import type { Segment, SegmentGroup } from "@/lib/supabase/types";
+
+export function assignableSegments(segments: Segment[]): Segment[] {
   return segments.filter((s) => s.key !== "all");
 }
 

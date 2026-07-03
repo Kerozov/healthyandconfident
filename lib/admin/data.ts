@@ -9,6 +9,7 @@ import type {
   EmailCampaign,
   SmsCampaign,
   AutomatedEmail,
+  SiteProduct,
 } from "@/lib/supabase/types";
 import { assignableSegments } from "@/lib/segments/hierarchy";
 
@@ -129,4 +130,16 @@ export async function getSmsCampaigns(): Promise<SmsCampaign[]> {
     .select("*")
     .order("created_at", { ascending: false });
   return (data as SmsCampaign[]) ?? [];
+}
+
+export async function getSiteProducts(includeDisabled = false): Promise<SiteProduct[]> {
+  const supabase = getAdminClient();
+  let q = supabase
+    .from("site_products")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+  if (!includeDisabled) q = q.eq("enabled", true);
+  const { data } = await q;
+  return (data as SiteProduct[]) ?? [];
 }
