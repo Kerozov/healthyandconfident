@@ -6,7 +6,7 @@ import { Container } from "@/components/ui/container";
 export function Testimonials({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const { testimonials } = dict;
   return (
-    <section id="results" className="scroll-mt-24 bg-white py-24">
+    <section id="testimonials" className="scroll-mt-24 bg-white py-24">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow text-gold-400">
@@ -22,13 +22,13 @@ export function Testimonials({ dict, locale }: { dict: Dictionary; locale: Local
           {testimonials.items.map((t) => (
             <figure
               key={t.name}
-              className="flex flex-col rounded-2xl border border-green-100 bg-forest-100 p-6 transition-all hover:shadow-sm"
+              className="flex flex-col rounded-2xl border border-forest-100 bg-cream-2 p-6 transition-all hover:shadow-sm"
             >
-              <span className="font-serif text-6xl leading-none text-green-300">&ldquo;</span>
-              <blockquote className="mt-2 flex-1 text-sm leading-relaxed text-forest-800">
+              <span className="font-serif text-6xl leading-none text-forest-300">&ldquo;</span>
+              <blockquote className="mt-2 flex-1 text-sm leading-relaxed text-ink-soft">
                 {locale === "bg" ? (
                   <>
-                    <span className="mb-2 block text-xs font-medium text-green-600">
+                    <span className="mb-2 block text-xs font-medium text-forest-500">
                       Клиент на Веси Ней:
                     </span>
                     {t.quote}
@@ -37,9 +37,9 @@ export function Testimonials({ dict, locale }: { dict: Dictionary; locale: Local
                   t.quote
                 )}
               </blockquote>
-              <figcaption className="mt-6 border-t border-green-100 pt-4">
+              <figcaption className="mt-6 border-t border-forest-100 pt-4">
                 <p className="font-semibold text-forest-800">{t.name}</p>
-                <p className="mt-1 text-sm text-green-600">
+                <p className="mt-1 text-sm text-ink-soft">
                   {[t.age, t.location].filter(Boolean).join(" · ")}
                 </p>
               </figcaption>

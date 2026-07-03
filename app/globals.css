@@ -3,74 +3,93 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --color-cream: #faf6ef;
-  --color-cream-2: #f3ecdf;
-  --color-ink: #15201b;
-  --color-ink-soft: #3a4a42;
+  /* Warm cream page background */
+  --color-cream: #f8f6f2;
+  --color-cream-2: #ede8df;
 
-  --color-forest-50: #eef6f1;
-  --color-forest-100: #d6eade;
-  --color-forest-200: #b7d7c4;
-  --color-forest-300: #8cc0a3;
-  --color-forest-400: #5aa37e;
-  --color-forest-500: #2d6a4f;
-  --color-forest-600: #1b4332;
-  --color-forest-700: #143528;
-  --color-forest-800: #0f281e;
-  --color-forest-900: #0d1f0d;
+  /* Charcoal headings & navy body */
+  --color-ink: #2d3238;
+  --color-ink-soft: #6b6b6b;
 
+  /* Sage olive — secondary accent */
+  --color-forest-50: #f4f5f3;
+  --color-forest-100: #e8ebe3;
+  --color-forest-200: #d5d9ce;
+  --color-forest-300: #b8bfa8;
+  --color-forest-400: #9ba387;
+  --color-forest-500: #838a6a;
+  --color-forest-600: #6f7560;
+  --color-forest-700: #5a5f4e;
+  --color-forest-800: #2d3238;
+  --color-forest-900: #23282c;
+
+  /* Slate blue — primary CTA */
+  --color-slate-50: #f4f6f8;
+  --color-slate-100: #e4e9ed;
+  --color-slate-200: #c8d2da;
+  --color-slate-300: #9aabb9;
+  --color-slate-400: #6b8496;
+  --color-slate-500: #4e6476;
+  --color-slate-600: #435663;
+  --color-slate-700: #384851;
+  --color-slate-800: #2d3238;
+  --color-slate-900: #23282c;
+
+  /* Sage green — icons, badges, secondary buttons */
+  --color-green-50: #f4f5f3;
+  --color-green-100: #e8ebe3;
+  --color-green-200: #d5d9ce;
+  --color-green-500: #838a6a;
+  --color-green-600: #838a6a;
+  --color-green-700: #6f7560;
+  --color-green-800: #2d3238;
+  --color-green-900: #23282c;
+
+  /* Muted warm gold — subtle highlights */
+  --color-gold-400: #c4a882;
+  --color-gold-500: #b8956a;
+  --color-gold-600: #9a7d55;
+
+  /* Admin coral — unchanged */
   --color-coral-300: #ffb3a3;
   --color-coral-400: #ff8a73;
   --color-coral-500: #f2784b;
   --color-coral-600: #e2603a;
   --color-coral-700: #c94e2e;
 
-  --color-gold-400: #e7b15a;
-  --color-gold-500: #d99b3a;
-  --color-gold-600: #b87d08;
-
-  --color-green-50: #f0f9f0;
-  --color-green-100: #d6eed6;
-  --color-green-200: #aadcaa;
-  --color-green-500: #3a9b5c;
-  --color-green-600: #2d7a47;
-  --color-green-700: #1f5c34;
-  --color-green-800: #154025;
-  --color-green-900: #0d2b18;
-
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 
   --radius-xl2: 1.75rem;
 
-  --shadow-soft: 0 24px 60px -28px rgba(13, 43, 24, 0.12);
+  --shadow-soft: 0 24px 60px -28px rgba(45, 50, 56, 0.1);
 }
 
 :root {
-  --bg-page: #f7fbf7;
+  --bg-page: #f8f6f2;
   --bg-card: #ffffff;
-  --bg-warm: #fafdf7;
-  --bg-section-alt: #eef7ee;
-  --green-50: #f0f9f0;
-  --green-100: #d6eed6;
-  --green-200: #aadcaa;
-  --green-500: #3a9b5c;
-  --green-600: #2d7a47;
-  --green-700: #1f5c34;
-  --green-800: #154025;
-  --green-900: #0d2b18;
-  --gold-400: #f0b429;
-  --gold-500: #d99b0f;
-  --gold-600: #b87d08;
-  --cream-50: #fffdf5;
-  --cream-100: #fff8e6;
-  --cream-200: #faefc8;
-  --text-main: #1a2e1a;
-  --text-body: #2d4a2d;
-  --text-muted: #5a7a5a;
-  --text-subtle: #8aaa8a;
-  --border-light: #d0e8d0;
-  --border-card: #e2f0e2;
+  --bg-warm: #f8f6f2;
+  --bg-section-alt: #ede8df;
+  --green-50: #f4f5f3;
+  --green-100: #e8ebe3;
+  --green-200: #d5d9ce;
+  --green-500: #838a6a;
+  --green-600: #838a6a;
+  --green-700: #6f7560;
+  --green-800: #2d3238;
+  --green-900: #23282c;
+  --gold-400: #c4a882;
+  --gold-500: #b8956a;
+  --gold-600: #9a7d55;
+  --cream-50: #f8f6f2;
+  --cream-100: #f3f0ea;
+  --cream-200: #ede8df;
+  --text-main: #2d3238;
+  --text-body: #6b6b6b;
+  --text-muted: #8a8a8a;
+  --text-subtle: #a8a8a8;
+  --border-light: #e4e9ed;
+  --border-card: #ede8df;
 }
 
 * {
@@ -91,7 +110,7 @@ body {
 }
 
 ::selection {
-  background: #d6eed6;
+  background: #e8ebe3;
   color: var(--text-main);
 }
 
@@ -150,11 +169,11 @@ body {
 }
 
 .prose-hc {
-  --tw-prose-body: #2d4a2d;
-  --tw-prose-headings: #1a2e1a;
-  --tw-prose-links: #2d7a47;
-  --tw-prose-bold: #1a2e1a;
-  --tw-prose-quotes: #1f5c34;
-  --tw-prose-quote-borders: #3a9b5c;
-  --tw-prose-bullets: #3a9b5c;
+  --tw-prose-body: #6b6b6b;
+  --tw-prose-headings: #2d3238;
+  --tw-prose-links: #4e6476;
+  --tw-prose-bold: #2d3238;
+  --tw-prose-quotes: #4e6476;
+  --tw-prose-quote-borders: #838a6a;
+  --tw-prose-bullets: #838a6a;
 }

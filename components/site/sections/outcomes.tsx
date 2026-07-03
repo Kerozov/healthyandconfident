@@ -12,7 +12,7 @@ export function Outcomes({
 }) {
   const { outcomes } = dict;
   return (
-    <section className="bg-gradient-to-r from-green-700 to-green-800 py-24 text-white">
+    <section className="bg-gradient-to-r from-slate-700 to-slate-800 py-24 text-white">
       <Container className="grid items-center gap-14 lg:grid-cols-2">
         <div>
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -23,7 +23,7 @@ export function Outcomes({
             placementKey="outcomes_cta"
             href={`/${locale}#contact`}
             size="lg"
-            className="mt-8 bg-gold-400 px-8 py-4 font-bold text-forest-900 shadow-lg hover:bg-gold-500 hover:shadow-xl"
+            className="mt-8 bg-slate-500 px-8 py-4 font-bold text-white shadow-lg hover:bg-slate-600 hover:shadow-xl"
           >
             {dict.contact.cta}
           </CtaLink>
@@ -33,7 +33,7 @@ export function Outcomes({
           {outcomes.items.map((item) => (
             <li
               key={item}
-              className="flex items-start gap-3 rounded-2xl border border-green-600/40 bg-green-800/30 p-4 text-sm font-medium text-green-100"
+              className="flex items-start gap-3 rounded-2xl border border-slate-500/40 bg-slate-800/30 p-4 text-sm font-medium text-slate-100"
             >
               <span className="mt-0.5 shrink-0 text-gold-400">✓</span>
               {item}

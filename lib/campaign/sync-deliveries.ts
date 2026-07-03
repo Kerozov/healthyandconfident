@@ -2,12 +2,13 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import { getJobReport } from "@/lib/worker/email";
+import type { CampaignDelivery } from "@/lib/supabase/types";
 
 type CampaignDeliveryRow = {
   id: string;
   worker_job_id: string | null;
   email: string;
-  status: string;
+  status: CampaignDelivery["status"];
 };
 
 export async function syncCampaignDeliveries(campaignId: string): Promise<number> {
@@ -31,7 +32,7 @@ export async function syncCampaignDeliveries(campaignId: string): Promise<number
       const recipient = report.recipients[0];
       if (!recipient) continue;
 
-      let status = row.status;
+      let status: CampaignDelivery["status"] = row.status;
       if (report.status === "sent" || report.status === "partial") status = "sent";
       else if (report.status === "failed") status = "failed";
       else if (report.status === "canceled") status = "canceled";

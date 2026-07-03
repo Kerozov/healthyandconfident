@@ -4,21 +4,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         primary:
-          "bg-gold-400 font-semibold text-forest-900 shadow-sm hover:bg-gold-500 hover:shadow-md",
+          "bg-slate-500 font-semibold text-white shadow-sm hover:bg-slate-600 hover:shadow-md",
         secondary:
-          "border-2 border-green-500 bg-transparent font-medium text-green-700 hover:bg-green-50",
+          "border-2 border-forest-500 bg-transparent font-medium text-forest-800 hover:bg-forest-50",
         forest:
-          "bg-green-600 font-semibold text-white hover:bg-green-700",
+          "bg-forest-500 font-semibold text-white hover:bg-forest-600",
         outline:
-          "border border-green-400 bg-transparent font-medium text-green-700 hover:bg-green-50",
-        ghost: "text-forest-800 hover:bg-green-50",
+          "border border-slate-300 bg-transparent font-medium text-slate-700 hover:bg-slate-50",
+        ghost: "text-forest-800 hover:bg-forest-50",
         gold:
-          "bg-gold-400 font-bold text-forest-900 shadow-md hover:bg-gold-500 hover:shadow-lg",
+          "bg-slate-500 font-bold text-white shadow-md hover:bg-slate-600 hover:shadow-lg",
       },
       size: {
         sm: "h-9 px-5 py-2 text-sm font-semibold",

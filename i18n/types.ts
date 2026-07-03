@@ -168,6 +168,30 @@ export type Dictionary = {
     bullets: string[];
     cta: string;
   };
+  foodGallery: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    featuredAlt: string;
+    featuredCaption: string;
+    featuredNote: string;
+    highlights: string[];
+    cta: string;
+    ctaSecondary: string;
+  };
+  results: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    beforeAfterCaption: string;
+    stats: Stat[];
+    bullets: string[];
+    cta: string;
+    awardsTitle: string;
+    clientsTitle: string;
+    clientsSubtitle: string;
+    clientCaptions: string[];
+  };
   footer: {
     tagline: string;
     rights: string;

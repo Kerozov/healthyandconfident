@@ -4,6 +4,8 @@ import { getDictionary } from "@/i18n";
 import { getPublicSiteContent } from "@/lib/site/content";
 import { Hero } from "@/components/site/sections/hero";
 import { Marquee } from "@/components/site/sections/marquee";
+import { FoodShowcase } from "@/components/site/sections/food-showcase";
+import { TransformationResults } from "@/components/site/sections/transformation-results";
 import { Problems } from "@/components/site/sections/problems";
 import { Method } from "@/components/site/sections/method";
 import { Outcomes } from "@/components/site/sections/outcomes";
@@ -39,10 +41,12 @@ export default async function HomePage({
       <HomeJsonLd dict={dict} locale={l} />
       <Hero dict={dict} locale={l} />
       <Marquee locale={l} />
+      <FoodShowcase dict={dict} locale={l} />
       <Problems dict={dict} />
-      <Method dict={dict} />
-      <Outcomes dict={dict} locale={l} />
+      <Method dict={dict} locale={l} />
       <Programs dict={dict} locale={l} />
+      <TransformationResults dict={dict} locale={l} />
+      <Outcomes dict={dict} locale={l} />
       <Challenge21Section dict={dict} locale={l} />
       {eventsSection && site.events.length > 0 && (
         <EventsSection

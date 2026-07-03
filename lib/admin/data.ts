@@ -6,6 +6,7 @@ import type {
   Segment,
   SegmentGroup,
   PopupConfig,
+  EmailFooterConfig,
   EmailCampaign,
   SmsCampaign,
   AutomatedEmail,
@@ -99,6 +100,12 @@ export async function getPopups(): Promise<PopupConfig[]> {
   const supabase = getAdminClient();
   const { data } = await supabase.from("popup_config").select("*").order("locale");
   return (data as PopupConfig[]) ?? [];
+}
+
+export async function getEmailFooters(): Promise<EmailFooterConfig[]> {
+  const supabase = getAdminClient();
+  const { data } = await supabase.from("email_footer_config").select("*").order("locale");
+  return (data as EmailFooterConfig[]) ?? [];
 }
 
 export async function getAutomatedEmails(): Promise<AutomatedEmail[]> {

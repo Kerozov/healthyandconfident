@@ -37,7 +37,7 @@ export function Navbar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 border-b border-green-100 bg-white/95 backdrop-blur-md transition-all duration-300",
+        "sticky top-0 z-50 border-b border-forest-100 bg-cream/95 backdrop-blur-md transition-all duration-300",
         scrolled && "shadow-sm",
       )}
     >
@@ -46,14 +46,14 @@ export function Navbar({
           href={`/${locale}`}
           className="flex items-center gap-2.5 font-display tracking-tight"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest-500 text-white">
             <Leaf className="h-5 w-5" />
           </span>
           <span className="leading-tight">
-            <span className="block text-lg font-semibold text-green-700">
+            <span className="block text-lg font-semibold text-forest-800">
               {siteConfig.brand}
             </span>
-            <span className="block text-[11px] font-medium uppercase tracking-wider text-forest-800/70">
+            <span className="block text-[11px] font-medium uppercase tracking-wider text-ink-soft">
               {siteConfig.tagline}
             </span>
           </span>
@@ -64,7 +64,7 @@ export function Navbar({
             <Link
               key={item.href}
               href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
-              className="text-sm font-medium text-forest-800 transition-colors hover:text-green-600"
+              className="text-sm font-medium text-forest-800 transition-colors hover:text-slate-500"
             >
               {item.label}
             </Link>
@@ -74,14 +74,14 @@ export function Navbar({
         <div className="hidden items-center gap-3 lg:flex">
           <Link
             href={switchHref}
-            className="rounded-full border border-green-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-forest-800 transition-colors hover:border-green-300 hover:bg-green-50"
+            className="rounded-full border border-forest-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-forest-800 transition-colors hover:border-forest-300 hover:bg-forest-50"
           >
             {other}
           </Link>
           <Button
             href={`/${locale}#contact`}
             size="sm"
-            className="bg-gold-400 font-semibold text-forest-900 shadow-sm hover:bg-gold-500"
+            className="bg-slate-500 font-semibold text-white shadow-sm hover:bg-slate-600"
           >
             {cta}
           </Button>
@@ -97,14 +97,14 @@ export function Navbar({
       </Container>
 
       {open && (
-        <div className="border-t border-green-100 bg-white lg:hidden">
+        <div className="border-t border-forest-100 bg-cream lg:hidden">
           <Container className="flex flex-col gap-1 py-4">
             {items.map((item) => (
               <Link
                 key={item.href}
                 href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-3 text-base font-medium text-forest-800 hover:bg-green-50"
+                className="rounded-lg px-2 py-3 text-base font-medium text-forest-800 hover:bg-forest-50"
               >
                 {item.label}
               </Link>
@@ -113,7 +113,7 @@ export function Navbar({
               <Link
                 href={switchHref}
                 onClick={() => setOpen(false)}
-                className="rounded-full border border-green-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-forest-800"
+                className="rounded-full border border-forest-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-forest-800"
               >
                 {other}
               </Link>

@@ -1,6 +1,7 @@
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { siteConfig } from "@/lib/site";
+import { siteMedia } from "@/lib/site/media-gallery";
 
 export function JsonLd({ data }: { data: object }) {
   return (
@@ -20,7 +21,7 @@ const bgPersonSchema = {
   description:
     "Холистичен диетолог, специалист по инсулинова резистентност и Диабет тип 2. NHS Diabetes Practitioner в Англия с 20+ години опит.",
   url: "https://www.healthyandconfident.co.uk/bg",
-  image: "https://www.healthyandconfident.co.uk/og/default.jpg",
+  image: "https://www.healthyandconfident.co.uk/images/3.jpg",
   telephone: "+447876565263",
   email: "vessie@healthyandconfident.co.uk",
   sameAs: [
@@ -101,17 +102,35 @@ const bgProfessionalServiceSchema = {
 };
 
 export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale }) {
+  const pageUrl = `${siteConfig.domain}/${locale}`;
+  const imageGallery = {
+    "@context": "https://schema.org",
+    "@type": "ImageGallery",
+    name:
+      locale === "bg"
+        ? "Реално меню и резултати — Веси Ней"
+        : "Real meals and results — Vessie Ney",
+    description: dict.foodGallery.subtitle,
+    url: `${pageUrl}#food`,
+    image: siteMedia.map((item) => ({
+      "@type": "ImageObject",
+      contentUrl: `${siteConfig.domain}${item.src}`,
+      description: item.alt[locale],
+    })),
+  };
+
   if (locale === "bg") {
     return (
       <>
         <JsonLd data={bgPersonSchema} />
         <JsonLd data={bgFaqSchema} />
         <JsonLd data={bgProfessionalServiceSchema} />
+        <JsonLd data={imageGallery} />
       </>
     );
   }
 
-  const url = `${siteConfig.domain}/${locale}`;
+  const url = pageUrl;
 
   const graph = [
     {
@@ -151,5 +170,10 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
     },
   ];
 
-  return <JsonLd data={{ "@context": "https://schema.org", "@graph": graph }} />;
+  return (
+    <>
+      <JsonLd data={{ "@context": "https://schema.org", "@graph": graph }} />
+      <JsonLd data={imageGallery} />
+    </>
+  );
 }

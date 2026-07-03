@@ -160,11 +160,12 @@ export function AudienceTargetChecklist({
     <div className="flex flex-col gap-2">
       {rows.map((row, index) => {
         if (row.type === "group" && row.group) {
-          const checked = selectedGroupIds.includes(row.group.id);
-          const segmentCount = getSegmentKeysForGroup(row.group.id, groups, segments).length;
+          const group = row.group;
+          const checked = selectedGroupIds.includes(group.id);
+          const segmentCount = getSegmentKeysForGroup(group.id, groups, segments).length;
           return (
             <label
-              key={`group-${row.group.id}`}
+              key={`group-${group.id}`}
               className={cn(
                 "inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors",
                 checked ? groupCheckedClass : "border-ink/15 bg-cream-2/40 text-ink-soft hover:border-ink/25",
@@ -180,10 +181,10 @@ export function AudienceTargetChecklist({
                 )}
                 checked={checked}
                 disabled={disabled}
-                onChange={() => toggleGroup(row.group.id)}
+                onChange={() => toggleGroup(group.id)}
               />
               <span className="min-w-0">
-                <span className="font-semibold text-ink">{row.group.name}</span>
+                <span className="font-semibold text-ink">{group.name}</span>
                 <span className="ml-1.5 text-xs text-ink-soft">
                   (група · {segmentCount} сегмент{segmentCount === 1 ? "" : "а"})
                 </span>

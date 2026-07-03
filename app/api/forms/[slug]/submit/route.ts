@@ -100,7 +100,7 @@ export async function POST(
     form_id: form.id,
     subscriber_id: subscriberId,
     email,
-    answers,
+    answers: answers as Record<string, string | string[] | boolean>,
   });
 
   if (insertError) {

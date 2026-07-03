@@ -1,4 +1,7 @@
 import { siteConfig } from "@/lib/site";
+import { DEFAULT_EMAIL_FOOTER } from "@/lib/email/footer-defaults";
+import { renderEmailSignatureAndFooter } from "@/lib/email/footer-html";
+import type { EmailFooterConfig } from "@/lib/supabase/types";
 
 export type EmailCta = {
   label: string;
@@ -10,6 +13,7 @@ export type ComposeEmailOptions = {
   locale?: "bg" | "en";
   cta?: EmailCta | null;
   unsubscribeHref?: string | null;
+  footerConfig?: EmailFooterConfig | null;
 };
 
 const COLORS = {
@@ -65,36 +69,32 @@ function ctaBlock(cta: EmailCta): string {
 </table>`;
 }
 
-function footerUnsubscribe(locale: "bg" | "en", href: string): string {
-  const label = locale === "en" ? "Unsubscribe" : "Отписване";
-  const intro =
-    locale === "en"
-      ? "Don't want these emails?"
-      : "Не искаш повече имейли?";
-  const safeHref = escapeHtml(href.trim());
-  return `
-            <p style="margin:0 0 12px;font-size:12px;color:${COLORS.textMuted};line-height:1.5">
-              ${intro}
-              <a href="${safeHref}" style="color:${COLORS.green};text-decoration:underline;font-weight:600">${label}</a>
-            </p>`;
+function resolveFooterConfig(
+  locale: "bg" | "en",
+  footerConfig?: EmailFooterConfig | null,
+): EmailFooterConfig {
+  if (footerConfig) return footerConfig;
+  const defaults = DEFAULT_EMAIL_FOOTER[locale];
+  return { id: "", updated_at: "", ...defaults };
 }
 
 /** Full branded HTML email — header, body, optional CTA, footer. */
 export function composeBrandedEmail(options: ComposeEmailOptions): string {
-  const { bodyHtml, locale = "bg", cta, unsubscribeHref } = options;
+  const { bodyHtml, locale = "bg", cta, unsubscribeHref, footerConfig } = options;
 
   if (bodyHtml.includes(MARKER)) {
     return bodyHtml;
   }
 
-  const siteUrl = siteConfig.domain.replace(/\/$/, "");
   const year = new Date().getFullYear();
   const subtitle = headerSubtitle(locale);
   const button = cta ? ctaBlock(cta) : "";
-  const unsubscribe =
-    unsubscribeHref?.trim() && isSafeHref(unsubscribeHref)
-      ? footerUnsubscribe(locale, unsubscribeHref)
-      : "";
+  const footer = resolveFooterConfig(locale, footerConfig);
+  const signatureFooter = renderEmailSignatureAndFooter(
+    footer,
+    locale,
+    unsubscribeHref,
+  );
 
   return `<!DOCTYPE html>
 <html lang="${locale === "en" ? "en" : "bg"}">
@@ -130,13 +130,10 @@ ${MARKER}
           </td>
         </tr>
         <tr>
-          <td style="background-color:${COLORS.footerBg};padding:24px 28px;text-align:center;border-top:1px solid rgba(155,123,106,0.15)">
-            <p style="margin:0 0 8px;font-size:14px">
-              <a href="${siteUrl}" style="color:${COLORS.green};text-decoration:none;font-weight:600">www.healthyandconfident.co.uk</a>
-            </p>
-            ${unsubscribe}
-            <p style="margin:0;font-size:12px;color:${COLORS.textMuted};line-height:1.5">
-              © ${year} ${escapeHtml(siteConfig.brand)} · ${escapeHtml(siteConfig.tagline)}
+          <td style="background-color:${COLORS.footerBg};padding:24px 28px;border-top:1px solid rgba(155,123,106,0.15)">
+            ${signatureFooter}
+            <p style="margin:20px 0 0;font-size:11px;color:${COLORS.textMuted};line-height:1.5;text-align:center">
+              © ${year} ${escapeHtml(siteConfig.brand)}
             </p>
           </td>
         </tr>

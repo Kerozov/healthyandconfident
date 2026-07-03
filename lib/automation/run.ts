@@ -259,7 +259,7 @@ async function scheduleAutomation(
           ctx.subscriberId ?? undefined,
         )
       : null;
-  const html = buildBrandedEmail({
+  const html = await buildBrandedEmail({
     bodyHtml: expandedHtml,
     locale,
     cta: ctaHref
@@ -362,7 +362,7 @@ async function sendAutomationNow(
           ctx.subscriberId ?? undefined,
         )
       : null;
-  const html = buildBrandedEmail({
+  const html = await buildBrandedEmail({
     bodyHtml: expandedHtml,
     locale,
     cta: ctaHref

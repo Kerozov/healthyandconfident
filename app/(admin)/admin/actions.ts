@@ -16,6 +16,7 @@ import {
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
 import { runAutomations } from "@/lib/automation/send";
 import { composeBrandedEmail } from "@/lib/email/layout";
+import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
 import { expandEmailProducts } from "@/lib/email/expand-products";
 import {
   campaignCtaRedirectUrl,
@@ -42,6 +43,7 @@ import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, Segment
 import { expandAudienceKeys, isDescendantGroup } from "@/lib/segments/hierarchy";
 import { uploadMediaImage } from "@/lib/supabase/media";
 import { MEDIA_FOLDERS, type MediaFolder } from "@/lib/media/folders";
+import { parseYoutubeVideoId } from "@/lib/youtube";
 import {
   getEngagementOverview,
   getEngagementSummaryForEmails,
@@ -197,6 +199,59 @@ export async function savePopup(input: {
     })
     .eq("locale", input.locale);
   if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
+// ── Email footer ──────────────────────────────────────────────
+export async function saveEmailFooter(input: {
+  locale: "bg" | "en";
+  signature_enabled: boolean;
+  signature_image_url?: string;
+  signature_closing: string;
+  signature_name: string;
+  signature_title: string;
+  signature_email: string;
+  signature_phone: string;
+  brand_name: string;
+  brand_color: string;
+  website_url: string;
+  footer_email: string;
+  footer_phone: string;
+  address_line1: string;
+  address_line2: string;
+  facebook_url?: string;
+  youtube_url?: string;
+  disclaimer: string;
+  preferences_url?: string;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("email_footer_config")
+    .update({
+      signature_enabled: input.signature_enabled,
+      signature_image_url: input.signature_image_url?.trim() || null,
+      signature_closing: input.signature_closing,
+      signature_name: input.signature_name,
+      signature_title: input.signature_title,
+      signature_email: input.signature_email,
+      signature_phone: input.signature_phone,
+      brand_name: input.brand_name,
+      brand_color: input.brand_color || "#2563eb",
+      website_url: input.website_url,
+      footer_email: input.footer_email,
+      footer_phone: input.footer_phone,
+      address_line1: input.address_line1,
+      address_line2: input.address_line2,
+      facebook_url: input.facebook_url?.trim() || null,
+      youtube_url: input.youtube_url?.trim() || null,
+      disclaimer: input.disclaimer,
+      preferences_url: input.preferences_url?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("locale", input.locale);
+  if (error) return { ok: false, message: error.message };
+  invalidateEmailFooterCache(input.locale);
   return { ok: true };
 }
 
@@ -1141,6 +1196,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
   const campaignId = (draft as { id: string }).id;
   const mailLocale = input.locale === "en" ? "en" : "bg";
   const bodyHtml = await expandEmailProducts(input.html, mailLocale);
+  const footerConfig = await getEmailFooterConfig(mailLocale);
 
   const { data: subs } = await supabase
     .from("subscribers")
@@ -1170,6 +1226,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
         locale: mailLocale,
         cta: ctaHref ? { label: ctaLabel, href: ctaHref } : null,
         unsubscribeHref: unsubscribeLinkForEmail(recipient, mailLocale),
+        footerConfig,
       });
 
       try {
@@ -2396,6 +2453,11 @@ export async function sendFormByEmail(input: {
   let sent = 0;
   let failed = 0;
 
+  const [footerBg, footerEn] = await Promise.all([
+    getEmailFooterConfig("bg"),
+    getEmailFooterConfig("en"),
+  ]);
+
   for (const email of audience.emails) {
     const sub = subMap.get(email.toLowerCase());
     const locale = sub?.locale === "en" ? "en" : "bg";
@@ -2437,6 +2499,7 @@ export async function sendFormByEmail(input: {
         href: formUrl,
       },
       unsubscribeHref: unsubscribeLinkForEmail(email, locale),
+      footerConfig: locale === "en" ? footerEn : footerBg,
     });
 
     try {

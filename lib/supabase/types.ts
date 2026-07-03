@@ -66,6 +66,30 @@ export type PopupConfig = {
   updated_at: string;
 };
 
+export type EmailFooterConfig = {
+  id: string;
+  locale: Locale;
+  signature_enabled: boolean;
+  signature_image_url: string | null;
+  signature_closing: string;
+  signature_name: string;
+  signature_title: string;
+  signature_email: string;
+  signature_phone: string;
+  brand_name: string;
+  brand_color: string;
+  website_url: string;
+  footer_email: string;
+  footer_phone: string;
+  address_line1: string;
+  address_line2: string;
+  facebook_url: string | null;
+  youtube_url: string | null;
+  disclaimer: string;
+  preferences_url: string | null;
+  updated_at: string;
+};
+
 export type AutomationTrigger = "registration" | "purchase" | "new_subscriber";
 
 export type AutomationChannel = "email" | "sms";

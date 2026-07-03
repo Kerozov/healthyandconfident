@@ -3,14 +3,18 @@ import {
   composeBrandedEmail,
   type EmailCta,
 } from "@/lib/email/layout";
+import { getEmailFooterConfig } from "@/lib/email/footer-config";
+import type { EmailFooterConfig } from "@/lib/supabase/types";
 
-export function buildBrandedEmail(input: {
+export async function buildBrandedEmail(input: {
   bodyHtml: string;
   locale?: "bg" | "en";
   cta?: EmailCta | null;
   vars?: { name?: string | null; email: string };
   unsubscribeHref?: string | null;
-}): string {
+  footerConfig?: EmailFooterConfig | null;
+}): Promise<string> {
+  const locale = input.locale ?? "bg";
   const body = input.vars
     ? renderEmailTemplate(input.bodyHtml, input.vars)
     : input.bodyHtml;
@@ -20,10 +24,14 @@ export function buildBrandedEmail(input: {
       ? { label: input.cta.label.trim(), href: input.cta.href.trim() }
       : null;
 
+  const footerConfig =
+    input.footerConfig ?? (await getEmailFooterConfig(locale));
+
   return composeBrandedEmail({
     bodyHtml: body,
-    locale: input.locale ?? "bg",
+    locale,
     cta,
     unsubscribeHref: input.unsubscribeHref,
+    footerConfig,
   });
 }

@@ -15,6 +15,9 @@ export const en: Dictionary = {
       "weight loss coach",
       "menopause nutrition",
       "Hashimoto thyroid nutrition",
+      "healthy meal plan",
+      "delicious diet food",
+      "before after weight loss",
     ],
     ogAlt: "Vessie Ney — Holistic Nutritionist & Diabetes Practitioner",
   },
@@ -22,6 +25,7 @@ export const en: Dictionary = {
     items: [
       { label: "About", href: "#about" },
       { label: "Method", href: "#method" },
+      { label: "Meals", href: "#food" },
       { label: "Programs", href: "#programs" },
       { label: "Results", href: "#results" },
       { label: "Google", href: "#google-reviews" },
@@ -43,7 +47,7 @@ export const en: Dictionary = {
       "More confidence, clarity and calm",
     ],
     primaryCta: "Start your transformation",
-    secondaryCta: "Get the free menu",
+    secondaryCta: "See real meals",
     stats: [
       { value: "20+", label: "years in medicine & nutrition" },
       { value: "100s", label: "clients transformed" },
@@ -133,6 +137,7 @@ export const en: Dictionary = {
         ],
         cta: "Buy here – €3",
         href: "/programs/garnituri",
+        image: "/images/9.jpg",
       },
       {
         badge: "Most popular",
@@ -149,6 +154,7 @@ export const en: Dictionary = {
         cta: "Apply now",
         href: "/programs/zhivey-bez-rezistentnost",
         highlight: true,
+        image: "/images/7.jpg",
       },
       {
         badge: "7–10 min/day",
@@ -164,7 +170,54 @@ export const en: Dictionary = {
         ],
         cta: "Learn more",
         href: "/programs/preprogramirai-apetita",
+        image: "/images/12.jpg",
       },
+    ],
+  },
+  foodGallery: {
+    eyebrow: "Real menu",
+    title: "This is what you actually eat on the programs",
+    subtitle:
+      "No hunger, no sad salads, no “diet food”. Colourful, filling, delicious meals — family-friendly and quick to make.",
+    featuredAlt: "Collage of real meals from Vessie Ney's programs",
+    featuredCaption: "A small taste of the menu — salads, soups, sides and mains",
+    featuredNote:
+      "Every photo is from the real recipes and menus clients receive in the programs.",
+    highlights: [
+      "Delicious and filling — no deprivation",
+      "Easy recipes for busy days",
+      "Family-friendly meals",
+      "No specialist shops required",
+    ],
+    cta: "See programs",
+    ctaSecondary: "Real results",
+  },
+  results: {
+    eyebrow: "Trust & results",
+    title: "Before & after — real transformations",
+    subtitle:
+      "94% success rate with Vessie's clients. See what the journey looks like — with tasty food, structure and support, not starvation.",
+    beforeAfterCaption: "A real client result from the program — before and after",
+    stats: [
+      { value: "94%", label: "client success rate" },
+      { value: "5–15", label: "kg lost sustainably in 3 months" },
+      { value: "20+", label: "years of experience" },
+    ],
+    bullets: [
+      "Lasting weight loss without hunger or yo-yo dieting",
+      "More stable blood sugar and higher energy",
+      "Confidence back — and your favourite clothes fitting again",
+      "Personal support from a certified specialist",
+    ],
+    cta: "Book a free call",
+    awardsTitle: "Recognition & credibility",
+    clientsTitle: "Happy, confident clients",
+    clientsSubtitle:
+      "After real results — more energy, confidence and joy in everyday life.",
+    clientCaptions: [
+      "More confidence after transformation",
+      "Active, healthy lifestyle",
+      "Energy and joy every day",
     ],
   },
   testimonials: {
@@ -348,6 +401,7 @@ export const en: Dictionary = {
         title: "Explore",
         links: [
           { label: "About", href: "/en#about" },
+          { label: "Meals", href: "/en#food" },
           { label: "Programs", href: "/en#programs" },
           { label: "Results", href: "/en#results" },
           { label: "Google reviews", href: "/en#google-reviews" },
