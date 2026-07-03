@@ -22,8 +22,9 @@ export function Outcomes({
           <CtaLink
             placementKey="outcomes_cta"
             href={`/${locale}#contact`}
+            variant="forest"
             size="lg"
-            className="mt-8 bg-slate-500 px-8 py-4 font-bold text-white shadow-lg hover:bg-slate-600 hover:shadow-xl"
+            className="mt-8 px-8"
           >
             {dict.contact.cta}
           </CtaLink>

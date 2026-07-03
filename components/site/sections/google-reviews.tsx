@@ -14,7 +14,7 @@ function StarRow({ rating }: { rating: number }) {
           className={
             i < rating
               ? "h-4 w-4 fill-gold-400 text-gold-400"
-              : "h-4 w-4 fill-green-100 text-green-100"
+              : "h-4 w-4 fill-forest-100 text-forest-100"
           }
         />
       ))}
@@ -27,33 +27,33 @@ export function GoogleReviews({ dict }: { dict: Dictionary }) {
   const reviewUrl = siteConfig.googleReviewsUrl;
 
   return (
-    <section id="google-reviews" className="scroll-mt-24 bg-green-50 py-24">
+    <section id="google-reviews" className="section-pad scroll-mt-24 bg-cream-2">
       <Container>
         <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="lg:sticky lg:top-28">
-            <div className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-white px-4 py-2 text-sm font-medium text-forest-800">
+            <div className="inline-flex items-center gap-2 rounded-full border border-forest-100 bg-white px-4 py-2 text-sm font-medium text-slate-800">
               <GoogleIcon className="h-5 w-5" />
               Google Reviews
             </div>
-            <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-forest-800 sm:text-4xl">
+            <h2 className="mt-5 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
               {googleReviews.title}
             </h2>
-            <p className="mt-4 max-w-md text-forest-800">{googleReviews.subtitle}</p>
+            <p className="mt-4 max-w-md text-ink-soft">{googleReviews.subtitle}</p>
 
-            <div className="mt-8 flex items-center gap-5 rounded-2xl border border-green-200 bg-white p-4 shadow-sm">
+            <div className="mt-8 flex items-center gap-5 rounded-xl border border-forest-100 bg-white p-4 shadow-card">
               <div>
-                <p className="text-4xl font-bold text-green-700">
+                <p className="text-4xl font-bold text-slate-800">
                   {googleReviews.aggregateRating}
                 </p>
                 <StarRow rating={5} />
-                <p className="mt-2 text-sm text-green-600">
+                <p className="mt-2 text-sm text-ink-soft">
                   {googleReviews.reviewCount} {googleReviews.reviewCountLabel}
                 </p>
               </div>
-              <div className="hidden h-16 w-px bg-green-100 sm:block" />
+              <div className="hidden h-16 w-px bg-forest-100 sm:block" />
               <div className="hidden sm:block">
                 <GoogleIcon className="h-10 w-10" />
-                <p className="mt-2 text-xs font-medium text-green-600">
+                <p className="mt-2 text-xs font-medium text-ink-soft">
                   {googleReviews.verifiedLabel}
                 </p>
               </div>
@@ -75,18 +75,18 @@ export function GoogleReviews({ dict }: { dict: Dictionary }) {
             {googleReviews.items.map((review) => (
               <article
                 key={`${review.name}-${review.date}`}
-                className="flex flex-col rounded-2xl border border-green-100 bg-white p-5 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
+                className="flex flex-col rounded-xl border border-forest-100 bg-white p-5 shadow-card transition-shadow hover:shadow-soft"
               >
                 <div className="flex items-start justify-between gap-3">
                   <StarRow rating={review.rating} />
                   <GoogleIcon className="h-5 w-5 shrink-0 opacity-80" />
                 </div>
-                <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-forest-800">
+                <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-ink-soft">
                   &ldquo;{review.quote}&rdquo;
                 </blockquote>
-                <footer className="mt-5 border-t border-green-100 pt-4">
-                  <p className="font-semibold text-forest-800">{review.name}</p>
-                  <p className="mt-1 text-sm text-green-500">
+                <footer className="mt-5 border-t border-forest-100 pt-4">
+                  <p className="font-semibold text-slate-800">{review.name}</p>
+                  <p className="mt-1 text-sm text-ink-soft">
                     {review.date} · {googleReviews.postedOnLabel}
                   </p>
                 </footer>

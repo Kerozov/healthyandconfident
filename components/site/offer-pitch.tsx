@@ -28,11 +28,11 @@ export function OfferPitch({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-green-300/50 bg-green-50 p-4",
+        "rounded-2xl border border-forest-200/50 bg-cream p-4",
         className,
       )}
     >
-      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-green-600">
+      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-forest-500">
         <Sparkles className="h-3.5 w-3.5" />
         {pitch}
       </p>
@@ -42,7 +42,7 @@ export function OfferPitch({
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-display text-base font-semibold leading-snug">{title}</p>
             {price && (
-              <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold text-green-700">
+              <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold text-forest-600">
                 {price}
               </span>
             )}

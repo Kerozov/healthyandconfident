@@ -44,11 +44,11 @@ function SectionTitle({
   return (
     <div className={cn("text-center", className)}>
       {eyebrow && (
-        <p className="text-sm font-semibold uppercase tracking-widest text-green-600">{eyebrow}</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-forest-500">{eyebrow}</p>
       )}
       <h2 className="mt-2 font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
         {title}{" "}
-        {accent && <span className="text-green-600">{accent}</span>}
+        {accent && <span className="text-forest-500">{accent}</span>}
       </h2>
     </div>
   );
@@ -67,7 +67,7 @@ function FoodGallery({
           {gallery.images.map((src, i) => (
             <div
               key={src}
-              className="aspect-square overflow-hidden rounded-2xl bg-green-100 shadow-md"
+              className="aspect-square overflow-hidden rounded-2xl bg-forest-100 shadow-md"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -92,14 +92,14 @@ export function ProgramLanding({
   return (
     <div className="overflow-hidden">
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-forest-900 via-forest-800 to-green-900 pb-24 pt-12 text-white">
+      <section className="relative bg-slate-800 pb-24 pt-12 text-white">
         <div className="pointer-events-none absolute -right-40 top-0 h-[500px] w-[500px] rounded-full bg-gold-400/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-32 bottom-0 h-96 w-96 rounded-full bg-green-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-32 bottom-0 h-96 w-96 rounded-full bg-forest-400/10 blur-3xl" />
 
         <Container className="relative">
           <Link
             href={`/${locale}#programs`}
-            className="inline-flex items-center gap-2 text-sm font-medium text-green-200/80 transition-colors hover:text-white"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             {locale === "bg" ? "Обратно към програмите" : "Back to programs"}
@@ -130,14 +130,14 @@ export function ProgramLanding({
                 )}
               </h1>
 
-              <p className="mt-6 text-lg leading-relaxed text-green-100/90 sm:text-xl">
+              <p className="mt-6 text-lg leading-relaxed text-slate-200 sm:text-xl">
                 {hero.subtitle}
               </p>
 
               {hero.bullets && hero.bullets.length > 0 && (
                 <ul className="mt-8 space-y-3">
                   {hero.bullets.map((b) => (
-                    <li key={b} className="flex items-start gap-3 text-green-50">
+                    <li key={b} className="flex items-start gap-3 text-slate-100">
                       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold-400/20">
                         <Check className="h-3.5 w-3.5 text-gold-300" />
                       </span>
@@ -204,7 +204,7 @@ export function ProgramLanding({
                 <p key={p.slice(0, 40)}>{p}</p>
               ))}
             </div>
-            <p className="mt-10 font-display text-2xl font-bold text-green-700 sm:text-3xl">
+            <p className="mt-10 font-display text-2xl font-bold text-forest-600 sm:text-3xl">
               {content.pain.hook}
             </p>
           </Container>
@@ -215,7 +215,7 @@ export function ProgramLanding({
       {content.vision && (
         <section className="relative bg-white py-20">
           <Container className="max-w-3xl text-center">
-            <h2 className="font-display text-3xl font-semibold text-green-700 sm:text-4xl">
+            <h2 className="font-display text-3xl font-semibold text-forest-600 sm:text-4xl">
               {content.vision.title}
             </h2>
             <div className="mt-8 space-y-5 text-lg leading-relaxed text-forest-800">
@@ -284,7 +284,7 @@ export function ProgramLanding({
               <ul className="mt-8 space-y-3">
                 {content.visualize.items.map((item) => (
                   <li key={item} className="flex items-start gap-3 text-lg text-forest-800">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-green-600" />
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-forest-500" />
                     {item}
                   </li>
                 ))}
@@ -316,7 +316,7 @@ export function ProgramLanding({
               {content.testimonials.map((t) => (
                 <blockquote
                   key={t.name}
-                  className="rounded-3xl border border-green-200/60 bg-white p-8 shadow-sm"
+                  className="rounded-3xl border border-forest-100/60 bg-white p-8 shadow-sm"
                 >
                   <div className="flex gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -331,7 +331,7 @@ export function ProgramLanding({
                   <p className="mt-4 text-sm leading-relaxed text-forest-700">
                     {t.quote}
                   </p>
-                  <footer className="mt-4 text-sm font-semibold text-green-700">
+                  <footer className="mt-4 text-sm font-semibold text-forest-600">
                     — {t.name}
                   </footer>
                 </blockquote>
@@ -346,7 +346,7 @@ export function ProgramLanding({
         <section className="bg-cream-50 py-20">
           <Container className="grid items-center gap-12 lg:grid-cols-2">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-green-600">
+              <p className="text-sm font-semibold uppercase tracking-widest text-forest-500">
                 {content.promoStrip.subtitle}
               </p>
               <h2 className="mt-2 font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
@@ -358,7 +358,7 @@ export function ProgramLanding({
               <ul className="mt-8 space-y-3">
                 {content.promoStrip.checklist.map((item) => (
                   <li key={item} className="flex items-start gap-3 text-forest-800">
-                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-forest-500" />
                     {item}
                   </li>
                 ))}
@@ -393,7 +393,7 @@ export function ProgramLanding({
               {content.valueStack.modules.map((mod) => (
                 <div
                   key={mod.title}
-                  className="overflow-hidden rounded-3xl border border-green-100 bg-cream-50/50 shadow-sm"
+                  className="overflow-hidden rounded-3xl border border-forest-100 bg-cream-50/50 shadow-sm"
                 >
                   {mod.image && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -449,7 +449,7 @@ export function ProgramLanding({
                 {content.valueStack.totalValue}
               </p>
               {content.valueStack.totalNote && (
-                <p className="mt-2 text-lg text-green-700">{content.valueStack.totalNote}</p>
+                <p className="mt-2 text-lg text-forest-600">{content.valueStack.totalNote}</p>
               )}
             </div>
           </Container>
@@ -472,7 +472,7 @@ export function ProgramLanding({
                   <ul className="mt-6 space-y-4">
                     {section.bullets.map((b) => (
                       <li key={b} className="flex items-start gap-3 text-forest-800">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-green-600" />
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-forest-500" />
                         <span className="leading-relaxed">{b}</span>
                       </li>
                     ))}
@@ -501,14 +501,14 @@ export function ProgramLanding({
           <Container>
             <SectionTitle title={content.comparison.title} />
             <div className="mt-14 grid gap-6 lg:grid-cols-2">
-              <div className="rounded-3xl border border-green-200 bg-green-50/40 p-8">
+              <div className="rounded-3xl border border-forest-100 bg-cream/40 p-8">
                 <h3 className="font-display text-lg font-semibold leading-snug text-forest-900">
                   {content.comparison.positive.title}
                 </h3>
                 <ul className="mt-6 space-y-2">
                   {content.comparison.positive.bullets.map((b) => (
                     <li key={b} className="flex items-start gap-2 text-sm text-forest-800">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-forest-500" />
                       {b}
                     </li>
                   ))}
@@ -526,7 +526,7 @@ export function ProgramLanding({
                   ))}
                 </ul>
                 {content.comparison.negative.closing && (
-                  <p className="mt-6 border-t border-rose-200 pt-6 text-sm font-medium leading-relaxed text-green-800">
+                  <p className="mt-6 border-t border-rose-200 pt-6 text-sm font-medium leading-relaxed text-slate-800">
                     {content.comparison.negative.closing}
                   </p>
                 )}
@@ -574,7 +574,7 @@ export function ProgramLanding({
                     </ul>
                   </div>
                   <div>
-                    <p className="font-semibold text-green-700">Сега:</p>
+                    <p className="font-semibold text-forest-600">Сега:</p>
                     <ul className="mt-2 space-y-1 text-forest-700">
                       {content.transformation.after.map((a) => (
                         <li key={a}>— {a}</li>
@@ -584,7 +584,7 @@ export function ProgramLanding({
                 </div>
               </div>
               <div className="text-center">
-                <p className="font-display text-4xl font-bold tracking-widest text-green-600">
+                <p className="font-display text-4xl font-bold tracking-widest text-forest-500">
                   СЛЕД
                 </p>
                 {content.transformation.afterImage && (
@@ -601,7 +601,7 @@ export function ProgramLanding({
               </div>
             </div>
             {content.transformation.audienceTitle && content.transformation.audienceBullets && (
-              <div className="mx-auto mt-14 max-w-md rounded-2xl border border-green-200 bg-white p-6">
+              <div className="mx-auto mt-14 max-w-md rounded-2xl border border-forest-100 bg-white p-6">
                 <p className="font-display text-lg font-semibold text-forest-900">
                   {content.transformation.audienceTitle}
                 </p>
@@ -628,9 +628,9 @@ export function ProgramLanding({
               {content.outcomes.items.map((item, i) => (
                 <div
                   key={item.title}
-                  className="group relative overflow-hidden rounded-3xl border border-green-200/60 bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+                  className="group relative overflow-hidden rounded-3xl border border-forest-100/60 bg-white p-8 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-600 text-lg font-bold text-white">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-forest-500 text-lg font-bold text-white">
                     {i + 1}
                   </span>
                   <h3 className="mt-5 font-display text-xl font-semibold text-forest-900">
@@ -660,9 +660,9 @@ export function ProgramLanding({
               {content.curriculum.items.map((item, i) => (
                 <div
                   key={item.title}
-                  className="flex gap-4 rounded-2xl border border-green-100 bg-cream-50/50 p-5"
+                  className="flex gap-4 rounded-2xl border border-forest-100 bg-cream-50/50 p-5"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-700 text-sm font-bold text-white">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-forest-600 text-sm font-bold text-white">
                     {i + 1}
                   </span>
                   <div>
@@ -688,7 +688,7 @@ export function ProgramLanding({
               </div>
             )}
             {content.curriculum.closing && (
-              <p className="mx-auto mt-10 max-w-3xl text-center font-display text-lg italic leading-relaxed text-green-800">
+              <p className="mx-auto mt-10 max-w-3xl text-center font-display text-lg italic leading-relaxed text-slate-800">
                 {content.curriculum.closing}
               </p>
             )}
@@ -713,7 +713,7 @@ export function ProgramLanding({
                   >
                     <Icon className="h-8 w-8 text-gold-400" />
                     <h3 className="mt-5 font-display text-xl font-semibold">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-green-100/80">{item.text}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-slate-200/80">{item.text}</p>
                   </div>
                 );
               })}
@@ -729,12 +729,12 @@ export function ProgramLanding({
             <h2 className="text-center font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
               {content.includes.title}
             </h2>
-            <div className="mx-auto mt-14 max-w-3xl divide-y divide-green-100 rounded-3xl border border-green-100 bg-cream-50/50">
+            <div className="mx-auto mt-14 max-w-3xl divide-y divide-forest-100 rounded-3xl border border-forest-100 bg-cream-50/50">
               {content.includes.items.map((item) => (
                 <details key={item.title} className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 font-semibold text-forest-900 transition-colors hover:text-green-700 [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 font-semibold text-forest-900 transition-colors hover:text-forest-600 [&::-webkit-details-marker]:hidden">
                     <span className="font-display text-lg">{item.title}</span>
-                    <ChevronDown className="h-5 w-5 shrink-0 text-green-600 transition-transform group-open:rotate-180" />
+                    <ChevronDown className="h-5 w-5 shrink-0 text-forest-500 transition-transform group-open:rotate-180" />
                   </summary>
                   <p className="px-6 pb-5 text-sm leading-relaxed text-forest-700">{item.text}</p>
                 </details>
@@ -750,12 +750,12 @@ export function ProgramLanding({
             <h2 className="text-center font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
               {content.includes.title}
             </h2>
-            <div className="mx-auto mt-14 max-w-3xl divide-y divide-green-100 rounded-3xl border border-green-100 bg-cream-50/50">
+            <div className="mx-auto mt-14 max-w-3xl divide-y divide-forest-100 rounded-3xl border border-forest-100 bg-cream-50/50">
               {content.includes.items.map((item) => (
                 <details key={item.title} className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 font-semibold text-forest-900 transition-colors hover:text-green-700 [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 font-semibold text-forest-900 transition-colors hover:text-forest-600 [&::-webkit-details-marker]:hidden">
                     <span className="font-display text-lg">{item.title}</span>
-                    <ChevronDown className="h-5 w-5 shrink-0 text-green-600 transition-transform group-open:rotate-180" />
+                    <ChevronDown className="h-5 w-5 shrink-0 text-forest-500 transition-transform group-open:rotate-180" />
                   </summary>
                   <p className="px-6 pb-5 text-sm leading-relaxed text-forest-700">{item.text}</p>
                 </details>
@@ -773,16 +773,16 @@ export function ProgramLanding({
               <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
                 {content.trust.title}
               </h2>
-              <p className="mt-4 text-xl font-semibold text-green-700">{content.trust.greeting}</p>
+              <p className="mt-4 text-xl font-semibold text-forest-600">{content.trust.greeting}</p>
               <ul className="mt-8 space-y-4">
                 {content.trust.credentials.map((c) => (
                   <li key={c} className="flex items-start gap-3 text-forest-800">
-                    <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                    <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-forest-500" />
                     <span>{c}</span>
                   </li>
                 ))}
               </ul>
-              <div className="mt-8 space-y-2 border-t border-green-100 pt-8">
+              <div className="mt-8 space-y-2 border-t border-forest-100 pt-8">
                 {content.trust.accolades.map((a) => (
                   <p key={a} className="flex items-start gap-2 text-sm font-medium text-forest-700">
                     <Award className="mt-0.5 h-4 w-4 shrink-0 text-gold-500" />
@@ -792,7 +792,7 @@ export function ProgramLanding({
               </div>
             </div>
             <div className="relative mx-auto w-full max-w-lg">
-              <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-green-100 to-cream-100 p-2 shadow-xl">
+              <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-forest-100 to-cream-100 p-2 shadow-xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={content.trust.image ?? "/images/vessie-about.jpg"}
@@ -807,13 +807,13 @@ export function ProgramLanding({
 
       {/* Pricing */}
       {content.pricing && (
-        <section className="bg-gradient-to-br from-cream-50 via-white to-green-50 py-24">
+        <section className="bg-gradient-to-br from-cream-50 via-white to-cream py-24">
           <Container className="max-w-5xl">
             <div className="text-center">
               <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
                 {content.pricing.title}{" "}
                 {content.pricing.titleAccent ? (
-                  <span className="text-green-600">{content.pricing.titleAccent}</span>
+                  <span className="text-forest-500">{content.pricing.titleAccent}</span>
                 ) : null}
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-forest-700">
@@ -824,7 +824,7 @@ export function ProgramLanding({
             {(content.pricing.audienceTitle || content.pricing.includesList) && (
               <div className="mt-12 grid gap-8 lg:grid-cols-2">
                 {content.pricing.audienceTitle && content.pricing.audienceBullets && (
-                  <div className="rounded-2xl border border-green-100 bg-white p-6">
+                  <div className="rounded-2xl border border-forest-100 bg-white p-6">
                     <p className="font-display text-lg font-semibold text-forest-900">
                       {content.pricing.audienceTitle}
                     </p>
@@ -836,7 +836,7 @@ export function ProgramLanding({
                   </div>
                 )}
                 {content.pricing.includesList && (
-                  <div className="rounded-2xl border border-green-100 bg-white p-6">
+                  <div className="rounded-2xl border border-forest-100 bg-white p-6">
                     <p className="font-display text-lg font-semibold text-forest-900">
                       {locale === "bg" ? "Включва:" : "Includes:"}
                     </p>
@@ -886,11 +886,11 @@ export function ProgramLanding({
                         ? "border-forest-300 md:col-span-2 lg:col-span-3"
                         : i === 0
                           ? "border-gold-400"
-                          : "border-green-200",
+                          : "border-forest-100",
                     )}
                   >
                     {opt.badge && (
-                      <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-forest-500">
                         {opt.badge}
                       </p>
                     )}
@@ -937,11 +937,11 @@ export function ProgramLanding({
               {content.faq.map((item) => (
                 <details
                   key={item.q}
-                  className="group rounded-2xl border border-green-100 bg-cream-50/50"
+                  className="group rounded-2xl border border-forest-100 bg-cream-50/50"
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-4 font-semibold text-forest-900 [&::-webkit-details-marker]:hidden">
                     {item.q}
-                    <ChevronDown className="h-5 w-5 shrink-0 text-green-600 transition-transform group-open:rotate-180" />
+                    <ChevronDown className="h-5 w-5 shrink-0 text-forest-500 transition-transform group-open:rotate-180" />
                   </summary>
                   <p className="px-6 pb-4 text-sm leading-relaxed text-forest-700">{item.a}</p>
                 </details>
@@ -953,14 +953,14 @@ export function ProgramLanding({
 
       {/* Video + Newsletter */}
       {(content.video || content.newsletter) && (
-        <section className="border-t border-green-100 bg-cream-50 py-24">
+        <section className="border-t border-forest-100 bg-cream-50 py-24">
           <Container>
             {content.video && (
               <div className="mx-auto max-w-3xl text-center">
                 <h2 className="font-display text-2xl font-semibold text-forest-900 sm:text-3xl">
                   {content.video.title}{" "}
                   {content.video.titleAccent && (
-                    <span className="text-green-600">{content.video.titleAccent}</span>
+                    <span className="text-forest-500">{content.video.titleAccent}</span>
                   )}
                   :
                 </h2>

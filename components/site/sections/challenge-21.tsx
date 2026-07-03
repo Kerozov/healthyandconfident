@@ -24,14 +24,14 @@ export function Challenge21Section({
   return (
     <section
       id="challenge-21"
-      className="scroll-mt-24 bg-forest-900 py-20 text-white sm:py-24"
+      className="section-pad scroll-mt-24 bg-slate-800 text-white"
     >
       <Container>
         <header className="mx-auto max-w-4xl text-center">
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             {challenge21.title}
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-green-100/90 sm:text-lg">
+          <p className="mt-4 text-base leading-relaxed text-slate-300 sm:text-lg">
             {challenge21.subtitle}
           </p>
         </header>
@@ -42,7 +42,7 @@ export function Challenge21Section({
               {COLLAGE_IMAGES.map((src) => (
                 <div
                   key={src}
-                  className="aspect-square overflow-hidden rounded-lg bg-forest-800"
+                  className="aspect-square overflow-hidden rounded-lg bg-slate-700"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -63,10 +63,10 @@ export function Challenge21Section({
                 <p className="text-[11px] font-bold uppercase leading-snug text-coral-600 sm:text-xs">
                   {challenge21.cardLine1}
                 </p>
-                <p className="mt-2 font-display text-lg font-bold uppercase leading-tight text-forest-900 sm:text-xl">
+                <p className="mt-2 font-display text-lg font-bold uppercase leading-tight text-slate-800 sm:text-xl">
                   {challenge21.cardLine2}
                 </p>
-                <p className="mt-2 font-display text-base italic text-forest-800 sm:text-lg">
+                <p className="mt-2 font-display text-base italic text-slate-700 sm:text-lg">
                   {challenge21.cardSignature}
                 </p>
               </div>
@@ -74,7 +74,7 @@ export function Challenge21Section({
           </div>
 
           <div>
-            <ul className="space-y-3 text-sm leading-relaxed text-green-50 sm:text-base">
+            <ul className="space-y-3 text-sm leading-relaxed text-slate-200 sm:text-base">
               {challenge21.bullets.map((item) => (
                 <li key={item} className="flex items-start gap-3">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gold-400" />
@@ -88,7 +88,7 @@ export function Challenge21Section({
               target="_blank"
               rel="noopener noreferrer"
               size="lg"
-              className="mt-10 rounded-sm bg-white px-8 py-4 text-sm font-bold uppercase tracking-wide text-forest-900 shadow-lg hover:bg-cream-50"
+              className="mt-10 rounded-lg bg-white px-8 py-4 text-sm font-bold uppercase tracking-wide text-slate-800 shadow-lg hover:bg-cream"
             >
               {challenge21.cta}
             </CtaLink>

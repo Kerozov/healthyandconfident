@@ -7,6 +7,7 @@ const TOPICS = {
     "Инсулинова резистентност",
     "Трайно отслабване",
     "Диабет тип 2",
+    "94% успех",
     "Балансирана кръвна захар",
     "Повече енергия",
     "Увереност",
@@ -17,6 +18,7 @@ const TOPICS = {
     "Insulin resistance",
     "Lasting weight loss",
     "Type 2 Diabetes",
+    "94% success rate",
     "Balanced blood sugar",
     "More energy",
     "Confidence",
@@ -27,22 +29,21 @@ const TOPICS = {
 
 export function Marquee({ locale }: { locale: Locale }) {
   const topics = locale === "bg" ? TOPICS.bg : TOPICS.en;
-  const label =
-    locale === "bg" ? "С фокус върху" : "Focused on";
+  const label = locale === "bg" ? "С фокус върху" : "Focused on";
 
   return (
-    <section className="border-y border-green-100 bg-gradient-to-b from-green-50/80 to-white py-8">
+    <section className="border-y border-forest-100 bg-cream py-8">
       <Container>
-        <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-green-600">
+        <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-forest-500">
           {label}
         </p>
         <ul className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           {topics.map((topic) => (
             <li
               key={topic}
-              className="inline-flex items-center gap-1.5 rounded-full border border-green-100 bg-white px-3.5 py-2 text-sm font-medium text-forest-800 shadow-sm transition-colors hover:border-green-200 hover:bg-green-50"
+              className="inline-flex items-center gap-1.5 rounded-full border border-forest-100 bg-white px-3.5 py-2 text-sm font-medium text-slate-800 shadow-sm"
             >
-              <Check className="h-3.5 w-3.5 shrink-0 text-green-500" aria-hidden />
+              <Check className="h-3.5 w-3.5 shrink-0 text-forest-500" aria-hidden />
               {topic}
             </li>
           ))}

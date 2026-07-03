@@ -5,14 +5,9 @@ import { Button } from "@/components/ui/button";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaByCategory } from "@/lib/site/media-gallery";
 
-const FOOD_GRID = [
-  "/images/6.jpg",
-  "/images/7.jpg",
-  "/images/8.jpg",
-  "/images/9.jpg",
-  "/images/10.jpg",
-  "/images/12.jpg",
-];
+const FOOD_GRID = mediaByCategory("food")
+  .map((f) => f.src)
+  .filter((src) => src !== "/images/11.jpg");
 
 export function FoodShowcase({
   dict,

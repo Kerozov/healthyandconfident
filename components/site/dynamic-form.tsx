@@ -7,11 +7,11 @@ import type { FormField, FormSettings, FormTheme } from "@/lib/forms/types";
 import { cn } from "@/lib/utils";
 
 const inputClass =
-  "w-full rounded-xl border border-green-100 bg-white px-4 py-3 text-sm text-forest-800 outline-none transition focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20";
+  "w-full rounded-xl border border-forest-100 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20";
 
 const themeShell: Record<FormTheme, string> = {
   default:
-    "border-forest-500/20 bg-gradient-to-br from-cream via-white to-green-50/40 shadow-lg shadow-forest-900/5",
+    "border-forest-500/20 bg-gradient-to-br from-cream via-white to-cream-2/40 shadow-lg shadow-slate-800/5",
   warm: "border-gold-400/30 bg-gradient-to-br from-gold-50/80 via-white to-coral-50/30 shadow-lg shadow-gold-900/5",
   minimal: "border-ink/10 bg-white shadow-md",
 };
@@ -100,7 +100,7 @@ export function DynamicForm({
   if (state === "done") {
     return (
       <div className="mx-auto max-w-xl px-4 py-16">
-        <div className="flex items-start gap-4 rounded-2xl border border-forest-500/20 bg-green-50 px-6 py-8">
+        <div className="flex items-start gap-4 rounded-2xl border border-forest-500/20 bg-cream px-6 py-8">
           <CheckCircle2 className="mt-0.5 h-8 w-8 shrink-0 text-forest-600" />
           <div>
             <h1 className="font-display text-2xl font-semibold text-forest-800">

@@ -64,7 +64,7 @@ export function Navbar({
             <Link
               key={item.href}
               href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
-              className="text-sm font-medium text-forest-800 transition-colors hover:text-slate-500"
+              className="text-sm font-medium text-slate-700 transition-colors hover:text-forest-500"
             >
               {item.label}
             </Link>
@@ -74,7 +74,7 @@ export function Navbar({
         <div className="hidden items-center gap-3 lg:flex">
           <Link
             href={switchHref}
-            className="rounded-full border border-forest-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-forest-800 transition-colors hover:border-forest-300 hover:bg-forest-50"
+            className="rounded-full border border-forest-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 transition-colors hover:border-forest-300 hover:bg-cream-2"
           >
             {other}
           </Link>
@@ -88,7 +88,7 @@ export function Navbar({
         </div>
 
         <button
-          className="text-forest-800 lg:hidden"
+          className="text-slate-800 lg:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label="Menu"
         >
@@ -104,7 +104,7 @@ export function Navbar({
                 key={item.href}
                 href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-3 text-base font-medium text-forest-800 hover:bg-forest-50"
+                className="rounded-lg px-2 py-3 text-base font-medium text-slate-800 hover:bg-cream-2"
               >
                 {item.label}
               </Link>
@@ -113,7 +113,7 @@ export function Navbar({
               <Link
                 href={switchHref}
                 onClick={() => setOpen(false)}
-                className="rounded-full border border-forest-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-forest-800"
+                className="rounded-full border border-forest-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700"
               >
                 {other}
               </Link>

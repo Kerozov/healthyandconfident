@@ -24,13 +24,13 @@ export function ShopSection({
       : section.title_en || dict.shop.title;
 
   return (
-    <section id="shop" className="scroll-mt-24 py-24">
+    <section id="shop" className="section-pad scroll-mt-24 bg-white">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow text-green-600">
+          <span className="eyebrow">
             <ShoppingBag className="h-4 w-4" /> {dict.shop.eyebrow}
           </span>
-          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
             {title}
           </h2>
           <p className="mt-4 text-ink-soft">{dict.shop.subtitle}</p>

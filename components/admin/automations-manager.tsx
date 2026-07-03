@@ -621,7 +621,7 @@ export function AutomationsManager({
         <Card title={editingId === "new" ? "Нова автоматизация" : "Редакция"}>
           <div className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Име">
+              <Field label="Име (и заглавие на пътя в „Пътища“)">
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}

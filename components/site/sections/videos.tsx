@@ -32,13 +32,13 @@ export function VideosSection({
       : section.title_en || dict.videos.title;
 
   return (
-    <section id="videos" className="scroll-mt-24 bg-white py-24">
+    <section id="videos" className="section-pad scroll-mt-24 bg-white">
       <Container>
         <div className="mx-auto max-w-3xl text-center">
           <span className="eyebrow text-forest-600">
             <Play className="h-4 w-4" /> {dict.videos.eyebrow}
           </span>
-          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-forest-800 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
             {title}
           </h2>
           <p className="mt-4 text-forest-700/80">{dict.videos.subtitle}</p>

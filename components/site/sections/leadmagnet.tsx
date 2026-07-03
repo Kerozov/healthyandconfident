@@ -7,19 +7,19 @@ import { LeadForm } from "@/components/site/lead-form";
 export function LeadMagnet({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const { leadMagnet } = dict;
   return (
-    <section id="lead" className="scroll-mt-24 py-24">
+    <section id="lead" className="section-pad scroll-mt-24">
       <Container>
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-green-700 to-green-800 px-7 py-14 text-white sm:px-14">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+        <div className="relative overflow-hidden rounded-2xl bg-slate-800 px-7 py-14 text-white sm:px-14">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-forest-500/20 blur-3xl" />
           <div className="relative mx-auto max-w-2xl text-center">
-            <span className="eyebrow justify-center text-green-100">
+            <span className="eyebrow justify-center text-forest-300">
               <Gift className="h-4 w-4" />
               {locale === "bg" ? "Безплатен подарък" : "Free gift"}
             </span>
-            <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
               {leadMagnet.title}
             </h2>
-            <p className="mt-4 text-white/90">{leadMagnet.subtitle}</p>
+            <p className="mt-4 text-slate-300">{leadMagnet.subtitle}</p>
             <div className="mt-8">
               <LeadForm
                 locale={locale}

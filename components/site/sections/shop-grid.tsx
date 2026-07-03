@@ -46,9 +46,9 @@ export function ShopProductGrid({
             type="button"
             onClick={() => openProduct(product)}
             disabled={!checkoutUrl}
-            className="group flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-bg-card text-left transition-all hover:-translate-y-1 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
+            className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <div className="relative aspect-[16/10] overflow-hidden bg-green-100">
+            <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">
               {product.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -57,18 +57,18 @@ export function ShopProductGrid({
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-green-500 to-green-700 font-display text-xl text-white/90">
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90">
                   {shopEyebrow}
                 </div>
               )}
             </div>
             <div className="flex flex-1 flex-col p-6">
               {price && (
-                <p className="font-display text-2xl font-semibold text-green-600">
+                <p className="font-display text-2xl font-semibold text-slate-800">
                   {price}
                 </p>
               )}
-              <h3 className="mt-2 font-display text-xl font-semibold leading-snug transition-colors group-hover:text-green-600">
+              <h3 className="mt-2 font-display text-xl font-semibold leading-snug text-slate-800 transition-colors group-hover:text-forest-500">
                 {productTitle}
               </h3>
               {description && (
@@ -76,7 +76,7 @@ export function ShopProductGrid({
                   {description}
                 </p>
               )}
-              <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-green-600">
+              <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-forest-500">
                 {shopCta} <ArrowUpRight className="h-4 w-4" />
               </span>
             </div>

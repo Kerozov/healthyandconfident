@@ -210,7 +210,7 @@ export function OfferPopupProvider({
               <X className="h-5 w-5" />
             </button>
 
-            <div className="bg-green-700 px-7 py-6 text-white">
+            <div className="bg-slate-800 px-7 py-6 text-white">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-300">
                 <Sparkles className="h-4 w-4" />
                 {popup.headline}
@@ -234,7 +234,7 @@ export function OfferPopupProvider({
               )}
 
               {baseProduct && bundleReady && basePrice && price && (
-                <p className="mt-4 rounded-xl bg-green-50 px-4 py-3 text-sm text-forest-800">
+                <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-sm text-slate-800">
                   {locale === "bg" ? "Общо в Stripe:" : "Stripe total:"}{" "}
                   <strong>
                     {basePrice} + {price}
@@ -268,7 +268,7 @@ export function OfferPopupProvider({
                       type="button"
                       onClick={declineToBaseOnly}
                       disabled={pending}
-                      className="inline-flex h-12 items-center justify-center rounded-full border border-green-200 bg-white px-6 text-sm font-semibold text-green-800 hover:bg-green-50 disabled:opacity-60"
+                      className="inline-flex h-12 items-center justify-center rounded-lg border border-forest-100 bg-white px-6 text-sm font-semibold text-slate-800 hover:bg-cream disabled:opacity-60"
                     >
                       {locale === "bg"
                         ? `Не, само „${baseTitle}“`
@@ -291,7 +291,7 @@ export function OfferPopupProvider({
                     <button
                       type="button"
                       onClick={() => close(true)}
-                      className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-green-200 bg-white px-6 text-sm font-semibold text-green-800 hover:bg-green-50"
+                      className="inline-flex h-12 flex-1 items-center justify-center rounded-lg border border-forest-100 bg-white px-6 text-sm font-semibold text-slate-800 hover:bg-cream"
                     >
                       {locale === "bg" ? "Не, благодаря" : "No thanks"}
                     </button>

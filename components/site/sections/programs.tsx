@@ -67,7 +67,7 @@ export function Programs({
                 <span className="mt-2 inline-flex w-fit rounded-full bg-forest-50 px-3 py-1 text-xs text-forest-700">
                   {p.duration}
                 </span>
-                <span className="mt-3 inline-flex w-fit rounded-full bg-cream-2 px-3 py-1 text-xs text-forest-800">
+                <span className="mt-3 inline-flex w-fit rounded-full bg-cream-2 px-3 py-1 text-xs text-slate-700">
                   {p.price}
                 </span>
                 <p className="mt-4 text-sm leading-relaxed text-ink-soft">{p.description}</p>

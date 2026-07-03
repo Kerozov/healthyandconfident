@@ -63,7 +63,7 @@ export function LeadForm({
           "flex items-center gap-3 rounded-2xl px-6 py-5",
           variant === "gradient"
             ? "bg-white/15 text-white"
-            : "bg-green-50 text-green-700",
+            : "bg-cream text-forest-600",
         )}
       >
         <CheckCircle2 className="h-6 w-6 shrink-0" />
@@ -81,12 +81,12 @@ export function LeadForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={placeholder}
-          className="h-14 flex-1 rounded-full border border-green-100 bg-white px-5 py-3 text-sm text-forest-800 outline-none focus:ring-2 focus:ring-gold-400"
+          className="h-14 flex-1 rounded-lg border border-forest-100 bg-white px-5 py-3 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-forest-200"
         />
         <button
           type="submit"
           disabled={state === "loading"}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 py-3 font-bold text-forest-900 transition-all hover:bg-gold-500 disabled:opacity-60"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-lg bg-forest-500 px-6 py-3 font-bold text-white transition-all hover:bg-forest-600 disabled:opacity-60"
         >
           {state === "loading" ? "..." : button}
           <ArrowRight className="h-4 w-4" />
@@ -96,10 +96,10 @@ export function LeadForm({
         className={cn(
           "mt-3 text-xs",
           variant === "gradient"
-            ? "text-green-100"
+            ? "text-slate-300"
             : variant === "light"
-              ? "text-forest-600/80"
-              : "text-green-600",
+              ? "text-ink-soft"
+              : "text-ink-soft",
         )}
       >
         {consent}
