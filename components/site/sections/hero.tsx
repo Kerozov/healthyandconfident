@@ -1,4 +1,4 @@
-import { Check, Sparkles, TrendingUp } from "lucide-react";
+import { Check } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaAlt } from "@/lib/site/media-gallery";
 
-const HERO_IMAGE = "/images/3.jpg";
+const HERO_IMAGE = "/images/5.jpg";
 
 export function Hero({
   dict,
@@ -16,111 +16,73 @@ export function Hero({
   locale: Locale;
 }) {
   const { hero } = dict;
-  return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-cream via-cream to-cream-2 pt-10 pb-20 lg:pt-16">
-      <div className="pointer-events-none absolute -right-32 -top-24 h-96 w-96 rounded-full bg-forest-100/60 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 top-40 h-80 w-80 rounded-full bg-cream-2/80 blur-3xl" />
 
-      <Container className="relative grid items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="animate-fade-up">
-          <span className="inline-flex items-center gap-2 rounded-full border border-forest-200 bg-forest-50 px-4 py-1 text-sm font-medium text-forest-600">
-            <Sparkles className="h-4 w-4" /> {hero.eyebrow}
-          </span>
+  return (
+    <section className="section-pad bg-cream">
+      <Container className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+        <div className="animate-fade-up max-w-xl">
+          <p className="eyebrow">{hero.eyebrow}</p>
 
           {locale === "bg" ? (
-            <>
-              <p className="mt-5 font-sans text-base font-semibold leading-snug tracking-normal text-forest-700 sm:text-lg">
-                Веси Ней — Холистичен диетолог
-              </p>
-              <h1 className="mt-3 font-display text-[2rem] font-semibold leading-[1.1] tracking-tight text-forest-800 sm:text-5xl lg:text-[3.5rem]">
-                Свали трайно 5-10-15 кг и се почувствай уверена
-              </h1>
-            </>
+            <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.12] tracking-tight text-slate-800 sm:text-5xl lg:text-[3.25rem]">
+              Свали трайно{" "}
+              <span className="text-forest-500">5–15 кг</span> и се почувствай
+              уверена
+            </h1>
           ) : (
-            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-forest-800 sm:text-6xl lg:text-[4.2rem]">
+            <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.12] tracking-tight text-slate-800 sm:text-5xl lg:text-[3.25rem]">
               {hero.title}{" "}
-              <span className="relative inline-block text-slate-500">
-                {hero.titleAccent}
-                <svg
-                  className="absolute -bottom-2 left-0 w-full text-forest-400"
-                  viewBox="0 0 300 12"
-                  fill="none"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M2 9C60 3 240 3 298 9"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
+              <span className="text-forest-500">{hero.titleAccent}</span>
             </h1>
           )}
 
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-            {hero.subtitle}
-          </p>
+          <p className="mt-5 text-lg leading-relaxed text-ink-soft">{hero.subtitle}</p>
 
-          <ul className="mt-7 grid gap-2.5 sm:grid-cols-2">
-            {hero.bullets.map((b) => (
-              <li key={b} className="flex items-start gap-2.5 text-sm font-medium text-forest-800">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest-500 text-white">
-                  <Check className="h-3 w-3" />
-                </span>
+          <ul className="mt-6 space-y-2.5">
+            {hero.bullets.slice(0, 4).map((b) => (
+              <li key={b} className="flex items-start gap-2.5 text-sm text-slate-800">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-forest-500" strokeWidth={2.5} />
                 {b}
               </li>
             ))}
           </ul>
 
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button href={`/${locale}#programs`} variant="primary" size="lg">
               {hero.primaryCta}
             </Button>
-            <Button href={`/${locale}#food`} size="lg" variant="secondary">
-              {hero.secondaryCta}
+            <Button href={`/${locale}#about`} variant="ghost" size="lg" className="font-medium">
+              {locale === "bg" ? "Научи повече за мен →" : "Learn more about me →"}
             </Button>
           </div>
 
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-forest-100 pt-8">
+          <dl className="mt-10 flex flex-wrap gap-8 border-t border-forest-100 pt-8">
             {hero.stats.map((s) => (
               <div key={s.label}>
-                <dt className="text-4xl font-bold text-slate-500">{s.value}</dt>
-                <dd className="mt-1 text-sm leading-snug text-ink-soft">{s.label}</dd>
+                <dt className="font-display text-3xl font-semibold text-slate-800">{s.value}</dt>
+                <dd className="mt-1 max-w-[8rem] text-xs leading-snug text-ink-soft">{s.label}</dd>
               </div>
             ))}
           </dl>
         </div>
 
-        <div className="relative mx-auto w-full max-w-md">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] shadow-soft">
+        <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-2xl shadow-soft ring-1 ring-forest-100/80">
             <SiteImage
               src={HERO_IMAGE}
               alt={mediaAlt(HERO_IMAGE, locale) || hero.imageAlt}
               fill
               priority
-              sizes="(max-width: 1024px) 90vw, 420px"
+              sizes="(max-width: 1024px) 90vw, 480px"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-800/15 to-transparent" />
-            <div className="absolute bottom-6 left-6 right-6 text-white">
-              <p className="font-display text-2xl font-semibold">Vessie Ney</p>
-              <p className="mt-1 text-sm leading-relaxed text-slate-100">{hero.imageAlt}</p>
-            </div>
           </div>
-
-          <div className="animate-float-slow absolute -left-6 top-10 hidden rounded-2xl border border-forest-100 bg-white p-4 shadow-soft sm:block">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-forest-500 text-white">
-                <TrendingUp className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-xl font-bold text-slate-500">94%</p>
-                <p className="text-[11px] text-ink-soft">
-                  {locale === "bg" ? "успех" : "success rate"}
-                </p>
-              </div>
-            </div>
-          </div>
+          <p className="mt-4 text-center text-sm text-ink-soft lg:text-left">
+            <span className="font-semibold text-slate-800">
+              {locale === "bg" ? "Веси Ней" : "Vessie Nay"}
+            </span>
+            {" · "}
+            {hero.imageAlt}
+          </p>
         </div>
       </Container>
     </section>

@@ -1,4 +1,4 @@
-import { Award, TrendingUp } from "lucide-react";
+import { Check } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaByCategory } from "@/lib/site/media-gallery";
 
-const CLIENT_RESULTS = ["/images/15.jpg", "/images/16.jpg", "/images/14.jpg"];
+const CLIENT_RESULTS = [
+  "/images/14.jpg",
+  "/images/15.jpg",
+  "/images/16.jpg",
+  "/images/17.jpg",
+];
 
 export function TransformationResults({
   dict,
@@ -16,117 +21,84 @@ export function TransformationResults({
   locale: Locale;
 }) {
   const { results } = dict;
-  const awards = mediaByCategory("award");
   const resultMedia = mediaByCategory("result");
   const altFor = (src: string) =>
-    resultMedia.find((r) => r.src === src)?.alt[locale] ??
-    awards.find((a) => a.src === src)?.alt[locale] ??
-    "";
+    resultMedia.find((r) => r.src === src)?.alt[locale] ?? "";
 
   return (
-    <section id="results" className="scroll-mt-24 bg-white py-20 lg:py-28">
+    <section id="results" className="section-pad scroll-mt-24 bg-cream-2">
       <Container>
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="eyebrow text-slate-500">{results.eyebrow}</span>
-          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-forest-800 sm:text-4xl">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="eyebrow">{results.eyebrow}</p>
+          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
             {results.title}
           </h2>
-          <p className="mt-4 text-lg leading-relaxed text-ink-soft">{results.subtitle}</p>
+          <p className="mt-4 text-base leading-relaxed text-ink-soft">{results.subtitle}</p>
         </div>
 
-        <div className="mt-14 grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
-          <figure className="overflow-hidden rounded-3xl shadow-soft ring-1 ring-forest-100">
+        <div className="mt-12 grid items-stretch gap-8 lg:grid-cols-2">
+          <figure className="overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-forest-100">
             <SiteImage
               src="/images/13.jpg"
               alt={altFor("/images/13.jpg")}
               width={800}
-              height={1000}
+              height={900}
               sizes="(max-width: 1024px) 100vw, 50vw"
-              className="rounded-3xl"
+              className="w-full"
             />
-            <figcaption className="bg-cream-2 px-5 py-4 text-center text-sm font-medium text-forest-800">
+            <figcaption className="border-t border-forest-100 px-5 py-4 text-center text-sm text-slate-800">
               {results.beforeAfterCaption}
             </figcaption>
           </figure>
 
-          <div>
-            <div className="grid grid-cols-3 gap-4 rounded-2xl border border-forest-100 bg-cream p-6">
+          <div className="flex flex-col rounded-2xl bg-white p-8 shadow-card ring-1 ring-forest-100">
+            <div className="grid grid-cols-3 gap-4 border-b border-forest-100 pb-8">
               {results.stats.map((s) => (
                 <div key={s.label} className="text-center">
-                  <p className="font-display text-3xl font-bold text-slate-500 sm:text-4xl">
-                    {s.value}
-                  </p>
-                  <p className="mt-1 text-xs leading-snug text-ink-soft sm:text-sm">{s.label}</p>
+                  <p className="font-display text-3xl font-semibold text-forest-500">{s.value}</p>
+                  <p className="mt-1 text-xs leading-snug text-ink-soft">{s.label}</p>
                 </div>
               ))}
             </div>
 
-            <ul className="mt-8 space-y-4">
+            <ul className="mt-8 flex-1 space-y-3">
               {results.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-3 text-forest-800">
-                  <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-forest-500 text-xs text-white">
-                    <TrendingUp className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="leading-relaxed">{b}</span>
+                <li key={b} className="flex items-start gap-3 text-sm text-slate-800">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-forest-500" strokeWidth={2.5} />
+                  {b}
                 </li>
               ))}
             </ul>
 
-            <Button href={`/${locale}#contact`} variant="primary" size="lg" className="mt-8">
+            <Button href={`/${locale}#contact`} variant="primary" size="lg" className="mt-8 w-full sm:w-auto">
               {results.cta}
             </Button>
           </div>
         </div>
 
-        <div className="mt-16">
-          <div className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-gold-500" />
-            <h3 className="font-display text-xl font-semibold text-forest-800">
-              {results.awardsTitle}
-            </h3>
-          </div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {awards.map((item) => (
-              <figure
-                key={item.src}
-                className="overflow-hidden rounded-2xl border border-forest-100 bg-cream shadow-sm"
-              >
-                <SiteImage
-                  src={item.src}
-                  alt={item.alt[locale]}
-                  width={800}
-                  height={500}
-                  sizes="(max-width: 640px) 100vw, 50vw"
-                  className="rounded-t-2xl"
-                />
-              </figure>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-16">
-          <h3 className="text-center font-display text-2xl font-semibold text-forest-800">
+        <div className="mt-14">
+          <h3 className="text-center font-display text-xl font-semibold text-slate-800">
             {results.clientsTitle}
           </h3>
-          <p className="mx-auto mt-2 max-w-2xl text-center text-ink-soft">
+          <p className="mx-auto mt-2 max-w-xl text-center text-sm text-ink-soft">
             {results.clientsSubtitle}
           </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
             {CLIENT_RESULTS.map((src, i) => (
               <figure
                 key={src}
-                className="overflow-hidden rounded-2xl shadow-sm ring-1 ring-forest-100"
+                className="overflow-hidden rounded-xl bg-white shadow-card ring-1 ring-forest-100"
               >
                 <div className="relative aspect-[3/4]">
                   <SiteImage
                     src={src}
                     alt={altFor(src)}
                     fill
-                    sizes="(max-width: 640px) 100vw, 33vw"
+                    sizes="(max-width: 1024px) 50vw, 25vw"
                   />
                 </div>
                 {results.clientCaptions[i] && (
-                  <figcaption className="bg-white px-4 py-3 text-center text-xs text-ink-soft">
+                  <figcaption className="px-3 py-2.5 text-center text-[11px] leading-snug text-ink-soft">
                     {results.clientCaptions[i]}
                   </figcaption>
                 )}

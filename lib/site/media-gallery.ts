@@ -1,33 +1,41 @@
 import type { Locale } from "@/i18n/config";
 
-export type MediaCategory = "vesi" | "award" | "food" | "result";
+export type MediaCategory = "vesi" | "food" | "result";
 
 export type SiteMediaItem = {
   src: string;
   category: MediaCategory;
   alt: Record<Locale, string>;
-  /** Approximate aspect for layout hints */
   aspect?: "square" | "portrait" | "landscape" | "wide";
 };
+
+/** First 5 uploads — portraits of Vessie Nay */
+export const VESI_PORTRAIT_IMAGES = [
+  "/images/1.jpg",
+  "/images/2.jpg",
+  "/images/3.jpg",
+  "/images/4.jpg",
+  "/images/5.jpg",
+] as const;
 
 /** Curated site imagery — 17 uploads in /public/images */
 export const siteMedia: SiteMediaItem[] = [
   {
     src: "/images/1.jpg",
-    category: "award",
+    category: "vesi",
     aspect: "landscape",
     alt: {
       bg: "Веси Ней получава награда за принос в областта на храненето и здравето",
-      en: "Vessie Ney receiving an award for contribution in nutrition and health",
+      en: "Vessie Nay receiving an award for contribution in nutrition and health",
     },
   },
   {
     src: "/images/2.jpg",
-    category: "award",
+    category: "vesi",
     aspect: "landscape",
     alt: {
       bg: "Веси Ней с приз за принос на церемония за здравословен начин на живот",
-      en: "Vessie Ney with a contribution award at a wellness ceremony",
+      en: "Vessie Nay with a contribution award at a wellness ceremony",
     },
   },
   {
@@ -36,7 +44,7 @@ export const siteMedia: SiteMediaItem[] = [
     aspect: "portrait",
     alt: {
       bg: "Веси Ней — холистичен диетолог, специалист по инсулинова резистентност и Диабет тип 2",
-      en: "Vessie Ney — holistic nutritionist, insulin resistance and Type 2 Diabetes specialist",
+      en: "Vessie Nay — holistic nutritionist, insulin resistance and Type 2 Diabetes specialist",
     },
   },
   {
@@ -45,7 +53,7 @@ export const siteMedia: SiteMediaItem[] = [
     aspect: "portrait",
     alt: {
       bg: "Веси Ней — мотивиращ диетолог с над 20 години опит",
-      en: "Vessie Ney — motivating nutritionist with 20+ years of experience",
+      en: "Vessie Nay — motivating nutritionist with 20+ years of experience",
     },
   },
   {
@@ -54,7 +62,7 @@ export const siteMedia: SiteMediaItem[] = [
     aspect: "portrait",
     alt: {
       bg: "Веси Ней — холистичен диетолог B.Med.Sc., NHS Diabetes Practitioner",
-      en: "Vessie Ney — holistic dietitian B.Med.Sc., NHS Diabetes Practitioner",
+      en: "Vessie Nay — holistic dietitian B.Med.Sc., NHS Diabetes Practitioner",
     },
   },
   {
@@ -108,7 +116,7 @@ export const siteMedia: SiteMediaItem[] = [
     aspect: "wide",
     alt: {
       bg: "Малка част от реалното меню на Веси Ней — салати, супи, гарнитури и здравословни ястия",
-      en: "A sample of Vessie Ney's real menu — salads, soups, sides and wholesome meals",
+      en: "A sample of Vessie Nay's real menu — salads, soups, sides and wholesome meals",
     },
   },
   {
@@ -126,7 +134,7 @@ export const siteMedia: SiteMediaItem[] = [
     aspect: "portrait",
     alt: {
       bg: "Резултат преди и след — трайно отслабване с програмата на Веси Ней",
-      en: "Before and after result — lasting weight loss with Vessie Ney's program",
+      en: "Before and after result — lasting weight loss with Vessie Nay's program",
     },
   },
   {
@@ -158,11 +166,11 @@ export const siteMedia: SiteMediaItem[] = [
   },
   {
     src: "/images/17.jpg",
-    category: "vesi",
+    category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Веси Ней — вашият холистичен диетолог и ментор по пътя към здравето",
-      en: "Vessie Ney — your holistic nutritionist and mentor on the path to health",
+      bg: "Клиентка след програмата — повече увереност и енергия",
+      en: "Client after the program — more confidence and energy",
     },
   },
 ];
@@ -171,8 +179,14 @@ export function mediaByCategory(category: MediaCategory): SiteMediaItem[] {
   return siteMedia.filter((item) => item.category === category);
 }
 
+export function vesiPortraits(): SiteMediaItem[] {
+  return VESI_PORTRAIT_IMAGES.map(
+    (src) => siteMedia.find((m) => m.src === src)!,
+  ).filter(Boolean);
+}
+
 export function mediaSrc(category: MediaCategory, index = 0): string {
-  return mediaByCategory(category)[index]?.src ?? "/images/3.jpg";
+  return mediaByCategory(category)[index]?.src ?? VESI_PORTRAIT_IMAGES[2];
 }
 
 export function mediaAlt(src: string, locale: Locale): string {

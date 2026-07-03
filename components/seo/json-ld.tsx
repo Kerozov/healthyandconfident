@@ -16,7 +16,7 @@ const bgPersonSchema = {
   "@context": "https://schema.org",
   "@type": "Person",
   name: "Веси Ней",
-  alternateName: "Vessie Ney",
+  alternateName: "Vessie Nay",
   jobTitle: "Холистичен диетолог",
   description:
     "Холистичен диетолог, специалист по инсулинова резистентност и Диабет тип 2. NHS Diabetes Practitioner в Англия с 20+ години опит.",
@@ -109,7 +109,7 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
     name:
       locale === "bg"
         ? "Реално меню и резултати — Веси Ней"
-        : "Real meals and results — Vessie Ney",
+        : "Real meals and results — Vessie Nay",
     description: dict.foodGallery.subtitle,
     url: `${pageUrl}#food`,
     image: siteMedia.map((item) => ({

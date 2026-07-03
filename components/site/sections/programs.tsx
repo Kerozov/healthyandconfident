@@ -16,13 +16,13 @@ export function Programs({
 }) {
   const { programs } = dict;
   return (
-    <section id="programs" className="scroll-mt-24 bg-forest-50 py-24">
+    <section id="programs" className="section-pad scroll-mt-24 bg-cream">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow text-forest-500">
             <Star className="h-4 w-4" /> {locale === "bg" ? "Програми" : "Programs"}
           </span>
-          <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-forest-800 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
             {programs.title}
           </h2>
           <p className="mt-4 text-ink-soft">{programs.subtitle}</p>
@@ -63,7 +63,7 @@ export function Programs({
                     {p.badge}
                   </span>
                 )}
-                <h3 className="font-display text-2xl font-semibold text-forest-800">{p.title}</h3>
+                <h3 className="font-display text-2xl font-semibold text-slate-800">{p.title}</h3>
                 <span className="mt-2 inline-flex w-fit rounded-full bg-forest-50 px-3 py-1 text-xs text-forest-700">
                   {p.duration}
                 </span>
@@ -71,7 +71,7 @@ export function Programs({
                   {p.price}
                 </span>
                 <p className="mt-4 text-sm leading-relaxed text-ink-soft">{p.description}</p>
-                <ul className="mt-6 flex-1 space-y-3 text-sm text-forest-800">
+                <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-800">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2.5">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-forest-500" />

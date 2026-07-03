@@ -50,7 +50,7 @@ export function Navbar({
             <Leaf className="h-5 w-5" />
           </span>
           <span className="leading-tight">
-            <span className="block text-lg font-semibold text-forest-800">
+            <span className="block text-lg font-semibold text-slate-800">
               {siteConfig.brand}
             </span>
             <span className="block text-[11px] font-medium uppercase tracking-wider text-ink-soft">
@@ -81,7 +81,7 @@ export function Navbar({
           <Button
             href={`/${locale}#contact`}
             size="sm"
-            className="bg-slate-500 font-semibold text-white shadow-sm hover:bg-slate-600"
+            variant="forest"
           >
             {cta}
           </Button>

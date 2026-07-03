@@ -22,7 +22,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
             </Link>
             {locale === "bg" && (
               <p className="mt-2 text-sm text-slate-300">
-                <strong className="text-white">Веси Ней</strong> (Vessie Ney) е холистичен
+                <strong className="text-white">Веси Ней</strong> (Vessie Nay) е холистичен
                 диетолог в Англия и България, специалист по инсулинова резистентност и
                 Диабет тип 2. Работи онлайн с клиенти от 13 държави.
               </p>

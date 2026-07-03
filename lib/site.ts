@@ -1,10 +1,10 @@
 export const siteConfig = {
   /** Primary name for SEO and Google (how people search). */
-  brand: "Vessie Ney",
+  brand: "Vessie Nay",
   /** Program / site tagline shown under the name. */
   tagline: "Healthy & Confident",
   /** @deprecated Use brand — kept for templates that expect siteConfig.name */
-  name: "Vessie Ney",
+  name: "Vessie Nay",
   domain: "https://www.healthyandconfident.co.uk",
   email: "vessie@healthyandconfident.co.uk",
   phone: "+44 7876 565 263",
@@ -16,7 +16,7 @@ export const siteConfig = {
   /** Link to Google Business profile / write a review */
   googleReviewsUrl:
     process.env.NEXT_PUBLIC_GOOGLE_REVIEWS_URL ??
-    "https://www.google.com/search?q=Vessie+Ney+Healthy+and+Confident+reviews",
+    "https://www.google.com/search?q=Vessie+Nay+Healthy+and+Confident+reviews",
   // Default OG image (place a real asset in /public/og)
   ogImage: "/og/default.jpg",
 } as const;

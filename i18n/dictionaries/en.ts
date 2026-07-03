@@ -2,9 +2,9 @@ import type { Dictionary } from "@/i18n/types";
 
 export const en: Dictionary = {
   meta: {
-    title: "Vessie Ney | Holistic Nutritionist & Type 2 Diabetes Practitioner",
+    title: "Vessie Nay | Holistic Nutritionist & Type 2 Diabetes Practitioner",
     description:
-      "Vessie Ney — Holistic Nutritionist (B.Med.Sc. Hons) & NHS Type 2 Diabetes Practitioner. Lasting weight loss, blood-sugar balance and diabetes remission through food, mindset and real support. 1:1 and group programs online.",
+      "Vessie Nay — Holistic Nutritionist (B.Med.Sc. Hons) & NHS Type 2 Diabetes Practitioner. Lasting weight loss, blood-sugar balance and diabetes remission through food, mindset and real support. 1:1 and group programs online.",
     keywords: [
       "holistic nutritionist",
       "type 2 diabetes remission",
@@ -19,7 +19,7 @@ export const en: Dictionary = {
       "delicious diet food",
       "before after weight loss",
     ],
-    ogAlt: "Vessie Ney — Holistic Nutritionist & Diabetes Practitioner",
+    ogAlt: "Vessie Nay — Holistic Nutritionist & Diabetes Practitioner",
   },
   nav: {
     items: [
@@ -53,7 +53,7 @@ export const en: Dictionary = {
       { value: "100s", label: "clients transformed" },
       { value: "13", label: "countries served online" },
     ],
-    imageAlt: "Vessie Ney, Holistic Nutritionist",
+    imageAlt: "Vessie Nay, Holistic Nutritionist",
   },
   problems: {
     title: "You are in the right place if you struggle with",
@@ -179,7 +179,7 @@ export const en: Dictionary = {
     title: "This is what you actually eat on the programs",
     subtitle:
       "No hunger, no sad salads, no “diet food”. Colourful, filling, delicious meals — family-friendly and quick to make.",
-    featuredAlt: "Collage of real meals from Vessie Ney's programs",
+    featuredAlt: "Collage of real meals from Vessie Nay's programs",
     featuredCaption: "A small taste of the menu — salads, soups, sides and mains",
     featuredNote:
       "Every photo is from the real recipes and menus clients receive in the programs.",
@@ -218,6 +218,7 @@ export const en: Dictionary = {
       "More confidence after transformation",
       "Active, healthy lifestyle",
       "Energy and joy every day",
+      "Confidence and a healthy lifestyle",
     ],
   },
   testimonials: {
@@ -250,7 +251,7 @@ export const en: Dictionary = {
   googleReviews: {
     title: "Google Reviews",
     subtitle:
-      "Real ratings from Vessie Ney's clients — published directly on Google.",
+      "Real ratings from Vessie Nay's clients — published directly on Google.",
     aggregateRating: "5.0",
     reviewCount: "12+",
     reviewCountLabel: "Google reviews",
@@ -300,7 +301,7 @@ export const en: Dictionary = {
     error: "Something went wrong. Please try again.",
   },
   bioBanner: {
-    title: "Vessie Ney",
+    title: "Vessie Nay",
     credentials: [
       "Holistic Nutritionist, B.Med.Sc. (Hons)",
       "Insulin Resistance Specialist",
@@ -376,7 +377,7 @@ export const en: Dictionary = {
     discount: "-52%",
     cardLine1: "Lose 3–5 kg for good — end the diets",
     cardLine2: "21-day challenge",
-    cardSignature: "With Vessie Ney",
+    cardSignature: "With Vessie Nay",
     bullets: [
       "Lose 3–5 kg sustainably and learn the magic of BALANCED, delicious eating",
       "Learn how to combine foods for a slimmer figure",

@@ -12,7 +12,7 @@ export function Outcomes({
 }) {
   const { outcomes } = dict;
   return (
-    <section className="bg-gradient-to-r from-slate-700 to-slate-800 py-24 text-white">
+    <section className="section-pad bg-slate-800 text-white">
       <Container className="grid items-center gap-14 lg:grid-cols-2">
         <div>
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">

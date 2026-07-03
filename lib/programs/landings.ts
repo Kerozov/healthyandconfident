@@ -16,7 +16,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "zhivey-bez-rezistentnost": {
     ...zhiveyBezRezistentnostBg,
     meta: {
-      title: "Live Without Resistance | 3-Month Program — Vessie Ney",
+      title: "Live Without Resistance | 3-Month Program — Vessie Nay",
       description:
         "Sustainable weight loss and insulin resistance support. 94% success rate — without hunger or deprivation.",
     },
@@ -116,7 +116,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     ],
     trust: {
       title: "Why trust me?",
-      greeting: "Hello! I'm Vessie Ney!",
+      greeting: "Hello! I'm Vessie Nay!",
       credentials: [
         "Holistic Dietitian, B.Med.Sc. (Hons)",
         "Specialist in insulin resistance, Type 2 Diabetes, Cambridge DEP",
@@ -186,7 +186,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "preprogramirai-apetita": {
     ...preprogramiraiApetitaBg,
     meta: {
-      title: "Reprogram Your Appetite | Slim & Light Club — Vessie Ney",
+      title: "Reprogram Your Appetite | Slim & Light Club — Vessie Nay",
       description:
         "7–10 minutes a day. Release stress, emotional eating and cravings. 94% success method. From €38/month.",
     },
@@ -250,7 +250,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     trust: {
       ...preprogramiraiApetitaBg.trust!,
       title: "Why trust me?",
-      greeting: "Hello! I'm Vessie Ney!",
+      greeting: "Hello! I'm Vessie Nay!",
     },
     pricing: {
       ...preprogramiraiApetitaBg.pricing!,
@@ -276,7 +276,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "garnituri": {
     ...garnituriBg,
     meta: {
-      title: "Side Dishes for Your Waistline | Low-Carb — Vessie Ney",
+      title: "Side Dishes for Your Waistline | Low-Carb — Vessie Nay",
       description:
         "Easy, filling low-carb side dish ideas for insulin resistance, weight loss and Type 2 Diabetes. €3.",
     },
