@@ -18,15 +18,14 @@ import {
 } from "lucide-react";
 import type {
   Automation,
+  AutomationStats,
   AutomationTrigger,
   Segment,
   SegmentGroup,
 } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
-type AutomationRow = Automation & {
-  stats?: { sent: number; scheduled: number };
-};
+type AutomationRow = Automation & AutomationStats;
 
 type TreeNode = {
   automation: AutomationRow;
