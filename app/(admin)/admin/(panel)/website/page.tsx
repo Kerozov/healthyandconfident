@@ -1,10 +1,15 @@
 import { getAdminSiteContent } from "@/lib/site/content";
+import { getSegmentGroups, getSegments } from "@/lib/admin/data";
 import { WebsiteManager } from "@/components/admin/website-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWebsitePage() {
-  const content = await getAdminSiteContent();
+  const [content, segments, groups] = await Promise.all([
+    getAdminSiteContent(),
+    getSegments(),
+    getSegmentGroups(),
+  ]);
 
   return (
     <div>
@@ -20,6 +25,8 @@ export default async function AdminWebsitePage() {
           products={content.products}
           videos={content.videos}
           ctaPlacements={Object.values(content.ctaPlacements)}
+          segments={segments}
+          groups={groups}
           dbReady={content.dbReady}
           dbError={content.dbError}
         />

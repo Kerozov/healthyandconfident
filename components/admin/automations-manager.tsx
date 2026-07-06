@@ -46,6 +46,7 @@ import { AutomationFlowView } from "@/components/admin/automation-flow";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
+import { PurchaseProductPicker } from "@/components/admin/purchase-product-picker";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -131,7 +132,7 @@ const TRIGGER_OPTIONS: {
   {
     value: "purchase",
     label: "След покупка",
-    hint: 'Когато системата получи събитие за покупка (source: "purchase").',
+    hint: "След успешно плащане в Stripe. Избери конкретен продукт/програма по-долу, за да получават различни имейли.",
   },
 ];
 
@@ -315,6 +316,7 @@ const EMPTY_FORM = {
   audience_logic: "any" as "any" | "all",
   exclude_group_ids: [] as string[],
   exclude_segment_keys: [] as string[],
+  purchase_product_ids: [] as string[],
   new_subscribers_only: true,
   after_automation_id: "" as string,
   delay_days: 0,
@@ -348,6 +350,7 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     audience_logic: a.audience_logic === "all" ? "all" : "any",
     exclude_group_ids: a.exclude_group_ids ?? [],
     exclude_segment_keys: a.exclude_segment_keys ?? [],
+    purchase_product_ids: a.purchase_product_ids ?? [],
     new_subscribers_only: a.new_subscribers_only,
     after_automation_id: a.after_automation_id ?? "",
     delay_days: a.delay_days ?? 0,
@@ -665,12 +668,16 @@ export function AutomationsManager({
               <Field label="Защо се пуска (събитие)">
                 <Select
                   value={form.trigger_event}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const trigger_event = e.target.value as AutomationTrigger;
                     setForm({
                       ...form,
-                      trigger_event: e.target.value as AutomationTrigger,
-                    })
-                  }
+                      trigger_event,
+                      ...(trigger_event === "purchase"
+                        ? { new_subscribers_only: false }
+                        : {}),
+                    });
+                  }}
                 >
                   {TRIGGER_OPTIONS.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -694,6 +701,20 @@ export function AutomationsManager({
               <p className="rounded-xl bg-cream-2/60 px-4 py-3 text-sm text-ink-soft">
                 {triggerMeta.hint}
               </p>
+            )}
+
+            {form.trigger_event === "purchase" && (
+              <div className="rounded-2xl border border-gold-500/30 bg-gold-50/40 p-5 space-y-3">
+                <p className="text-sm font-semibold text-ink">При покупка на</p>
+                <PurchaseProductPicker
+                  products={products}
+                  selectedIds={form.purchase_product_ids}
+                  onChange={(purchase_product_ids) =>
+                    setForm({ ...form, purchase_product_ids })
+                  }
+                  disabled={pending}
+                />
+              </div>
             )}
 
             <div className="grid gap-5 sm:grid-cols-2">

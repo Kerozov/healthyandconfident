@@ -12,7 +12,8 @@ import {
   Calendar,
   Play,
 } from "lucide-react";
-import type { SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection, SiteVideo } from "@/lib/supabase/types";
+import type { Segment, SegmentGroup, SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection, SiteVideo } from "@/lib/supabase/types";
+import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
 import { CtaPlacementsPanel, WebsiteTabs } from "@/components/admin/website-cta-panel";
@@ -146,6 +147,7 @@ const EMPTY_PRODUCT = {
   headline_en: "",
   cta_label_bg: "",
   cta_label_en: "",
+  purchase_tags: [] as string[],
   enabled: true,
   sort_order: 0,
 };
@@ -156,6 +158,8 @@ export function WebsiteManager({
   products,
   videos,
   ctaPlacements,
+  segments,
+  groups,
   dbReady = true,
   dbError,
 }: {
@@ -164,6 +168,8 @@ export function WebsiteManager({
   products: SiteProduct[];
   videos: SiteVideo[];
   ctaPlacements: SiteCtaPlacement[];
+  segments: Segment[];
+  groups: SegmentGroup[];
   dbReady?: boolean;
   dbError?: string;
 }) {
@@ -301,6 +307,7 @@ export function WebsiteManager({
       headline_en: product.headline_en ?? "",
       cta_label_bg: product.cta_label_bg ?? "",
       cta_label_en: product.cta_label_en ?? "",
+      purchase_tags: product.purchase_tags ?? [],
       enabled: product.enabled,
       sort_order: product.sort_order,
     });
@@ -313,6 +320,7 @@ export function WebsiteManager({
       const res = await saveSiteProduct({
         id: editingProductId === "new" ? undefined : editingProductId!,
         ...productForm,
+        purchase_tags: productForm.purchase_tags,
       });
       if (!res.ok) {
         setError(res.message || "Failed");
@@ -499,6 +507,21 @@ export function WebsiteManager({
                     placeholder="View offer"
                   />
                 </Field>
+              </div>
+              <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
+                <p className="text-sm font-semibold text-forest-800">Тагове при покупка</p>
+                <p className="text-xs text-ink-soft">
+                  Добавят се към абоната след успешно плащане. Полезни за сегменти и кампании.
+                </p>
+                <SegmentAssignChecklist
+                  segments={segments}
+                  groups={groups}
+                  selected={productForm.purchase_tags}
+                  onChange={(purchase_tags) =>
+                    setProductForm({ ...productForm, purchase_tags })
+                  }
+                  disabled={pending}
+                />
               </div>
               <label className="flex items-center gap-2 text-sm font-medium">
                 <input

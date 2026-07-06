@@ -266,6 +266,7 @@ type AutomationInput = {
   audience_logic?: "any" | "all";
   exclude_group_ids?: string[];
   exclude_segment_keys?: string[];
+  purchase_product_ids?: string[];
   new_subscribers_only: boolean;
   after_automation_id?: string | null;
   delay_days?: number;
@@ -315,6 +316,7 @@ export async function createAutomation(
       audience_logic: input.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
+      purchase_product_ids: input.purchase_product_ids ?? [],
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
       send_time: normalizeSendTime(input.send_time),
@@ -345,6 +347,7 @@ export async function updateAutomation(
       audience_logic: input.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
+      purchase_product_ids: input.purchase_product_ids ?? [],
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
       send_time: normalizeSendTime(input.send_time),
@@ -2218,6 +2221,7 @@ export async function saveSiteProduct(input: {
   cta_label_en?: string;
   enabled?: boolean;
   sort_order?: number;
+  purchase_tags?: string[];
 }): Promise<ActionResult & { id?: string }> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -2246,6 +2250,7 @@ export async function saveSiteProduct(input: {
     cta_label_bg: input.cta_label_bg?.trim() ?? "",
     cta_label_en: input.cta_label_en?.trim() ?? "",
     audience_tags: [] as string[],
+    purchase_tags: (input.purchase_tags ?? []).filter(Boolean),
     enabled: input.enabled ?? true,
     sort_order: input.sort_order ?? 0,
     updated_at: new Date().toISOString(),

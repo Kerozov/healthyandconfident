@@ -25,6 +25,7 @@ export const bg: Dictionary = {
   },
   nav: {
     items: [
+      { label: "Безплатно меню", href: "#free-menu" },
       { label: "За мен", href: "#about" },
       { label: "Методът", href: "#method" },
       { label: "Храна", href: "#food" },
@@ -49,7 +50,12 @@ export const bg: Dictionary = {
       "Повече енергия, увереност и спокойствие",
     ],
     primaryCta: "Започни промяната",
+    freeMenuCta: "Вземи безплатно меню",
     secondaryCta: "Виж реалното меню",
+    freeMenuStrip: {
+      title: "Безплатно 2-дневно меню",
+      subtitle: "Вкусно, балансирано и лесно — изпрати ни имейла си.",
+    },
     stats: [
       { value: "20+", label: "години в медицината и храненето" },
       { value: "94%", label: "успех при клиентите" },

@@ -51,12 +51,14 @@ export function TransformationResults({
             </figcaption>
           </figure>
 
-          <div className="flex flex-col rounded-2xl bg-white p-8 shadow-card ring-1 ring-forest-100">
-            <div className="grid grid-cols-3 gap-4 border-b border-forest-100 pb-8">
+          <div className="flex flex-col rounded-2xl bg-white p-5 shadow-card ring-1 ring-forest-100 sm:p-8">
+            <div className="grid grid-cols-3 gap-2 border-b border-forest-100 pb-6 sm:gap-4 sm:pb-8">
               {results.stats.map((s) => (
                 <div key={s.label} className="text-center">
-                  <p className="font-display text-3xl font-semibold text-forest-500">{s.value}</p>
-                  <p className="mt-1 text-xs leading-snug text-ink-soft">{s.label}</p>
+                  <p className="font-display text-2xl font-semibold text-forest-500 sm:text-3xl">
+                    {s.value}
+                  </p>
+                  <p className="mt-1 text-[10px] leading-snug text-ink-soft sm:text-xs">{s.label}</p>
                 </div>
               ))}
             </div>

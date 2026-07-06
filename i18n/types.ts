@@ -56,7 +56,12 @@ export type Dictionary = {
     subtitle: string;
     bullets: string[];
     primaryCta: string;
+    freeMenuCta: string;
     secondaryCta: string;
+    freeMenuStrip: {
+      title: string;
+      subtitle: string;
+    };
     stats: Stat[];
     imageAlt: string;
   };

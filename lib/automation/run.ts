@@ -2,7 +2,7 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
-import { subscriberMatchesAutomationAudience } from "@/lib/automation/audience";
+import { subscriberMatchesAutomationAudience, automationMatchesPurchaseProducts } from "@/lib/automation/audience";
 import { buildBrandedEmail } from "@/lib/email/compose";
 import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
@@ -22,6 +22,7 @@ export type AutomationRunContext = {
   tags?: string[];
   isNew: boolean;
   source?: string;
+  purchasedProductIds?: string[];
 };
 
 function resolveTriggerEvents(
@@ -157,6 +158,12 @@ async function scheduleChainedFromParent(
     const email = ctx.email.trim().toLowerCase();
     if (rule.new_subscribers_only && !ctx.isNew) continue;
     if (!segmentMatches(rule, ctx.tags ?? [], segments, groups)) continue;
+    if (
+      rule.trigger_event === "purchase" &&
+      !automationMatchesPurchaseProducts(rule, ctx.purchasedProductIds ?? [])
+    ) {
+      continue;
+    }
     if (await alreadyQueuedOrSent(rule.id, email)) continue;
     const childDelay = rule.delay_days ?? 0;
     try {
@@ -426,6 +433,12 @@ async function executeAutomation(
 
   if (automation.new_subscribers_only && !ctx.isNew) return;
   if (!segmentMatches(automation, tags, segments, groups)) return;
+  if (
+    automation.trigger_event === "purchase" &&
+    !automationMatchesPurchaseProducts(automation, ctx.purchasedProductIds ?? [])
+  ) {
+    return;
+  }
   if (await alreadyQueuedOrSent(automation.id, email)) return;
 
   if (automation.after_automation_id) {

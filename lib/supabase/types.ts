@@ -121,6 +121,8 @@ export type Automation = {
   audience_logic: "any" | "all";
   exclude_group_ids: string[];
   exclude_segment_keys: string[];
+  /** When trigger is purchase — only fire if buyer purchased one of these products (empty = any). */
+  purchase_product_ids: string[];
   new_subscribers_only: boolean;
   after_automation_id: string | null;
   delay_days: number;
@@ -338,6 +340,8 @@ export type SiteProduct = {
   cta_label_bg: string;
   cta_label_en: string;
   audience_tags: string[];
+  /** Tags applied to subscriber when this product is purchased */
+  purchase_tags: string[];
   enabled: boolean;
   sort_order: number;
   created_at: string;

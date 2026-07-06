@@ -53,6 +53,10 @@ export async function createProductCheckoutSession(
     success_url: `${origin}/${locale}?checkout=success`,
     cancel_url: `${origin}/${locale}?checkout=cancelled`,
     locale: locale === "bg" ? "bg" : "en",
+    metadata: {
+      product_ids: productIds.join(","),
+      locale,
+    },
   });
 
   if (!session.url) {

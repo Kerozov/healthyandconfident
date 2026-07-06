@@ -35,7 +35,7 @@ export function Programs({
               className={cn(
                 "relative flex flex-col overflow-hidden rounded-2xl border transition-all",
                 p.highlight
-                  ? "scale-[1.02] border-2 border-forest-500 bg-white shadow-lg"
+                  ? "border-2 border-forest-500 bg-white shadow-lg lg:scale-[1.02]"
                   : "border-forest-100 bg-white hover:border-forest-300 hover:shadow-md",
               )}
             >

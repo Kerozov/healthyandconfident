@@ -14,6 +14,7 @@ export function LeadForm({
   variant = "default",
   offerPlacementKey,
   button,
+  compact = false,
 }: {
   locale: Locale;
   placeholder?: string;
@@ -25,6 +26,7 @@ export function LeadForm({
   source?: string;
   variant?: "default" | "gradient" | "light";
   offerPlacementKey?: string;
+  compact?: boolean;
 }) {
   const { tryOpenPlacement } = useOfferPopup();
 
@@ -37,6 +39,7 @@ export function LeadForm({
       success={success}
       buttonLabel={button}
       variant={variant}
+      compact={compact}
       onSuccess={() => {
         if (offerPlacementKey) {
           tryOpenPlacement(offerPlacementKey, "");

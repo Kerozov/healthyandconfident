@@ -25,6 +25,16 @@ function subscriberInExcludeList(
   return false;
 }
 
+export function automationMatchesPurchaseProducts(
+  automation: Automation,
+  purchasedProductIds: string[],
+): boolean {
+  const required = automation.purchase_product_ids?.filter(Boolean) ?? [];
+  if (required.length === 0) return true;
+  if (purchasedProductIds.length === 0) return false;
+  return required.some((id) => purchasedProductIds.includes(id));
+}
+
 /** Whether a subscriber should receive this automation (include + exclude rules). */
 export function subscriberMatchesAutomationAudience(
   automation: Automation,

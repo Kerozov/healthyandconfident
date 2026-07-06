@@ -5,7 +5,7 @@ export function SuccessProof({ dict }: { dict: Dictionary }) {
   const { hero } = dict;
 
   return (
-    <section className="border-y border-forest-100 bg-white py-10">
+    <section className="border-y border-forest-100 bg-white py-8 sm:py-10">
       <Container>
         <div className="grid gap-8 sm:grid-cols-3 sm:gap-6">
           {hero.stats.map((s) => (

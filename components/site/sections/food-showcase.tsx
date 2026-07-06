@@ -35,7 +35,7 @@ export function FoodShowcase({
         </div>
 
         <div className="mt-12 overflow-hidden rounded-2xl shadow-card ring-1 ring-forest-100">
-          <div className="relative aspect-[21/9] min-h-[220px] w-full">
+          <div className="relative aspect-[4/3] min-h-[180px] w-full sm:aspect-[21/9] sm:min-h-[220px]">
             <SiteImage
               src={FEATURED}
               alt={altFor(FEATURED)}
@@ -95,11 +95,11 @@ export function FoodShowcase({
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Button href={`/${locale}#programs`} variant="primary" size="lg">
+        <div className="mt-10 flex flex-col items-center justify-center gap-2.5 sm:mt-10 sm:flex-row sm:gap-3">
+          <Button href={`/${locale}#programs`} variant="primary" size="lg" className="w-full sm:w-auto">
             {foodGallery.cta}
           </Button>
-          <Button href={`/${locale}#results`} variant="outline" size="lg">
+          <Button href={`/${locale}#results`} variant="outline" size="lg" className="w-full sm:w-auto">
             {foodGallery.ctaSecondary}
           </Button>
         </div>

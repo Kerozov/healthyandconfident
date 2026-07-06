@@ -40,6 +40,16 @@ type EmailLinkClick = {
   clicked_at: string;
 };
 
+type SubscriberPurchase = {
+  id: string;
+  subscriber_id: string | null;
+  email: string;
+  product_id: string | null;
+  stripe_session_id: string | null;
+  stripe_price_id: string | null;
+  purchased_at: string;
+};
+
 type TableShape<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -69,6 +79,7 @@ export type Database = {
       site_sections: TableShape<SiteSection>;
       site_events: TableShape<SiteEvent>;
       site_products: TableShape<SiteProduct>;
+      subscriber_purchases: TableShape<SubscriberPurchase>;
       site_videos: TableShape<SiteVideo>;
       site_cta_placements: TableShape<SiteCtaPlacement>;
     };

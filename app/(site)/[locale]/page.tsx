@@ -42,6 +42,7 @@ export default async function HomePage({
     <>
       <HomeJsonLd dict={dict} locale={l} />
       <Hero dict={dict} locale={l} />
+      <LeadMagnet dict={dict} locale={l} />
       <SuccessProof dict={dict} />
       <Marquee locale={l} />
       <TrustFeatures locale={l} />
@@ -80,7 +81,6 @@ export default async function HomePage({
           products={site.products}
         />
       )}
-      <LeadMagnet dict={dict} locale={l} />
       <Faq dict={dict} />
       <Contact dict={dict} />
     </>

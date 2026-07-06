@@ -23,6 +23,7 @@ export const en: Dictionary = {
   },
   nav: {
     items: [
+      { label: "Free menu", href: "#free-menu" },
       { label: "About", href: "#about" },
       { label: "Method", href: "#method" },
       { label: "Meals", href: "#food" },
@@ -47,7 +48,12 @@ export const en: Dictionary = {
       "More confidence, clarity and calm",
     ],
     primaryCta: "Start your transformation",
+    freeMenuCta: "Get your free menu",
     secondaryCta: "See real meals",
+    freeMenuStrip: {
+      title: "Free 2-day menu",
+      subtitle: "Tasty, balanced and easy — drop your email below.",
+    },
     stats: [
       { value: "20+", label: "years in medicine & nutrition" },
       { value: "100s", label: "clients transformed" },

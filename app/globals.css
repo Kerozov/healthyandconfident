@@ -106,16 +106,33 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.625rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-forest-500);
+  line-height: 1.4;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 640px) {
+  .eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.16em;
+  }
 }
 
 .section-pad {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+
+@media (min-width: 768px) {
+  .section-pad {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
 }
 
 @media (min-width: 1024px) {

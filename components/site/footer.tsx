@@ -8,7 +8,7 @@ import { siteConfig } from "@/lib/site";
 export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   return (
     <footer className="bg-slate-800 text-slate-200">
-      <Container className="py-16">
+      <Container className="py-12 sm:py-16">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
             <Link

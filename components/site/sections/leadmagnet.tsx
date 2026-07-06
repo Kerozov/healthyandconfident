@@ -7,7 +7,7 @@ import { LeadForm } from "@/components/site/lead-form";
 export function LeadMagnet({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const { leadMagnet } = dict;
   return (
-    <section id="lead" className="section-pad scroll-mt-24">
+    <section id="lead" className="section-pad hidden scroll-mt-24 bg-cream-2/40 md:block">
       <Container>
         <div className="relative overflow-hidden rounded-2xl bg-slate-800 px-7 py-14 text-white sm:px-14">
           <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-forest-500/20 blur-3xl" />

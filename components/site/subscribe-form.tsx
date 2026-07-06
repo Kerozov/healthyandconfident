@@ -64,6 +64,7 @@ export function SubscribeForm({
   success,
   buttonLabel,
   variant = "default",
+  compact = false,
   onSuccess,
 }: {
   locale: Locale;
@@ -73,6 +74,7 @@ export function SubscribeForm({
   success: string;
   buttonLabel?: string;
   variant?: "default" | "gradient" | "light";
+  compact?: boolean;
   onSuccess?: () => void;
 }) {
   const t = COPY[locale];
@@ -112,20 +114,23 @@ export function SubscribeForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !firstName.trim() || !lastName.trim() || !facebook.trim()) return;
-    const hasHealth =
-      health.insulinResistance || health.diabetes || health.general;
-    if (!hasHealth) return;
+    if (!email.trim()) return;
+    if (!compact) {
+      if (!firstName.trim() || !lastName.trim() || !facebook.trim()) return;
+      const hasHealth =
+        health.insulinResistance || health.diabetes || health.general;
+      if (!hasHealth) return;
+    }
     if (!marketingConsent) return;
     setState("loading");
-    const healthTags = tagsFromHealthSelection(health);
+    const healthTags = compact ? [] : tagsFromHealthSelection(health);
     const tags = Array.from(new Set([...baseTags, ...healthTags]));
     const payload: SubscribeFormPayload = {
       email: email.trim(),
-      first_name: firstName.trim() || undefined,
-      last_name: lastName.trim() || undefined,
-      name: fullNameFromParts(firstName, lastName),
-      facebook_url: facebook.trim() || null,
+      first_name: compact ? undefined : firstName.trim() || undefined,
+      last_name: compact ? undefined : lastName.trim() || undefined,
+      name: compact ? null : fullNameFromParts(firstName, lastName),
+      facebook_url: compact ? null : facebook.trim() || null,
       locale,
       source,
       tags,
@@ -160,6 +165,48 @@ export function SubscribeForm({
         <CheckCircle2 className="h-6 w-6 shrink-0" />
         <p className="font-medium">{success}</p>
       </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <form onSubmit={submit} className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t.email}
+            className={cn(inputClass, "sm:flex-1")}
+            autoComplete="email"
+          />
+          <button
+            type="submit"
+            disabled={state === "loading" || !marketingConsent}
+            className={cn(
+              "inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-lg px-5 text-sm font-bold transition-all disabled:opacity-60 sm:h-11 sm:w-auto",
+              "bg-forest-500 text-white hover:bg-forest-600",
+            )}
+          >
+            {state === "loading" ? t.loading : buttonLabel ?? t.submit}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+        <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-snug text-ink-soft">
+          <input
+            type="checkbox"
+            required
+            checked={marketingConsent}
+            onChange={(e) => setMarketingConsent(e.target.checked)}
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-forest-300 text-forest-500 focus:ring-forest-300"
+          />
+          <span>{consent}</span>
+        </label>
+        {state === "error" && (
+          <p className="text-sm text-coral-600">{t.error}</p>
+        )}
+      </form>
     );
   }
 

@@ -29,7 +29,7 @@ export function Contact({
               rel="noopener noreferrer"
               size="lg"
               variant="forest"
-              className="mt-8 px-10"
+              className="mt-6 w-full px-8 sm:mt-8 sm:w-auto"
             >
               <CalendarHeart className="h-5 w-5" /> {contact.cta}
             </Button>

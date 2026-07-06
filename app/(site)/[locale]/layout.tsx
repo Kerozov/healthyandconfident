@@ -77,7 +77,7 @@ export default async function SiteLayout({
       lang={localeHtmlLang[l]}
       className={`${geistSans.variable} ${fraunces.variable}`}
     >
-      <body className="min-h-screen">
+      <body className="min-h-screen overflow-x-hidden pb-[env(safe-area-inset-bottom)]">
         <OfferPopupProvider
           placements={site.ctaPlacements}
           offersById={site.offersById}

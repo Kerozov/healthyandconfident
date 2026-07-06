@@ -14,11 +14,11 @@ export function Problems({ dict }: { dict: Dictionary }) {
           <p className="mt-4 text-ink-soft">{problems.subtitle}</p>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid gap-3 sm:mt-14 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {problems.items.map((p) => (
             <div
               key={p.text}
-              className="rounded-xl border border-forest-100 bg-cream p-5 transition-shadow hover:shadow-md"
+              className="rounded-xl border border-forest-100 bg-cream p-4 transition-shadow hover:shadow-md sm:p-5"
             >
               <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-forest-500/10 text-forest-500">
                 <Icon name={p.icon} className="h-5 w-5" />
