@@ -296,7 +296,7 @@ export const en: Dictionary = {
     placeholder: "Your best email",
     button: "Send me the menu",
     consent:
-      "I agree to receive helpful emails. You can unsubscribe at any time.",
+      "I agree to receive marketing emails with tips, offers and helpful content. You can unsubscribe at any time.",
     success: "Check your inbox — your menu is on the way! 🎉",
     error: "Something went wrong. Please try again.",
   },

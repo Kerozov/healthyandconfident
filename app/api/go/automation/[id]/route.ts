@@ -15,13 +15,21 @@ export async function GET(
 
   const { data } = await supabase
     .from("automations")
-    .select("cta_url_bg, cta_url_en")
+    .select("cta_url_bg, cta_url_en, cta_label_bg, cta_label_en")
     .eq("id", id)
     .maybeSingle();
 
-  const row = data as { cta_url_bg?: string; cta_url_en?: string } | null;
+  const row = data as {
+    cta_url_bg?: string;
+    cta_url_en?: string;
+    cta_label_bg?: string;
+    cta_label_en?: string;
+  } | null;
   const target =
     (locale === "en" ? row?.cta_url_en : row?.cta_url_bg)?.trim() ?? "";
+  const linkLabel =
+    (locale === "en" ? row?.cta_label_en : row?.cta_label_bg)?.trim() ||
+    "CTA бутон";
 
   if (!target || !isSafeCtaTarget(target)) {
     return NextResponse.json({ error: "Link not found" }, { status: 404 });
@@ -39,6 +47,7 @@ export async function GET(
           email: payload.e,
           subscriberId: payload.sid,
           targetUrl: resolved,
+          linkLabel,
         });
       } catch {
         /* still redirect */

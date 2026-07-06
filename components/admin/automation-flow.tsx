@@ -10,6 +10,10 @@ import {
   Users,
   Tag,
   Zap,
+  Split,
+  UserCheck,
+  ShoppingBag,
+  UserPlus,
 } from "lucide-react";
 import type {
   Automation,
@@ -23,10 +27,30 @@ type AutomationRow = Automation & {
   stats?: { sent: number; scheduled: number };
 };
 
-const TRIGGER_LABELS: Record<AutomationTrigger, string> = {
-  new_subscriber: "Нов абонат",
-  registration: "Записване от сайта",
-  purchase: "След покупка",
+type TreeNode = {
+  automation: AutomationRow;
+  children: TreeNode[];
+};
+
+const TRIGGER_META: Record<
+  AutomationTrigger,
+  { label: string; icon: typeof UserPlus; color: string }
+> = {
+  new_subscriber: {
+    label: "Нов абонат",
+    icon: UserPlus,
+    color: "bg-sky-100 text-sky-800 border-sky-200",
+  },
+  registration: {
+    label: "Записване от сайта",
+    icon: UserCheck,
+    color: "bg-forest-500/15 text-forest-800 border-forest-200",
+  },
+  purchase: {
+    label: "След покупка",
+    icon: ShoppingBag,
+    color: "bg-amber-100 text-amber-900 border-amber-200",
+  },
 };
 
 type ResolvedAudience = {
@@ -77,12 +101,58 @@ function resolveAudience(
 
 function scheduleLabel(automation: Automation): string {
   if (automation.send_date) {
-    return `${automation.send_date} · ${automation.send_time}`;
+    return `Фиксирана дата: ${automation.send_date} · ${automation.send_time}`;
   }
   if ((automation.delay_days ?? 0) > 0) {
-    return `+${automation.delay_days} дн. · ${automation.send_time}`;
+    return `След ${automation.delay_days} дн. · ${automation.send_time} (София)`;
   }
-  return `Веднага · ${automation.send_time}`;
+  return `Веднага / днес ${automation.send_time} (София)`;
+}
+
+function audienceSummary(
+  automation: Automation,
+  audience: ResolvedAudience,
+): string {
+  const logic = automation.audience_logic === "all" ? " И " : " ИЛИ ";
+  const include: string[] = [];
+  audience.groups.forEach((g) => include.push(`група „${g.name}"`));
+  audience.segments.forEach((s) => include.push(`сегмент „${s.name}"`));
+  const inc =
+    include.length > 0 ? include.join(logic) : "всички абонати (без филтър)";
+  const exc =
+    audience.excludes.length > 0
+      ? ` · без: ${audience.excludes.map((e) => `„${e.name}"`).join(", ")}`
+      : "";
+  return `${inc}${exc}`;
+}
+
+function buildTree(automations: AutomationRow[], root: AutomationRow): TreeNode {
+  const children = automations
+    .filter((a) => a.after_automation_id === root.id)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((a) => buildTree(automations, a));
+  return { automation: root, children };
+}
+
+function buildForestByTrigger(
+  automations: AutomationRow[],
+): Record<AutomationTrigger, TreeNode[]> {
+  const byId = new Map(automations.map((a) => [a.id, a]));
+  const forest: Record<AutomationTrigger, TreeNode[]> = {
+    new_subscriber: [],
+    registration: [],
+    purchase: [],
+  };
+
+  const roots = automations
+    .filter((a) => !a.after_automation_id || !byId.has(a.after_automation_id))
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  for (const root of roots) {
+    forest[root.trigger_event].push(buildTree(automations, root));
+  }
+
+  return forest;
 }
 
 function AudienceChips({
@@ -97,7 +167,7 @@ function AudienceChips({
 
   if (!hasInclude) {
     return (
-      <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+      <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
         Всички абонати
       </span>
     );
@@ -105,23 +175,24 @@ function AudienceChips({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {logic === "all" && audience.groups.length + audience.segments.length > 1 && (
-        <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-          AND
-        </span>
-      )}
-      {logic === "any" && audience.groups.length + audience.segments.length > 1 && (
-        <span className="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">
-          OR
-        </span>
-      )}
+      {logic === "all" &&
+        audience.groups.length + audience.segments.length > 1 && (
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+            AND
+          </span>
+        )}
+      {logic === "any" &&
+        audience.groups.length + audience.segments.length > 1 && (
+          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+            OR
+          </span>
+        )}
       {audience.groups.map((g) => (
         <span
           key={g.id}
           className="inline-flex items-center gap-1 rounded-md bg-forest-500/12 px-2 py-0.5 text-[11px] font-medium text-forest-700"
         >
-          <Users className="h-3 w-3 shrink-0 opacity-70" />
-          {g.name}
+          <Users className="h-3 w-3" /> {g.name}
         </span>
       ))}
       {audience.segments.map((s) => (
@@ -129,209 +200,286 @@ function AudienceChips({
           key={s.key}
           className="inline-flex items-center gap-1 rounded-md bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-700"
         >
-          <Tag className="h-3 w-3 shrink-0 opacity-70" />
-          {s.name}
+          <Tag className="h-3 w-3" /> {s.name}
         </span>
       ))}
     </div>
   );
 }
 
-function ExcludeBranch({
-  item,
-}: {
-  item: ResolvedAudience["excludes"][number];
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-1">
-      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-coral-500" />
-      <div className="inline-flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-dashed border-coral-300 bg-coral-50/80 px-2.5 py-1.5 text-[11px] font-medium text-coral-800">
-        <UserMinus className="h-3.5 w-3.5 shrink-0 text-coral-600" />
-        <span className="min-w-0 truncate">
-          {item.kind === "group" ? "Група" : "Сегмент"} ·{" "}
-          <strong className="font-semibold">{item.name}</strong>
-          <span className="text-coral-600/90"> — спира на тази стъпка</span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function FlowNode({
+function FlowCard({
   automation,
   audience,
-  stepNumber,
+  stepLabel,
+  parentName,
 }: {
   automation: AutomationRow;
   audience: ResolvedAudience;
-  stepNumber: number;
+  stepLabel: string;
+  parentName?: string;
 }) {
   return (
     <div
       className={cn(
-        "relative w-full max-w-md rounded-xl border px-4 py-3 shadow-sm",
+        "w-full min-w-[280px] max-w-md rounded-xl border-2 px-4 py-3 shadow-sm",
         automation.enabled
-          ? "border-forest-500/25 bg-white"
-          : "border-ink/10 bg-cream-2/60 opacity-75",
+          ? automation.channel === "sms"
+            ? "border-sky-300/60 bg-white"
+            : "border-forest-400/40 bg-white"
+          : "border-ink/10 bg-cream-2/60 opacity-70",
       )}
     >
-      <div className="flex items-start gap-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-forest-500/10 text-xs font-bold text-forest-700">
-          {stepNumber}
+      <div className="flex items-start justify-between gap-2">
+        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          {stepLabel}
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {automation.channel === "sms" ? (
-              <MessageSquare className="h-4 w-4 shrink-0 text-forest-600" />
-            ) : (
-              <Mail className="h-4 w-4 shrink-0 text-forest-600" />
-            )}
-            <p className="font-display text-sm font-semibold leading-snug text-ink">
-              {automation.name}
-            </p>
-            {!automation.enabled && (
-              <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[10px] font-medium text-ink-soft">
-                Изключена
-              </span>
-            )}
-          </div>
-
-          <div className="mt-2.5">
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-soft/70">
-              Получатели
-            </p>
-            <AudienceChips
-              audience={audience}
-              logic={automation.audience_logic === "all" ? "all" : "any"}
-            />
-          </div>
-
-          <p className="mt-2.5 text-[11px] text-ink-soft">
-            <Zap className="mr-1 inline h-3 w-3 opacity-60" />
-            {scheduleLabel(automation)}
-          </p>
-        </div>
+        {!automation.enabled && (
+          <span className="text-[10px] font-medium text-ink-soft">изключена</span>
+        )}
       </div>
-    </div>
-  );
-}
 
-function FlowConnector({ hasExcludeBranch }: { hasExcludeBranch: boolean }) {
-  return (
-    <div
-      className={cn(
-        "flex items-stretch py-1",
-        hasExcludeBranch ? "min-h-[52px]" : "min-h-[28px]",
+      {parentName && (
+        <p className="mt-2 text-[10px] text-ink-soft">
+          ↳ след „<span className="font-medium text-slate-700">{parentName}</span>"
+        </p>
       )}
-    >
-      <div className="flex w-full max-w-md flex-col items-center">
-        <div className="h-full min-h-[20px] w-px flex-1 bg-forest-400/35" />
-        <ArrowDown className="h-4 w-4 shrink-0 text-forest-500/70" />
-        <div className="h-2 w-px bg-forest-400/35" />
+
+      <div className="mt-2 flex items-center gap-2">
+        {automation.channel === "sms" ? (
+          <MessageSquare className="h-4 w-4 text-sky-600" />
+        ) : (
+          <Mail className="h-4 w-4 text-forest-600" />
+        )}
+        <p className="font-display text-sm font-semibold text-ink">
+          {automation.name}
+        </p>
       </div>
+
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-soft">
+        {automation.new_subscribers_only
+          ? "👤 Само при първо добавяне на имейла"
+          : "👥 Нов и съществуващ имейл в списъка"}
+      </p>
+
+      <div className="mt-3 rounded-lg bg-cream/80 p-2.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-forest-600">
+          Получава, ако
+        </p>
+        <div className="mt-1.5">
+          <AudienceChips
+            audience={audience}
+            logic={automation.audience_logic === "all" ? "all" : "any"}
+          />
+        </div>
+        <p className="mt-2 text-[10px] leading-snug text-slate-600">
+          {audienceSummary(automation, audience)}
+        </p>
+      </div>
+
+      {audience.excludes.length > 0 && (
+        <div className="mt-2 rounded-lg border border-dashed border-coral-200 bg-coral-50/60 p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-coral-700">
+            Не получава (изключение)
+          </p>
+          <ul className="mt-1 space-y-1">
+            {audience.excludes.map((ex) => (
+              <li
+                key={`${ex.kind}-${ex.id}`}
+                className="flex items-center gap-1.5 text-[11px] text-coral-800"
+              >
+                <UserMinus className="h-3 w-3 shrink-0" />
+                {ex.kind === "group" ? "Група" : "Сегмент"} ·{" "}
+                <strong>{ex.name}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="mt-3 flex items-center gap-1 text-[11px] text-ink-soft">
+        <Zap className="h-3 w-3" />
+        {scheduleLabel(automation)}
+      </p>
     </div>
   );
 }
 
-function buildChains(automations: AutomationRow[]): AutomationRow[][] {
-  const byId = new Map(automations.map((a) => [a.id, a]));
-  const claimed = new Set<string>();
-  const chains: AutomationRow[][] = [];
-
-  const roots = automations
-    .filter((a) => !a.after_automation_id || !byId.has(a.after_automation_id))
-    .sort((a, b) => a.sort_order - b.sort_order);
-
-  for (const root of roots) {
-    const chain: AutomationRow[] = [];
-    let current: AutomationRow | undefined = root;
-    while (current && !claimed.has(current.id)) {
-      chain.push(current);
-      claimed.add(current.id);
-      current = automations.find((a) => a.after_automation_id === current!.id);
-    }
-    if (chain.length > 0) chains.push(chain);
-  }
-
-  for (const automation of automations) {
-    if (!claimed.has(automation.id)) {
-      chains.push([automation]);
-    }
-  }
-
-  return chains;
+function DownConnector({ label }: { label?: string }) {
+  return (
+    <div className="flex flex-col items-center py-2">
+      {label && (
+        <span className="mb-1 max-w-[200px] text-center text-[10px] font-medium text-forest-600">
+          {label}
+        </span>
+      )}
+      <div className="h-4 w-px bg-forest-400/50" />
+      <ArrowDown className="h-4 w-4 text-forest-500" />
+      <div className="h-2 w-px bg-forest-400/50" />
+    </div>
+  );
 }
 
-function PathColumn({
-  chain,
+function ForkConnector({ count }: { count: number }) {
+  return (
+    <div className="flex flex-col items-center py-2">
+      <div className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-semibold text-amber-900">
+        <Split className="h-3 w-3" />
+        {count} клона — различна аудитория
+      </div>
+      <div className="mt-2 h-4 w-px bg-forest-400/50" />
+      <ArrowDown className="h-4 w-4 text-forest-500" />
+    </div>
+  );
+}
+
+function ExcludeExit({ item }: { item: ResolvedAudience["excludes"][number] }) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-coral-200 bg-coral-50 px-2.5 py-2 text-[11px] text-coral-800">
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-coral-500" />
+      <UserMinus className="h-3.5 w-3.5 shrink-0" />
+      <span>
+        <strong>{item.name}</strong> — спира на тази стъпка
+      </span>
+    </div>
+  );
+}
+
+function TreeBranch({
+  node,
+  groups,
+  segments,
+  stepPrefix,
+  parentName,
+  depth,
+}: {
+  node: TreeNode;
+  groups: SegmentGroup[];
+  segments: Segment[];
+  stepPrefix: string;
+  parentName?: string;
+  depth: number;
+}) {
+  const audience = resolveAudience(node.automation, groups, segments);
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="grid w-full gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
+        <FlowCard
+          automation={node.automation}
+          audience={audience}
+          stepLabel={`${stepPrefix}${depth}`}
+          parentName={parentName}
+        />
+        {audience.excludes.length > 0 && (
+          <div className="flex flex-col gap-2 lg:max-w-[220px]">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-coral-600">
+              Изход от пътя
+            </p>
+            {audience.excludes.map((ex) => (
+              <ExcludeExit key={`${ex.kind}-${ex.id}`} item={ex} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {node.children.length === 1 && (
+        <>
+          <DownConnector label="след изпращане → следваща стъпка" />
+          <TreeBranch
+            node={node.children[0]!}
+            groups={groups}
+            segments={segments}
+            stepPrefix={stepPrefix}
+            parentName={node.automation.name}
+            depth={depth + 1}
+          />
+        </>
+      )}
+
+      {node.children.length > 1 && (
+        <>
+          <ForkConnector count={node.children.length} />
+          <div className="flex w-full flex-wrap justify-center gap-6 pt-2">
+            {node.children.map((child, i) => (
+              <div
+                key={child.automation.id}
+                className="flex flex-col items-center border-t-2 border-forest-300/40 pt-4"
+              >
+                <span className="mb-2 rounded-full bg-forest-500/10 px-2.5 py-0.5 text-[10px] font-bold text-forest-700">
+                  Клон {i + 1}
+                </span>
+                <TreeBranch
+                  node={child}
+                  groups={groups}
+                  segments={segments}
+                  stepPrefix={stepPrefix}
+                  parentName={node.automation.name}
+                  depth={depth + 1}
+                />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TriggerSection({
+  trigger,
+  trees,
   groups,
   segments,
 }: {
-  chain: AutomationRow[];
+  trigger: AutomationTrigger;
+  trees: TreeNode[];
   groups: SegmentGroup[];
   segments: Segment[];
 }) {
-  const root = chain[0];
-  if (!root) return null;
-
-  const pathName = root.name;
-  const trigger = TRIGGER_LABELS[root.trigger_event] ?? root.trigger_event;
+  if (trees.length === 0) return null;
+  const meta = TRIGGER_META[trigger];
+  const Icon = meta.icon;
 
   return (
-    <div className="rounded-2xl border border-forest-200/60 bg-gradient-to-b from-cream/80 to-white p-5 shadow-sm">
-      <div className="mb-5 border-b border-forest-100 pb-4">
-        <div className="flex items-start gap-2">
-          <GitBranch className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" />
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-forest-600">
-              Път · {chain.length} {chain.length === 1 ? "стъпка" : "стъпки"}
-            </p>
-            <h3 className="mt-1 font-display text-base font-semibold leading-snug text-ink">
-              {pathName}
-            </h3>
-            <p className="mt-1.5 text-xs text-ink-soft">
-              Тригър: <span className="font-medium text-slate-700">{trigger}</span>
-            </p>
-          </div>
+    <section className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+      <div
+        className={cn(
+          "mb-6 inline-flex items-center gap-2 rounded-xl border px-4 py-2.5",
+          meta.color,
+        )}
+      >
+        <Icon className="h-5 w-5" />
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest opacity-80">
+            Стартов тригър
+          </p>
+          <p className="font-display text-base font-semibold">{meta.label}</p>
         </div>
       </div>
 
-      <div className="space-y-0">
-        {chain.map((automation, index) => {
-          const audience = resolveAudience(automation, groups, segments);
-          const hasExcludes = audience.excludes.length > 0;
-          const isLast = index === chain.length - 1;
-
-          return (
-            <div key={automation.id}>
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-                <FlowNode
-                  automation={automation}
-                  audience={audience}
-                  stepNumber={index + 1}
-                />
-
-                {hasExcludes && (
-                  <div className="flex flex-col gap-2 border-l-2 border-dashed border-coral-200 pl-4 lg:ml-4 lg:min-w-[210px] lg:max-w-[260px] lg:flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-coral-600/80">
-                      Разклонение · спира
-                    </p>
-                    {audience.excludes.map((item) => (
-                      <ExcludeBranch
-                        key={`${item.kind}-${item.id}`}
-                        item={item}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {!isLast && <FlowConnector hasExcludeBranch={hasExcludes} />}
+      <div className="space-y-10">
+        {trees.map((tree, pathIndex) => (
+          <div
+            key={tree.automation.id}
+            className="rounded-xl border border-forest-100 bg-gradient-to-b from-cream/40 to-white p-5"
+          >
+            <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-forest-100 pb-3">
+              <GitBranch className="h-4 w-4 text-forest-600" />
+              <p className="text-sm font-semibold text-slate-800">
+                Път {pathIndex + 1}: {tree.automation.name}
+              </p>
             </div>
-          );
-        })}
+            <TreeBranch
+              node={tree}
+              groups={groups}
+              segments={segments}
+              stepPrefix={`${pathIndex + 1}.`}
+              depth={1}
+            />
+          </div>
+        ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -344,9 +492,10 @@ export function AutomationFlowView({
   groups: SegmentGroup[];
   segments: Segment[];
 }) {
-  const chains = buildChains(automations);
+  const forest = buildForestByTrigger(automations);
+  const hasAny = automations.length > 0;
 
-  if (automations.length === 0) {
+  if (!hasAny) {
     return (
       <p className="text-sm text-ink-soft">
         Няма автоматизации — създай първа от таб „Списък“.
@@ -358,35 +507,40 @@ export function AutomationFlowView({
     <div className="space-y-6">
       <div className="rounded-xl border border-forest-100 bg-cream/50 px-4 py-3 text-sm leading-relaxed text-ink-soft">
         <p>
-          Всяка колона е отделен <strong className="text-slate-800">път</strong> надолу.
-          Името на пътя е от <strong className="text-slate-800">първата стъпка</strong>;
-          всяка стъпка показва собственото си име, групи и сегменти.
+          Графиката показва <strong className="text-slate-800">кога</strong> и{" "}
+          <strong className="text-slate-800">към кого</strong> отива всеки имейл.
+          Разклоненията (клонове) са различни пътища след една и съща стъпка.
+          Червените изходи са изключени групи/сегменти — те{" "}
+          <strong className="text-coral-700">не получават този имейл</strong>.
         </p>
-        <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <div className="mt-3 flex flex-wrap gap-3 text-xs">
           <span className="inline-flex items-center gap-1">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-forest-500/20" />
-            Група
+            <Users className="h-3 w-3 text-forest-600" /> Група
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-slate-500/20" />
-            Сегмент
+            <Tag className="h-3 w-3 text-slate-600" /> Сегмент
+          </span>
+          <span className="inline-flex items-center gap-1 text-amber-800">
+            <Split className="h-3 w-3" /> Разклонение
           </span>
           <span className="inline-flex items-center gap-1 text-coral-700">
-            <ArrowRight className="h-3 w-3" />
-            Изключена аудитория — спира на тази стъпка
+            <UserMinus className="h-3 w-3" /> Изключение
           </span>
-        </p>
+        </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        {chains.map((chain) => (
-          <PathColumn
-            key={chain.map((a) => a.id).join("-")}
-            chain={chain}
-            groups={groups}
-            segments={segments}
-          />
-        ))}
+      <div className="space-y-8">
+        {(["registration", "new_subscriber", "purchase"] as const).map(
+          (trigger) => (
+            <TriggerSection
+              key={trigger}
+              trigger={trigger}
+              trees={forest[trigger]}
+              groups={groups}
+              segments={segments}
+            />
+          ),
+        )}
       </div>
     </div>
   );

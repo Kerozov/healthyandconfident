@@ -2,12 +2,14 @@ import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
+import { SiteImage } from "@/components/site/site-image";
+import { mediaAlt } from "@/lib/site/media-gallery";
 
 const COLLAGE_IMAGES = [
-  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=500&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=500&h=500&fit=crop",
+  "/images/6.jpg",
+  "/images/7.jpg",
+  "/images/8.jpg",
+  "/images/10.jpg",
 ] as const;
 
 const SIGNUP_URL = "https://www.subscribepage.com/21_days_24";
@@ -42,14 +44,13 @@ export function Challenge21Section({
               {COLLAGE_IMAGES.map((src) => (
                 <div
                   key={src}
-                  className="aspect-square overflow-hidden rounded-lg bg-slate-700"
+                  className="relative aspect-square overflow-hidden rounded-lg bg-slate-700 ring-1 ring-white/10"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <SiteImage
                     src={src}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    loading="lazy"
+                    alt={mediaAlt(src, locale)}
+                    fill
+                    sizes="250px"
                   />
                 </div>
               ))}

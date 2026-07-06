@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { X, Gift } from "lucide-react";
-import { mergeVisitorTags } from "@/lib/site/visitor-tags";
 import type { Locale } from "@/i18n/config";
+import { SubscribeForm } from "@/components/site/subscribe-form";
 
 type PopupData = {
   enabled: boolean;
@@ -19,8 +19,7 @@ type PopupData = {
 export function Popup({ locale }: { locale: Locale }) {
   const [data, setData] = useState<PopupData | null>(null);
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [done, setDone] = useState(false);
 
   const storageKey = `hc_popup_${locale}`;
 
@@ -46,38 +45,11 @@ export function Popup({ locale }: { locale: Locale }) {
     localStorage.setItem(storageKey, "dismissed");
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    setState("loading");
-    try {
-      const res = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          locale,
-          source: "popup",
-          tags: data?.segment_tag ? [data.segment_tag] : [],
-        }),
-      });
-      if (!res.ok) throw new Error();
-      setState("done");
-      localStorage.setItem(storageKey, "subscribed");
-      if (data?.segment_tag) {
-        mergeVisitorTags([data.segment_tag]);
-      }
-      setTimeout(() => setOpen(false), 2500);
-    } catch {
-      setState("error");
-    }
-  }
-
   if (!open || !data) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-forest-900/50 p-4 backdrop-blur-sm sm:items-center">
-      <div className="animate-fade-up relative w-full max-w-lg overflow-hidden rounded-3xl bg-cream-50 shadow-2xl">
+      <div className="animate-fade-up relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-cream-50 shadow-2xl">
         <button
           onClick={dismiss}
           aria-label="Close"
@@ -96,37 +68,32 @@ export function Popup({ locale }: { locale: Locale }) {
         </div>
 
         <div className="px-7 py-6">
-          {state === "done" ? (
+          {done ? (
             <p className="py-6 text-center font-display text-xl text-forest-600">
               {data.success_message}
             </p>
           ) : (
             <>
               <p className="text-sm leading-relaxed text-ink-soft">{data.message}</p>
-              <form onSubmit={submit} className="mt-5 flex flex-col gap-3">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={locale === "bg" ? "Твоят имейл" : "Your best email"}
-                  className="h-12 rounded-lg border border-forest-100 bg-white px-5 text-sm text-slate-800 outline-none focus:border-forest-400 focus:ring-2 focus:ring-forest-200"
+              <div className="mt-5">
+                <SubscribeForm
+                  locale={locale}
+                  source="popup"
+                  baseTags={data.segment_tag ? [data.segment_tag] : []}
+                  consent={
+                    locale === "bg"
+                      ? "Съгласявам се да получавам маркетингови имейли със съвети, оферти и полезно съдържание. Можеш да се отпишеш по всяко време."
+                      : "I agree to receive marketing emails with tips, offers and helpful content. You can unsubscribe at any time."
+                  }
+                  success={data.success_message}
+                  buttonLabel={data.cta_label}
+                  onSuccess={() => {
+                    setDone(true);
+                    localStorage.setItem(storageKey, "subscribed");
+                    setTimeout(() => setOpen(false), 2500);
+                  }}
                 />
-                <button
-                  type="submit"
-                  disabled={state === "loading"}
-                  className="h-12 rounded-lg bg-forest-500 font-bold text-white transition-colors hover:bg-forest-600 disabled:opacity-60"
-                >
-                  {state === "loading"
-                    ? "..."
-                    : data.cta_label}
-                </button>
-                {state === "error" && (
-                  <p className="text-center text-sm text-coral-600">
-                    {locale === "bg" ? "Нещо се обърка. Опитай пак." : "Something went wrong. Try again."}
-                  </p>
-                )}
-              </form>
+              </div>
             </>
           )}
         </div>

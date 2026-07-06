@@ -18,6 +18,7 @@ import { runAutomations } from "@/lib/automation/send";
 import { composeBrandedEmail } from "@/lib/email/layout";
 import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
 import { expandEmailProducts } from "@/lib/email/expand-products";
+import { bodyWithAttachment } from "@/lib/email/attachments";
 import {
   campaignCtaRedirectUrl,
   isSafeCtaTarget,
@@ -41,7 +42,7 @@ import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { expandAudienceKeys, isDescendantGroup } from "@/lib/segments/hierarchy";
-import { uploadMediaImage } from "@/lib/supabase/media";
+import { uploadMediaImage, uploadEmailPdf } from "@/lib/supabase/media";
 import { MEDIA_FOLDERS, type MediaFolder } from "@/lib/media/folders";
 import { parseYoutubeVideoId } from "@/lib/youtube";
 import {
@@ -279,6 +280,10 @@ type AutomationInput = {
   cta_url_bg: string;
   cta_label_en: string;
   cta_url_en: string;
+  attachment_path_bg?: string;
+  attachment_filename_bg?: string;
+  attachment_path_en?: string;
+  attachment_filename_en?: string;
   sms_bg: string;
   sms_en: string;
   sort_order?: number;
@@ -1142,6 +1147,8 @@ type CampaignInsert = {
   recipients: string[];
   scheduledAt?: string;
   parentCampaignId?: string;
+  attachment_path?: string;
+  attachment_filename?: string;
 };
 
 /** Core sender: create the worker job, then persist a campaign row with the
@@ -1185,6 +1192,8 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
       status: initialStatus,
       scheduled_at: scheduledAtIso,
       parent_campaign_id: input.parentCampaignId || null,
+      attachment_path: input.attachment_path?.trim() || null,
+      attachment_filename: input.attachment_filename?.trim() || null,
     })
     .select("id")
     .single();
@@ -1195,7 +1204,13 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
 
   const campaignId = (draft as { id: string }).id;
   const mailLocale = input.locale === "en" ? "en" : "bg";
-  const bodyHtml = await expandEmailProducts(input.html, mailLocale);
+  const expandedHtml = await expandEmailProducts(input.html, mailLocale);
+  const { bodyHtml, attachments } = bodyWithAttachment(
+    expandedHtml,
+    input.attachment_path,
+    input.attachment_filename,
+    mailLocale,
+  );
   const footerConfig = await getEmailFooterConfig(mailLocale);
 
   const { data: subs } = await supabase
@@ -1237,6 +1252,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
             recipients: [recipient],
             sendAt: scheduledAtIso,
             idempotencyKey: `camp-${campaignId}-${recipient}`,
+            attachments,
           });
           jobIds.push(res.jobId);
           workerStatus = res.status || "pending";
@@ -1252,6 +1268,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
             subject: input.subject,
             html: wrappedHtml,
             recipients: [recipient],
+            attachments,
           });
           jobIds.push(res.jobId);
           sent += res.sent ?? 1;
@@ -1367,6 +1384,8 @@ export async function sendEmailCampaign(input: {
   cta_url?: string;
   audience: AudienceInput;
   scheduled_at?: string;
+  attachment_path?: string;
+  attachment_filename?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
   const ctaLabel = input.cta_label?.trim() ?? "";

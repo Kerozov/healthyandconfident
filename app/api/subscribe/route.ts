@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
-import {
-  runAutomations,
-} from "@/lib/automation/send";
+import { runAutomations } from "@/lib/automation/send";
+import { fullNameFromParts } from "@/lib/site/health-tags";
 import type { Locale } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +12,14 @@ export async function POST(req: Request) {
   let body: {
     email?: string;
     name?: string;
+    first_name?: string;
+    last_name?: string;
+    facebook_url?: string;
     phone?: string;
     locale?: string;
     source?: string;
     tags?: string[];
+    consent?: boolean;
   };
   try {
     body = await req.json();
@@ -29,6 +32,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
+  if (body.consent !== true) {
+    return NextResponse.json({ error: "Marketing consent required" }, { status: 400 });
+  }
+
   const locale = body.locale === "en" ? "en" : "bg";
   const source = body.source || "popup";
   const mailLocale: Locale = locale;
@@ -36,9 +43,16 @@ export async function POST(req: Request) {
     ? body.tags.filter((t) => typeof t === "string" && t.length > 0)
     : [];
 
+  const firstName = body.first_name?.trim() || null;
+  const lastName = body.last_name?.trim() || null;
+  const name =
+    body.name?.trim() ||
+    fullNameFromParts(firstName ?? "", lastName ?? "") ||
+    null;
+  const facebookUrl = body.facebook_url?.trim() || null;
+
   try {
     const supabase = getAdminClient();
-    const name = body.name?.trim() || null;
 
     const { data: existing } = await supabase
       .from("subscribers")
@@ -50,17 +64,25 @@ export async function POST(req: Request) {
     let subscriberId = existing?.id as string | undefined;
     let finalTags = incomingTags;
 
+    const profilePatch = {
+      ...(firstName ? { first_name: firstName } : {}),
+      ...(lastName ? { last_name: lastName } : {}),
+      ...(name ? { name } : {}),
+      ...(facebookUrl ? { facebook_url: facebookUrl } : {}),
+      ...(body.phone?.trim() ? { phone: body.phone.trim() } : {}),
+    };
+
     if (existing) {
       finalTags = Array.from(
-        new Set([...(existing.tags as string[] ?? []), ...incomingTags]),
+        new Set([...((existing.tags as string[]) ?? []), ...incomingTags]),
       );
       await supabase
         .from("subscribers")
         .update({
           tags: finalTags,
           status: "subscribed",
-          ...(name ? { name } : {}),
-          ...(body.phone?.trim() ? { phone: body.phone.trim() } : {}),
+          consent: true,
+          ...profilePatch,
         })
         .eq("id", existing.id as string);
     } else {
@@ -69,10 +91,14 @@ export async function POST(req: Request) {
         .insert({
           email,
           name,
+          first_name: firstName,
+          last_name: lastName,
+          facebook_url: facebookUrl,
           phone: body.phone?.trim() || null,
           locale,
           source,
           tags: incomingTags,
+          consent: true,
         })
         .select("id")
         .single();

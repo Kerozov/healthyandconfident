@@ -14,11 +14,12 @@ export async function GET(
 
   const { data } = await supabase
     .from("email_campaigns")
-    .select("cta_url")
+    .select("cta_url, cta_label")
     .eq("id", id)
     .maybeSingle();
 
-  const target = (data as { cta_url?: string } | null)?.cta_url?.trim() ?? "";
+  const row = data as { cta_url?: string; cta_label?: string } | null;
+  const target = row?.cta_url?.trim() ?? "";
   if (!target || !isSafeCtaTarget(target)) {
     return NextResponse.json({ error: "Link not found" }, { status: 404 });
   }
@@ -35,6 +36,7 @@ export async function GET(
           email: payload.e,
           subscriberId: payload.sid,
           targetUrl: resolved,
+          linkLabel: row?.cta_label?.trim() || "CTA бутон",
         });
       } catch {
         /* still redirect */

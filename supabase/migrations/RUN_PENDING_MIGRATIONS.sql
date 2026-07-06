@@ -629,6 +629,12 @@ values
   )
 on conflict (locale) do nothing;
 
+-- 029: subscriber profile fields (registration forms)
+alter table public.subscribers
+  add column if not exists first_name text,
+  add column if not exists last_name text,
+  add column if not exists facebook_url text;
+
 notify pgrst, 'reload schema';
 
 select 'Upgrade complete (012–028 applied). Also run 007_automations.sql if not yet applied.' as result;

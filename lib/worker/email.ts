@@ -17,6 +17,11 @@ type SendArgs = {
   recipients: string[];
   from?: string;
   replyTo?: string;
+  attachments?: {
+    filename: string;
+    url: string;
+    contentType: string;
+  }[];
 };
 
 type ScheduleArgs = SendArgs & {
@@ -184,6 +189,7 @@ export async function sendEmail(args: SendArgs): Promise<WorkerSendResult> {
     recipients: args.recipients,
     from: args.from || from,
     replyTo: args.replyTo || replyTo,
+    attachments: args.attachments?.length ? args.attachments : undefined,
   });
 }
 
@@ -197,6 +203,7 @@ export async function scheduleEmail(args: ScheduleArgs): Promise<WorkerSendResul
     replyTo: args.replyTo || replyTo,
     sendAt: args.sendAt,
     idempotencyKey: args.idempotencyKey,
+    attachments: args.attachments?.length ? args.attachments : undefined,
   });
 }
 

@@ -3,9 +3,10 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt } from "@/lib/site/media-gallery";
+import { mediaAlt, mediaByCategory } from "@/lib/site/media-gallery";
 
 const BANNER_IMAGE = "/images/11.jpg";
+const FOOD_COLLAGE = mediaByCategory("food").filter((f) => f.src !== BANNER_IMAGE).slice(0, 4);
 
 export function BioCommunityBanner({
   dict,
@@ -29,7 +30,24 @@ export function BioCommunityBanner({
         <div className="absolute inset-0 bg-slate-800/65" aria-hidden />
       </div>
       <Container className="relative section-pad">
-        <div className="mx-auto max-w-xl rounded-2xl border border-white/20 bg-white/95 p-8 text-center shadow-2xl backdrop-blur-sm sm:p-10">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
+            {FOOD_COLLAGE.map((item) => (
+              <div
+                key={item.src}
+                className="relative aspect-square overflow-hidden rounded-xl ring-2 ring-white/30"
+              >
+                <SiteImage
+                  src={item.src}
+                  alt={item.alt[locale]}
+                  fill
+                  sizes="200px"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-white/20 bg-white/95 p-8 text-center shadow-2xl backdrop-blur-sm sm:p-10 lg:text-left">
           <p className="font-display text-4xl font-semibold text-forest-500">94%</p>
           <p className="mt-1 text-sm font-medium text-ink-soft">
             {locale === "bg" ? "успех при клиентите" : "client success rate"}
@@ -57,6 +75,7 @@ export function BioCommunityBanner({
           >
             {bioBanner.cta}
           </CtaLink>
+          </div>
         </div>
       </Container>
     </section>

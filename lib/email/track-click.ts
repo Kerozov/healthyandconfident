@@ -9,6 +9,7 @@ export async function recordEmailLinkClick(input: {
   email: string;
   subscriberId?: string | null;
   targetUrl: string;
+  linkLabel?: string | null;
 }): Promise<void> {
   const supabase = getAdminClient();
   const email = input.email.trim().toLowerCase();
@@ -20,6 +21,7 @@ export async function recordEmailLinkClick(input: {
     email,
     subscriber_id: input.subscriberId ?? null,
     target_url: input.targetUrl,
+    link_label: input.linkLabel?.trim() || null,
     clicked_at: now,
   });
 

@@ -2,6 +2,8 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 
+export type EngagementTier = "hot" | "warm" | "cold" | "none";
+
 export type EmailEngagementSummary = {
   emailsSent: number;
   emailsOpened: number;
@@ -9,6 +11,7 @@ export type EmailEngagementSummary = {
   totalClicks: number;
   openRate: number;
   clickRate: number;
+  tier: EngagementTier;
 };
 
 export type SubscriberEngagementRow = EmailEngagementSummary & {
@@ -26,13 +29,32 @@ export type EngagementActivityItem = {
   clicks: number;
 };
 
+export type ClickEventItem = {
+  sourceType: "campaign" | "automation";
+  sourceTitle: string;
+  linkLabel: string | null;
+  targetUrl: string | null;
+  clickedAt: string;
+};
+
+export type TopLinkRow = {
+  linkLabel: string;
+  targetUrl: string;
+  clicks: number;
+  uniqueEmails: number;
+};
+
 export type EngagementOverview = {
   totals: EmailEngagementSummary;
+  topByOpens: SubscriberEngagementRow[];
   topByClicks: SubscriberEngagementRow[];
+  topLinks: TopLinkRow[];
   recentClicks: {
     email: string;
     sourceType: "campaign" | "automation";
     sourceTitle: string;
+    linkLabel: string | null;
+    targetUrl: string | null;
     clickedAt: string;
   }[];
 };
@@ -40,6 +62,19 @@ export type EngagementOverview = {
 function rate(part: number, whole: number): number {
   if (!whole) return 0;
   return Math.round((part / whole) * 100);
+}
+
+export function engagementTier(summary: {
+  emailsSent: number;
+  emailsOpened: number;
+  totalClicks: number;
+  openRate: number;
+}): EngagementTier {
+  if (summary.emailsSent === 0) return "none";
+  if (summary.openRate >= 50 && summary.totalClicks >= 2) return "hot";
+  if (summary.openRate >= 35 || summary.totalClicks >= 1) return "warm";
+  if (summary.emailsOpened > 0) return "cold";
+  return "none";
 }
 
 type Acc = {
@@ -59,13 +94,21 @@ function bumpAcc(acc: Acc, opened: boolean, clicks: number) {
 }
 
 function accToSummary(acc: Acc): EmailEngagementSummary {
+  const openRate = rate(acc.emailsOpened, acc.emailsSent);
+  const clickRate = rate(acc.emailsWithClicks, acc.emailsSent);
   return {
     emailsSent: acc.emailsSent,
     emailsOpened: acc.emailsOpened,
     emailsWithClicks: acc.emailsWithClicks,
     totalClicks: acc.totalClicks,
-    openRate: rate(acc.emailsOpened, acc.emailsSent),
-    clickRate: rate(acc.emailsWithClicks, acc.emailsSent),
+    openRate,
+    clickRate,
+    tier: engagementTier({
+      emailsSent: acc.emailsSent,
+      emailsOpened: acc.emailsOpened,
+      totalClicks: acc.totalClicks,
+      openRate,
+    }),
   };
 }
 
@@ -74,6 +117,19 @@ function isOpenedRow(row: {
   recipient_status: string | null;
 }): boolean {
   return Boolean(row.opened_at) || row.recipient_status === "opened";
+}
+
+function rowToSubscriber(
+  email: string,
+  acc: Acc,
+  subMap: Map<string, { id: string; name: string | null }>,
+): SubscriberEngagementRow {
+  return {
+    email,
+    subscriberId: subMap.get(email)?.id ?? null,
+    name: subMap.get(email)?.name ?? null,
+    ...accToSummary(acc),
+  };
 }
 
 export async function getEngagementSummaryForEmails(
@@ -137,9 +193,63 @@ export async function getEngagementSummaryForEmails(
   return map;
 }
 
+async function resolveSourceTitle(
+  sourceType: "campaign" | "automation",
+  sourceId: string,
+): Promise<string> {
+  const supabase = getAdminClient();
+  if (sourceType === "campaign") {
+    const { data } = await supabase
+      .from("email_campaigns")
+      .select("subject")
+      .eq("id", sourceId)
+      .maybeSingle();
+    return (data as { subject?: string } | null)?.subject ?? sourceId;
+  }
+  const { data } = await supabase
+    .from("automations")
+    .select("name")
+    .eq("id", sourceId)
+    .maybeSingle();
+  return (data as { name?: string } | null)?.name ?? sourceId;
+}
+
+export async function getClickEventsForEmail(
+  email: string,
+  limit = 30,
+): Promise<ClickEventItem[]> {
+  const normalized = email.trim().toLowerCase();
+  const supabase = getAdminClient();
+  const { data } = await supabase
+    .from("email_link_clicks")
+    .select("source_type, source_id, link_label, target_url, clicked_at")
+    .eq("email", normalized)
+    .order("clicked_at", { ascending: false })
+    .limit(limit);
+
+  const events: ClickEventItem[] = [];
+  for (const row of (data as {
+    source_type: "campaign" | "automation";
+    source_id: string;
+    link_label: string | null;
+    target_url: string | null;
+    clicked_at: string;
+  }[] | null) ?? []) {
+    events.push({
+      sourceType: row.source_type,
+      sourceTitle: await resolveSourceTitle(row.source_type, row.source_id),
+      linkLabel: row.link_label,
+      targetUrl: row.target_url,
+      clickedAt: row.clicked_at,
+    });
+  }
+  return events;
+}
+
 export async function getSubscriberEngagementDetail(email: string): Promise<{
   summary: EmailEngagementSummary;
   activity: EngagementActivityItem[];
+  clickEvents: ClickEventItem[];
 }> {
   const normalized = email.trim().toLowerCase();
   const summaryMap = await getEngagementSummaryForEmails([normalized]);
@@ -216,7 +326,50 @@ export async function getSubscriberEngagementDetail(email: string): Promise<{
     (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
   );
 
-  return { summary, activity: activity.slice(0, 40) };
+  const clickEvents = await getClickEventsForEmail(normalized);
+
+  return { summary, activity: activity.slice(0, 40), clickEvents };
+}
+
+async function aggregateTopLinks(): Promise<TopLinkRow[]> {
+  const supabase = getAdminClient();
+  const { data } = await supabase
+    .from("email_link_clicks")
+    .select("link_label, target_url, email");
+
+  const map = new Map<
+    string,
+    { linkLabel: string; targetUrl: string; clicks: number; emails: Set<string> }
+  >();
+
+  for (const row of (data as {
+    link_label: string | null;
+    target_url: string | null;
+    email: string;
+  }[] | null) ?? []) {
+    const targetUrl = row.target_url?.trim() || "—";
+    const linkLabel = row.link_label?.trim() || targetUrl;
+    const key = `${linkLabel}::${targetUrl}`;
+    const entry = map.get(key) ?? {
+      linkLabel,
+      targetUrl,
+      clicks: 0,
+      emails: new Set<string>(),
+    };
+    entry.clicks += 1;
+    entry.emails.add(row.email.toLowerCase());
+    map.set(key, entry);
+  }
+
+  return [...map.values()]
+    .map((entry) => ({
+      linkLabel: entry.linkLabel,
+      targetUrl: entry.targetUrl,
+      clicks: entry.clicks,
+      uniqueEmails: entry.emails.size,
+    }))
+    .sort((a, b) => b.clicks - a.clicks || b.uniqueEmails - a.uniqueEmails)
+    .slice(0, 15);
 }
 
 export async function getEngagementOverview(): Promise<EngagementOverview> {
@@ -293,56 +446,60 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
     ),
   );
 
-  const topByClicks: SubscriberEngagementRow[] = [...byEmail.entries()]
-    .map(([email, acc]) => ({
-      email,
-      subscriberId: subMap.get(email)?.id ?? null,
-      name: subMap.get(email)?.name ?? null,
-      ...accToSummary(acc),
-    }))
-    .sort((a, b) => b.totalClicks - a.totalClicks || b.emailsOpened - a.emailsOpened)
+  const allRows = [...byEmail.entries()].map(([email, acc]) =>
+    rowToSubscriber(email, acc, subMap),
+  );
+
+  const topByOpens = [...allRows]
+    .sort(
+      (a, b) =>
+        b.emailsOpened - a.emailsOpened ||
+        b.openRate - a.openRate ||
+        b.totalClicks - a.totalClicks,
+    )
+    .slice(0, 15);
+
+  const topByClicks = [...allRows]
+    .sort(
+      (a, b) =>
+        b.totalClicks - a.totalClicks ||
+        b.emailsOpened - a.emailsOpened ||
+        b.openRate - a.openRate,
+    )
     .slice(0, 15);
 
   const { data: recentClickRows } = await supabase
     .from("email_link_clicks")
-    .select("email, source_type, source_id, clicked_at")
+    .select("email, source_type, source_id, link_label, target_url, clicked_at")
     .order("clicked_at", { ascending: false })
-    .limit(20);
+    .limit(25);
 
   const recentClicks: EngagementOverview["recentClicks"] = [];
   for (const row of (recentClickRows as {
     email: string;
     source_type: "campaign" | "automation";
     source_id: string;
+    link_label: string | null;
+    target_url: string | null;
     clicked_at: string;
   }[] | null) ?? []) {
-    let sourceTitle = row.source_id;
-    if (row.source_type === "campaign") {
-      const { data } = await supabase
-        .from("email_campaigns")
-        .select("subject")
-        .eq("id", row.source_id)
-        .maybeSingle();
-      sourceTitle = (data as { subject?: string } | null)?.subject ?? sourceTitle;
-    } else {
-      const { data } = await supabase
-        .from("automations")
-        .select("name")
-        .eq("id", row.source_id)
-        .maybeSingle();
-      sourceTitle = (data as { name?: string } | null)?.name ?? sourceTitle;
-    }
     recentClicks.push({
       email: row.email,
       sourceType: row.source_type,
-      sourceTitle,
+      sourceTitle: await resolveSourceTitle(row.source_type, row.source_id),
+      linkLabel: row.link_label,
+      targetUrl: row.target_url,
       clickedAt: row.clicked_at,
     });
   }
 
+  const topLinks = await aggregateTopLinks();
+
   return {
     totals: accToSummary(totalsAcc),
+    topByOpens,
     topByClicks,
+    topLinks,
     recentClicks,
   };
 }

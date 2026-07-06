@@ -24,6 +24,9 @@ export type Subscriber = {
   id: string;
   email: string;
   name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  facebook_url: string | null;
   phone: string | null;
   locale: Locale;
   source: string;

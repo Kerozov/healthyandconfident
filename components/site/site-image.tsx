@@ -14,6 +14,10 @@ type SiteImageProps = {
   | { fill?: false; width: number; height: number }
 );
 
+/**
+ * fill mode: parent must be `position: relative` with explicit size (aspect-* or h-*).
+ * Image is rendered as a direct child so Next.js fill layout works correctly.
+ */
 export function SiteImage({
   src,
   alt,
@@ -28,17 +32,15 @@ export function SiteImage({
 }: SiteImageProps) {
   if (fill) {
     return (
-      <div className={cn("relative overflow-hidden", className)}>
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          priority={priority}
-          quality={quality}
-          sizes={sizes ?? "(max-width: 768px) 100vw, 50vw"}
-          className={cn("object-cover", imageClassName)}
-        />
-      </div>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        priority={priority}
+        quality={quality}
+        sizes={sizes ?? "(max-width: 768px) 100vw, 50vw"}
+        className={cn("object-cover", imageClassName, className)}
+      />
     );
   }
 

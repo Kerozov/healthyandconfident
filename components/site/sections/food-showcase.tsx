@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaByCategory } from "@/lib/site/media-gallery";
 
-const FOOD_GRID = mediaByCategory("food")
-  .map((f) => f.src)
-  .filter((src) => src !== "/images/11.jpg");
+const FOOD_ITEMS = mediaByCategory("food");
+const FEATURED = "/images/11.jpg";
 
 export function FoodShowcase({
   dict,
@@ -17,9 +16,10 @@ export function FoodShowcase({
   locale: Locale;
 }) {
   const { foodGallery } = dict;
-  const foodItems = mediaByCategory("food");
   const altFor = (src: string) =>
-    foodItems.find((f) => f.src === src)?.alt[locale] ?? foodGallery.featuredAlt;
+    FOOD_ITEMS.find((f) => f.src === src)?.alt[locale] ?? foodGallery.featuredAlt;
+
+  const gridItems = FOOD_ITEMS.filter((f) => f.src !== FEATURED);
 
   return (
     <section id="food" className="section-pad scroll-mt-24 bg-white">
@@ -29,14 +29,16 @@ export function FoodShowcase({
           <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
             {foodGallery.title}
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-ink-soft">{foodGallery.subtitle}</p>
+          <p className="mt-4 text-base leading-relaxed text-ink-soft">
+            {foodGallery.subtitle}
+          </p>
         </div>
 
         <div className="mt-12 overflow-hidden rounded-2xl shadow-card ring-1 ring-forest-100">
-          <div className="relative aspect-[21/9] min-h-[200px]">
+          <div className="relative aspect-[21/9] min-h-[220px] w-full">
             <SiteImage
-              src="/images/11.jpg"
-              alt={altFor("/images/11.jpg")}
+              src={FEATURED}
+              alt={altFor(FEATURED)}
               fill
               sizes="(max-width: 1200px) 100vw, 1152px"
             />
@@ -49,17 +51,33 @@ export function FoodShowcase({
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-          {FOOD_GRID.map((src) => (
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {gridItems.slice(0, 4).map((item) => (
             <figure
-              key={src}
-              className="relative aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-forest-100"
+              key={item.src}
+              className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-sm ring-1 ring-forest-100"
             >
               <SiteImage
-                src={src}
-                alt={altFor(src)}
+                src={item.src}
+                alt={altFor(item.src)}
                 fill
-                sizes="(max-width: 768px) 50vw, 33vw"
+                sizes="(max-width: 1024px) 50vw, 25vw"
+              />
+            </figure>
+          ))}
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-3 sm:gap-4">
+          {gridItems.slice(4).map((item) => (
+            <figure
+              key={item.src}
+              className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-sm ring-1 ring-forest-100"
+            >
+              <SiteImage
+                src={item.src}
+                alt={altFor(item.src)}
+                fill
+                sizes="(max-width: 768px) 33vw, 20vw"
               />
             </figure>
           ))}

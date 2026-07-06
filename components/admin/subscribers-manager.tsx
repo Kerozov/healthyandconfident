@@ -567,7 +567,19 @@ export function SubscribersManager({
                   <Fragment key={s.id}>
                     <tr className="border-b border-ink/5">
                       <td className="py-3 pr-4 font-medium">{s.email}</td>
-                      <td className="py-3 pr-4 text-ink-soft">{s.name || "—"}</td>
+                      <td className="py-3 pr-4 text-ink-soft">
+                        {[s.first_name, s.last_name].filter(Boolean).join(" ") || s.name || "—"}
+                        {s.facebook_url ? (
+                          <a
+                            href={s.facebook_url.startsWith("http") ? s.facebook_url : `https://${s.facebook_url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-0.5 block truncate text-xs text-brand-600 hover:underline"
+                          >
+                            Facebook
+                          </a>
+                        ) : null}
+                      </td>
                       <td className="py-3 pr-4 text-ink-soft">{s.phone || "—"}</td>
                       <td className="py-3 pr-4 uppercase text-ink-soft">{s.locale}</td>
                       <td className="py-3 pr-4">
