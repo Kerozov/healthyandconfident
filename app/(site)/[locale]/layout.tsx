@@ -9,6 +9,7 @@ import { siteConfig } from "@/lib/site";
 import { Navbar } from "@/components/site/navbar";
 import { Footer } from "@/components/site/footer";
 import { Popup } from "@/components/site/popup";
+import { MenuPopupProvider } from "@/components/site/menu-popup";
 import { OfferPopupProvider } from "@/components/site/offer-popup";
 
 export function generateStaticParams() {
@@ -83,10 +84,21 @@ export default async function SiteLayout({
           offersById={site.offersById}
           locale={l}
         >
-          <Navbar locale={l} items={dict.nav.items} cta={dict.nav.cta} />
-          <main>{children}</main>
-          <Footer locale={l} dict={dict} />
-          <Popup locale={l} />
+          <MenuPopupProvider
+            locale={l}
+            copy={{
+              title: dict.leadMagnet.title,
+              subtitle: dict.leadMagnet.subtitle,
+              button: dict.leadMagnet.button,
+              consent: dict.leadMagnet.consent,
+              success: dict.leadMagnet.success,
+            }}
+          >
+            <Navbar locale={l} items={dict.nav.items} cta={dict.nav.cta} />
+            <main>{children}</main>
+            <Footer locale={l} dict={dict} />
+            <Popup locale={l} />
+          </MenuPopupProvider>
         </OfferPopupProvider>
       </body>
     </html>

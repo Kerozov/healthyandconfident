@@ -20,7 +20,7 @@ import { Challenge21Section } from "@/components/site/sections/challenge-21";
 import { VideosSection } from "@/components/site/sections/videos";
 import { EventsSection } from "@/components/site/sections/events";
 import { ShopSection } from "@/components/site/sections/shop";
-import { LeadMagnet } from "@/components/site/sections/leadmagnet";
+import { FreeMenuBanner } from "@/components/site/sections/free-menu-banner";
 import { Faq } from "@/components/site/sections/faq";
 import { Contact } from "@/components/site/sections/contact";
 import { HomeJsonLd } from "@/components/seo/json-ld";
@@ -42,7 +42,6 @@ export default async function HomePage({
     <>
       <HomeJsonLd dict={dict} locale={l} />
       <Hero dict={dict} locale={l} />
-      <LeadMagnet dict={dict} locale={l} />
       <SuccessProof dict={dict} />
       <Marquee locale={l} />
       <TrustFeatures locale={l} />
@@ -81,6 +80,7 @@ export default async function HomePage({
           products={site.products}
         />
       )}
+      <FreeMenuBanner dict={dict} locale={l} />
       <Faq dict={dict} />
       <Contact dict={dict} />
     </>

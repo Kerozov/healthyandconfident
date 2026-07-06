@@ -1,10 +1,10 @@
-import { Check, Gift } from "lucide-react";
+import { Check } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
+import { OpenMenuButton } from "@/components/site/open-menu-button";
 import { SiteImage } from "@/components/site/site-image";
-import { LeadForm } from "@/components/site/lead-form";
 import { mediaAlt } from "@/lib/site/media-gallery";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ export function Hero({
   dict: Dictionary;
   locale: Locale;
 }) {
-  const { hero, leadMagnet } = dict;
+  const { hero } = dict;
 
   const headline =
     locale === "bg" ? (
@@ -40,36 +40,6 @@ export function Hero({
             {headline}
           </h1>
 
-          <div
-            id="free-menu"
-            className="mt-5 scroll-mt-24 rounded-2xl border border-forest-200 bg-white p-4 shadow-sm ring-1 ring-forest-100/80 sm:mt-6 sm:p-5"
-          >
-            <div className="mb-3 flex items-start gap-3 sm:mb-4">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest-500/15 text-forest-600 sm:h-10 sm:w-10">
-                <Gift className="h-4 w-4 sm:h-5 sm:w-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="font-display text-base font-semibold text-slate-800 sm:text-lg">
-                  {hero.freeMenuStrip.title}
-                </p>
-                <p className="mt-0.5 text-xs leading-snug text-ink-soft sm:text-sm">
-                  {hero.freeMenuStrip.subtitle}
-                </p>
-              </div>
-            </div>
-            <LeadForm
-              locale={locale}
-              button={leadMagnet.button}
-              consent={leadMagnet.consent}
-              success={leadMagnet.success}
-              error={leadMagnet.error}
-              segmentTag="weight-loss"
-              source="hero-free-menu"
-              compact
-              offerPlacementKey="leadmagnet_cta"
-            />
-          </div>
-
           <p className="mt-5 text-base leading-relaxed text-ink-soft sm:mt-6 sm:text-lg">
             {hero.subtitle}
           </p>
@@ -84,14 +54,14 @@ export function Hero({
           </ul>
 
           <div className="mt-6 flex flex-col gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap">
-            <Button
-              href={`/${locale}#free-menu`}
+            <OpenMenuButton
+              source="hero"
               variant="forest"
               size="lg"
               className="w-full sm:w-auto"
             >
               {hero.freeMenuCta}
-            </Button>
+            </OpenMenuButton>
             <Button
               href={`/${locale}#programs`}
               variant="primary"

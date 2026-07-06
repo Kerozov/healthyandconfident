@@ -7,6 +7,8 @@ import { Menu, X, Leaf } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { OpenMenuButton } from "@/components/site/open-menu-button";
+import { OpenMenuNavAnchor } from "@/components/site/open-menu-nav-link";
 import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
@@ -69,20 +71,24 @@ export function Navbar({
         </Link>
 
         <nav className="hidden items-center gap-7 lg:flex">
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-forest-500",
-                item.href === "#free-menu"
-                  ? "font-semibold text-forest-600"
-                  : "text-slate-700",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {items.map((item) =>
+            item.href === "#free-menu" ? (
+              <OpenMenuNavAnchor
+                key={item.href}
+                locale={locale}
+                label={item.label}
+                className="text-sm font-semibold text-forest-600 transition-colors hover:text-forest-500"
+              />
+            ) : (
+              <Link
+                key={item.href}
+                href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
+                className="text-sm font-medium text-slate-700 transition-colors hover:text-forest-500"
+              >
+                {item.label}
+              </Link>
+            ),
+          )}
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
@@ -92,13 +98,9 @@ export function Navbar({
           >
             {other}
           </Link>
-          <Button
-            href={`/${locale}#free-menu`}
-            size="sm"
-            variant="forest"
-          >
+          <OpenMenuButton source="nav-header" size="sm" variant="forest">
             {locale === "bg" ? "Безплатно меню" : "Free menu"}
-          </Button>
+          </OpenMenuButton>
           <Button
             href={`/${locale}#contact`}
             size="sm"
@@ -122,29 +124,36 @@ export function Navbar({
       {open && (
         <div className="max-h-[min(85vh,32rem)] overflow-y-auto border-t border-forest-100 bg-cream lg:hidden">
           <Container className="flex flex-col gap-0.5 py-3 pb-5">
-            {items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "rounded-xl px-3 py-3.5 text-base font-medium transition-colors hover:bg-cream-2",
-                  item.href === "#free-menu"
-                    ? "bg-forest-500/10 font-semibold text-forest-700"
-                    : "text-slate-800",
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {items.map((item) =>
+              item.href === "#free-menu" ? (
+                <OpenMenuNavAnchor
+                  key={item.href}
+                  locale={locale}
+                  label={item.label}
+                  onNavigate={() => setOpen(false)}
+                  className="rounded-xl bg-forest-500/10 px-3 py-3.5 text-base font-semibold text-forest-700 transition-colors hover:bg-forest-500/15"
+                />
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
+                  onClick={() => setOpen(false)}
+                  className="rounded-xl px-3 py-3.5 text-base font-medium text-slate-800 transition-colors hover:bg-cream-2"
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
             <div className="mt-2 flex flex-col gap-2">
-              <Link
-                href={`/${locale}#free-menu`}
+              <OpenMenuButton
+                source="nav-mobile"
+                variant="forest"
+                size="sm"
+                className="w-full"
                 onClick={() => setOpen(false)}
-                className={cn(buttonVariants({ variant: "forest", size: "sm" }), "w-full")}
               >
                 {locale === "bg" ? "Безплатно меню" : "Free menu"}
-              </Link>
+              </OpenMenuButton>
               <div className="flex items-center gap-3">
                 <Link
                   href={switchHref}
