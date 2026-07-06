@@ -29,7 +29,7 @@ export function EmailAttachmentPicker({
     fd.set("file", file);
     startTransition(async () => {
       const res = await uploadEmailAttachment(fd);
-      if (!res.ok) {
+      if (!res.ok || !res.path || !res.filename) {
         setError(res.message ?? "Качването не успя.");
         return;
       }

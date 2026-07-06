@@ -14,6 +14,7 @@ import {
   UserCheck,
   ShoppingBag,
   UserPlus,
+  Pencil,
 } from "lucide-react";
 import type {
   Automation,
@@ -212,30 +213,52 @@ function FlowCard({
   audience,
   stepLabel,
   parentName,
+  selected,
+  onSelect,
 }: {
   automation: AutomationRow;
   audience: ResolvedAudience;
   stepLabel: string;
   parentName?: string;
+  selected?: boolean;
+  onSelect?: (automation: AutomationRow) => void;
 }) {
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onSelect?.(automation)}
       className={cn(
-        "w-full min-w-[280px] max-w-md rounded-xl border-2 px-4 py-3 shadow-sm",
-        automation.enabled
-          ? automation.channel === "sms"
-            ? "border-sky-300/60 bg-white"
-            : "border-forest-400/40 bg-white"
-          : "border-ink/10 bg-cream-2/60 opacity-70",
+        "w-full min-w-[280px] max-w-md rounded-xl border-2 px-4 py-3 text-left shadow-sm transition-all",
+        "cursor-pointer hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-400 focus-visible:ring-offset-2",
+        selected
+          ? "border-forest-500 bg-forest-500/5 ring-2 ring-forest-400/60"
+          : automation.enabled
+            ? automation.channel === "sms"
+              ? "border-sky-300/60 bg-white hover:border-sky-400"
+              : "border-forest-400/40 bg-white hover:border-forest-500"
+            : "border-ink/10 bg-cream-2/60 opacity-70 hover:opacity-90",
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
           {stepLabel}
         </span>
-        {!automation.enabled && (
-          <span className="text-[10px] font-medium text-ink-soft">изключена</span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {!automation.enabled && (
+            <span className="text-[10px] font-medium text-ink-soft">изключена</span>
+          )}
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+              selected
+                ? "bg-forest-500 text-white"
+                : "bg-slate-100 text-slate-600",
+            )}
+          >
+            <Pencil className="h-3 w-3" />
+            {selected ? "Редактираш" : "Редакция"}
+          </span>
+        </div>
       </div>
 
       {parentName && (
@@ -300,7 +323,7 @@ function FlowCard({
         <Zap className="h-3 w-3" />
         {scheduleLabel(automation)}
       </p>
-    </div>
+    </button>
   );
 }
 
@@ -351,6 +374,8 @@ function TreeBranch({
   stepPrefix,
   parentName,
   depth,
+  selectedId,
+  onSelect,
 }: {
   node: TreeNode;
   groups: SegmentGroup[];
@@ -358,6 +383,8 @@ function TreeBranch({
   stepPrefix: string;
   parentName?: string;
   depth: number;
+  selectedId?: string | null;
+  onSelect?: (automation: AutomationRow) => void;
 }) {
   const audience = resolveAudience(node.automation, groups, segments);
 
@@ -369,6 +396,8 @@ function TreeBranch({
           audience={audience}
           stepLabel={`${stepPrefix}${depth}`}
           parentName={parentName}
+          selected={selectedId === node.automation.id}
+          onSelect={onSelect}
         />
         {audience.excludes.length > 0 && (
           <div className="flex flex-col gap-2 lg:max-w-[220px]">
@@ -392,6 +421,8 @@ function TreeBranch({
             stepPrefix={stepPrefix}
             parentName={node.automation.name}
             depth={depth + 1}
+            selectedId={selectedId}
+            onSelect={onSelect}
           />
         </>
       )}
@@ -415,6 +446,8 @@ function TreeBranch({
                   stepPrefix={stepPrefix}
                   parentName={node.automation.name}
                   depth={depth + 1}
+                  selectedId={selectedId}
+                  onSelect={onSelect}
                 />
               </div>
             ))}
@@ -430,11 +463,15 @@ function TriggerSection({
   trees,
   groups,
   segments,
+  selectedId,
+  onSelect,
 }: {
   trigger: AutomationTrigger;
   trees: TreeNode[];
   groups: SegmentGroup[];
   segments: Segment[];
+  selectedId?: string | null;
+  onSelect?: (automation: AutomationRow) => void;
 }) {
   if (trees.length === 0) return null;
   const meta = TRIGGER_META[trigger];
@@ -475,6 +512,8 @@ function TriggerSection({
               segments={segments}
               stepPrefix={`${pathIndex + 1}.`}
               depth={1}
+              selectedId={selectedId}
+              onSelect={onSelect}
             />
           </div>
         ))}
@@ -487,10 +526,14 @@ export function AutomationFlowView({
   automations,
   groups,
   segments,
+  selectedId,
+  onSelectAutomation,
 }: {
   automations: AutomationRow[];
   groups: SegmentGroup[];
   segments: Segment[];
+  selectedId?: string | null;
+  onSelectAutomation?: (automation: AutomationRow) => void;
 }) {
   const forest = buildForestByTrigger(automations);
   const hasAny = automations.length > 0;
@@ -509,6 +552,8 @@ export function AutomationFlowView({
         <p>
           Графиката показва <strong className="text-slate-800">кога</strong> и{" "}
           <strong className="text-slate-800">към кого</strong> отива всеки имейл.
+          <strong className="text-forest-700"> Кликни върху стъпка</strong>, за да я
+          редактираш — аудитория, текст, бутон, график и всичко останало.
           Разклоненията (клонове) са различни пътища след една и съща стъпка.
           Червените изходи са изключени групи/сегменти — те{" "}
           <strong className="text-coral-700">не получават този имейл</strong>.
@@ -538,6 +583,8 @@ export function AutomationFlowView({
               trees={forest[trigger]}
               groups={groups}
               segments={segments}
+              selectedId={selectedId}
+              onSelect={onSelectAutomation}
             />
           ),
         )}

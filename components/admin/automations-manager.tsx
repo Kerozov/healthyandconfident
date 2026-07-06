@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, useCallback } from "react";
+import { useEffect, useState, useTransition, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -387,6 +387,7 @@ export function AutomationsManager({
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>("all");
   const [viewTab, setViewTab] = useState<"list" | "flow">("list");
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const hasTrackable = automations.some(
     (a) => a.sent_count > 0 || a.scheduled_count > 0,
@@ -433,6 +434,13 @@ export function AutomationsManager({
     setForm(automationToForm(a));
     setError(null);
     setSaved(false);
+  }
+
+  function openEditFromFlow(a: AutomationRow) {
+    openEdit(a);
+    window.requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function closeEditor() {
@@ -618,7 +626,8 @@ export function AutomationsManager({
       </div>
 
       {editingId && (
-        <Card title={editingId === "new" ? "Нова автоматизация" : "Редакция"}>
+        <div ref={editorRef} className="scroll-mt-6">
+        <Card title={editingId === "new" ? "Нова автоматизация" : `Редакция: ${form.name || "автоматизация"}`}>
           <div className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Име (и заглавие на пътя в „Пътища“)">
@@ -1079,6 +1088,7 @@ export function AutomationsManager({
             </div>
           </div>
         </Card>
+        </div>
       )}
 
       {viewTab === "flow" ? (
@@ -1087,6 +1097,8 @@ export function AutomationsManager({
             automations={automations}
             groups={groups}
             segments={segments}
+            selectedId={editingId !== "new" ? editingId : null}
+            onSelectAutomation={openEditFromFlow}
           />
         </Card>
       ) : (

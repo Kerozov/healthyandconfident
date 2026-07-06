@@ -136,6 +136,10 @@ export type Automation = {
   cta_url_bg: string;
   cta_label_en: string;
   cta_url_en: string;
+  attachment_path_bg: string | null;
+  attachment_filename_bg: string | null;
+  attachment_path_en: string | null;
+  attachment_filename_en: string | null;
   sms_bg: string;
   sms_en: string;
   sort_order: number;
@@ -231,6 +235,8 @@ export type EmailCampaign = {
   last_synced_at: string | null;
   parent_campaign_id: string | null;
   target_tags: string[] | null;
+  attachment_path: string | null;
+  attachment_filename: string | null;
 };
 
 export type AudienceMode = "segment" | "tags";

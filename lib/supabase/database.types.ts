@@ -36,6 +36,7 @@ type EmailLinkClick = {
   email: string;
   subscriber_id: string | null;
   target_url: string | null;
+  link_label: string | null;
   clicked_at: string;
 };
 

@@ -321,6 +321,10 @@ export async function createAutomation(
       send_time: normalizeSendTime(input.send_time),
       send_date: normalizeSendDate(input.send_date),
       sort_order: input.sort_order ?? 0,
+      attachment_path_bg: input.attachment_path_bg?.trim() || null,
+      attachment_filename_bg: input.attachment_filename_bg?.trim() || null,
+      attachment_path_en: input.attachment_path_en?.trim() || null,
+      attachment_filename_en: input.attachment_filename_en?.trim() || null,
     })
     .select("id")
     .single();
@@ -347,6 +351,10 @@ export async function updateAutomation(
       send_time: normalizeSendTime(input.send_time),
       send_date: normalizeSendDate(input.send_date),
       updated_at: new Date().toISOString(),
+      attachment_path_bg: input.attachment_path_bg?.trim() || null,
+      attachment_filename_bg: input.attachment_filename_bg?.trim() || null,
+      attachment_path_en: input.attachment_path_en?.trim() || null,
+      attachment_filename_en: input.attachment_filename_en?.trim() || null,
     })
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -2322,6 +2330,28 @@ export async function uploadSiteImage(
   const result = await uploadMediaImage(file, folder as MediaFolder);
   if (!result.ok) return { ok: false, message: result.message };
   return { ok: true, url: result.url };
+}
+
+export async function uploadEmailAttachment(
+  formData: FormData,
+): Promise<
+  ActionResult & { path?: string; filename?: string; url?: string }
+> {
+  await requireAdmin();
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false, message: "Липсва файл." };
+  }
+
+  const result = await uploadEmailPdf(file);
+  if (!result.ok) return { ok: false, message: result.message };
+  return {
+    ok: true,
+    path: result.path,
+    filename: result.filename,
+    url: result.url,
+  };
 }
 
 // ── Forms ─────────────────────────────────────────────────────
