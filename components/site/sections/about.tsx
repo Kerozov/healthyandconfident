@@ -4,11 +4,11 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt, VESI_PORTRAIT_IMAGES } from "@/lib/site/media-gallery";
+import { mediaAlt } from "@/lib/site/media-gallery";
 
+/** Main portrait + two accents — each file used once (no duplicate award thumbs). */
 const MAIN = "/images/3.jpg";
-const THUMBS = VESI_PORTRAIT_IMAGES.filter((src) => src !== MAIN);
-const AWARDS = ["/images/1.jpg", "/images/2.jpg"];
+const ACCENTS = ["/images/1.jpg", "/images/4.jpg"] as const;
 
 export function About({
   dict,
@@ -21,7 +21,7 @@ export function About({
 
   return (
     <section id="about" className="section-pad scroll-mt-24 bg-cream-2">
-      <Container className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+      <Container className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
         <div className="mx-auto w-full max-w-md lg:max-w-none">
           <div className="relative aspect-[4/5] overflow-hidden rounded-2xl shadow-soft ring-1 ring-white/80">
             <SiteImage
@@ -32,25 +32,19 @@ export function About({
             />
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-2">
-            {THUMBS.map((src) => (
-              <div
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {ACCENTS.map((src) => (
+              <figure
                 key={src}
-                className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-forest-100"
+                className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-sm ring-1 ring-forest-100"
               >
-                <SiteImage src={src} alt={mediaAlt(src, locale)} fill sizes="96px" />
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {AWARDS.map((src) => (
-              <div
-                key={src}
-                className="relative aspect-[3/2] overflow-hidden rounded-lg ring-1 ring-forest-100"
-              >
-                <SiteImage src={src} alt={mediaAlt(src, locale)} fill sizes="200px" />
-              </div>
+                <SiteImage
+                  src={src}
+                  alt={mediaAlt(src, locale)}
+                  fill
+                  sizes="(max-width: 1024px) 45vw, 220px"
+                />
+              </figure>
             ))}
           </div>
         </div>

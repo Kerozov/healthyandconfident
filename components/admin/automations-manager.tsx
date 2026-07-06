@@ -20,6 +20,7 @@ import {
   UserPlus,
   UserMinus,
 } from "lucide-react";
+import type { FormTemplateRecord } from "@/lib/forms/types";
 import type {
   Automation,
   AutomationChannel,
@@ -44,7 +45,7 @@ import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
 import { AutomationFlowView } from "@/components/admin/automation-flow";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
-import { EmailProductPicker } from "@/components/admin/email-product-picker";
+import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -327,6 +328,10 @@ const EMPTY_FORM = {
   html_en: "",
   cta_label_en: "",
   cta_url_en: "",
+  attachment_path_bg: "",
+  attachment_filename_bg: "",
+  attachment_path_en: "",
+  attachment_filename_en: "",
   sms_bg: "",
   sms_en: "",
   sort_order: 0,
@@ -356,6 +361,10 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     html_en: a.html_en,
     cta_label_en: a.cta_label_en ?? "",
     cta_url_en: a.cta_url_en ?? "",
+    attachment_path_bg: a.attachment_path_bg ?? "",
+    attachment_filename_bg: a.attachment_filename_bg ?? "",
+    attachment_path_en: a.attachment_path_en ?? "",
+    attachment_filename_en: a.attachment_filename_en ?? "",
     sms_bg: a.sms_bg,
     sms_en: a.sms_en,
     sort_order: a.sort_order,
@@ -367,11 +376,13 @@ export function AutomationsManager({
   segments,
   groups,
   products,
+  forms,
 }: {
   automations: AutomationRow[];
   segments: Segment[];
   groups: SegmentGroup[];
   products: SiteProduct[];
+  forms: FormTemplateRecord[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -954,11 +965,17 @@ export function AutomationsManager({
                       }
                     />
                   </Field>
-                  <EmailProductPicker
-                    products={products}
+                  <EmailEmbedsPanel
                     locale="bg"
                     html={form.html_bg}
-                    onInsert={(html_bg) => setForm({ ...form, html_bg })}
+                    onHtmlChange={(html_bg) => setForm({ ...form, html_bg })}
+                    products={products}
+                    forms={forms}
+                    attachmentPath={form.attachment_path_bg}
+                    attachmentFilename={form.attachment_filename_bg}
+                    onAttachmentChange={(attachment_path_bg, attachment_filename_bg) =>
+                      setForm({ ...form, attachment_path_bg, attachment_filename_bg })
+                    }
                     disabled={pending}
                   />
                   <Field label="Текст на бутона (по избор)">
@@ -988,6 +1005,7 @@ export function AutomationsManager({
                     ctaUrl={form.cta_url_bg}
                     locale="bg"
                     products={products}
+                    forms={forms}
                   />
                 </div>
                 <div className="space-y-3 rounded-xl border border-ink/10 p-4">
@@ -1010,11 +1028,17 @@ export function AutomationsManager({
                       }
                     />
                   </Field>
-                  <EmailProductPicker
-                    products={products}
+                  <EmailEmbedsPanel
                     locale="en"
                     html={form.html_en}
-                    onInsert={(html_en) => setForm({ ...form, html_en })}
+                    onHtmlChange={(html_en) => setForm({ ...form, html_en })}
+                    products={products}
+                    forms={forms}
+                    attachmentPath={form.attachment_path_en}
+                    attachmentFilename={form.attachment_filename_en}
+                    onAttachmentChange={(attachment_path_en, attachment_filename_en) =>
+                      setForm({ ...form, attachment_path_en, attachment_filename_en })
+                    }
                     disabled={pending}
                   />
                   <Field label="Button text (optional)">
@@ -1044,6 +1068,7 @@ export function AutomationsManager({
                     ctaUrl={form.cta_url_en}
                     locale="en"
                     products={products}
+                    forms={forms}
                   />
                 </div>
               </div>

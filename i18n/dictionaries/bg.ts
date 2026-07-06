@@ -30,7 +30,7 @@ export const bg: Dictionary = {
       { label: "Храна", href: "#food" },
       { label: "Програми", href: "#programs" },
       { label: "Резултати", href: "#results" },
-      { label: "Google", href: "#google-reviews" },
+      { label: "Отзиви", href: "#google-reviews" },
       { label: "Блог", href: "/bg/blog" },
       { label: "Контакти", href: "#contact" },
     ],

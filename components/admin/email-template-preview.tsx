@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { composeBrandedEmail } from "@/lib/email/layout";
 import { expandEmailProductMarkers } from "@/lib/email/products-block";
+import { expandEmailFormMarkers } from "@/lib/email/forms-block";
+import type { FormTemplateRecord } from "@/lib/forms/types";
 import type { SiteProduct } from "@/lib/supabase/types";
 
 export function EmailTemplatePreview({
@@ -11,12 +13,14 @@ export function EmailTemplatePreview({
   ctaUrl,
   locale = "bg",
   products = [],
+  forms = [],
 }: {
   bodyHtml: string;
   ctaLabel: string;
   ctaUrl: string;
   locale?: "bg" | "en";
   products?: SiteProduct[];
+  forms?: FormTemplateRecord[];
 }) {
   const srcDoc = useMemo(() => {
     const label = ctaLabel.trim();
@@ -24,10 +28,20 @@ export function EmailTemplatePreview({
     const productsById = new Map(
       products.map((product) => [product.id.toLowerCase(), product]),
     );
-    const expandedBody = expandEmailProductMarkers(
+    const formsById = new Map(forms.map((form) => [form.id.toLowerCase(), form]));
+    const previewHref = new Map(
+      forms.map((form) => [form.id.toLowerCase(), `/${locale}/forms/${form.slug}`]),
+    );
+    let expandedBody = expandEmailProductMarkers(
       bodyHtml.trim() || "<p style='color:#9B7B6A;margin:0'>Съдържание на имейла…</p>",
       productsById,
       locale,
+    );
+    expandedBody = expandEmailFormMarkers(
+      expandedBody,
+      formsById,
+      locale,
+      previewHref,
     );
     return composeBrandedEmail({
       bodyHtml: expandedBody,
@@ -35,7 +49,7 @@ export function EmailTemplatePreview({
       cta: label && href ? { label, href } : null,
       unsubscribeHref: `/${locale}/unsubscribe?token=example`,
     });
-  }, [bodyHtml, ctaLabel, ctaUrl, locale, products]);
+  }, [bodyHtml, ctaLabel, ctaUrl, locale, products, forms]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-ink/10 bg-ink/5">

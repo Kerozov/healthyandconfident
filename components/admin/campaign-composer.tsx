@@ -4,13 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
 import type { AudienceInput, Segment, SegmentGroup, SiteProduct } from "@/lib/supabase/types";
+import type { FormTemplateRecord } from "@/lib/forms/types";
 import {
   sendEmailCampaign,
   sendSmsCampaign,
 } from "@/app/(admin)/admin/actions";
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
-import { EmailProductPicker } from "@/components/admin/email-product-picker";
+import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { datetimeLocalToIso } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ export function CampaignComposer({
   segments,
   groups,
   products,
+  forms,
   subscriberTags,
   workerConfigured,
   tab,
@@ -26,6 +28,7 @@ export function CampaignComposer({
   segments: Segment[];
   groups: SegmentGroup[];
   products: SiteProduct[];
+  forms: FormTemplateRecord[];
   subscriberTags: string[];
   workerConfigured: boolean;
   tab: "email" | "sms";
@@ -39,6 +42,8 @@ export function CampaignComposer({
     html: "",
     cta_label: "",
     cta_url: "",
+    attachment_path: "",
+    attachment_filename: "",
     audience: { ...EMPTY_AUDIENCE } as AudienceInput,
     scheduled_at: "",
   });
@@ -61,6 +66,8 @@ export function CampaignComposer({
         scheduled_at: email.scheduled_at
           ? datetimeLocalToIso(email.scheduled_at) ?? undefined
           : undefined,
+        attachment_path: email.attachment_path || undefined,
+        attachment_filename: email.attachment_filename || undefined,
       });
       setResult(res);
       if (res.ok) {
@@ -69,6 +76,8 @@ export function CampaignComposer({
           html: "",
           cta_label: "",
           cta_url: "",
+          attachment_path: "",
+          attachment_filename: "",
           audience: { ...EMPTY_AUDIENCE },
           scheduled_at: "",
         });
@@ -125,22 +134,26 @@ export function CampaignComposer({
               placeholder="<p>Здравей,</p><p>Благодарим ти…</p>"
             />
           </Field>
-          <div className="rounded-xl border border-ink/10 p-4">
-            <p className="mb-3 text-sm font-medium text-ink">Продукти в имейла</p>
-            <EmailProductPicker
-              products={products}
-              locale={email.audience.locale === "en" ? "en" : "bg"}
-              html={email.html}
-              onInsert={(html) => setEmail({ ...email, html })}
-              disabled={pending}
-            />
-          </div>
+          <EmailEmbedsPanel
+            locale={email.audience.locale === "en" ? "en" : "bg"}
+            html={email.html}
+            onHtmlChange={(html) => setEmail({ ...email, html })}
+            products={products}
+            forms={forms}
+            attachmentPath={email.attachment_path}
+            attachmentFilename={email.attachment_filename}
+            onAttachmentChange={(attachment_path, attachment_filename) =>
+              setEmail({ ...email, attachment_path, attachment_filename })
+            }
+            disabled={pending}
+          />
           <EmailTemplatePreview
             bodyHtml={email.html}
             ctaLabel={showButton ? email.cta_label : ""}
             ctaUrl={showButton ? email.cta_url : ""}
             locale={email.audience.locale === "en" ? "en" : "bg"}
             products={products}
+            forms={forms}
           />
           <div className="rounded-xl border border-ink/10 p-4">
             <label className="flex cursor-pointer items-center gap-3">

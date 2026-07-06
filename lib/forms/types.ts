@@ -54,6 +54,8 @@ export type FormTemplateRecord = {
   email_intro_bg: string;
   email_intro_en: string;
   enabled: boolean;
+  attachment_path?: string | null;
+  attachment_filename?: string | null;
   created_at: string;
   updated_at: string;
 };

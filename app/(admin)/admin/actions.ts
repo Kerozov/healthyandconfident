@@ -17,8 +17,7 @@ import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worke
 import { runAutomations } from "@/lib/automation/send";
 import { composeBrandedEmail } from "@/lib/email/layout";
 import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
-import { expandEmailProducts } from "@/lib/email/expand-products";
-import { bodyWithAttachment } from "@/lib/email/attachments";
+import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import {
   campaignCtaRedirectUrl,
   isSafeCtaTarget,
@@ -511,17 +510,13 @@ export async function resendAutomationToNonOpeners(
       name: null,
       email: sampleEmail,
     }).slice(0, 250);
-    const html = renderEmailTemplate(htmlTpl, {
-      name: null,
-      email: sampleEmail,
-    });
     const ctaLabel =
       locale === "en" ? automation.cta_label_en : automation.cta_label_bg;
     const ctaUrl = locale === "en" ? automation.cta_url_en : automation.cta_url_bg;
 
     await dispatchCampaign({
       subject,
-      html,
+      html: htmlTpl,
       cta_label: ctaLabel,
       cta_url: ctaUrl,
       locale,
@@ -530,6 +525,14 @@ export async function resendAutomationToNonOpeners(
         ? automation.segment_keys
         : null,
       recipients: localeEmails,
+      attachment_path:
+        locale === "en"
+          ? automation.attachment_path_en ?? undefined
+          : automation.attachment_path_bg ?? undefined,
+      attachment_filename:
+        locale === "en"
+          ? automation.attachment_filename_en ?? undefined
+          : automation.attachment_filename_bg ?? undefined,
     });
   }
 
@@ -1212,23 +1215,16 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
 
   const campaignId = (draft as { id: string }).id;
   const mailLocale = input.locale === "en" ? "en" : "bg";
-  const expandedHtml = await expandEmailProducts(input.html, mailLocale);
-  const { bodyHtml, attachments } = bodyWithAttachment(
-    expandedHtml,
-    input.attachment_path,
-    input.attachment_filename,
-    mailLocale,
-  );
   const footerConfig = await getEmailFooterConfig(mailLocale);
 
   const { data: subs } = await supabase
     .from("subscribers")
-    .select("id, email")
+    .select("id, email, name")
     .in("email", input.recipients);
   const subByEmail = new Map(
-    ((subs as { id: string; email: string }[] | null) ?? []).map((s) => [
+    ((subs as { id: string; email: string; name: string | null }[] | null) ?? []).map((s) => [
       s.email.toLowerCase(),
-      s.id,
+      s,
     ]),
   );
 
@@ -1240,9 +1236,23 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
 
     for (const recipient of input.recipients) {
       const email = recipient.trim().toLowerCase();
+      const sub = subByEmail.get(email);
+      const subscriberId = sub?.id ?? null;
+      const renderedHtml = renderEmailTemplate(input.html, {
+        name: sub?.name ?? null,
+        email,
+      });
+      const { bodyHtml, attachments } = await buildEmailBodyForRecipient({
+        html: renderedHtml,
+        locale: mailLocale,
+        email,
+        subscriberId,
+        attachmentPath: input.attachment_path,
+        attachmentFilename: input.attachment_filename,
+      });
       const ctaHref =
         ctaLabel && ctaUrl
-          ? campaignCtaRedirectUrl(campaignId, email, subByEmail.get(email))
+          ? campaignCtaRedirectUrl(campaignId, email, subscriberId)
           : null;
       const wrappedHtml = composeBrandedEmail({
         bodyHtml,
@@ -1267,7 +1277,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
           await supabase.from("campaign_deliveries").insert({
             campaign_id: campaignId,
             email,
-            subscriber_id: subByEmail.get(email) ?? null,
+            subscriber_id: subscriberId,
             worker_job_id: res.jobId,
             status: "scheduled",
           });
@@ -1285,7 +1295,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
           await supabase.from("campaign_deliveries").insert({
             campaign_id: campaignId,
             email,
-            subscriber_id: subByEmail.get(email) ?? null,
+            subscriber_id: subscriberId,
             worker_job_id: res.jobId,
             status: "sent",
           });
@@ -1548,6 +1558,8 @@ export async function resendToNonOpeners(input: {
         cta_url: string;
         locale: "bg" | "en" | null;
         segment_tag: string;
+        attachment_path: string | null;
+        attachment_filename: string | null;
       }
     | null;
 
@@ -1578,6 +1590,8 @@ export async function resendToNonOpeners(input: {
     target_tags: null,
     recipients: emails,
     parentCampaignId: input.campaignId,
+    attachment_path: parent.attachment_path ?? undefined,
+    attachment_filename: parent.attachment_filename ?? undefined,
   });
 }
 
@@ -2535,9 +2549,17 @@ export async function sendFormByEmail(input: {
       name: sub?.name,
       email,
     });
-    const bodyHtml = renderEmailTemplate(introTpl, {
+    const bodyIntro = renderEmailTemplate(introTpl, {
       name: sub?.name,
       email,
+    });
+    const { bodyHtml, attachments } = await buildEmailBodyForRecipient({
+      html: bodyIntro,
+      locale,
+      email,
+      subscriberId: sub?.id,
+      attachmentPath: form.attachment_path,
+      attachmentFilename: form.attachment_filename,
     });
 
     const html = composeBrandedEmail({
@@ -2552,7 +2574,7 @@ export async function sendFormByEmail(input: {
     });
 
     try {
-      await sendEmail({ subject, html, recipients: [email] });
+      await sendEmail({ subject, html, recipients: [email], attachments });
       sent += 1;
     } catch {
       failed += 1;

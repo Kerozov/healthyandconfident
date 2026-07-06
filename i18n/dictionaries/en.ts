@@ -28,7 +28,7 @@ export const en: Dictionary = {
       { label: "Meals", href: "#food" },
       { label: "Programs", href: "#programs" },
       { label: "Results", href: "#results" },
-      { label: "Google", href: "#google-reviews" },
+      { label: "Reviews", href: "#google-reviews" },
       { label: "Blog", href: "/en/blog" },
       { label: "Contact", href: "#contact" },
     ],

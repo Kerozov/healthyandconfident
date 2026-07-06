@@ -14,6 +14,7 @@ export function CampaignsWorkspace({
   segments,
   groups,
   products,
+  forms,
   subscriberTags,
   workerConfigured,
 }: {
@@ -22,6 +23,7 @@ export function CampaignsWorkspace({
   segments: Segment[];
   groups: SegmentGroup[];
   products: SiteProduct[];
+  forms: import("@/lib/forms/types").FormTemplateRecord[];
   subscriberTags: string[];
   workerConfigured: boolean;
 }) {
@@ -62,6 +64,7 @@ export function CampaignsWorkspace({
         segments={segments}
         groups={groups}
         products={products}
+        forms={forms}
         subscriberTags={subscriberTags}
         workerConfigured={workerConfigured}
         tab={tab}

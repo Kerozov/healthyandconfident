@@ -4,7 +4,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { subscriberMatchesAutomationAudience } from "@/lib/automation/audience";
 import { buildBrandedEmail } from "@/lib/email/compose";
-import { expandEmailProducts } from "@/lib/email/expand-products";
+import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
 import { unsubscribeLinkForEmail, isEmailUnsubscribed } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
@@ -247,7 +247,21 @@ async function scheduleAutomation(
   if (!subjectRaw.trim() || !htmlRaw.trim()) return false;
 
   const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
-  const expandedHtml = await expandEmailProducts(htmlRaw, locale);
+  const renderedHtml = renderEmailTemplate(htmlRaw, { name: ctx.name, email });
+  const attachmentPath =
+    locale === "en" ? automation.attachment_path_en : automation.attachment_path_bg;
+  const attachmentFilename =
+    locale === "en"
+      ? automation.attachment_filename_en
+      : automation.attachment_filename_bg;
+  const { bodyHtml, attachments } = await buildEmailBodyForRecipient({
+    html: renderedHtml,
+    locale,
+    email,
+    subscriberId: ctx.subscriberId,
+    attachmentPath,
+    attachmentFilename,
+  });
   const ctaLabel = locale === "en" ? automation.cta_label_en : automation.cta_label_bg;
   const ctaUrl = locale === "en" ? automation.cta_url_en : automation.cta_url_bg;
   const ctaHref =
@@ -260,7 +274,7 @@ async function scheduleAutomation(
         )
       : null;
   const html = await buildBrandedEmail({
-    bodyHtml: expandedHtml,
+    bodyHtml,
     locale,
     cta: ctaHref
       ? { label: ctaLabel.trim(), href: ctaHref }
@@ -275,6 +289,7 @@ async function scheduleAutomation(
     recipients: [email],
     sendAt,
     idempotencyKey: key,
+    attachments,
   });
   await recordDelivery({
     automationId: automation.id,
@@ -350,7 +365,21 @@ async function sendAutomationNow(
   if (!subjectRaw.trim() || !htmlRaw.trim()) return false;
 
   const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
-  const expandedHtml = await expandEmailProducts(htmlRaw, locale);
+  const renderedHtml = renderEmailTemplate(htmlRaw, { name: ctx.name, email });
+  const attachmentPath =
+    locale === "en" ? automation.attachment_path_en : automation.attachment_path_bg;
+  const attachmentFilename =
+    locale === "en"
+      ? automation.attachment_filename_en
+      : automation.attachment_filename_bg;
+  const { bodyHtml, attachments } = await buildEmailBodyForRecipient({
+    html: renderedHtml,
+    locale,
+    email,
+    subscriberId: ctx.subscriberId,
+    attachmentPath,
+    attachmentFilename,
+  });
   const ctaLabel = locale === "en" ? automation.cta_label_en : automation.cta_label_bg;
   const ctaUrl = locale === "en" ? automation.cta_url_en : automation.cta_url_bg;
   const ctaHref =
@@ -363,7 +392,7 @@ async function sendAutomationNow(
         )
       : null;
   const html = await buildBrandedEmail({
-    bodyHtml: expandedHtml,
+    bodyHtml,
     locale,
     cta: ctaHref
       ? { label: ctaLabel.trim(), href: ctaHref }
@@ -372,7 +401,7 @@ async function sendAutomationNow(
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
   });
 
-  const res = await sendEmail({ subject, html, recipients: [email] });
+  const res = await sendEmail({ subject, html, recipients: [email], attachments });
   await recordDelivery({
     automationId: automation.id,
     subscriberId: ctx.subscriberId,

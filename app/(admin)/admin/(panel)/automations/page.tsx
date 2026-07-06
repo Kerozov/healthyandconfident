@@ -1,15 +1,17 @@
 import { getAutomations, getSegments, getSegmentGroups, getSiteProducts } from "@/lib/admin/data";
+import { getFormTemplates } from "@/lib/admin/forms-data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { AutomationsManager } from "@/components/admin/automations-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAutomationsPage() {
-  const [automations, segments, groups, products] = await Promise.all([
+  const [automations, segments, groups, products, forms] = await Promise.all([
     getAutomations(),
     getSegments(),
     getSegmentGroups(),
     getSiteProducts(true),
+    getFormTemplates(),
   ]);
   const workerOk = isNotificationWorkerConfigured();
 
@@ -33,6 +35,7 @@ export default async function AdminAutomationsPage() {
           segments={segments}
           groups={groups}
           products={products}
+          forms={forms}
         />
       </div>
 
