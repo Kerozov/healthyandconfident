@@ -1667,8 +1667,12 @@ export async function getAdminEngagementOverview() {
 
 export async function getSubscriberEngagementReport(email: string) {
   await requireAdmin();
-  const detail = await getSubscriberEngagementDetail(email);
-  return { ok: true as const, ...detail };
+  const { getPersonProfile } = await import("@/lib/admin/person-profile");
+  const [detail, profile] = await Promise.all([
+    getSubscriberEngagementDetail(email),
+    getPersonProfile(email),
+  ]);
+  return { ok: true as const, ...detail, profile };
 }
 
 export async function getSubscribersEngagementSummaries(emails: string[]) {

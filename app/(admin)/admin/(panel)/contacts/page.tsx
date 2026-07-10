@@ -11,7 +11,7 @@ export default async function AdminContactsPage() {
     <div>
       <PageHeader
         title="Контакти"
-        description="Път на клиента — плащане, reminders, Zoom и кликове от имейли."
+        description="Journey на клиента — плащане, Zoom време по сесии, reminders и кликове. Кликни имейл за детайли."
       />
       <ContactsManager contacts={contacts} />
     </div>

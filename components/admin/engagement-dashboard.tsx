@@ -35,6 +35,11 @@ export function EngagementDashboard({
 
   return (
     <div className="space-y-8">
+      <p className="text-sm text-ink-soft">
+        Обща статистика по имейли. За пълен профил на човек (Zoom, покупки, форми) —
+        отиди в <strong className="text-slate-800">Абонати</strong> и кликни иконата за
+        статистика до имейла.
+      </p>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Изпратени имейли" value={totals.emailsSent} />
         <Stat

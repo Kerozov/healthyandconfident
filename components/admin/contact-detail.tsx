@@ -118,7 +118,52 @@ export function ContactDetailView({
       </section>
 
       <section className="rounded-xl border border-ink/10 bg-white p-6">
-        <h2 className="font-display text-xl font-semibold">Journey timeline</h2>
+        <h2 className="font-display text-xl font-semibold">Zoom сесии</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[420px] text-left text-sm">
+            <thead className="border-b border-ink/10 text-xs uppercase text-ink-soft">
+              <tr>
+                <th className="py-2 pr-4">Влязъл</th>
+                <th className="py-2 pr-4">Излязъл</th>
+                <th className="py-2">Време в срещата</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events
+                .filter((e) => e.event_type === "zoom_left")
+                .map((e) => (
+                  <tr key={e.id} className="border-b border-ink/5">
+                    <td className="py-2.5 pr-4 text-ink-soft">
+                      {typeof e.metadata?.join_time === "string"
+                        ? formatDate(e.metadata.join_time as string, "bg")
+                        : "—"}
+                    </td>
+                    <td className="py-2.5 pr-4 text-ink-soft">
+                      {formatDate(e.created_at, "bg")}
+                    </td>
+                    <td className="py-2.5 font-medium text-forest-700">
+                      {typeof e.metadata?.duration_minutes === "number"
+                        ? `${e.metadata.duration_minutes} мин.`
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              {events.filter((e) => e.event_type === "zoom_left").length === 0 && (
+                <tr>
+                  <td colSpan={3} className="py-6 text-center text-ink-soft">
+                    {contact.zoom_attended
+                      ? "Има участие, но няма записани сесии с продължителност."
+                      : "Няма Zoom участие още."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-ink/10 bg-white p-6">
+        <h2 className="font-display text-xl font-semibold">Хронология</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead className="border-b border-ink/10 text-xs uppercase text-ink-soft">
@@ -153,7 +198,7 @@ export function ContactDetailView({
       </section>
 
       <section className="rounded-xl border border-ink/10 bg-white p-6">
-        <h2 className="font-display text-xl font-semibold">Scheduled worker jobs</h2>
+        <h2 className="font-display text-xl font-semibold">Планирани имейли (worker)</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="border-b border-ink/10 text-xs uppercase text-ink-soft">

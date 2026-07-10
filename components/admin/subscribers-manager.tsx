@@ -1,10 +1,17 @@
 "use client";
 
 import { useMemo, useState, useTransition, Fragment } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Download, Upload, Trash2, Tag, UserMinus, UserCheck, X, ChevronDown, ChevronUp, BarChart3, Loader2 } from "lucide-react";
 import type { Subscriber, Segment, SegmentGroup } from "@/lib/supabase/types";
-import type { EmailEngagementSummary, EngagementActivityItem } from "@/lib/admin/engagement";
+import type { EmailEngagementSummary, EngagementActivityItem, ClickEventItem } from "@/lib/admin/engagement";
+import type {
+  ContactSummary,
+  PersonFormSubmission,
+  PersonPurchase,
+  PersonZoomSession,
+} from "@/lib/admin/person-profile";
 import {
   SegmentAssignChecklist,
   assignableSegments,
@@ -44,12 +51,14 @@ export function SubscribersManager({
   groups,
   subscriberTags = [],
   engagementByEmail = {},
+  contactByEmail = {},
 }: {
   subscribers: Subscriber[];
   segments: Segment[];
   groups: SegmentGroup[];
   subscriberTags?: string[];
   engagementByEmail?: Record<string, EmailEngagementSummary>;
+  contactByEmail?: Record<string, ContactSummary>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -89,6 +98,13 @@ export function SubscribersManager({
   const [statsDetail, setStatsDetail] = useState<{
     summary: EmailEngagementSummary;
     activity: EngagementActivityItem[];
+    clickEvents: ClickEventItem[];
+    profile: {
+      contact: ContactSummary;
+      purchases: PersonPurchase[];
+      formSubmissions: PersonFormSubmission[];
+      zoomSessions: PersonZoomSession[];
+    };
   } | null>(null);
 
   const filtered = useMemo(() => {
@@ -210,7 +226,12 @@ export function SubscribersManager({
     const res = await getSubscriberEngagementReport(email);
     setStatsLoading(false);
     if (res.ok) {
-      setStatsDetail({ summary: res.summary, activity: res.activity });
+      setStatsDetail({
+        summary: res.summary,
+        activity: res.activity,
+        clickEvents: res.clickEvents,
+        profile: res.profile,
+      });
     }
   }
 
@@ -600,6 +621,8 @@ export function SubscribersManager({
                 <th className="py-2 pr-4">Lang</th>
                 <th className="py-2 pr-4">Интерес</th>
                 <th className="py-2 pr-4">Сегменти</th>
+                <th className="py-2 pr-4">Плащане</th>
+                <th className="py-2 pr-4">Zoom</th>
                 <th className="py-2 pr-4">Source</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4 text-center">Отворени</th>
@@ -610,6 +633,7 @@ export function SubscribersManager({
             <tbody>
               {filtered.map((s) => {
                 const stats = engagementByEmail[s.email.toLowerCase()];
+                const contact = contactByEmail[s.email.toLowerCase()];
                 const isStatsOpen = statsEmail === s.email;
                 return (
                   <Fragment key={s.id}>
@@ -662,6 +686,28 @@ export function SubscribersManager({
                           )}
                         </div>
                       </td>
+                      <td className="py-3 pr-4">
+                        {contact?.paymentStatus === "paid" ? (
+                          <span className="rounded-full bg-forest-500/15 px-2.5 py-1 text-xs font-medium text-forest-700">
+                            Платил
+                          </span>
+                        ) : contact?.paymentStatus === "unpaid" ? (
+                          <span className="rounded-full bg-gold-400/20 px-2.5 py-1 text-xs text-amber-900">
+                            Неплатил
+                          </span>
+                        ) : (
+                          <span className="text-ink-soft/50">—</span>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 text-ink-soft">
+                        {contact?.zoomAttended ? (
+                          <span title="Общо време в Zoom">
+                            {contact.zoomTotalMinutes} мин.
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="py-3 pr-4 text-ink-soft">{s.source}</td>
                       <td className="py-3 pr-4">
                         <span
@@ -689,7 +735,7 @@ export function SubscribersManager({
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => toggleStats(s.email)}
-                            title="Статистика имейли"
+                            title="Пълен профил и статистика"
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-forest-500/10 hover:text-forest-700"
                           >
                             {isStatsOpen ? (
@@ -728,72 +774,285 @@ export function SubscribersManager({
                     </tr>
                     {isStatsOpen && (
                       <tr className="border-b border-ink/5 bg-cream-2/30">
-                        <td colSpan={10} className="px-4 py-4">
+                        <td colSpan={12} className="px-4 py-4">
                           {statsLoading ? (
                             <p className="flex items-center gap-2 text-sm text-ink-soft">
                               <Loader2 className="h-4 w-4 animate-spin" /> Зареждане…
                             </p>
                           ) : statsDetail ? (
-                            <div className="space-y-4">
-                              <div className="flex flex-wrap gap-6 text-sm">
-                                <p>
-                                  <span className="text-ink-soft">Изпратени:</span>{" "}
-                                  <strong>{statsDetail.summary.emailsSent}</strong>
-                                </p>
-                                <p>
-                                  <span className="text-ink-soft">Отворени:</span>{" "}
-                                  <strong>
-                                    {statsDetail.summary.emailsOpened} (
-                                    {statsDetail.summary.openRate}%)
-                                  </strong>
-                                </p>
-                                <p>
-                                  <span className="text-ink-soft">Кликове бутон:</span>{" "}
-                                  <strong>{statsDetail.summary.totalClicks}</strong>
-                                </p>
-                              </div>
-                              {statsDetail.activity.length > 0 ? (
-                                <div className="overflow-x-auto rounded-xl border border-ink/10 bg-white">
-                                  <table className="w-full text-sm">
-                                    <thead>
-                                      <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
-                                        <th className="px-3 py-2">Имейл</th>
-                                        <th className="px-3 py-2">Тип</th>
-                                        <th className="px-3 py-2">Изпратен</th>
-                                        <th className="px-3 py-2">Отворен</th>
-                                        <th className="px-3 py-2">Кликове</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {statsDetail.activity.map((item, i) => (
-                                        <tr key={`${item.title}-${item.sentAt}-${i}`} className="border-b border-ink/5 last:border-0">
-                                          <td className="px-3 py-2 font-medium">{item.title}</td>
-                                          <td className="px-3 py-2 text-ink-soft">
-                                            {item.kind === "campaign" ? "Кампания" : "Автоматизация"}
-                                          </td>
-                                          <td className="px-3 py-2 text-xs text-ink-soft">
-                                            {formatDate(item.sentAt, "bg")}
-                                          </td>
-                                          <td className="px-3 py-2 text-xs text-ink-soft">
-                                            {item.opened
-                                              ? item.openedAt
-                                                ? formatDate(item.openedAt, "bg")
-                                                : "Да"
-                                              : "—"}
-                                          </td>
-                                          <td className="px-3 py-2 font-medium text-forest-700">
-                                            {item.clicks}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                            <div className="space-y-6">
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <p className="font-display text-base font-semibold text-ink">
+                                    Профил: {s.email}
+                                  </p>
+                                  {statsDetail.profile.contact.contactId && (
+                                    <Link
+                                      href={`/admin/contacts/${statsDetail.profile.contact.contactId}`}
+                                      className="mt-1 inline-block text-xs font-medium text-forest-700 hover:underline"
+                                    >
+                                      Отвори journey в Контакти →
+                                    </Link>
+                                  )}
                                 </div>
-                              ) : (
-                                <p className="text-sm text-ink-soft">
-                                  Няма изпратени имейли към този адрес още.
-                                </p>
+                                <span
+                                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                    statsDetail.summary.tier === "hot"
+                                      ? "bg-coral-500/15 text-coral-700"
+                                      : statsDetail.summary.tier === "warm"
+                                        ? "bg-gold-400/25 text-amber-900"
+                                        : statsDetail.summary.tier === "cold"
+                                          ? "bg-sky-100 text-sky-800"
+                                          : "bg-ink/5 text-ink-soft"
+                                  }`}
+                                >
+                                  {statsDetail.summary.tier === "hot"
+                                    ? "Горещ лийд"
+                                    : statsDetail.summary.tier === "warm"
+                                      ? "Топъл"
+                                      : statsDetail.summary.tier === "cold"
+                                        ? "Студен"
+                                        : "Без активност"}
+                                </span>
+                              </div>
+
+                              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="rounded-xl border border-ink/10 bg-white p-4">
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                                    Имейли
+                                  </p>
+                                  <p className="mt-2 text-sm">
+                                    <strong>{statsDetail.summary.emailsOpened}</strong>/
+                                    {statsDetail.summary.emailsSent} отворени (
+                                    {statsDetail.summary.openRate}%)
+                                  </p>
+                                  <p className="mt-1 text-xs text-ink-soft">
+                                    {statsDetail.summary.totalClicks} клика на бутони
+                                  </p>
+                                </div>
+                                <div className="rounded-xl border border-ink/10 bg-white p-4">
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                                    Плащане
+                                  </p>
+                                  <p className="mt-2 text-sm font-medium">
+                                    {statsDetail.profile.contact.paymentStatus === "paid"
+                                      ? "Платил"
+                                      : statsDetail.profile.contact.paymentStatus === "unpaid"
+                                        ? "Неплатил"
+                                        : "Няма contact запис"}
+                                  </p>
+                                  {statsDetail.profile.contact.paidAt && (
+                                    <p className="mt-1 text-xs text-ink-soft">
+                                      {formatDate(statsDetail.profile.contact.paidAt, "bg")}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="rounded-xl border border-ink/10 bg-white p-4">
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                                    Zoom
+                                  </p>
+                                  <p className="mt-2 text-sm font-medium">
+                                    {statsDetail.profile.contact.zoomAttended
+                                      ? `${statsDetail.profile.contact.zoomTotalMinutes} мин. общо`
+                                      : "Не е участвал"}
+                                  </p>
+                                  {statsDetail.profile.contact.zoomLastJoinedAt && (
+                                    <p className="mt-1 text-xs text-ink-soft">
+                                      Последно:{" "}
+                                      {formatDate(
+                                        statsDetail.profile.contact.zoomLastJoinedAt,
+                                        "bg",
+                                      )}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="rounded-xl border border-ink/10 bg-white p-4">
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                                    Покупки
+                                  </p>
+                                  <p className="mt-2 text-sm font-medium">
+                                    {statsDetail.profile.purchases.length > 0
+                                      ? `${statsDetail.profile.purchases.length} продукт(а)`
+                                      : "Няма"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {statsDetail.profile.zoomSessions.length > 0 && (
+                                <div>
+                                  <p className="mb-2 text-sm font-semibold">Zoom сесии</p>
+                                  <div className="overflow-x-auto rounded-xl border border-ink/10 bg-white">
+                                    <table className="w-full text-sm">
+                                      <thead>
+                                        <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
+                                          <th className="px-3 py-2">Влязъл</th>
+                                          <th className="px-3 py-2">Излязъл</th>
+                                          <th className="px-3 py-2">Време</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {statsDetail.profile.zoomSessions.map((session, i) => (
+                                          <tr
+                                            key={`${session.leftAt}-${i}`}
+                                            className="border-b border-ink/5 last:border-0"
+                                          >
+                                            <td className="px-3 py-2 text-xs text-ink-soft">
+                                              {session.joinedAt
+                                                ? formatDate(session.joinedAt, "bg")
+                                                : "—"}
+                                            </td>
+                                            <td className="px-3 py-2 text-xs text-ink-soft">
+                                              {formatDate(session.leftAt, "bg")}
+                                            </td>
+                                            <td className="px-3 py-2 font-medium text-forest-700">
+                                              {session.durationMinutes} мин.
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
                               )}
+
+                              {statsDetail.profile.purchases.length > 0 && (
+                                <div>
+                                  <p className="mb-2 text-sm font-semibold">Покупки</p>
+                                  <ul className="space-y-2 rounded-xl border border-ink/10 bg-white p-3">
+                                    {statsDetail.profile.purchases.map((purchase) => (
+                                      <li
+                                        key={`${purchase.productTitle}-${purchase.purchasedAt}`}
+                                        className="flex flex-wrap justify-between gap-2 text-sm"
+                                      >
+                                        <span className="font-medium">
+                                          {purchase.productTitle}
+                                        </span>
+                                        <span className="text-xs text-ink-soft">
+                                          {formatDate(purchase.purchasedAt, "bg")}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {statsDetail.profile.formSubmissions.length > 0 && (
+                                <div>
+                                  <p className="mb-2 text-sm font-semibold">
+                                    Отговори от форми
+                                  </p>
+                                  <div className="space-y-3">
+                                    {statsDetail.profile.formSubmissions.map((form) => (
+                                      <div
+                                        key={`${form.formName}-${form.submittedAt}`}
+                                        className="rounded-xl border border-ink/10 bg-white p-4"
+                                      >
+                                        <div className="flex flex-wrap justify-between gap-2">
+                                          <p className="text-sm font-semibold">
+                                            {form.formName}
+                                          </p>
+                                          <p className="text-xs text-ink-soft">
+                                            {formatDate(form.submittedAt, "bg")}
+                                          </p>
+                                        </div>
+                                        <ul className="mt-2 space-y-1 text-xs">
+                                          {form.rows.map((row) => (
+                                            <li key={`${form.formName}-${row.label}`}>
+                                              <span className="font-medium text-slate-700">
+                                                {row.label}:
+                                              </span>{" "}
+                                              <span className="text-ink-soft">
+                                                {row.value}
+                                              </span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {statsDetail.activity.length > 0 && (
+                                <div>
+                                  <p className="mb-2 text-sm font-semibold">Имейл активност</p>
+                                  <div className="overflow-x-auto rounded-xl border border-ink/10 bg-white">
+                                    <table className="w-full text-sm">
+                                      <thead>
+                                        <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
+                                          <th className="px-3 py-2">Имейл</th>
+                                          <th className="px-3 py-2">Тип</th>
+                                          <th className="px-3 py-2">Изпратен</th>
+                                          <th className="px-3 py-2">Отворен</th>
+                                          <th className="px-3 py-2">Кликове</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {statsDetail.activity.map((item, i) => (
+                                          <tr
+                                            key={`${item.title}-${item.sentAt}-${i}`}
+                                            className="border-b border-ink/5 last:border-0"
+                                          >
+                                            <td className="px-3 py-2 font-medium">
+                                              {item.title}
+                                            </td>
+                                            <td className="px-3 py-2 text-ink-soft">
+                                              {item.kind === "campaign"
+                                                ? "Кампания"
+                                                : "Автоматизация"}
+                                            </td>
+                                            <td className="px-3 py-2 text-xs text-ink-soft">
+                                              {formatDate(item.sentAt, "bg")}
+                                            </td>
+                                            <td className="px-3 py-2 text-xs text-ink-soft">
+                                              {item.opened
+                                                ? item.openedAt
+                                                  ? formatDate(item.openedAt, "bg")
+                                                  : "Да"
+                                                : "—"}
+                                            </td>
+                                            <td className="px-3 py-2 font-medium text-forest-700">
+                                              {item.clicks}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              )}
+
+                              {statsDetail.clickEvents.length > 0 && (
+                                <div>
+                                  <p className="mb-2 text-sm font-semibold">
+                                    Кликове по линкове
+                                  </p>
+                                  <ul className="space-y-2 rounded-xl border border-ink/10 bg-white p-3">
+                                    {statsDetail.clickEvents.map((click, i) => (
+                                      <li
+                                        key={`${click.clickedAt}-${i}`}
+                                        className="text-xs text-ink-soft"
+                                      >
+                                        <span className="font-medium text-slate-700">
+                                          {click.linkLabel || click.targetUrl || "Линк"}
+                                        </span>
+                                        {" · "}
+                                        {click.sourceTitle} ·{" "}
+                                        {formatDate(click.clickedAt, "bg")}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {statsDetail.activity.length === 0 &&
+                                statsDetail.profile.zoomSessions.length === 0 &&
+                                statsDetail.profile.purchases.length === 0 &&
+                                statsDetail.profile.formSubmissions.length === 0 && (
+                                  <p className="text-sm text-ink-soft">
+                                    Още няма записана активност за този имейл.
+                                  </p>
+                                )}
                             </div>
                           ) : (
                             <p className="text-sm text-ink-soft">Няма данни.</p>
