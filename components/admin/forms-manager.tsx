@@ -32,6 +32,7 @@ import { DynamicForm } from "@/components/site/dynamic-form";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { siteConfig } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
+import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
 import { cn } from "@/lib/utils";
 
 const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
@@ -235,7 +236,8 @@ export function FormsManager({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-ink-soft max-w-2xl">
           Създавай форми от готови шаблони, редактирай въпросите и изпращай линк по
-          имейл до избрана аудитория.
+          имейл до избрана аудитория. Отговорите са под всеки формуляр — бутон{" "}
+          <strong className="text-slate-800">„Отговори“</strong>.
         </p>
         <div className="flex flex-wrap gap-2">
           {FORM_PRESETS.filter((p) => p.key !== "blank").map((preset) => (
@@ -700,9 +702,18 @@ export function FormsManager({
                               {formatDate(s.submitted_at, "bg")}
                             </td>
                             <td className="px-4 py-2 text-xs">
-                              <pre className="max-w-md whitespace-pre-wrap font-sans text-ink-soft">
-                                {JSON.stringify(s.answers, null, 0).slice(0, 200)}
-                              </pre>
+                              <ul className="max-w-xl space-y-1">
+                                {formatSubmissionAnswers(f.fields ?? [], s.answers).map(
+                                  (row) => (
+                                    <li key={`${s.id}-${row.label}`}>
+                                      <span className="font-medium text-slate-700">
+                                        {row.label}:
+                                      </span>{" "}
+                                      <span className="text-ink-soft">{row.value}</span>
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
                             </td>
                           </tr>
                         ))}

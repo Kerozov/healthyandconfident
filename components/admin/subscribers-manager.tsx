@@ -30,6 +30,13 @@ import {
   type ImportSubscriberRow,
 } from "@/lib/admin/import-subscribers";
 import { formatDate } from "@/lib/utils";
+import {
+  applyHealthSelectionToTags,
+  healthInterestLabelsFromTags,
+  healthSelectionFromTags,
+  HEALTH_SEGMENT_LABELS_BG,
+  type HealthSelection,
+} from "@/lib/site/health-tags";
 
 export function SubscribersManager({
   subscribers,
@@ -63,6 +70,11 @@ export function SubscribersManager({
   const [editing, setEditing] = useState<Subscriber | null>(null);
   const [editTagKeys, setEditTagKeys] = useState<string[]>([]);
   const [editExtraTags, setEditExtraTags] = useState("");
+  const [editHealth, setEditHealth] = useState<HealthSelection>({
+    insulinResistance: false,
+    diabetes: false,
+    general: false,
+  });
 
   const [importSegments, setImportSegments] = useState<string[]>([]);
   const [importPreview, setImportPreview] = useState<ImportSubscriberRow[] | null>(
@@ -144,6 +156,7 @@ export function SubscribersManager({
   function openEditSegments(s: Subscriber) {
     setEditing(s);
     const known = new Set([...segmentKeySet, ...customTagOptions]);
+    setEditHealth(healthSelectionFromTags(s.tags));
     setEditTagKeys(s.tags.filter((t) => known.has(t)));
     setEditExtraTags(s.tags.filter((t) => !known.has(t)).join(", "));
   }
@@ -153,7 +166,10 @@ export function SubscribersManager({
     startTransition(async () => {
       const res = await updateSubscriber({
         id: editing.id,
-        tags: mergeTags(editTagKeys, parseTagList(editExtraTags)),
+        tags: applyHealthSelectionToTags(
+          mergeTags(editTagKeys, parseTagList(editExtraTags)),
+          editHealth,
+        ),
       });
       if (!res.ok) {
         setError(res.message || "Failed to update segments");
@@ -426,8 +442,38 @@ export function SubscribersManager({
       </Card>
 
       {editing && (
-        <Card title={`Tags — ${editing.email}`}>
-          <Field label="Segments">
+        <Card title={`Сегменти и интерес — ${editing.email}`}>
+          <div className="rounded-xl border border-forest-100 bg-cream/40 p-4">
+            <p className="text-sm font-semibold text-slate-800">Какво го вълнува?</p>
+            <p className="mt-1 text-xs text-ink-soft">
+              Същото като при записване от сайта — инсулинова резистентност, диабет или
+              общо отслабване.
+            </p>
+            <div className="mt-3 flex flex-col gap-2">
+              {(
+                [
+                  ["insulinResistance", HEALTH_SEGMENT_LABELS_BG["insulin-resistance"]],
+                  ["diabetes", HEALTH_SEGMENT_LABELS_BG.diabetes],
+                  ["general", HEALTH_SEGMENT_LABELS_BG["weight-loss"]],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editHealth[key]}
+                    onChange={(e) =>
+                      setEditHealth({ ...editHealth, [key]: e.target.checked })
+                    }
+                    disabled={pending}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+          <Field label="Други сегменти">
             <SegmentAssignChecklist
               segments={segments}
               groups={groups}
@@ -436,6 +482,7 @@ export function SubscribersManager({
               disabled={pending}
             />
           </Field>
+          </div>
 
           {customTagOptions.length > 0 && (
             <div className="mt-4">
@@ -551,7 +598,8 @@ export function SubscribersManager({
                 <th className="py-2 pr-4">Name</th>
                 <th className="py-2 pr-4">Phone</th>
                 <th className="py-2 pr-4">Lang</th>
-                <th className="py-2 pr-4">Segments</th>
+                <th className="py-2 pr-4">Интерес</th>
+                <th className="py-2 pr-4">Сегменти</th>
                 <th className="py-2 pr-4">Source</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4 text-center">Отворени</th>
@@ -582,6 +630,22 @@ export function SubscribersManager({
                       </td>
                       <td className="py-3 pr-4 text-ink-soft">{s.phone || "—"}</td>
                       <td className="py-3 pr-4 uppercase text-ink-soft">{s.locale}</td>
+                      <td className="py-3 pr-4">
+                        <div className="flex flex-wrap gap-1">
+                          {healthInterestLabelsFromTags(s.tags).length === 0 ? (
+                            <span className="text-ink-soft/50">—</span>
+                          ) : (
+                            healthInterestLabelsFromTags(s.tags).map((label) => (
+                              <span
+                                key={label}
+                                className="rounded-full bg-gold-400/20 px-2 py-0.5 text-xs text-amber-900"
+                              >
+                                {label}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-1">
                           {s.tags.length === 0 ? (
@@ -636,7 +700,7 @@ export function SubscribersManager({
                           </button>
                           <button
                             onClick={() => openEditSegments(s)}
-                            title="Edit segments"
+                            title="Сегменти и интерес"
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink"
                           >
                             <Tag className="h-4 w-4" />
