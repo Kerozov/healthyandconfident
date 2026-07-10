@@ -61,7 +61,42 @@ export async function POST(req: Request) {
       productIds,
       stripeSessionId: session.id,
       stripePriceIds: priceIds,
+      amountCents: session.amount_total ?? null,
+      currency: session.currency ?? null,
     });
+  }
+
+  if (event.type === "payment_intent.succeeded") {
+    const intent = event.data.object as Stripe.PaymentIntent;
+    const sessionId =
+      typeof intent.metadata?.checkout_session_id === "string"
+        ? intent.metadata.checkout_session_id
+        : null;
+    if (sessionId) {
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status === "paid") {
+        const email =
+          session.customer_details?.email?.trim().toLowerCase() ||
+          session.customer_email?.trim().toLowerCase() ||
+          "";
+        if (email) {
+          const { productIds, priceIds } = await resolveProductIdsFromCheckoutSession(session);
+          if (productIds.length > 0) {
+            await fulfillPurchase({
+              email,
+              name: session.customer_details?.name ?? null,
+              locale: session.metadata?.locale === "en" ? "en" : "bg",
+              productIds,
+              stripeSessionId: session.id,
+              stripePriceIds: priceIds,
+              amountCents: session.amount_total ?? intent.amount_received ?? null,
+              currency: session.currency ?? intent.currency ?? null,
+            });
+          }
+        }
+      }
+    }
   }
 
   return NextResponse.json({ received: true });

@@ -9,6 +9,7 @@ import { getStripe } from "@/lib/stripe/server";
 export async function createProductCheckoutSession(
   productIds: string[],
   locale: Locale,
+  contactId?: string,
 ): Promise<string> {
   if (productIds.length === 0) {
     throw new Error("No products selected");
@@ -56,6 +57,7 @@ export async function createProductCheckoutSession(
     metadata: {
       product_ids: productIds.join(","),
       locale,
+      ...(contactId ? { contact_id: contactId } : {}),
     },
   });
 

@@ -49,25 +49,54 @@ export function MenuPopupProvider({
   const [done, setDone] = useState(false);
   const { tryOpenPlacement } = useOfferPopup();
 
-  const openMenuPopup = useCallback((nextSource = "menu-popup") => {
-    setSource(nextSource);
-    setDone(false);
-    setOpen(true);
-  }, []);
+  const storageKey = `hc_popup_${locale}`;
+
+  const openMenuPopup = useCallback(
+    (nextSource = "menu-popup") => {
+      if (
+        nextSource === "auto-popup" &&
+        typeof window !== "undefined" &&
+        localStorage.getItem(storageKey)
+      ) {
+        return;
+      }
+      setSource(nextSource);
+      setDone(false);
+      setOpen(true);
+    },
+    [storageKey],
+  );
+
+  const close = useCallback(
+    (rememberDismiss = true) => {
+      if (
+        rememberDismiss &&
+        source === "auto-popup" &&
+        typeof window !== "undefined"
+      ) {
+        localStorage.setItem(storageKey, "dismissed");
+      }
+      setOpen(false);
+      setDone(false);
+    },
+    [source, storageKey],
+  );
 
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+    }
+    window.addEventListener("keydown", onKeyDown);
+
     return () => {
       document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
-
-  function close() {
-    setOpen(false);
-    setDone(false);
-  }
+  }, [open, close]);
 
   return (
     <MenuPopupContext.Provider value={{ openMenuPopup }}>
@@ -79,11 +108,15 @@ export function MenuPopupProvider({
           role="dialog"
           aria-modal="true"
           aria-labelledby="menu-popup-title"
+          onClick={() => close()}
         >
-          <div className="animate-fade-up relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-cream-50 shadow-2xl sm:rounded-3xl">
+          <div
+            className="animate-fade-up relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-cream-50 shadow-2xl sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
-              onClick={close}
+              onClick={() => close()}
               aria-label={locale === "bg" ? "Затвори" : "Close"}
               className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-forest-800/5 text-forest-800 transition-colors hover:bg-forest-800/10 sm:right-4 sm:top-4"
             >
@@ -120,10 +153,10 @@ export function MenuPopupProvider({
                   onSuccess={() => {
                     setDone(true);
                     if (typeof window !== "undefined") {
-                      localStorage.setItem(`hc_popup_${locale}`, "subscribed");
+                      localStorage.setItem(storageKey, "subscribed");
                     }
                     tryOpenPlacement("leadmagnet_cta", "");
-                    setTimeout(() => close(), 2500);
+                    setTimeout(() => close(false), 2500);
                   }}
                 />
               )}

@@ -12,7 +12,15 @@ import {
   Calendar,
   Play,
 } from "lucide-react";
-import type { Segment, SegmentGroup, SiteCtaPlacement, SiteEvent, SiteProduct, SiteSection, SiteVideo } from "@/lib/supabase/types";
+import type {
+  Segment,
+  SegmentGroup,
+  SiteCtaPlacement,
+  SiteEvent,
+  SiteProduct,
+  SiteSection,
+  SiteVideo,
+} from "@/lib/supabase/types";
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";

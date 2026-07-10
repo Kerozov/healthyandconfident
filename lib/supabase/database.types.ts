@@ -18,6 +18,7 @@ import type {
   SiteCtaPlacement,
 } from "@/lib/supabase/types";
 import type { FormTemplateRecord, FormSubmissionRecord } from "@/lib/forms/types";
+import type { Contact, ContactWorkerJob, ContactEvent } from "@/lib/contacts/types";
 
 type FormInvitation = {
   id: string;
@@ -80,6 +81,9 @@ export type Database = {
       site_events: TableShape<SiteEvent>;
       site_products: TableShape<SiteProduct>;
       subscriber_purchases: TableShape<SubscriberPurchase>;
+      contacts: TableShape<Contact>;
+      contact_worker_jobs: TableShape<ContactWorkerJob>;
+      contact_events: TableShape<ContactEvent>;
       site_videos: TableShape<SiteVideo>;
       site_cta_placements: TableShape<SiteCtaPlacement>;
     };

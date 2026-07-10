@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FileText, Users, Megaphone, MousePointerClick, Mail, Leaf, ExternalLink, LogOut, Globe, BarChart3, ClipboardList, Signature } from "lucide-react";
+import { LayoutDashboard, FileText, Users, Megaphone, MousePointerClick, Mail, Leaf, ExternalLink, LogOut, Globe, BarChart3, ClipboardList, Signature, Route } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/blog", label: "Blog", icon: FileText },
   { href: "/admin/subscribers", label: "Subscribers", icon: Users },
+  { href: "/admin/contacts", label: "Контакти", icon: Route },
   { href: "/admin/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/admin/email-footer", label: "Email footer", icon: Signature },
   { href: "/admin/automations", label: "Automations", icon: Mail },

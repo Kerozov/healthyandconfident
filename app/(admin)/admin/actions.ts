@@ -2602,3 +2602,17 @@ export async function getFormSubmissionsReport(formId: string) {
   return { ok: true as const, submissions };
 }
 
+// ── Contacts journey ──────────────────────────────────────────
+export async function cancelContactJobAction(
+  localJobId: string,
+): Promise<{ ok: boolean; message?: string }> {
+  await requireAdmin();
+  const { cancelContactWorkerJobById } = await import("@/lib/notification-worker");
+  const canceled = await cancelContactWorkerJobById(localJobId);
+  revalidatePath("/admin/contacts");
+  if (!canceled) {
+    return { ok: false, message: "Job not found or already sent/canceled." };
+  }
+  return { ok: true, message: "Reminder canceled." };
+}
+

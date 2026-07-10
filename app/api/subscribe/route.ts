@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { runAutomations } from "@/lib/automation/send";
 import { fullNameFromParts } from "@/lib/site/health-tags";
+import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
+import { schedulePrePaymentReminders } from "@/lib/contacts/reminders";
 import type { Locale } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -116,6 +118,21 @@ export async function POST(req: Request) {
       isNew,
       source,
     });
+
+    if (subscriberId) {
+      void (async () => {
+        try {
+          const contact = await ensureContactForSubscriber({
+            subscriberId,
+            email,
+            name,
+          });
+          await schedulePrePaymentReminders(contact, mailLocale);
+        } catch (err) {
+          console.error("[subscribe] contact reminders:", err);
+        }
+      })();
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

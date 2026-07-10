@@ -2,6 +2,8 @@ import "server-only";
 
 import { runAutomations } from "@/lib/automation/run";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
+import { syncContactAfterPurchase } from "@/lib/contacts/payment";
 import type { Locale, SiteProduct } from "@/lib/supabase/types";
 
 export type FulfillPurchaseInput = {
@@ -11,6 +13,8 @@ export type FulfillPurchaseInput = {
   productIds: string[];
   stripeSessionId: string;
   stripePriceIds?: string[];
+  amountCents?: number | null;
+  currency?: string | null;
 };
 
 function mergeTags(...groups: string[][]): string[] {
@@ -109,6 +113,17 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     source: "purchase",
     purchasedProductIds: productIds,
   });
+
+  if (subscriberId) {
+    await syncContactAfterPurchase({
+      subscriberId,
+      email,
+      name: input.name ?? (existing?.name as string | null) ?? null,
+      stripeSessionId: input.stripeSessionId,
+      amountCents: input.amountCents,
+      currency: input.currency,
+    });
+  }
 
   return { ok: true, productIds, tags: finalTags };
 }
