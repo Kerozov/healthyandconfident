@@ -620,16 +620,22 @@ export function AutomationsManager({
         tabs={[
           {
             id: "flow",
-            label: "Визуализация",
+            label: "Схема",
             icon: <GitBranch className="h-4 w-4" aria-hidden />,
           },
           {
             id: "list",
-            label: "Списък и статистика",
+            label: "Списък",
             icon: <List className="h-4 w-4" aria-hidden />,
           },
         ]}
       />
+
+      <p className="text-sm text-ink-soft">
+        {viewTab === "flow"
+          ? "Кой получава какъв имейл или SMS, кога и при какъв тригър. Кликни върху стъпка за редакция."
+          : "Всички автоматизации на едно място — име, статистика и редакция."}
+      </p>
 
       <div
         className={cn(
@@ -1137,7 +1143,7 @@ export function AutomationsManager({
 
       <div className={cn(editingId && viewTab === "flow" && "min-w-0")}>
       {viewTab === "flow" ? (
-        <Card>
+        <Card title="Кой · какво · кога">
           <AutomationFlowView
             automations={automations}
             groups={groups}

@@ -449,7 +449,7 @@ function TreeBranch({
         {audience.excludes.length > 0 && (
           <div className="flex flex-col gap-2 lg:max-w-[220px]">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-coral-600">
-              Изход от пътя
+              Изключва се
             </p>
             {audience.excludes.map((ex) => (
               <ExcludeExit key={`${ex.kind}-${ex.id}`} item={ex} />
@@ -535,7 +535,7 @@ function TriggerSection({
         <Icon className="h-5 w-5" />
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-80">
-            Стартов тригър
+            Започва при
           </p>
           <p className="font-display text-base font-semibold">{meta.label}</p>
         </div>
@@ -596,16 +596,26 @@ export function AutomationFlowView({
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-forest-100 bg-cream/50 px-4 py-3 text-sm leading-relaxed text-ink-soft">
-        <p>
-          Графиката показва <strong className="text-slate-800">кога</strong> и{" "}
-          <strong className="text-slate-800">към кого</strong> отива всеки имейл.
-          <strong className="text-forest-700"> Кликни върху стъпка</strong>, за да я
-          редактираш — аудитория, текст, бутон, график и всичко останало.
-          Разклоненията (клонове) са различни пътища след една и съща стъпка.
-          Червените изходи са изключени групи/сегменти — те{" "}
-          <strong className="text-coral-700">не получават този имейл</strong>. След
-          покупка, ако таговете вкарат някого в изключена група, вече планираните
-          стъпки към него се отменяват.
+        <p className="font-medium text-slate-800">Как да четеш схемата</p>
+        <ul className="mt-2 list-inside list-disc space-y-1">
+          <li>
+            <strong className="text-slate-800">Кога</strong> — при записване, покупка или
+            със закъснение (виж под всяка стъпка)
+          </li>
+          <li>
+            <strong className="text-slate-800">Кой</strong> — групи и сегменти, които
+            получават съобщението
+          </li>
+          <li>
+            <strong className="text-slate-800">Какво</strong> — имейл или SMS; кликни
+            стъпката за редакция на текст, бутон и график
+          </li>
+        </ul>
+        <p className="mt-2">
+          <strong className="text-amber-800">Разклонения</strong> — различни следващи
+          стъпки за различна аудитория.{" "}
+          <strong className="text-coral-700">Изключения</strong> — тези хора спират
+          веригата на тази стъпка (след покупка планираните имейли се отменяват).
         </p>
         <div className="mt-3 flex flex-wrap gap-3 text-xs">
           <span className="inline-flex items-center gap-1">
