@@ -53,31 +53,23 @@ export function Hero({
             ))}
           </ul>
 
-          <div className="mt-6 flex flex-col gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap">
-            <OpenMenuButton
-              source="hero"
-              variant="forest"
-              size="lg"
-              className="w-full sm:w-auto"
-            >
-              {hero.freeMenuCta}
-            </OpenMenuButton>
+          <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
             <Button
               href={`/${locale}#programs`}
               variant="primary"
               size="lg"
-              className="w-full sm:w-auto"
+              className="w-full rounded-full sm:w-auto"
             >
               {hero.primaryCta}
             </Button>
-            <Button
-              href={`/${locale}#food`}
+            <OpenMenuButton
+              source="hero"
               variant="outline"
               size="lg"
-              className="w-full font-medium sm:w-auto"
+              className="w-full rounded-full sm:w-auto"
             >
-              {hero.secondaryCta}
-            </Button>
+              {hero.freeMenuCta}
+            </OpenMenuButton>
           </div>
 
           <dl className="mt-8 hidden gap-6 border-t border-forest-100 pt-8 sm:mt-10 sm:flex sm:flex-wrap sm:gap-8 lg:flex">

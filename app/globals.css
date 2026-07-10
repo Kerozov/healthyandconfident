@@ -81,10 +81,10 @@
 
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
 }
 
 body {
+  overflow-x: clip;
   background-color: var(--bg-page);
   color: var(--text-main);
   font-family: var(--font-sans);

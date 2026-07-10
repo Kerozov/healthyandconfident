@@ -23,7 +23,6 @@ export const en: Dictionary = {
   },
   nav: {
     items: [
-      { label: "Free menu", href: "#free-menu" },
       { label: "About", href: "#about" },
       { label: "Method", href: "#method" },
       { label: "Meals", href: "#food" },

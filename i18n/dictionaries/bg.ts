@@ -25,7 +25,6 @@ export const bg: Dictionary = {
   },
   nav: {
     items: [
-      { label: "Безплатно меню", href: "#free-menu" },
       { label: "За мен", href: "#about" },
       { label: "Методът", href: "#method" },
       { label: "Храна", href: "#food" },
