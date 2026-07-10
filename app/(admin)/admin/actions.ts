@@ -36,7 +36,7 @@ import {
 } from "@/lib/campaign/sync-deliveries";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
-import type { Automation, AutomationDelivery } from "@/lib/supabase/types";
+import type { Automation, AutomationDelivery, SiteSectionKey } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
@@ -2093,7 +2093,7 @@ async function syncProductPlacement(
 }
 
 export async function saveSiteSection(input: {
-  key: "events" | "products" | "videos";
+  key: SiteSectionKey;
   enabled: boolean;
   title_bg?: string;
   title_en?: string;
