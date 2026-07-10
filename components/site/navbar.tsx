@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Leaf } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { OpenMenuButton } from "@/components/site/open-menu-button";
 import { OpenMenuNavAnchor } from "@/components/site/open-menu-nav-link";
 import { Container } from "@/components/ui/container";
@@ -162,15 +162,16 @@ export function Navbar({
                 >
                   {freeMenuLabel}
                 </OpenMenuButton>
-                <Button
+                <Link
                   href={`/${locale}#contact`}
-                  size="sm"
-                  variant="primary"
-                  className="w-full rounded-full"
                   onClick={() => setOpen(false)}
+                  className={cn(
+                    buttonVariants({ size: "sm", variant: "primary" }),
+                    "w-full rounded-full",
+                  )}
                 >
                   {cta}
-                </Button>
+                </Link>
                 <Link
                   href={switchHref}
                   onClick={() => setOpen(false)}
