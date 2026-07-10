@@ -155,6 +155,54 @@ function buildForestByTrigger(
   return forest;
 }
 
+export const TRIGGER_SECTION_LABELS: Record<AutomationTrigger, string> = {
+  new_subscriber: "Нов абонат",
+  registration: "Записване от сайта",
+  purchase: "След покупка",
+};
+
+export type FlatAutomationRow = {
+  automation: AutomationRow;
+  depth: number;
+  pathLabel: string;
+  parentName?: string;
+  trigger: AutomationTrigger;
+};
+
+/** Ordered list for compact UI — same tree order as the visual schema. */
+export function flattenAutomationsForDisplay(
+  automations: AutomationRow[],
+): FlatAutomationRow[] {
+  const forest = buildForestByTrigger(automations);
+  const result: FlatAutomationRow[] = [];
+  const triggers: AutomationTrigger[] = ["new_subscriber", "registration", "purchase"];
+
+  for (const trigger of triggers) {
+    forest[trigger].forEach((tree, pathIndex) => {
+      function walk(
+        node: TreeNode,
+        depth: number,
+        path: string,
+        parentName?: string,
+      ) {
+        result.push({
+          automation: node.automation,
+          depth,
+          pathLabel: path,
+          parentName,
+          trigger,
+        });
+        node.children.forEach((child, i) => {
+          walk(child, depth + 1, `${path}.${i + 1}`, node.automation.name);
+        });
+      }
+      walk(tree, 0, `${pathIndex + 1}`);
+    });
+  }
+
+  return result;
+}
+
 function AudienceChips({
   audience,
   logic,
@@ -502,7 +550,7 @@ function TriggerSection({
             <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-forest-100 pb-3">
               <GitBranch className="h-4 w-4 text-forest-600" />
               <p className="text-sm font-semibold text-slate-800">
-                Път {pathIndex + 1}: {tree.automation.name}
+                Верига {pathIndex + 1}: {tree.automation.name}
               </p>
             </div>
             <TreeBranch
@@ -555,7 +603,9 @@ export function AutomationFlowView({
           редактираш — аудитория, текст, бутон, график и всичко останало.
           Разклоненията (клонове) са различни пътища след една и съща стъпка.
           Червените изходи са изключени групи/сегменти — те{" "}
-          <strong className="text-coral-700">не получават този имейл</strong>.
+          <strong className="text-coral-700">не получават този имейл</strong>. След
+          покупка, ако таговете вкарат някого в изключена група, вече планираните
+          стъпки към него се отменяват.
         </p>
         <div className="mt-3 flex flex-wrap gap-3 text-xs">
           <span className="inline-flex items-center gap-1">

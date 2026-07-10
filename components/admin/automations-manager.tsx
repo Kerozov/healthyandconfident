@@ -42,8 +42,9 @@ import {
   resendAutomationToNonOpeners,
 } from "@/app/(admin)/admin/actions";
 import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
-import { AutomationFlowView } from "@/components/admin/automation-flow";
+import { AutomationFlowView, flattenAutomationsForDisplay, TRIGGER_SECTION_LABELS } from "@/components/admin/automation-flow";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { TabList } from "@/components/admin/ui";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
 import { PurchaseProductPicker } from "@/components/admin/purchase-product-picker";
@@ -132,7 +133,7 @@ const TRIGGER_OPTIONS: {
   {
     value: "purchase",
     label: "След покупка",
-    hint: "След успешно плащане в Stripe. Избери конкретен продукт/програма по-долу, за да получават различни имейли.",
+    hint: "След успешно плащане в Stripe. Задай продукт по-долу и/или сегмент в „Включване“ — при плащане таговете се обновяват и стартира тази верига (дори за вече записани имейли).",
   },
 ];
 
@@ -400,7 +401,7 @@ export function AutomationsManager({
   const [deliveries, setDeliveries] = useState<AutomationDelivery[] | null>(null);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>("all");
-  const [viewTab, setViewTab] = useState<"list" | "flow">("list");
+  const [viewTab, setViewTab] = useState<"list" | "flow">("flow");
   const editorRef = useRef<HTMLDivElement>(null);
 
   const hasTrackable = automations.some(
@@ -451,10 +452,8 @@ export function AutomationsManager({
   }
 
   function openEditFromFlow(a: AutomationRow) {
+    setViewTab("flow");
     openEdit(a);
-    window.requestAnimationFrame(() => {
-      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
   }
 
   function closeEditor() {
@@ -575,7 +574,9 @@ export function AutomationsManager({
         <div>
           <p className="text-sm text-ink-soft max-w-2xl">
             Автоматични имейли или SMS при нов абонат, покупка или с закъснение.
-            По подразбиране се изпращат само веднъж на имейл — без дублиране.
+            По подразбиране се изпращат само веднъж на имейл. При покупка таговете се
+            обновяват — изключените групи спират старите вериги, а автоматизациите
+            „След покупка“ с подходящ сегмент/продукт <strong>започват нова верига</strong>.
           </p>
           {note && <p className="mt-1 text-xs text-ink-soft">{note}</p>}
         </div>
@@ -612,39 +613,36 @@ export function AutomationsManager({
         </div>
       </div>
 
-      <div className="inline-flex gap-1 rounded-xl border border-ink/15 bg-white p-1">
-        <button
-          type="button"
-          onClick={() => setViewTab("list")}
-          className={cn(
-            "inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium transition",
-            viewTab === "list"
-              ? "bg-forest-600 text-cream"
-              : "text-ink-soft hover:bg-ink/5",
-          )}
-        >
-          <List className="h-4 w-4" /> Списък
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewTab("flow")}
-          className={cn(
-            "inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium transition",
-            viewTab === "flow"
-              ? "bg-forest-600 text-cream"
-              : "text-ink-soft hover:bg-ink/5",
-          )}
-        >
-          <GitBranch className="h-4 w-4" /> Пътища
-        </button>
-      </div>
+      <TabList
+        aria-label="Изглед на автоматизациите"
+        active={viewTab}
+        onChange={(id) => setViewTab(id as "list" | "flow")}
+        tabs={[
+          {
+            id: "flow",
+            label: "Визуализация",
+            icon: <GitBranch className="h-4 w-4" aria-hidden />,
+          },
+          {
+            id: "list",
+            label: "Списък и статистика",
+            icon: <List className="h-4 w-4" aria-hidden />,
+          },
+        ]}
+      />
 
+      <div
+        className={cn(
+          "grid gap-6",
+          editingId && viewTab === "flow" && "xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] xl:items-start",
+        )}
+      >
       {editingId && (
-        <div ref={editorRef} className="scroll-mt-6">
+        <div ref={editorRef} className="scroll-mt-6 xl:sticky xl:top-6">
         <Card title={editingId === "new" ? "Нова автоматизация" : `Редакция: ${form.name || "автоматизация"}`}>
           <div className="space-y-5">
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Име (и заглавие на пътя в „Пътища“)">
+              <Field label="Име (заглавие в схемата)">
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -1137,8 +1135,9 @@ export function AutomationsManager({
         </div>
       )}
 
+      <div className={cn(editingId && viewTab === "flow" && "min-w-0")}>
       {viewTab === "flow" ? (
-        <Card title="Визуализация на пътищата">
+        <Card>
           <AutomationFlowView
             automations={automations}
             groups={groups}
@@ -1175,7 +1174,12 @@ export function AutomationsManager({
             </div>
           </div>
         ) : (
-          automations.map((a) => {
+          (() => {
+            const flat = flattenAutomationsForDisplay(automations);
+            let lastTrigger: AutomationTrigger | null = null;
+            return flat.map(({ automation: a, depth, pathLabel, parentName, trigger }) => {
+            const showHeader = trigger !== lastTrigger;
+            if (showHeader) lastTrigger = trigger;
             const rate = openRate(a);
             const audienceLine = formatAutomationAudienceLine(a, groups, segments);
             const rowBusy = busyId === a.id && pending;
@@ -1189,13 +1193,27 @@ export function AutomationsManager({
               : [];
 
             return (
+            <div key={a.id} className="space-y-3">
+              {showHeader && (
+                <div className="flex items-center gap-2 border-b border-ink/10 pb-2 pt-2 first:pt-0">
+                  <GitBranch className="h-4 w-4 text-forest-600" aria-hidden />
+                  <h3 className="font-display text-base font-semibold text-ink">
+                    {TRIGGER_SECTION_LABELS[trigger]}
+                  </h3>
+                </div>
+              )}
             <div
-              key={a.id}
-              className="rounded-2xl border border-ink/10 bg-white p-5"
+              className={cn(
+                "rounded-2xl border border-ink/10 bg-white p-5",
+                depth > 0 && "ml-4 border-l-2 border-l-forest-200 sm:ml-8",
+              )}
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                      {pathLabel}
+                    </span>
                     <h3 className="font-display text-lg font-semibold">{a.name}</h3>
                     <span
                       className={cn(
@@ -1211,6 +1229,11 @@ export function AutomationsManager({
                       {a.channel}
                     </span>
                   </div>
+                  {parentName && (
+                    <p className="mt-1 text-xs text-ink-soft">
+                      ↳ след „<span className="font-medium text-slate-700">{parentName}</span>"
+                    </p>
+                  )}
                   <p className="mt-1 text-sm text-ink-soft">
                     {triggerSummary(a)}
                     {audienceLine && ` · ${audienceLine}`}
@@ -1445,11 +1468,15 @@ export function AutomationsManager({
                 </div>
               )}
             </div>
+            </div>
             );
-          })
+          });
+          })()
         )}
       </div>
       )}
+      </div>
+      </div>
     </div>
   );
 }

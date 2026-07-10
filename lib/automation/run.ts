@@ -20,6 +20,8 @@ export type AutomationRunContext = {
   locale?: Locale;
   subscriberId?: string | null;
   tags?: string[];
+  /** Tags before this event (e.g. before purchase) — used for segment-entry checks. */
+  priorTags?: string[];
   isNew: boolean;
   source?: string;
   purchasedProductIds?: string[];
@@ -29,13 +31,68 @@ function resolveTriggerEvents(
   source: string,
   isNew: boolean,
 ): AutomationTrigger[] {
+  // Payment always starts the purchase flow only — not welcome/registration drips.
+  if (source === "purchase") return ["purchase"];
+
   const events: AutomationTrigger[] = [];
-  if (source === "purchase") events.push("purchase");
   if (isNew) {
     events.push("new_subscriber");
-    if (source !== "purchase") events.push("registration");
+    events.push("registration");
   }
   return events;
+}
+
+/** Purchase automations run for every buyer, including existing subscribers. */
+function passesNewSubscriberGate(
+  automation: Automation,
+  ctx: AutomationRunContext,
+): boolean {
+  if (!automation.new_subscribers_only) return true;
+  if (ctx.source === "purchase" && automation.trigger_event === "purchase") {
+    return true;
+  }
+  return ctx.isNew;
+}
+
+/**
+ * On purchase, also start automations when new tags put the subscriber into the
+ * target segment/group (even if they were already subscribed before paying).
+ */
+function passesPurchaseSegmentEntryGate(
+  automation: Automation,
+  ctx: AutomationRunContext,
+  segments: Segment[],
+  groups: SegmentGroup[],
+): boolean {
+  if (automation.trigger_event !== "purchase" || ctx.source !== "purchase") {
+    return true;
+  }
+
+  const nowTags = ctx.tags ?? [];
+  if (!subscriberMatchesAutomationAudience(automation, nowTags, segments, groups)) {
+    return false;
+  }
+
+  const hasInclude =
+    (automation.segment_keys?.filter(Boolean).length ?? 0) > 0 ||
+    (automation.group_ids?.filter(Boolean).length ?? 0) > 0;
+
+  if (!hasInclude) return true;
+
+  const hasProductFilter =
+    (automation.purchase_product_ids?.filter(Boolean).length ?? 0) > 0;
+  if (hasProductFilter) return true;
+
+  const priorTags = ctx.priorTags ?? [];
+  if (priorTags.length === 0) return true;
+
+  const wasIn = subscriberMatchesAutomationAudience(
+    automation,
+    priorTags,
+    segments,
+    groups,
+  );
+  return !wasIn;
 }
 
 function segmentMatches(
@@ -156,7 +213,8 @@ async function scheduleChainedFromParent(
   const parentAt = new Date(parentSendAt);
   for (const rule of (data as Automation[]) ?? []) {
     const email = ctx.email.trim().toLowerCase();
-    if (rule.new_subscribers_only && !ctx.isNew) continue;
+    if (!passesNewSubscriberGate(rule, ctx)) continue;
+    if (!passesPurchaseSegmentEntryGate(rule, ctx, segments, groups)) continue;
     if (!segmentMatches(rule, ctx.tags ?? [], segments, groups)) continue;
     if (
       rule.trigger_event === "purchase" &&
@@ -431,7 +489,8 @@ async function executeAutomation(
   const email = ctx.email.trim().toLowerCase();
   const tags = ctx.tags ?? [];
 
-  if (automation.new_subscribers_only && !ctx.isNew) return;
+  if (!passesNewSubscriberGate(automation, ctx)) return;
+  if (!passesPurchaseSegmentEntryGate(automation, ctx, segments, groups)) return;
   if (!segmentMatches(automation, tags, segments, groups)) return;
   if (
     automation.trigger_event === "purchase" &&

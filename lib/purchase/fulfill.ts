@@ -102,6 +102,19 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     }
   }
 
+  const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
+    "@/lib/automation/cancel"
+  );
+  const { canceled } = await cancelIneligibleAutomationDeliveriesForSubscriber(
+    email,
+    finalTags,
+  );
+  if (canceled > 0) {
+    console.info(
+      `[purchase] canceled ${canceled} scheduled automation(s) for ${email} (audience/exclude mismatch after purchase)`,
+    );
+  }
+
   await runAutomations({
     email,
     name: input.name ?? (existing?.name as string | null) ?? null,
@@ -109,6 +122,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     locale: (existing?.locale as Locale) ?? locale,
     subscriberId: subscriberId ?? null,
     tags: finalTags,
+    priorTags,
     isNew,
     source: "purchase",
     purchasedProductIds: productIds,

@@ -734,6 +734,24 @@ export async function updateSubscriber(input: {
     .update(patch)
     .eq("id", input.id);
   if (error) return { ok: false, message: error.message };
+
+  if (input.tags !== undefined) {
+    const { data: row } = await supabase
+      .from("subscribers")
+      .select("email, tags")
+      .eq("id", input.id)
+      .maybeSingle();
+    if (row?.email) {
+      const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
+        "@/lib/automation/cancel"
+      );
+      await cancelIneligibleAutomationDeliveriesForSubscriber(
+        row.email as string,
+        (row.tags as string[]) ?? [],
+      );
+    }
+  }
+
   revalidatePath("/admin/subscribers");
   return { ok: true };
 }

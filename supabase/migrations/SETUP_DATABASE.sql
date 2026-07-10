@@ -1,17 +1,10 @@
 -- ═══════════════════════════════════════════════════════════════
--- Healthy & Confident — FULL database setup (fresh Supabase project)
--- Run this ONCE in Supabase SQL Editor if you have NO tables yet.
--- Already have tables? Use RUN_PENDING_MIGRATIONS.sql (+ 007 if needed).
+-- Healthy & Confident — FULL database setup
+-- Run in Supabase → SQL Editor.
 --
--- Schema includes:
---   blog, subscribers, segments, popup
---   automations (email/SMS, delay_days, send_time, send_date)
---   automation_deliveries (scheduled, opens, bounces)
---   site_sections / site_events / site_products / site_guides / site_cta_placements
---   stripe_price_id, popup upsell placements, media storage bucket
---   email_campaigns, sms_campaigns, forms
---   purchase automations (purchase_product_ids, subscriber_purchases)
---   contact journey (contacts, contact_worker_jobs, contact_events)
+-- • НОВА база: създава всички таблици от нулата.
+-- • СЪЩЕСТВУВАЩА база: безопасно за повторно пускане — секцията
+--   UPGRADE по-долу добавя липсващи колони (вкл. purchase_product_ids).
 -- ═══════════════════════════════════════════════════════════════
 
 create extension if not exists "pgcrypto";
@@ -726,6 +719,189 @@ values
    'You received this email because you registered on our platform or took part in one of our trainings or programmes.')
 on conflict (locale) do nothing;
 
+-- ═══════════════════════════════════════════════════════════════
+-- UPGRADE (idempotent) — fixes existing databases missing new columns
+-- If you see "Could not find column in schema cache", run THIS FILE again.
+-- ═══════════════════════════════════════════════════════════════
+
+-- subscribers profile
+alter table public.subscribers
+  add column if not exists first_name text,
+  add column if not exists last_name text,
+  add column if not exists facebook_url text;
+
+-- automations: attachments + purchase filter
+alter table public.automations
+  add column if not exists delay_days int not null default 0,
+  add column if not exists send_time text not null default '09:00',
+  add column if not exists send_date date,
+  add column if not exists cta_label_bg text not null default '',
+  add column if not exists cta_url_bg text not null default '',
+  add column if not exists cta_label_en text not null default '',
+  add column if not exists cta_url_en text not null default '',
+  add column if not exists group_ids uuid[] not null default '{}',
+  add column if not exists audience_logic text not null default 'any',
+  add column if not exists exclude_group_ids uuid[] not null default '{}',
+  add column if not exists exclude_segment_keys text[] not null default '{}',
+  add column if not exists attachment_path_bg text,
+  add column if not exists attachment_filename_bg text,
+  add column if not exists attachment_path_en text,
+  add column if not exists attachment_filename_en text,
+  add column if not exists purchase_product_ids uuid[] not null default '{}';
+
+-- site products
+alter table public.site_products
+  add column if not exists stripe_price_id text not null default '',
+  add column if not exists offer_type text not null default 'upsell',
+  add column if not exists headline_bg text not null default '',
+  add column if not exists headline_en text not null default '',
+  add column if not exists cta_label_bg text not null default '',
+  add column if not exists cta_label_en text not null default '',
+  add column if not exists audience_tags text[] not null default '{}',
+  add column if not exists purchase_tags text[] not null default '{}';
+
+-- email campaigns
+alter table public.email_campaigns
+  add column if not exists cta_label text not null default '',
+  add column if not exists cta_url text not null default '',
+  add column if not exists attachment_path text,
+  add column if not exists attachment_filename text,
+  add column if not exists clicked_count int not null default 0,
+  add column if not exists bounced_count int not null default 0,
+  add column if not exists target_tags text[],
+  add column if not exists machine_opened_count int not null default 0,
+  add column if not exists not_opened_count int not null default 0,
+  add column if not exists parent_campaign_id uuid references public.email_campaigns(id) on delete set null;
+
+-- engagement clicks
+alter table public.email_link_clicks
+  add column if not exists link_label text;
+
+alter table public.automation_deliveries
+  add column if not exists scheduled_for timestamptz,
+  add column if not exists recipient_status text,
+  add column if not exists opened_at timestamptz,
+  add column if not exists delivered_at timestamptz,
+  add column if not exists click_count int not null default 0,
+  add column if not exists first_clicked_at timestamptz,
+  add column if not exists last_synced_at timestamptz;
+
+alter table public.form_templates
+  add column if not exists attachment_path text,
+  add column if not exists attachment_filename text;
+
+-- purchase history
+create table if not exists public.subscriber_purchases (
+  id                 uuid primary key default gen_random_uuid(),
+  subscriber_id      uuid references public.subscribers(id) on delete set null,
+  email              text not null,
+  product_id         uuid references public.site_products(id) on delete set null,
+  stripe_session_id  text,
+  stripe_price_id    text,
+  purchased_at       timestamptz not null default now()
+);
+
+create unique index if not exists subscriber_purchases_session_product_idx
+  on public.subscriber_purchases (stripe_session_id, product_id);
+
+create index if not exists subscriber_purchases_email_idx
+  on public.subscriber_purchases (email, purchased_at desc);
+
+-- guides section
+insert into public.site_sections (key, enabled, title_bg, title_en)
+values ('guides', false, 'Ръководства', 'Guides')
+on conflict (key) do nothing;
+
+create table if not exists public.site_guides (
+  id              uuid primary key default gen_random_uuid(),
+  title_bg        text not null,
+  title_en        text not null,
+  description_bg  text not null default '',
+  description_en  text not null default '',
+  stripe_url      text not null,
+  stripe_price_id text not null default '',
+  price_label_bg  text not null default '',
+  price_label_en  text not null default '',
+  image_url       text,
+  enabled         boolean not null default true,
+  sort_order      int not null default 0,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+create index if not exists site_guides_sort_idx
+  on public.site_guides (enabled, sort_order, created_at desc);
+
+drop trigger if exists site_guides_updated_at on public.site_guides;
+create trigger site_guides_updated_at before update on public.site_guides
+  for each row execute function public.set_updated_at();
+
+-- contact journey
+create table if not exists public.contacts (
+  id                     uuid primary key references public.subscribers(id) on delete cascade,
+  email                  text not null,
+  name                   text,
+  payment_status         text not null default 'unpaid'
+    check (payment_status in ('unpaid', 'paid')),
+  paid_at                timestamptz,
+  last_stripe_session_id text,
+  zoom_attended          boolean not null default false,
+  zoom_last_joined_at    timestamptz,
+  zoom_last_left_at      timestamptz,
+  zoom_total_minutes     int not null default 0,
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now()
+);
+
+create unique index if not exists contacts_email_idx on public.contacts (email);
+create index if not exists contacts_payment_status_idx on public.contacts (payment_status);
+
+create table if not exists public.contact_worker_jobs (
+  id              uuid primary key default gen_random_uuid(),
+  contact_id      uuid not null references public.contacts(id) on delete cascade,
+  worker_job_id   text not null,
+  sequence_key    text not null,
+  idempotency_key text,
+  status          text not null default 'pending'
+    check (status in ('pending', 'canceled', 'sent', 'failed')),
+  scheduled_at    timestamptz,
+  canceled_at     timestamptz,
+  created_at      timestamptz not null default now()
+);
+
+create unique index if not exists contact_worker_jobs_idempotency_idx
+  on public.contact_worker_jobs (idempotency_key)
+  where idempotency_key is not null;
+
+create index if not exists contact_worker_jobs_contact_sequence_idx
+  on public.contact_worker_jobs (contact_id, sequence_key, status);
+
+create table if not exists public.contact_events (
+  id            uuid primary key default gen_random_uuid(),
+  contact_id    uuid not null references public.contacts(id) on delete cascade,
+  event_type    text not null,
+  source        text,
+  campaign_id   text,
+  worker_job_id text,
+  metadata      jsonb not null default '{}',
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists contact_events_contact_idx
+  on public.contact_events (contact_id, created_at desc);
+
+create index if not exists contact_events_type_idx
+  on public.contact_events (event_type);
+
+insert into public.contacts (id, email, name)
+select s.id, s.email, s.name
+from public.subscribers s
+on conflict (id) do nothing;
+
+drop trigger if exists contacts_updated_at on public.contacts;
+create trigger contacts_updated_at before update on public.contacts
+  for each row execute function public.set_updated_at();
+
 notify pgrst, 'reload schema';
 
-select 'Setup complete' as result;
+select 'Setup complete — schema up to date (incl. purchase_product_ids)' as result;
