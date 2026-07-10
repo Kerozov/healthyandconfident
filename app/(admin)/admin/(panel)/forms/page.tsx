@@ -7,6 +7,7 @@ import {
   getSubscriberTags,
 } from "@/lib/admin/data";
 import { FormsManager } from "@/components/admin/forms-manager";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -20,18 +21,16 @@ export default async function AdminFormsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">Форми</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Въпросници и форми с шаблони — изпращай по имейл и виж отговорите.
-      </p>
-      <div className="mt-8">
-        <FormsManager
+      <PageHeader
+        title="Форми"
+        description="Въпросници и форми с шаблони — изпращай по имейл и виж отговорите."
+      />
+      <FormsManager
           forms={forms}
           segments={segments}
           groups={groups}
           subscriberTags={subscriberTags}
         />
-      </div>
     </div>
   );
 }

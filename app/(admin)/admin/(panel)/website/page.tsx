@@ -1,6 +1,7 @@
 import { getAdminSiteContent } from "@/lib/site/content";
 import { getSegmentGroups, getSegments } from "@/lib/admin/data";
 import { WebsiteManager } from "@/components/admin/website-manager";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -13,13 +14,12 @@ export default async function AdminWebsitePage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">Website</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Продукти в магазина, събития, YouTube видеа и popup upsell при клик на бутон/продукт.
-      </p>
+      <PageHeader
+        title="Уебсайт"
+        description="Продукти, ръководства, събития, видеа и popup upsell при клик на бутон."
+      />
 
-      <div className="mt-8">
-        <WebsiteManager
+      <WebsiteManager
           sections={content.sections}
           events={content.events}
           products={content.products}
@@ -31,7 +31,6 @@ export default async function AdminWebsitePage() {
           dbReady={content.dbReady}
           dbError={content.dbError}
         />
-      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 import { getFormTemplates } from "@/lib/admin/forms-data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { CampaignsWorkspace } from "@/components/admin/campaigns-workspace";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +28,12 @@ export default async function AdminCampaignsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">Campaigns</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Send by segment or tags, track delivery live from the worker, and resend
-        to non-openers.
-      </p>
+      <PageHeader
+        title="Кампании"
+        description="Изпращане по сегмент или тагове, проследяване на доставката и повторно изпращане към неотворили."
+      />
 
-      <div className="mt-8">
-        <CampaignsWorkspace
+      <CampaignsWorkspace
           emailCampaigns={emailCampaigns}
           smsCampaigns={smsCampaigns}
           segments={segments}
@@ -44,7 +43,6 @@ export default async function AdminCampaignsPage() {
           subscriberTags={subscriberTags}
           workerConfigured={workerConfigured}
         />
-      </div>
     </div>
   );
 }

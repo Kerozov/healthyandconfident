@@ -2,6 +2,7 @@ import { getAutomations, getSegments, getSegmentGroups, getSiteProducts } from "
 import { getFormTemplates } from "@/lib/admin/forms-data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { AutomationsManager } from "@/components/admin/automations-manager";
+import { Alert, PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -17,29 +18,27 @@ export default async function AdminAutomationsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">Автоматизации</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Автоматични имейли и SMS при записване, покупка или с закъснение.
-      </p>
+      <PageHeader
+        title="Автоматизации"
+        description="Автоматични имейли и SMS при записване, покупка или с закъснение."
+      >
+        {!workerOk && (
+          <Alert variant="warning">
+            Задай <code>NOTIFICATION_WORKER_URL</code> и{" "}
+            <code>NOTIFICATION_WORKER_API_KEY</code> — иначе нищо няма да се изпраща.
+          </Alert>
+        )}
+      </PageHeader>
 
-      {!workerOk && (
-        <p className="mt-4 rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
-          Set <code>NOTIFICATION_WORKER_URL</code> and{" "}
-          <code>NOTIFICATION_WORKER_API_KEY</code> — otherwise nothing will send.
-        </p>
-      )}
-
-      <div className="mt-8">
-        <AutomationsManager
+      <AutomationsManager
           automations={automations}
           segments={segments}
           groups={groups}
           products={products}
           forms={forms}
         />
-      </div>
 
-      <div className="mt-10 rounded-2xl border border-ink/10 bg-white p-5 text-sm text-ink-soft">
+      <section className="mt-10 rounded-2xl border border-ink/10 bg-white p-5 text-sm text-ink-soft">
         <p className="font-medium text-ink">Бърз пример: welcome серия от 3 имейла</p>
         <ol className="mt-2 list-inside list-decimal space-y-1">
           <li>
@@ -56,7 +55,7 @@ export default async function AdminAutomationsPage() {
           Всяка автоматизация се изпраща само веднъж на имейл. Включи ги с бутона
           „Включена“.
         </p>
-      </div>
+      </section>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { getEngagementSummaryForEmails } from "@/lib/admin/engagement";
 import { SubscribersManager } from "@/components/admin/subscribers-manager";
 import { SegmentsManager } from "@/components/admin/segments-manager";
 import { GroupsManager } from "@/components/admin/groups-manager";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +23,11 @@ export default async function AdminSubscribersPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">Subscribers</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Full control of your list — add manually, segment, export and manage status.
-      </p>
-      <div className="mt-8 space-y-8">
+      <PageHeader
+        title="Абонати"
+        description="Управление на списъка — добавяне, сегменти, експорт и статус."
+      />
+      <div className="space-y-8">
         <GroupsManager groups={groups} />
         <SegmentsManager segments={segments} groups={groups} />
         <SubscribersManager

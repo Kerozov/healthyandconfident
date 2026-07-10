@@ -7,9 +7,11 @@
 --   blog, subscribers, segments, popup
 --   automations (email/SMS, delay_days, send_time, send_date)
 --   automation_deliveries (scheduled, opens, bounces)
---   site_sections / site_events / site_products / site_cta_placements
+--   site_sections / site_events / site_products / site_guides / site_cta_placements
 --   stripe_price_id, popup upsell placements, media storage bucket
---   email_campaigns, sms_campaigns
+--   email_campaigns, sms_campaigns, forms
+--   purchase automations (purchase_product_ids, subscriber_purchases)
+--   contact journey (contacts, contact_worker_jobs, contact_events)
 -- ═══════════════════════════════════════════════════════════════
 
 create extension if not exists "pgcrypto";
@@ -182,6 +184,11 @@ create table if not exists public.automations (
   cta_url_en           text not null default '',
   sms_bg               text not null default '',
   sms_en               text not null default '',
+  attachment_path_bg   text,
+  attachment_filename_bg text,
+  attachment_path_en   text,
+  attachment_filename_en text,
+  purchase_product_ids uuid[] not null default '{}',
   sort_order           int not null default 0,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
@@ -277,6 +284,7 @@ create table if not exists public.site_products (
   cta_label_bg    text not null default '',
   cta_label_en    text not null default '',
   audience_tags   text[] not null default '{}',
+  purchase_tags   text[] not null default '{}',
   enabled         boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),
@@ -305,6 +313,22 @@ create table if not exists public.site_guides (
 
 create index if not exists site_guides_sort_idx
   on public.site_guides (enabled, sort_order, created_at desc);
+
+create table if not exists public.subscriber_purchases (
+  id                 uuid primary key default gen_random_uuid(),
+  subscriber_id      uuid references public.subscribers(id) on delete set null,
+  email              text not null,
+  product_id         uuid references public.site_products(id) on delete set null,
+  stripe_session_id  text,
+  stripe_price_id    text,
+  purchased_at       timestamptz not null default now()
+);
+
+create unique index if not exists subscriber_purchases_session_product_idx
+  on public.subscriber_purchases (stripe_session_id, product_id);
+
+create index if not exists subscriber_purchases_email_idx
+  on public.subscriber_purchases (email, purchased_at desc);
 
 create table if not exists public.site_videos (
   id           uuid primary key default gen_random_uuid(),
@@ -408,6 +432,8 @@ create table if not exists public.email_campaigns (
   bounced_count        int not null default 0,
   total_count          int not null default 0,
   clicked_count        int not null default 0,
+  attachment_path      text,
+  attachment_filename  text,
   last_synced_at       timestamptz,
   parent_campaign_id   uuid references public.email_campaigns(id) on delete set null,
   created_at           timestamptz not null default now()
@@ -447,6 +473,7 @@ create table if not exists public.email_link_clicks (
   email         text not null,
   subscriber_id uuid references public.subscribers(id) on delete set null,
   target_url    text,
+  link_label    text,
   clicked_at    timestamptz not null default now()
 );
 
@@ -555,6 +582,8 @@ create table if not exists public.form_templates (
   email_subject_en text not null default '',
   email_intro_bg   text not null default '',
   email_intro_en   text not null default '',
+  attachment_path  text,
+  attachment_filename text,
   enabled          boolean not null default true,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
@@ -584,6 +613,72 @@ create table if not exists public.form_invitations (
 
 drop trigger if exists form_templates_updated_at on public.form_templates;
 create trigger form_templates_updated_at before update on public.form_templates
+  for each row execute function public.set_updated_at();
+
+-- ── Contact journey (payment, worker jobs, Zoom events) ────────
+create table if not exists public.contacts (
+  id                     uuid primary key references public.subscribers(id) on delete cascade,
+  email                  text not null,
+  name                   text,
+  payment_status         text not null default 'unpaid'
+    check (payment_status in ('unpaid', 'paid')),
+  paid_at                timestamptz,
+  last_stripe_session_id text,
+  zoom_attended          boolean not null default false,
+  zoom_last_joined_at    timestamptz,
+  zoom_last_left_at      timestamptz,
+  zoom_total_minutes     int not null default 0,
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now()
+);
+
+create unique index if not exists contacts_email_idx on public.contacts (email);
+create index if not exists contacts_payment_status_idx on public.contacts (payment_status);
+
+create table if not exists public.contact_worker_jobs (
+  id              uuid primary key default gen_random_uuid(),
+  contact_id      uuid not null references public.contacts(id) on delete cascade,
+  worker_job_id   text not null,
+  sequence_key    text not null,
+  idempotency_key text,
+  status          text not null default 'pending'
+    check (status in ('pending', 'canceled', 'sent', 'failed')),
+  scheduled_at    timestamptz,
+  canceled_at     timestamptz,
+  created_at      timestamptz not null default now()
+);
+
+create unique index if not exists contact_worker_jobs_idempotency_idx
+  on public.contact_worker_jobs (idempotency_key)
+  where idempotency_key is not null;
+
+create index if not exists contact_worker_jobs_contact_sequence_idx
+  on public.contact_worker_jobs (contact_id, sequence_key, status);
+
+create table if not exists public.contact_events (
+  id            uuid primary key default gen_random_uuid(),
+  contact_id    uuid not null references public.contacts(id) on delete cascade,
+  event_type    text not null,
+  source        text,
+  campaign_id   text,
+  worker_job_id text,
+  metadata      jsonb not null default '{}',
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists contact_events_contact_idx
+  on public.contact_events (contact_id, created_at desc);
+
+create index if not exists contact_events_type_idx
+  on public.contact_events (event_type);
+
+insert into public.contacts (id, email, name)
+select s.id, s.email, s.name
+from public.subscribers s
+on conflict (id) do nothing;
+
+drop trigger if exists contacts_updated_at on public.contacts;
+create trigger contacts_updated_at before update on public.contacts
   for each row execute function public.set_updated_at();
 
 -- ── Email footer ───────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { getEngagementOverview } from "@/lib/admin/engagement";
 import { EngagementDashboard } from "@/components/admin/engagement-dashboard";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -8,14 +9,11 @@ export default async function AdminEngagementPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">Статистика имейли</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Отваряния (от пощенския сървър) и кликове на бутони (проследявани при
-        натискане). За всеки абонат — в таб Subscribers.
-      </p>
-      <div className="mt-8">
-        <EngagementDashboard overview={overview} />
-      </div>
+      <PageHeader
+        title="Статистика"
+        description="Отваряния и кликове на бутони. За всеки абонат — в секция Абонати."
+      />
+      <EngagementDashboard overview={overview} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Users, FileText, Megaphone, ArrowUpRight } from "lucide-react";
 import { getDashboardStats } from "@/lib/admin/data";
 import { formatDate } from "@/lib/utils";
+import { PageHeader, Badge, DataTable } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -10,23 +11,23 @@ export default async function AdminDashboard() {
 
   const cards = [
     {
-      label: "Active subscribers",
+      label: "Активни абонати",
       value: stats.activeSubscribers,
-      sub: `${stats.totalSubscribers} total`,
+      sub: `${stats.totalSubscribers} общо`,
       icon: Users,
       href: "/admin/subscribers",
     },
     {
-      label: "Published posts",
+      label: "Публикувани статии",
       value: stats.publishedPosts,
-      sub: `${stats.totalPosts} total`,
+      sub: `${stats.totalPosts} общо`,
       icon: FileText,
       href: "/admin/blog",
     },
     {
-      label: "Campaigns sent",
+      label: "Изпратени кампании",
       value: stats.recentCampaigns.filter((c) => c.status === "sent").length,
-      sub: "recent",
+      sub: "скорошни",
       icon: Megaphone,
       href: "/admin/campaigns",
     },
@@ -34,74 +35,80 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">Dashboard</h1>
-      <p className="mt-1 text-sm text-ink-soft">
-        Overview of subscribers, content and campaigns.
-      </p>
+      <PageHeader
+        title="Табло"
+        description="Бърз преглед на абонати, съдържание и кампании."
+      />
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((c) => (
           <Link
             key={c.label}
             href={c.href}
-            className="group rounded-2xl border border-ink/10 bg-white p-6 transition-all hover:-translate-y-0.5 hover:shadow-soft"
+            className="group rounded-2xl border border-ink/10 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-forest-200 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35"
           >
             <div className="flex items-center justify-between">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-forest-50 text-forest-600">
-                <c.icon className="h-5 w-5" />
+                <c.icon className="h-5 w-5" aria-hidden />
               </span>
-              <ArrowUpRight className="h-4 w-4 text-ink-soft/40 transition-colors group-hover:text-coral-500" />
+              <ArrowUpRight
+                className="h-4 w-4 text-ink-soft/40 transition-colors group-hover:text-coral-500"
+                aria-hidden
+              />
             </div>
-            <p className="mt-4 font-display text-4xl font-semibold">{c.value}</p>
-            <p className="text-sm font-medium">{c.label}</p>
-            <p className="text-xs text-ink-soft/70">{c.sub}</p>
+            <p className="mt-4 font-display text-4xl font-semibold text-ink">{c.value}</p>
+            <p className="text-sm font-medium text-ink">{c.label}</p>
+            <p className="text-xs text-ink-soft">{c.sub}</p>
           </Link>
         ))}
       </div>
 
-      <div className="mt-10 rounded-2xl border border-ink/10 bg-white p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl font-semibold">Recent campaigns</h2>
+      <section className="mt-10">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="font-display text-xl font-semibold text-ink">Скорошни кампании</h2>
           <Link
             href="/admin/campaigns"
-            className="text-sm font-medium text-coral-600 hover:underline"
+            className="text-sm font-medium text-coral-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35"
           >
-            View all
+            Виж всички
           </Link>
         </div>
-        {stats.recentCampaigns.length === 0 ? (
-          <p className="mt-4 text-sm text-ink-soft">No campaigns yet.</p>
-        ) : (
-          <table className="mt-4 w-full text-sm">
-            <thead>
-              <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
-                <th className="pb-2">Subject</th>
-                <th className="pb-2">Segment</th>
-                <th className="pb-2">Recipients</th>
-                <th className="pb-2">Status</th>
-                <th className="pb-2">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.recentCampaigns.map((c) => (
-                <tr key={c.id} className="border-b border-ink/5 last:border-0">
-                  <td className="py-3 font-medium">{c.subject}</td>
-                  <td className="py-3 text-ink-soft">{c.segment_tag}</td>
-                  <td className="py-3 text-ink-soft">{c.recipients_count}</td>
-                  <td className="py-3">
-                    <span className="rounded-full bg-forest-50 px-2.5 py-1 text-xs text-forest-600">
-                      {c.status}
-                    </span>
-                  </td>
-                  <td className="py-3 text-ink-soft">
-                    {formatDate(c.created_at, "en")}
-                  </td>
+
+        <DataTable
+          empty={
+            stats.recentCampaigns.length === 0 ? (
+              <p>Все още няма кампании.</p>
+            ) : undefined
+          }
+        >
+          {stats.recentCampaigns.length > 0 && (
+            <table className="w-full min-w-[36rem] text-sm">
+              <thead>
+                <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft">
+                  <th className="p-4 font-semibold">Тема</th>
+                  <th className="p-4 font-semibold">Сегмент</th>
+                  <th className="p-4 font-semibold">Получатели</th>
+                  <th className="p-4 font-semibold">Статус</th>
+                  <th className="p-4 font-semibold">Дата</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {stats.recentCampaigns.map((c) => (
+                  <tr key={c.id} className="border-b border-ink/5 last:border-0">
+                    <td className="p-4 font-medium text-ink">{c.subject}</td>
+                    <td className="p-4 text-ink-soft">{c.segment_tag}</td>
+                    <td className="p-4 text-ink-soft">{c.recipients_count}</td>
+                    <td className="p-4">
+                      <Badge tone="success">{c.status}</Badge>
+                    </td>
+                    <td className="p-4 text-ink-soft">{formatDate(c.created_at, "bg")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </DataTable>
+      </section>
     </div>
   );
 }

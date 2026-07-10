@@ -4,6 +4,7 @@ import { getPosts } from "@/lib/admin/data";
 import { formatDate } from "@/lib/utils";
 import { DeletePostButton } from "@/components/admin/delete-post-button";
 import { PublishPostButton } from "@/components/admin/publish-post-button";
+import { AdminButton, PageHeader, Badge, DataTable } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -12,28 +13,21 @@ export default async function AdminBlogList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">Blog</h1>
-          <p className="mt-1 text-sm text-ink-soft">
-            {posts.length} post{posts.length === 1 ? "" : "s"} · BG &amp; EN
-          </p>
-        </div>
-        <Link
-          href="/admin/blog/new"
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-coral-500 px-5 font-semibold text-white hover:bg-coral-600"
-        >
-          <Plus className="h-4 w-4" /> New post
-        </Link>
-      </div>
+      <PageHeader
+        title="Блог"
+        description={`${posts.length} статии · BG & EN`}
+        actions={
+          <AdminButton href="/admin/blog/new">
+            <Plus className="h-4 w-4" aria-hidden /> Нова статия
+          </AdminButton>
+        }
+      />
 
-      <div className="mt-8 overflow-hidden rounded-2xl border border-ink/10 bg-white">
-        {posts.length === 0 ? (
-          <p className="p-8 text-center text-sm text-ink-soft">
-            No posts yet. Create your first article.
-          </p>
-        ) : (
-          <table className="w-full text-sm">
+      <DataTable
+        empty={posts.length === 0 ? <p>Все още няма статии. Създай първата.</p> : undefined}
+      >
+        {posts.length > 0 && (
+          <table className="w-full min-w-[40rem] text-sm">
             <thead>
               <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
                 <th className="p-4">Title</th>
@@ -51,29 +45,21 @@ export default async function AdminBlogList() {
                     <span className="block text-xs text-ink-soft/60">/{p.slug}</span>
                   </td>
                   <td className="p-4">
-                    <span className="rounded-full bg-forest-50 px-2 py-0.5 text-xs font-semibold uppercase text-forest-600">
-                      {p.locale}
-                    </span>
+                    <Badge tone="forest">{p.locale}</Badge>
                   </td>
                   <td className="p-4">
-                    <span
-                      className={
-                        p.status === "published"
-                          ? "rounded-full bg-forest-500/15 px-2.5 py-1 text-xs font-medium text-forest-600"
-                          : "rounded-full bg-gold-400/20 px-2.5 py-1 text-xs font-medium text-gold-500"
-                      }
-                    >
-                      {p.status}
-                    </span>
+                    <Badge tone={p.status === "published" ? "success" : "warning"}>
+                      {p.status === "published" ? "публикувана" : "чернова"}
+                    </Badge>
                   </td>
-                  <td className="p-4 text-ink-soft">{formatDate(p.updated_at, "en")}</td>
+                  <td className="p-4 text-ink-soft">{formatDate(p.updated_at, "bg")}</td>
                   <td className="p-4">
                     <div className="flex items-center justify-end gap-1">
                       {p.status !== "published" && <PublishPostButton id={p.id} />}
                       <Link
                         href={`/admin/blog/${p.id}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink"
-                        title="Edit"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35"
+                        aria-label={`Редактирай ${p.title}`}
                       >
                         <Pencil className="h-4 w-4" />
                       </Link>
@@ -85,7 +71,7 @@ export default async function AdminBlogList() {
             </tbody>
           </table>
         )}
-      </div>
+      </DataTable>
     </div>
   );
 }

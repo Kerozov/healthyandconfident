@@ -6,7 +6,7 @@ import type { EmailCampaign, Segment, SegmentGroup, SiteProduct, SmsCampaign } f
 import { CampaignComposer } from "@/components/admin/campaign-composer";
 import { CampaignsTable } from "@/components/admin/campaigns-table";
 import { SmsCampaignsTable } from "@/components/admin/sms-campaigns-table";
-import { cn } from "@/lib/utils";
+import { TabList } from "@/components/admin/ui";
 
 export function CampaignsWorkspace({
   emailCampaigns,
@@ -31,46 +31,39 @@ export function CampaignsWorkspace({
 
   return (
     <div>
-      <div className="mb-6 inline-flex rounded-full border border-ink/10 p-1">
-        <button
-          onClick={() => setTab("email")}
-          className={cn(
-            "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold",
-            tab === "email" ? "bg-forest-600 text-cream" : "text-ink-soft",
-          )}
-        >
-          <Mail className="h-4 w-4" />
-          Email
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
-            {emailCampaigns.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setTab("sms")}
-          className={cn(
-            "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold",
-            tab === "sms" ? "bg-forest-600 text-cream" : "text-ink-soft",
-          )}
-        >
-          <MessageSquare className="h-4 w-4" />
-          SMS
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
-            {smsCampaigns.length}
-          </span>
-        </button>
-      </div>
-
-      <CampaignComposer
-        segments={segments}
-        groups={groups}
-        products={products}
-        forms={forms}
-        subscriberTags={subscriberTags}
-        workerConfigured={workerConfigured}
-        tab={tab}
+      <TabList
+        aria-label="Тип кампания"
+        active={tab}
+        onChange={(id) => setTab(id as "email" | "sms")}
+        tabs={[
+          {
+            id: "email",
+            label: "Имейл",
+            icon: <Mail className="h-4 w-4" aria-hidden />,
+            count: emailCampaigns.length,
+          },
+          {
+            id: "sms",
+            label: "SMS",
+            icon: <MessageSquare className="h-4 w-4" aria-hidden />,
+            count: smsCampaigns.length,
+          },
+        ]}
       />
 
-      <div className="mt-8">
+      <div className="mt-6">
+        <CampaignComposer
+          segments={segments}
+          groups={groups}
+          products={products}
+          forms={forms}
+          subscriberTags={subscriberTags}
+          workerConfigured={workerConfigured}
+          tab={tab}
+        />
+      </div>
+
+      <div className="mt-8" role="tabpanel">
         {tab === "email" ? (
           <CampaignsTable campaigns={emailCampaigns} />
         ) : (
