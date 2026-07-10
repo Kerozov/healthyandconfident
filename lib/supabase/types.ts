@@ -281,7 +281,7 @@ export type SmsCampaign = {
   created_at: string;
 };
 
-export type SiteSectionKey = "events" | "products" | "videos";
+export type SiteSectionKey = "events" | "products" | "videos" | "guides";
 
 export type SiteSection = {
   key: SiteSectionKey;
@@ -342,6 +342,23 @@ export type SiteProduct = {
   audience_tags: string[];
   /** Tags applied to subscriber when this product is purchased */
   purchase_tags: string[];
+  enabled: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SiteGuide = {
+  id: string;
+  title_bg: string;
+  title_en: string;
+  description_bg: string;
+  description_en: string;
+  stripe_url: string;
+  stripe_price_id: string;
+  price_label_bg: string;
+  price_label_en: string;
+  image_url: string | null;
   enabled: boolean;
   sort_order: number;
   created_at: string;

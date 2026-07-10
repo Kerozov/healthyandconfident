@@ -158,6 +158,12 @@ export type Dictionary = {
     subtitle: string;
     cta: string;
   };
+  guides: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    cta: string;
+  };
   videos: {
     eyebrow: string;
     title: string;

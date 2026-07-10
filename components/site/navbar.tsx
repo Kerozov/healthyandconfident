@@ -13,6 +13,12 @@ import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
+const PRIMARY_NAV = new Set(["#about", "#programs", "#food", "#results", "#contact"]);
+
+function isExternal(href: string) {
+  return href.startsWith("/") && !href.startsWith(`#`);
+}
+
 export function Navbar({
   locale,
   items,
@@ -45,6 +51,7 @@ export function Navbar({
   const other: Locale = locale === "bg" ? "en" : "bg";
   const switchHref = pathname.replace(/^\/(bg|en)/, `/${other}`) || `/${other}`;
   const freeMenuLabel = locale === "bg" ? "Безплатно меню" : "Free menu";
+  const shortCta = locale === "bg" ? "Безплатен разговор" : "Free call";
 
   return (
     <>
@@ -54,7 +61,7 @@ export function Navbar({
           scrolled && "shadow-md",
         )}
       >
-        <Container className="flex h-14 items-center justify-between gap-4 sm:h-16">
+        <Container className="grid h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:h-16 lg:gap-3">
           <Link
             href={`/${locale}`}
             className="flex min-w-0 shrink-0 items-center gap-2 font-display tracking-tight"
@@ -66,37 +73,44 @@ export function Navbar({
               <span className="block truncate text-sm font-semibold text-slate-800 sm:text-base">
                 {siteConfig.brand}
               </span>
-              <span className="hidden text-[10px] font-medium uppercase tracking-wider text-ink-soft xl:block">
-                {siteConfig.tagline}
-              </span>
             </span>
           </Link>
 
-          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-3 lg:flex lg:gap-4">
-            {items.map((item) =>
-              item.href === "#free-menu" ? (
-                <OpenMenuNavAnchor
-                  key={item.href}
-                  locale={locale}
-                  label={item.label}
-                  className="whitespace-nowrap text-sm font-medium text-forest-600 transition-colors hover:text-forest-500"
-                />
-              ) : (
+          <nav className="hidden min-w-0 items-center justify-center gap-2 overflow-hidden lg:flex xl:gap-3">
+            {items.map((item) => {
+              const compactOnly = !PRIMARY_NAV.has(item.href) && !isExternal(item.href);
+              const className = cn(
+                "whitespace-nowrap text-xs font-medium text-slate-700 transition-colors hover:text-forest-500 xl:text-sm",
+                compactOnly && "hidden xl:inline",
+              );
+
+              if (item.href === "#free-menu") {
+                return (
+                  <OpenMenuNavAnchor
+                    key={item.href}
+                    locale={locale}
+                    label={item.label}
+                    className={cn(className, "text-forest-600 hover:text-forest-500")}
+                  />
+                );
+              }
+
+              return (
                 <Link
                   key={item.href}
                   href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
-                  className="whitespace-nowrap text-sm font-medium text-slate-700 transition-colors hover:text-forest-500"
+                  className={className}
                 >
                   {item.label}
                 </Link>
-              ),
-            )}
+              );
+            })}
           </nav>
 
-          <div className="hidden shrink-0 items-center gap-2 sm:gap-2.5 lg:flex">
+          <div className="hidden shrink-0 items-center justify-end gap-1.5 sm:gap-2 lg:flex">
             <Link
               href={switchHref}
-              className="rounded-full border border-forest-200 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-700 transition-colors hover:border-forest-300 hover:bg-cream-2 sm:px-3 sm:py-1.5 sm:text-xs"
+              className="rounded-full border border-forest-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-700 transition-colors hover:border-forest-300 hover:bg-cream-2 sm:px-2.5 sm:text-[11px]"
             >
               {other}
             </Link>
@@ -104,7 +118,7 @@ export function Navbar({
               source="nav-header"
               size="sm"
               variant="outline"
-              className="hidden rounded-full lg:inline-flex"
+              className="hidden rounded-full px-3 text-xs xl:inline-flex"
             >
               {freeMenuLabel}
             </OpenMenuButton>
@@ -112,15 +126,16 @@ export function Navbar({
               href={`/${locale}#contact`}
               size="sm"
               variant="primary"
-              className="rounded-full"
+              className="rounded-full px-3 text-xs xl:px-5 xl:text-sm"
             >
-              {cta}
+              <span className="xl:hidden">{shortCta}</span>
+              <span className="hidden xl:inline">{cta}</span>
             </Button>
           </div>
 
           <button
             type="button"
-            className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-800 hover:bg-forest-50 lg:hidden"
+            className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center justify-self-end rounded-lg text-slate-800 hover:bg-forest-50 lg:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label="Menu"
             aria-expanded={open}
@@ -185,7 +200,6 @@ export function Navbar({
         )}
       </header>
 
-      {/* Offset for fixed header */}
       <div className="h-14 shrink-0 sm:h-16" aria-hidden />
     </>
   );

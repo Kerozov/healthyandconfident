@@ -1,21 +1,14 @@
 import type { ProgramLandingContent } from "../types";
+import {
+  PROGRAM_FOOD_IMAGES,
+  PROGRAM_FOOD_IMAGES_2,
+  PROGRAM_VESI_IMAGES,
+} from "../images";
 
 const whatsapp = "https://wa.me/447876565263";
 
-/** Stock food photos — replace with your own in /public/images/programs/ when ready. */
-const FOOD = [
-  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1488473401977-608c3dd55607?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1525351483853-660ab98bcc05?w=600&h=600&fit=crop",
-];
-
-const FOOD2 = [
-  "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1604908176997-12518829a1a8?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=600&fit=crop",
-];
+const FOOD = [...PROGRAM_FOOD_IMAGES];
+const FOOD2 = [...PROGRAM_FOOD_IMAGES_2];
 
 export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
   slug: "zhivey-bez-rezistentnost",
@@ -40,7 +33,7 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
     secondaryCta: "Виж какво включва",
     secondaryHref: "#includes",
     placementKey: "programs_1",
-    image: FOOD[0],
+    image: PROGRAM_VESI_IMAGES[2],
   },
   galleries: [
     { title: "Хранейки се", titleAccent: "така", images: FOOD },
@@ -65,6 +58,7 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
       "Това не е мечта, а реалността, която стотици жени постигнаха с „Живей без резистентност“.",
       "Това не е поредната диета. Това е цялостна трансформация, базирана на доказан в Англия метод с 94% успеваемост, адаптиран специално за теб. Метод, който съчетава новости в медицината с психология на успеха, за да получиш трайни резултати!",
     ],
+    image: PROGRAM_VESI_IMAGES[1],
   },
   audience: {
     eyebrow: "За кого е",
@@ -99,6 +93,18 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
         text: "и усещаш как това се отразява на апетита, съня и енергията ти.",
       },
     ],
+  },
+  promoStrip: {
+    title: "Доказан метод",
+    subtitle: "94% успеваемост",
+    stat: "Система, адаптирана за жени с инсулинова резистентност — с реална храна, без глад и без поредната диета.",
+    checklist: [
+      "Вкусни менюта и рецепти за цялото семейство",
+      "Седмична подкрепа и общност от мотивирани жени",
+      "Практични умения за цял живот — не временен режим",
+    ],
+    footer: "Твоята трансформация започва с едно решение.",
+    image: PROGRAM_FOOD_IMAGES[5],
   },
   outcomes: {
     eyebrow: "Нека ти разкажа…",

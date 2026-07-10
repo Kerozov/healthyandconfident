@@ -4,14 +4,16 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import { X, ArrowUpRight, Sparkles, Loader2 } from "lucide-react";
+import { ArrowUpRight, Sparkles, Loader2 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
+import { ModalCloseButton } from "@/components/site/modal-close-button";
 import { resolveOffer, resolveOfferHeadline, resolveOfferCta } from "@/lib/site/cta-placements";
 import { isProductPlacementKey } from "@/lib/site/product-placement";
 import {
@@ -112,11 +114,34 @@ export function OfferPopupProvider({
 
   const ctx = useMemo(() => ({ tryOpenPlacement }), [tryOpenPlacement]);
 
+  const dismiss = useCallback(
+    (andContinue = false) => {
+      const href = popup?.continueHref;
+      setPopup(null);
+      setCheckoutError(null);
+      if (andContinue && href) navigateTo(href, router);
+    },
+    [popup?.continueHref, router],
+  );
+
+  useEffect(() => {
+    if (!popup) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !pending) dismiss(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [popup, pending, dismiss]);
+
   function close(andContinue = false) {
-    const href = popup?.continueHref;
-    setPopup(null);
-    setCheckoutError(null);
-    if (andContinue && href) navigateTo(href, router);
+    dismiss(andContinue);
   }
 
   function checkoutProducts(productIds: string[], onFallback?: () => void) {
@@ -193,22 +218,22 @@ export function OfferPopupProvider({
       {children}
 
       {popup && offer && (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-forest-900/55 p-4 backdrop-blur-sm sm:items-center">
+        <div
+          className="fixed inset-0 z-[110] flex items-end justify-center bg-forest-900/55 p-4 backdrop-blur-sm sm:items-center"
+          onClick={() => !pending && dismiss(false)}
+        >
           <div
             className="animate-fade-up relative w-full max-w-lg overflow-hidden rounded-3xl bg-cream-50 shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="offer-popup-title"
+            onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => close(true)}
+            <ModalCloseButton
+              onClick={() => dismiss(false)}
               disabled={pending}
-              aria-label={locale === "bg" ? "Затвори" : "Close"}
-              className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-forest-800/5 text-forest-800 transition-colors hover:bg-forest-800/10 disabled:opacity-50"
-            >
-              <X className="h-5 w-5" />
-            </button>
+              label={locale === "bg" ? "Затвори" : "Close"}
+            />
 
             <div className="bg-slate-800 px-7 py-6 text-white">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-300">

@@ -25,6 +25,8 @@ import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { LeadForm } from "@/components/site/lead-form";
 import { ProgramCountdown } from "@/components/site/program-countdown";
+import { SiteImage } from "@/components/site/site-image";
+import { mediaAlt } from "@/lib/site/media-gallery";
 import { cn } from "@/lib/utils";
 
 const pillarIcons = [Flame, Heart, Zap];
@@ -56,21 +58,29 @@ function SectionTitle({
 
 function FoodGallery({
   gallery,
+  locale,
 }: {
   gallery: { title: string; titleAccent?: string; images: string[] };
+  locale: Locale;
 }) {
   return (
     <section className="bg-white py-16">
       <Container>
         <SectionTitle title={gallery.title} accent={gallery.titleAccent} />
-        <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {gallery.images.map((src, i) => (
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {gallery.images.map((src) => (
             <div
               key={src}
-              className="aspect-square overflow-hidden rounded-2xl bg-forest-100 shadow-md"
+              className="relative aspect-square overflow-hidden rounded-2xl bg-forest-100 shadow-md ring-1 ring-forest-100/80"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
+              <SiteImage
+                src={src}
+                alt={mediaAlt(src, locale) || gallery.title}
+                fill
+                sizes="(max-width: 768px) 50vw, 25vw"
+                className="object-cover"
+                imageClassName="object-cover"
+              />
             </div>
           ))}
         </div>
@@ -178,11 +188,14 @@ export function ProgramLanding({
 
             {hero.image && (
               <div className="overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <SiteImage
                   src={hero.image}
-                  alt=""
+                  alt={mediaAlt(hero.image, locale) || hero.title}
+                  width={640}
+                  height={640}
                   className="aspect-[4/3] w-full object-cover lg:aspect-square"
+                  imageClassName="object-cover"
+                  priority
                 />
               </div>
             )}
@@ -190,7 +203,9 @@ export function ProgramLanding({
         </Container>
       </section>
 
-      {content.galleries?.[0] && <FoodGallery gallery={content.galleries[0]} />}
+      {content.galleries?.[0] && (
+        <FoodGallery gallery={content.galleries[0]} locale={locale} />
+      )}
 
       {/* Pain */}
       {content.pain && (
@@ -214,15 +229,40 @@ export function ProgramLanding({
       {/* Vision */}
       {content.vision && (
         <section className="relative bg-white py-20">
-          <Container className="max-w-3xl text-center">
-            <h2 className="font-display text-3xl font-semibold text-forest-600 sm:text-4xl">
-              {content.vision.title}
-            </h2>
-            <div className="mt-8 space-y-5 text-lg leading-relaxed text-forest-800">
-              {content.vision.paragraphs.map((p) => (
-                <p key={p.slice(0, 40)}>{p}</p>
-              ))}
+          <Container
+            className={cn(
+              content.vision.image
+                ? "grid max-w-5xl items-center gap-12 lg:grid-cols-2"
+                : "max-w-3xl text-center",
+            )}
+          >
+            <div className={content.vision.image ? "" : "mx-auto"}>
+              <h2 className="font-display text-3xl font-semibold text-forest-600 sm:text-4xl">
+                {content.vision.title}
+              </h2>
+              <div
+                className={cn(
+                  "mt-8 space-y-5 text-lg leading-relaxed text-forest-800",
+                  !content.vision.image && "text-left",
+                )}
+              >
+                {content.vision.paragraphs.map((p) => (
+                  <p key={p.slice(0, 40)}>{p}</p>
+                ))}
+              </div>
             </div>
+            {content.vision.image && (
+              <div className="overflow-hidden rounded-3xl shadow-xl ring-1 ring-forest-100/80">
+                <SiteImage
+                  src={content.vision.image}
+                  alt={mediaAlt(content.vision.image, locale) || content.vision.title}
+                  width={640}
+                  height={480}
+                  className="aspect-[4/3] w-full object-cover"
+                  imageClassName="object-cover"
+                />
+              </div>
+            )}
           </Container>
         </section>
       )}
@@ -644,7 +684,9 @@ export function ProgramLanding({
         </section>
       )}
 
-      {content.galleries?.[1] && <FoodGallery gallery={content.galleries[1]} />}
+      {content.galleries?.[1] && (
+        <FoodGallery gallery={content.galleries[1]} locale={locale} />
+      )}
 
       {/* Curriculum */}
       {content.curriculum && (

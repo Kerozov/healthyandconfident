@@ -8,10 +8,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { X, Gift } from "lucide-react";
+import { Gift } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import { SubscribeForm } from "@/components/site/subscribe-form";
 import { useOfferPopup } from "@/components/site/offer-popup";
+import { ModalCloseButton } from "@/components/site/modal-close-button";
 
 export type MenuPopupCopy = {
   title: string;
@@ -114,14 +115,10 @@ export function MenuPopupProvider({
             className="animate-fade-up relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-cream-50 shadow-2xl sm:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
+            <ModalCloseButton
               onClick={() => close()}
-              aria-label={locale === "bg" ? "Затвори" : "Close"}
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-forest-800/5 text-forest-800 transition-colors hover:bg-forest-800/10 sm:right-4 sm:top-4"
-            >
-              <X className="h-5 w-5" />
-            </button>
+              label={locale === "bg" ? "Затвори" : "Close"}
+            />
 
             <div className="bg-slate-800 px-5 py-5 text-white sm:px-7 sm:py-6">
               <span className="eyebrow text-gold-400">
@@ -139,9 +136,9 @@ export function MenuPopupProvider({
 
             <div className="px-5 py-5 sm:px-7 sm:py-6">
               {done ? (
-                <p className="py-6 text-center font-display text-xl text-forest-600">
-                  {copy.success}
-                </p>
+                <div className="relative py-6 text-center">
+                  <p className="font-display text-xl text-forest-600">{copy.success}</p>
+                </div>
               ) : (
                 <SubscribeForm
                   locale={locale}

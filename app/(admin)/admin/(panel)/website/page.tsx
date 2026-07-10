@@ -23,6 +23,7 @@ export default async function AdminWebsitePage() {
           sections={content.sections}
           events={content.events}
           products={content.products}
+          guides={content.guides}
           videos={content.videos}
           ctaPlacements={Object.values(content.ctaPlacements)}
           segments={segments}

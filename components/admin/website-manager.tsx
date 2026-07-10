@@ -18,6 +18,7 @@ import type {
   SiteCtaPlacement,
   SiteEvent,
   SiteProduct,
+  SiteGuide,
   SiteSection,
   SiteVideo,
 } from "@/lib/supabase/types";
@@ -34,6 +35,7 @@ import {
   saveSiteProduct,
   deleteSiteProduct,
 } from "@/app/(admin)/admin/actions";
+import { GuidesManagerPanel } from "@/components/admin/guides-manager";
 import { ProductAdminGrid } from "@/components/admin/product-admin-grid";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
@@ -164,6 +166,7 @@ export function WebsiteManager({
   sections,
   events,
   products,
+  guides,
   videos,
   ctaPlacements,
   segments,
@@ -174,6 +177,7 @@ export function WebsiteManager({
   sections: Record<string, SiteSection>;
   events: SiteEvent[];
   products: SiteProduct[];
+  guides: SiteGuide[];
   videos: SiteVideo[];
   ctaPlacements: SiteCtaPlacement[];
   segments: Segment[];
@@ -574,6 +578,13 @@ export function WebsiteManager({
             />
           </div>
         </Card>
+      )}
+
+      {tab === "guides" && (
+        <GuidesManagerPanel
+          guides={guides}
+          section={sections.guides ?? DEFAULT_SITE_SECTIONS.guides}
+        />
       )}
 
       {tab === "events" && (

@@ -370,6 +370,12 @@ export const en: Dictionary = {
     subtitle: "Choose a product and pay securely via Stripe.",
     cta: "Buy now",
   },
+  guides: {
+    eyebrow: "Guides",
+    title: "Guides & handbooks",
+    subtitle: "Practical PDF guides for meals, side dishes and healthy living.",
+    cta: "Get the guide",
+  },
   videos: {
     eyebrow: "Videos",
     title: "Inspiring stories",

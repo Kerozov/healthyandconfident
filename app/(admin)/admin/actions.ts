@@ -2204,6 +2204,83 @@ export async function deleteSiteVideo(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+export async function saveSiteGuide(input: {
+  id?: string;
+  title_bg: string;
+  title_en: string;
+  description_bg?: string;
+  description_en?: string;
+  stripe_url: string;
+  stripe_price_id?: string;
+  price_label_bg?: string;
+  price_label_en?: string;
+  image_url?: string;
+  enabled?: boolean;
+  sort_order?: number;
+}): Promise<ActionResult & { id?: string }> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const titleBg = input.title_bg.trim();
+  const titleEn = input.title_en.trim() || titleBg;
+  if (!titleBg) {
+    return { ok: false, message: "Попълни име на ръководството (BG)." };
+  }
+  if (!input.stripe_url?.trim()) {
+    return { ok: false, message: "Попълни Stripe линк." };
+  }
+
+  const row = {
+    title_bg: titleBg,
+    title_en: titleEn,
+    description_bg: input.description_bg?.trim() ?? "",
+    description_en: input.description_en?.trim() ?? "",
+    stripe_url: input.stripe_url.trim(),
+    stripe_price_id: input.stripe_price_id?.trim() ?? "",
+    price_label_bg: input.price_label_bg?.trim() ?? "",
+    price_label_en: input.price_label_en?.trim() ?? "",
+    image_url: input.image_url?.trim() || null,
+    enabled: input.enabled ?? true,
+    sort_order: input.sort_order ?? 0,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { error } = await supabase.from("site_guides").update(row).eq("id", input.id);
+    if (error) return { ok: false, message: error.message };
+    revalidateSitePaths();
+    return { ok: true, id: input.id };
+  }
+
+  const { data, error } = await supabase.from("site_guides").insert(row).select("id").single();
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function deleteSiteGuide(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase.from("site_guides").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true };
+}
+
+export async function reorderSiteGuides(ids: string[]): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  await Promise.all(
+    ids.map((id, index) =>
+      supabase
+        .from("site_guides")
+        .update({ sort_order: (index + 1) * 10, updated_at: new Date().toISOString() })
+        .eq("id", id),
+    ),
+  );
+  revalidateSitePaths();
+  return { ok: true };
+}
+
 export async function saveSiteProduct(input: {
   id?: string;
   title_bg: string;

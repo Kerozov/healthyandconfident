@@ -19,6 +19,7 @@ import { GoogleReviews } from "@/components/site/sections/google-reviews";
 import { Challenge21Section } from "@/components/site/sections/challenge-21";
 import { VideosSection } from "@/components/site/sections/videos";
 import { EventsSection } from "@/components/site/sections/events";
+import { GuidesSection } from "@/components/site/sections/guides";
 import { ShopSection } from "@/components/site/sections/shop";
 import { FreeMenuBanner } from "@/components/site/sections/free-menu-banner";
 import { Faq } from "@/components/site/sections/faq";
@@ -36,6 +37,7 @@ export default async function HomePage({
   const [dict, site] = await Promise.all([getDictionary(l), getPublicSiteContent()]);
   const eventsSection = site.sections.events;
   const productsSection = site.sections.products;
+  const guidesSection = site.sections.guides;
   const videosSection = site.sections.videos;
 
   return (
@@ -78,6 +80,14 @@ export default async function HomePage({
           locale={l}
           section={productsSection}
           products={site.products}
+        />
+      )}
+      {guidesSection && site.guides.length > 0 && (
+        <GuidesSection
+          dict={dict}
+          locale={l}
+          section={guidesSection}
+          guides={site.guides}
         />
       )}
       <FreeMenuBanner dict={dict} locale={l} />

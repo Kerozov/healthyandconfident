@@ -1,9 +1,10 @@
-import type { SiteEvent, SiteProduct, SiteSection, SiteSectionKey, SiteCtaPlacement, Segment, SiteVideo } from "@/lib/supabase/types";
+import type { SiteEvent, SiteProduct, SiteSection, SiteSectionKey, SiteCtaPlacement, Segment, SiteVideo, SiteGuide } from "@/lib/supabase/types";
 
 export type SiteContent = {
   sections: Record<string, SiteSection>;
   events: SiteEvent[];
   products: SiteProduct[];
+  guides: SiteGuide[];
   videos: SiteVideo[];
   offersById: Record<string, SiteProduct>;
   ctaPlacements: Record<string, SiteCtaPlacement>;
@@ -32,6 +33,13 @@ export const DEFAULT_SITE_SECTIONS: Record<SiteSectionKey, SiteSection> = {
     enabled: false,
     title_bg: "Вдъхновяващи истории",
     title_en: "Inspiring stories",
+    updated_at: new Date().toISOString(),
+  },
+  guides: {
+    key: "guides",
+    enabled: false,
+    title_bg: "Ръководства",
+    title_en: "Guides",
     updated_at: new Date().toISOString(),
   },
 };

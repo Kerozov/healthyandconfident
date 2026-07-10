@@ -27,6 +27,13 @@ export const garnituriBg: ProgramLandingContent = {
     placementKey: "programs_0",
     image: "/images/garnituri-cover.png",
   },
+  galleries: [
+    {
+      title: "Вкусни гарнитури",
+      titleAccent: "без вина",
+      images: ["/images/11.jpg", "/images/12.jpg", "/images/13.jpg", "/images/14.jpg", "/images/15.jpg", "/images/16.jpg"],
+    },
+  ],
   pain: {
     title: "Омръзна ли ти да ядеш само салата?",
     paragraphs: [
@@ -43,6 +50,7 @@ export const garnituriBg: ProgramLandingContent = {
       "Идеи, с които чинията изглежда пълна и удовлетворяваща, без да те товари с излишни въглехидрати.",
       "Практичен формат на достъпна цена — вземи, готви и усети разликата още тази седмица.",
     ],
+    image: "/images/2.jpg",
   },
   outcomes: {
     title: "За кого е",

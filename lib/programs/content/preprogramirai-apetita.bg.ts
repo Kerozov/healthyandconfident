@@ -1,4 +1,5 @@
 import type { ProgramLandingContent } from "../types";
+import { PROGRAM_FOOD_IMAGES, PROGRAM_VESI_IMAGES } from "../images";
 
 const whatsapp = "https://wa.me/447876565263";
 /** Замени с реалните Stripe линкове от PDF, когато ги имаш */
@@ -6,12 +7,7 @@ const checkout38 = whatsapp;
 const checkout12m = whatsapp;
 const checkout3m = whatsapp;
 
-const FOOD = [
-  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1488473401977-608c3dd55607?w=600&h=600&fit=crop",
-  "https://images.unsplash.com/photo-1525351483853-660ab98bcc05?w=600&h=600&fit=crop",
-];
+const FOOD = [...PROGRAM_FOOD_IMAGES];
 
 export const preprogramiraiApetitaBg: ProgramLandingContent = {
   slug: "preprogramirai-apetita",
@@ -33,9 +29,12 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
     secondaryCta: "Какво включва клубът",
     secondaryHref: "#includes",
     placementKey: "programs_2",
-    image: FOOD[0],
+    image: PROGRAM_VESI_IMAGES[3],
   },
-  galleries: [{ title: "Препрограмирай апетита", titleAccent: "с вкусна храна", images: FOOD }],
+  galleries: [
+    { title: "Препрограмирай апетита", titleAccent: "с вкусна храна", images: FOOD },
+    { title: "Реална храна", titleAccent: "от програмата", images: [...PROGRAM_FOOD_IMAGES].reverse() },
+  ],
   audience: {
     title: "„Препрограмирай апетита“ е за теб, ако…",
     items: [
@@ -68,8 +67,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
       "повече увереност и лекота",
       "повече време за релакс",
     ],
-    image:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&h=600&fit=crop",
+    image: "/images/3.jpg",
   },
   testimonials: [
     {
@@ -106,22 +104,19 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         title: "#1 Модул „ЧАО стрес и емоц.хранене“",
         value: "На стойност: €200",
         text: "Ще се почувстваш СПОКОЙНА, силна и уверена. ТИ ще си в КОНТРОЛ",
-        image:
-          "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600&h=400&fit=crop",
+        image: "/images/6.jpg",
       },
       {
         title: "#2 Идеи за хранене",
         value: "На стойност: €50",
         text: "Вече знаеш какво да хапваш за плосък корем, без да ровиш из интернет — закуска, обяд и вечеря. Вкл. безмлечни рецепти за щит.жлеза",
-        image:
-          "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&h=400&fit=crop",
+        image: "/images/7.jpg",
       },
       {
         title: "#3 Специални медитации",
         value: "На стойност: €100",
         text: "Успокояваш се и променяш мисленето си за успех и увереност, докато си почиваш",
-        image:
-          "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&h=400&fit=crop",
+        image: "/images/8.jpg",
       },
     ],
     bonusesTitle: "Плюс допълнителни бонуси",
@@ -130,22 +125,19 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         title: "Бонус #1",
         value: "на стойност €80",
         text: "1 месечна среща на клуба с Веси Ней. Огромна доза мотивация. Тема на месеца. Отговори на ваши въпроси",
-        image:
-          "https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?w=600&h=400&fit=crop",
+        image: "/images/4.jpg",
       },
       {
         title: "Бонус #2",
         value: "на стойност €70",
         text: "Месечна „кутия“ с изненади. Специални ръководства — напр. полезни гарнитури, протеини, идеи за заети хора",
-        image:
-          "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=600&h=400&fit=crop",
+        image: "/images/11.jpg",
       },
       {
         title: "Бонус #3",
         value: "на стойност €30",
         text: "Видеа за движение. Удобно от комфорта на дома ти — дори не е нужно да се преобличаш или да излизаш",
-        image:
-          "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=400&fit=crop",
+        image: "/images/9.jpg",
       },
     ],
     totalValue: "Обща стойност = €530",
@@ -161,8 +153,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
           "често води до „невидими“ +500–1 000 kcal на ден от похапване (от стрес/притеснения)",
           "без пускане на стреса всяка диета е като война срещу тялото и е временна",
         ],
-        image:
-          "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=500&fit=crop",
+        image: "/images/2.jpg",
       },
       {
         title: "✨ Как 7–10 минути на ден променят всичко",
@@ -172,8 +163,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
           "7–10 мин на ден → за 2–3 седмици води до по-стабилен апетит и усещане за контрол, нова увереност → води до сваляне на тегло",
           "спокойното тяло и ум, и препрограмиран апетит: отслабването става естествен резултат, не от „диети“, а от грижа И за емоциите ни",
         ],
-        image:
-          "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&h=500&fit=crop",
+        image: "/images/10.jpg",
       },
     ],
   },
@@ -221,10 +211,8 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
       "Сашо вече има настроение и си играе с децата",
       "Верчето просто сияе",
     ],
-    beforeImage:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&h=600&fit=crop",
-    afterImage:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&h=600&fit=crop",
+    beforeImage: "/images/14.jpg",
+    afterImage: "/images/15.jpg",
     audienceTitle: "За кого е:",
     audienceBullets: [
       "За заети жени, които искат",

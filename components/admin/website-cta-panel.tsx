@@ -241,6 +241,7 @@ export function WebsiteTabs({
 }) {
   const tabs = [
     { id: "products", label: "Продукти" },
+    { id: "guides", label: "Ръководства" },
     { id: "events", label: "Събития" },
     { id: "videos", label: "Видеа" },
     { id: "buttons", label: "Popup upsell" },

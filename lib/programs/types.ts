@@ -30,7 +30,7 @@ export type ProgramLandingContent = {
   };
   galleries?: { title: string; titleAccent?: string; images: string[] }[];
   pain?: { title: string; paragraphs: string[]; hook: string };
-  vision?: { title: string; paragraphs: string[] };
+  vision?: { title: string; paragraphs: string[]; image?: string };
   audience?: {
     eyebrow?: string;
     title: string;

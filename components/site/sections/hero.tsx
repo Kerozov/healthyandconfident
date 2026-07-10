@@ -2,8 +2,9 @@ import { Check } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { OpenMenuButton } from "@/components/site/open-menu-button";
+import { SectionLink } from "@/components/site/section-link";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaAlt } from "@/lib/site/media-gallery";
 import { cn } from "@/lib/utils";
@@ -54,14 +55,16 @@ export function Hero({
           </ul>
 
           <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
-            <Button
-              href={`/${locale}#programs`}
-              variant="primary"
-              size="lg"
-              className="w-full rounded-full sm:w-auto"
+            <SectionLink
+              href="#programs"
+              locale={locale}
+              className={cn(
+                buttonVariants({ variant: "primary", size: "lg" }),
+                "w-full rounded-full sm:w-auto",
+              )}
             >
               {hero.primaryCta}
-            </Button>
+            </SectionLink>
             <OpenMenuButton
               source="hero"
               variant="outline"
