@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { getFormTemplateBySlug } from "@/lib/admin/forms-data";
 import { verifyFormInviteToken } from "@/lib/forms/form-invite-token";
+import { resolveTagsOnSubmit } from "@/lib/forms/tags-on-submit";
+import {
+  mergeAnswerTagsIntoSubscriber,
+  tagsFromMappedAnswers,
+} from "@/lib/forms/answer-tags";
 import type { FormField } from "@/lib/forms/types";
 
 function extractEmail(
@@ -47,6 +52,7 @@ export async function POST(
 
   const answers = body.answers ?? {};
   const fields = form.fields ?? [];
+  const locale = body.locale === "en" ? "en" : "bg";
 
   for (const field of fields) {
     if (!field.required || field.type === "heading") continue;
@@ -114,8 +120,11 @@ export async function POST(
       .eq("id", invitationId);
   }
 
-  const tag = form.settings?.tag_on_submit?.trim();
-  if (tag && email) {
+  const fixedTags = resolveTagsOnSubmit(form.settings);
+  const answerTags = tagsFromMappedAnswers(fields, answers);
+  const hasTagWork = fixedTags.length > 0 || answerTags.length > 0;
+
+  if (email && hasTagWork) {
     const { data: subRow } = await supabase
       .from("subscribers")
       .select("id, tags")
@@ -123,11 +132,40 @@ export async function POST(
       .maybeSingle();
 
     const sub = subRow as { id: string; tags: string[] } | null;
-    if (sub && !sub.tags.includes(tag)) {
+    const nextTags = mergeAnswerTagsIntoSubscriber(
+      sub?.tags ?? [],
+      answerTags,
+      fixedTags,
+    );
+
+    if (sub) {
       await supabase
         .from("subscribers")
-        .update({ tags: [...sub.tags, tag], updated_at: new Date().toISOString() })
+        .update({ tags: nextTags, updated_at: new Date().toISOString() })
         .eq("id", sub.id);
+    } else {
+      const { data: inserted } = await supabase
+        .from("subscribers")
+        .insert({
+          email,
+          locale,
+          source: `form:${slug}`,
+          tags: nextTags,
+          status: "subscribed",
+          consent: true,
+        })
+        .select("id")
+        .single();
+
+      const newId = (inserted as { id: string } | null)?.id;
+      if (newId) {
+        await supabase
+          .from("form_submissions")
+          .update({ subscriber_id: newId })
+          .eq("form_id", form.id)
+          .eq("email", email)
+          .is("subscriber_id", null);
+      }
     }
   }
 

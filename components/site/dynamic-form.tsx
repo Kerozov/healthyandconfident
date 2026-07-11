@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { FormField, FormSettings, FormTheme } from "@/lib/forms/types";
+import { normalizeFormFields } from "@/lib/forms/answer-tags";
 import { cn } from "@/lib/utils";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 const inputClass =
   "w-full rounded-xl border border-forest-100 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20";
@@ -57,6 +58,7 @@ export function DynamicForm({
   const theme = settings.theme ?? "default";
   const thankYou =
     locale === "en" ? settings.thank_you_en : settings.thank_you_bg;
+  const renderFields = useMemo(() => normalizeFormFields(fields), [fields]);
 
   function setValue(id: string, value: string | string[] | boolean) {
     setValues((prev) => ({ ...prev, [id]: value }));
@@ -128,7 +130,7 @@ export function DynamicForm({
         </header>
 
         <form onSubmit={submit} className="space-y-6">
-          {fields.map((field) => {
+          {renderFields.map((field) => {
             if (field.type === "heading") {
               return (
                 <div key={field.id} className="border-b border-ink/10 pb-2 pt-2">
@@ -165,6 +167,9 @@ export function DynamicForm({
                     {label(field)}
                     {field.required && <span className="text-coral-500"> *</span>}
                   </legend>
+                  {help(field) && (
+                    <p className="mb-3 text-xs text-ink-soft">{help(field)}</p>
+                  )}
                   <div className="space-y-2">
                     {field.options.map((opt) => (
                       <label

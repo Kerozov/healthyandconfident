@@ -19,7 +19,7 @@ const COPY = {
     facebook: "Facebook профил (име или линк)",
     facebookPh: "Име във Facebook или линк",
     healthTitle: "Какво те вълнува?",
-    healthHint: "Избери едно или повече — така получаваш подходящо съдържание.",
+    healthHint: "Избери — слагаме те в съответния сегмент.",
     ir: "Инсулинова резистентност",
     diabetes: "Диабет тип 2",
     general: "Нямам тези проблеми — общо отслабване / енергия",
@@ -34,7 +34,7 @@ const COPY = {
     facebook: "Facebook profile (name or link)",
     facebookPh: "Facebook name or link",
     healthTitle: "What are you interested in?",
-    healthHint: "Pick one or more — we'll send relevant content.",
+    healthHint: "Choose one — we'll put you in the matching segment.",
     ir: "Insulin resistance",
     diabetes: "Type 2 Diabetes",
     general: "None of these — general weight loss / energy",
@@ -96,19 +96,10 @@ export function SubscribeForm({
   );
 
   function toggleHealth(key: keyof HealthSelection) {
-    setHealth((prev) => {
-      if (key === "general") {
-        return {
-          insulinResistance: false,
-          diabetes: false,
-          general: !prev.general,
-        };
-      }
-      return {
-        ...prev,
-        general: false,
-        [key]: !prev[key],
-      };
+    setHealth({
+      insulinResistance: key === "insulinResistance",
+      diabetes: key === "diabetes",
+      general: key === "general",
     });
   }
 
@@ -289,10 +280,11 @@ export function SubscribeForm({
               )}
             >
               <input
-                type="checkbox"
+                type="radio"
+                name="health-interest"
                 checked={health[key]}
                 onChange={() => toggleHealth(key)}
-                className="mt-0.5 h-4 w-4 rounded border-forest-300 text-forest-500 focus:ring-forest-300"
+                className="mt-0.5 h-4 w-4 border-forest-300 text-forest-500 focus:ring-forest-300"
               />
               <span>{label}</span>
             </label>

@@ -26,7 +26,7 @@ export const FORM_PRESETS: FormPreset[] = [
       theme: "default",
       thank_you_bg: "Благодарим! Отговорите са записани. Ще се свържем с теб скоро.",
       thank_you_en: "Thank you! Your answers have been saved. We will be in touch soon.",
-      tag_on_submit: "questionnaire-done",
+      tags_on_submit: ["questionnaire-done"],
     },
     fields: [
       {
@@ -55,6 +55,35 @@ export const FORM_PRESETS: FormPreset[] = [
         label_bg: "Възраст",
         label_en: "Age",
         required: true,
+      },
+      {
+        id: fid("interest"),
+        type: "radio",
+        label_bg: "Какво те вълнува?",
+        label_en: "What are you interested in?",
+        help_bg: "Избери — слагаме те в съответния сегмент.",
+        help_en: "Choose one — we'll put you in the matching segment.",
+        required: true,
+        options: [
+          {
+            value: "insulin-resistance",
+            label_bg: "Инсулинова резистентност",
+            label_en: "Insulin resistance",
+            segment_key: "insulin-resistance",
+          },
+          {
+            value: "diabetes",
+            label_bg: "Диабет тип 2",
+            label_en: "Type 2 Diabetes",
+            segment_key: "diabetes",
+          },
+          {
+            value: "weight-loss",
+            label_bg: "Нямам тези проблеми — общо отслабване / енергия",
+            label_en: "None of these — general weight loss / energy",
+            segment_key: "weight-loss",
+          },
+        ],
       },
       {
         id: fid("goal"),
@@ -153,7 +182,7 @@ export const FORM_PRESETS: FormPreset[] = [
       theme: "minimal",
       thank_you_bg: "Записана си! Очаквай имейл с детайли.",
       thank_you_en: "You are registered! Expect an email with details.",
-      tag_on_submit: "event-registered",
+      tags_on_submit: ["event-registered"],
     },
     fields: [
       {

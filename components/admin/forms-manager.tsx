@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -28,8 +28,18 @@ import {
   getFormSubmissionsReport,
 } from "@/app/(admin)/admin/actions";
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
+import { FormOptionSegmentEditor } from "@/components/admin/form-option-segment-editor";
+import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { DynamicForm } from "@/components/site/dynamic-form";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { normalizeFormFields } from "@/lib/forms/answer-tags";
+import {
+  deleteCustomFieldDefault,
+  listFieldDefaults,
+  saveFieldAsDefault,
+  type FormFieldDefault,
+} from "@/lib/forms/field-defaults";
+import { resolveTagsOnSubmit } from "@/lib/forms/tags-on-submit";
 import { siteConfig } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
@@ -63,8 +73,18 @@ function emptyField(type: FormFieldType): FormField {
     ...(type === "select" || type === "radio" || type === "checkbox"
       ? {
           options: [
-            { value: "a", label_bg: "Опция 1", label_en: "Option 1" },
-            { value: "b", label_bg: "Опция 2", label_en: "Option 2" },
+            {
+              value: "a",
+              label_bg: "Опция 1",
+              label_en: "Option 1",
+              segment_key: null,
+            },
+            {
+              value: "b",
+              label_bg: "Опция 2",
+              label_en: "Option 2",
+              segment_key: null,
+            },
           ],
         }
       : {}),
@@ -95,6 +115,11 @@ export function FormsManager({
   >(null);
   const [sendAudience, setSendAudience] = useState({ ...EMPTY_AUDIENCE });
   const [sendNote, setSendNote] = useState<string | null>(null);
+  const [fieldDefaults, setFieldDefaults] = useState<FormFieldDefault[]>([]);
+
+  useEffect(() => {
+    setFieldDefaults(listFieldDefaults());
+  }, []);
 
   const [form, setForm] = useState({
     id: "" as string | undefined,
@@ -109,7 +134,7 @@ export function FormsManager({
       theme: "default" as FormTheme,
       thank_you_bg: "Благодарим!",
       thank_you_en: "Thank you!",
-      tag_on_submit: "",
+      tags_on_submit: [] as string[],
     } as FormSettings,
     email_subject_bg: "",
     email_subject_en: "",
@@ -138,7 +163,10 @@ export function FormsManager({
         description_bg: preset.description_bg,
         description_en: preset.description_en,
         fields: preset.fields,
-        settings: preset.settings,
+        settings: {
+          ...preset.settings,
+          tags_on_submit: resolveTagsOnSubmit(preset.settings),
+        },
         email_subject_bg: preset.email_subject_bg,
         email_subject_en: preset.email_subject_en,
         email_intro_bg: preset.email_intro_bg,
@@ -160,11 +188,12 @@ export function FormsManager({
       title_en: row.title_en,
       description_bg: row.description_bg,
       description_en: row.description_en,
-      fields: row.fields ?? [],
-      settings: row.settings ?? {
-        theme: "default",
-        thank_you_bg: "",
-        thank_you_en: "",
+      fields: normalizeFormFields(row.fields ?? []),
+      settings: {
+        theme: (row.settings?.theme as FormTheme) ?? "default",
+        thank_you_bg: row.settings?.thank_you_bg ?? "",
+        thank_you_en: row.settings?.thank_you_en ?? "",
+        tags_on_submit: resolveTagsOnSubmit(row.settings),
       },
       email_subject_bg: row.email_subject_bg,
       email_subject_en: row.email_subject_en,
@@ -344,18 +373,31 @@ export function FormsManager({
                   <option value="minimal">Минимална</option>
                 </Select>
               </Field>
-              <Field label="Тag при submit (по избор)">
-                <Input
-                  value={form.settings.tag_on_submit ?? ""}
-                  onChange={(e) =>
+              <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3 md:col-span-2">
+                <p className="text-sm font-semibold text-forest-800">
+                  Фиксирани сегменти след попълване
+                </p>
+                <p className="text-xs text-ink-soft">
+                  Слагат се винаги. Отделно от това всеки отговор в Полета може да води
+                  към свой сегмент.
+                </p>
+                <SegmentAssignChecklist
+                  segments={segments}
+                  groups={groups}
+                  selected={resolveTagsOnSubmit(form.settings)}
+                  onChange={(tags_on_submit) =>
                     setForm({
                       ...form,
-                      settings: { ...form.settings, tag_on_submit: e.target.value },
+                      settings: {
+                        ...form.settings,
+                        tags_on_submit,
+                        tag_on_submit: undefined,
+                      },
                     })
                   }
-                  placeholder="questionnaire-done"
+                  disabled={pending}
                 />
-              </Field>
+              </div>
               <Field label="Благодарност — BG">
                 <Input
                   value={form.settings.thank_you_bg}
@@ -383,6 +425,49 @@ export function FormsManager({
 
           {tab === "fields" && (
             <div className="space-y-4">
+              <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
+                <p className="text-sm font-semibold text-forest-800">Шаблони с отговор → сегмент</p>
+                <p className="text-xs text-ink-soft">
+                  Добави готов въпрос или запази текущо поле като шаблон за следващи форми.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {fieldDefaults.map((def) => (
+                    <div key={def.id} className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            fields: [
+                              ...form.fields,
+                              { ...def.field, id: newFieldId() } as FormField,
+                            ],
+                          })
+                        }
+                        className="rounded-full border border-forest-300 bg-white px-3 py-1 text-xs font-medium text-forest-800 hover:bg-forest-50"
+                        title={def.description}
+                      >
+                        + {def.name}
+                      </button>
+                      {!def.builtin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deleteCustomFieldDefault(def.id);
+                            setFieldDefaults(listFieldDefaults());
+                          }}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-coral-600 hover:bg-coral-50"
+                          aria-label="Изтрий шаблон"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-2">
                 {FIELD_TYPES.map((t) => (
                   <button
@@ -408,6 +493,26 @@ export function FormsManager({
                         {FIELD_TYPES.find((t) => t.value === field.type)?.label ?? field.type}
                       </span>
                       <div className="flex gap-1">
+                        {(field.type === "radio" ||
+                          field.type === "select" ||
+                          field.type === "checkbox") && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const name = window.prompt(
+                                "Име на шаблона",
+                                field.label_bg || "Мой въпрос",
+                              );
+                              if (!name?.trim()) return;
+                              saveFieldAsDefault({ name, field });
+                              setFieldDefaults(listFieldDefaults());
+                            }}
+                            className="mr-1 rounded-lg border border-ink/10 px-2 py-1 text-[10px] font-medium text-ink-soft hover:bg-ink/5"
+                            title="Запази като шаблон"
+                          >
+                            Запази шаблон
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => moveField(index, -1)}
@@ -459,23 +564,33 @@ export function FormsManager({
                       </Field>
                       {field.type !== "heading" && field.type !== "consent" && (
                         <>
-                          <Field label="Placeholder BG">
-                            <Input
-                              value={field.placeholder_bg ?? ""}
-                              onChange={(e) => {
-                                const fields = [...form.fields];
-                                fields[index] = { ...field, placeholder_bg: e.target.value };
-                                setForm({ ...form, fields });
-                              }}
-                            />
-                          </Field>
+                          {field.type !== "radio" &&
+                            field.type !== "select" &&
+                            field.type !== "checkbox" && (
+                              <Field label="Placeholder BG">
+                                <Input
+                                  value={field.placeholder_bg ?? ""}
+                                  onChange={(e) => {
+                                    const fields = [...form.fields];
+                                    fields[index] = {
+                                      ...field,
+                                      placeholder_bg: e.target.value,
+                                    };
+                                    setForm({ ...form, fields });
+                                  }}
+                                />
+                              </Field>
+                            )}
                           <label className="flex items-center gap-2 text-sm">
                             <input
                               type="checkbox"
                               checked={field.required ?? false}
                               onChange={(e) => {
                                 const fields = [...form.fields];
-                                fields[index] = { ...field, required: e.target.checked };
+                                fields[index] = {
+                                  ...field,
+                                  required: e.target.checked,
+                                };
                                 setForm({ ...form, fields });
                               }}
                             />
@@ -487,30 +602,17 @@ export function FormsManager({
                         field.type === "radio" ||
                         field.type === "checkbox") && (
                         <div className="md:col-span-2">
-                          <Field label="Опции (value | BG | EN, по ред)">
-                            <Textarea
-                              rows={3}
-                              value={(field.options ?? [])
-                                .map((o) => `${o.value}|${o.label_bg}|${o.label_en}`)
-                                .join("\n")}
-                              onChange={(e) => {
-                                const options = e.target.value
-                                  .split("\n")
-                                  .map((line) => line.trim())
-                                  .filter(Boolean)
-                                  .map((line) => {
-                                    const [value, label_bg, label_en] = line.split("|");
-                                    return {
-                                      value: value?.trim() || "x",
-                                      label_bg: label_bg?.trim() || value?.trim() || "",
-                                      label_en: label_en?.trim() || label_bg?.trim() || "",
-                                    };
-                                  });
+                          <Field label="Отговори → сегмент">
+                            <FormOptionSegmentEditor
+                              options={field.options ?? []}
+                              segments={segments}
+                              groups={groups}
+                              disabled={pending}
+                              onChange={(options) => {
                                 const fields = [...form.fields];
                                 fields[index] = { ...field, options };
                                 setForm({ ...form, fields });
                               }}
-                              placeholder="weight|Отслабване|Weight loss"
                             />
                           </Field>
                         </div>

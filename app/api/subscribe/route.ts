@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { runAutomations } from "@/lib/automation/send";
-import { fullNameFromParts } from "@/lib/site/health-tags";
+import {
+  ALL_HEALTH_TAG_KEYS,
+  fullNameFromParts,
+} from "@/lib/site/health-tags";
 import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
 import { schedulePrePaymentReminders } from "@/lib/contacts/reminders";
 import type { Locale } from "@/lib/supabase/types";
@@ -9,6 +12,20 @@ import type { Locale } from "@/lib/supabase/types";
 export const dynamic = "force-dynamic";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const HEALTH_TAG_SET = new Set<string>(ALL_HEALTH_TAG_KEYS);
+
+function mergeSubscriberTags(
+  existing: string[] | null | undefined,
+  incoming: string[],
+): string[] {
+  const incomingHealth = incoming.filter((t) => HEALTH_TAG_SET.has(t));
+  const incomingOther = incoming.filter((t) => !HEALTH_TAG_SET.has(t));
+  const kept = (existing ?? []).filter((t) => {
+    if (incomingHealth.length > 0 && HEALTH_TAG_SET.has(t)) return false;
+    return true;
+  });
+  return Array.from(new Set([...kept, ...incomingOther, ...incomingHealth]));
+}
 
 export async function POST(req: Request) {
   let body: {
@@ -75,9 +92,7 @@ export async function POST(req: Request) {
     };
 
     if (existing) {
-      finalTags = Array.from(
-        new Set([...((existing.tags as string[]) ?? []), ...incomingTags]),
-      );
+      finalTags = mergeSubscriberTags(existing.tags as string[] | null, incomingTags);
       await supabase
         .from("subscribers")
         .update({

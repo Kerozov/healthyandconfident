@@ -1,4 +1,5 @@
 import type { FormField } from "@/lib/forms/types";
+import { healthLabelForTag } from "@/lib/site/health-tags";
 
 function formatAnswerValue(
   value: unknown,
@@ -6,6 +7,10 @@ function formatAnswerValue(
 ): string {
   if (value === undefined || value === null || value === "") return "—";
   if (typeof value === "boolean") return value ? "Да" : "Не";
+
+  if (field?.type === "health_interest" && typeof value === "string") {
+    return healthLabelForTag(value, "bg");
+  }
 
   const optionLabel = (raw: string) => {
     const match = field?.options?.find((option) => option.value === raw);

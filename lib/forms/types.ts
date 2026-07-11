@@ -8,6 +8,8 @@ export type FormFieldType =
   | "select"
   | "radio"
   | "checkbox"
+  /** @deprecated Use radio with option.segment_key — still accepted & normalized */
+  | "health_interest"
   | "heading"
   | "consent";
 
@@ -15,6 +17,8 @@ export type FormFieldOption = {
   value: string;
   label_bg: string;
   label_en: string;
+  /** When this answer is chosen, add this segment tag to the subscriber */
+  segment_key?: string | null;
 };
 
 export type FormField = {
@@ -36,7 +40,10 @@ export type FormSettings = {
   theme: FormTheme;
   thank_you_bg: string;
   thank_you_en: string;
+  /** @deprecated Prefer tags_on_submit */
   tag_on_submit?: string;
+  /** Fixed segment keys applied to the subscriber after submit */
+  tags_on_submit?: string[];
 };
 
 export type FormTemplateRecord = {

@@ -143,7 +143,6 @@ export function MenuPopupProvider({
                 <SubscribeForm
                   locale={locale}
                   source={source}
-                  baseTags={["weight-loss"]}
                   consent={copy.consent}
                   success={copy.success}
                   buttonLabel={copy.button}
@@ -155,8 +154,7 @@ export function MenuPopupProvider({
                     tryOpenPlacement("leadmagnet_cta", "");
                     setTimeout(() => close(false), 2500);
                   }}
-                />
-              )}
+                />              )}
             </div>
           </div>
         </div>

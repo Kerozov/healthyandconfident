@@ -57,6 +57,56 @@ export function tagsFromHealthSelection(selection: HealthSelection): string[] {
   return tags;
 }
 
+export const HEALTH_SEGMENT_LABELS_EN: Record<
+  (typeof HEALTH_SEGMENT)[keyof typeof HEALTH_SEGMENT],
+  string
+> = {
+  [HEALTH_SEGMENT.insulinResistance]: "Insulin resistance",
+  [HEALTH_SEGMENT.diabetes]: "Type 2 Diabetes",
+  [HEALTH_SEGMENT.general]: "General weight loss / energy",
+};
+
+export const HEALTH_INTEREST_OPTIONS = [
+  {
+    key: "insulinResistance" as const,
+    tag: HEALTH_SEGMENT.insulinResistance,
+    label_bg: HEALTH_SEGMENT_LABELS_BG[HEALTH_SEGMENT.insulinResistance],
+    label_en: HEALTH_SEGMENT_LABELS_EN[HEALTH_SEGMENT.insulinResistance],
+  },
+  {
+    key: "diabetes" as const,
+    tag: HEALTH_SEGMENT.diabetes,
+    label_bg: HEALTH_SEGMENT_LABELS_BG[HEALTH_SEGMENT.diabetes],
+    label_en: HEALTH_SEGMENT_LABELS_EN[HEALTH_SEGMENT.diabetes],
+  },
+  {
+    key: "general" as const,
+    tag: HEALTH_SEGMENT.general,
+    label_bg: HEALTH_SEGMENT_LABELS_BG[HEALTH_SEGMENT.general],
+    label_en: HEALTH_SEGMENT_LABELS_EN[HEALTH_SEGMENT.general],
+  },
+];
+
+export function healthSelectionFromAnswerKey(key: string): HealthSelection | null {
+  if (key === HEALTH_SEGMENT.insulinResistance) {
+    return { insulinResistance: true, diabetes: false, general: false };
+  }
+  if (key === HEALTH_SEGMENT.diabetes) {
+    return { insulinResistance: false, diabetes: true, general: false };
+  }
+  if (key === HEALTH_SEGMENT.general) {
+    return { insulinResistance: false, diabetes: false, general: true };
+  }
+  return null;
+}
+
+export function healthLabelForTag(tag: string, locale: "bg" | "en" = "bg"): string {
+  if (!(ALL_HEALTH_TAG_KEYS as string[]).includes(tag)) return tag;
+  return locale === "en"
+    ? HEALTH_SEGMENT_LABELS_EN[tag as (typeof ALL_HEALTH_TAG_KEYS)[number]]
+    : HEALTH_SEGMENT_LABELS_BG[tag as (typeof ALL_HEALTH_TAG_KEYS)[number]];
+}
+
 export function fullNameFromParts(
   firstName: string,
   lastName: string,
