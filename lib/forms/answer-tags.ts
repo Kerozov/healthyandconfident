@@ -15,10 +15,10 @@ export function normalizeFormFields(fields: FormField[]): FormField[] {
       type: "radio",
       help_bg:
         field.help_bg ||
-        "Избери — слагаме те в съответния сегмент.",
+        "Избери едно — ще ти пратим най-подходящото съдържание.",
       help_en:
         field.help_en ||
-        "Choose one — we'll put you in the matching segment.",
+        "Choose one — we'll send the most relevant content.",
       options: HEALTH_INTEREST_OPTIONS.map((opt) => ({
         value: opt.tag,
         label_bg: opt.label_bg,

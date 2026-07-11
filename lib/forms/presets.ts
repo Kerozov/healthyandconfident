@@ -59,10 +59,10 @@ export const FORM_PRESETS: FormPreset[] = [
       {
         id: fid("interest"),
         type: "radio",
-        label_bg: "Какво те вълнува?",
-        label_en: "What are you interested in?",
-        help_bg: "Избери — слагаме те в съответния сегмент.",
-        help_en: "Choose one — we'll put you in the matching segment.",
+        label_bg: "С какво можем да ти помогнем?",
+        label_en: "How can we help you?",
+        help_bg: "Избери едно — ще ти пратим най-подходящото съдържание.",
+        help_en: "Choose one — we'll send the most relevant content.",
         required: true,
         options: [
           {
@@ -79,8 +79,8 @@ export const FORM_PRESETS: FormPreset[] = [
           },
           {
             value: "weight-loss",
-            label_bg: "Нямам тези проблеми — общо отслабване / енергия",
-            label_en: "None of these — general weight loss / energy",
+            label_bg: "Нямам тези проблеми — искам общо отслабване / повече енергия",
+            label_en: "None of these — general weight loss / more energy",
             segment_key: "weight-loss",
           },
         ],

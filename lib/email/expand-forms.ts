@@ -3,7 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { createFormInviteToken } from "@/lib/forms/form-invite-token";
-import { publicFormUrl } from "@/lib/forms/urls";
+import { publicFormInviteUrl } from "@/lib/forms/invite-url";
 import {
   expandEmailFormMarkers,
   extractFormIdsFromHtml,
@@ -45,7 +45,7 @@ export async function expandEmailForms(
     }
     hrefByFormId.set(
       form.id.toLowerCase(),
-      publicFormUrl(form.slug, locale, form.id, email, recipient.subscriberId),
+      publicFormInviteUrl(form.slug, locale, form.id, email, recipient.subscriberId),
     );
   }
 

@@ -36,7 +36,7 @@ import {
   parseSubscriberFile,
   type ImportSubscriberRow,
 } from "@/lib/admin/import-subscribers";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import {
   ALL_HEALTH_TAG_KEYS,
   applyHealthSelectionToTags,
@@ -673,25 +673,28 @@ export function SubscribersManager({
                       </td>
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-1">
-                          {(() => {
-                            const otherTags = s.tags.filter(
-                              (t) =>
-                                !ALL_HEALTH_TAG_KEYS.includes(
-                                  t as (typeof ALL_HEALTH_TAG_KEYS)[number],
-                                ),
-                            );
-                            if (otherTags.length === 0) {
-                              return <span className="text-ink-soft/50">—</span>;
-                            }
-                            return otherTags.map((t) => (
-                              <span
-                                key={t}
-                                className="rounded-full bg-forest-50 px-2 py-0.5 text-xs text-forest-600"
-                              >
-                                {segmentNameByKey(t)}
-                              </span>
-                            ));
-                          })()}
+                          {s.tags.length === 0 ? (
+                            <span className="text-ink-soft/50">—</span>
+                          ) : (
+                            s.tags.map((t) => {
+                              const isHealth = ALL_HEALTH_TAG_KEYS.includes(
+                                t as (typeof ALL_HEALTH_TAG_KEYS)[number],
+                              );
+                              return (
+                                <span
+                                  key={t}
+                                  className={cn(
+                                    "rounded-full px-2 py-0.5 text-xs",
+                                    isHealth
+                                      ? "bg-gold-400/20 text-amber-900"
+                                      : "bg-forest-50 text-forest-600",
+                                  )}
+                                >
+                                  {segmentNameByKey(t)}
+                                </span>
+                              );
+                            })
+                          )}
                         </div>
                       </td>
                       <td className="py-3 pr-4">

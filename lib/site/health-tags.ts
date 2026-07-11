@@ -11,7 +11,7 @@ export const HEALTH_SEGMENT_LABELS_BG: Record<
 > = {
   [HEALTH_SEGMENT.insulinResistance]: "Инсулинова резистентност",
   [HEALTH_SEGMENT.diabetes]: "Диабет тип 2",
-  [HEALTH_SEGMENT.general]: "Общо отслабване / енергия",
+  [HEALTH_SEGMENT.general]: "Общо отслабване / повече енергия",
 };
 
 export const ALL_HEALTH_TAG_KEYS = Object.values(HEALTH_SEGMENT);
@@ -53,7 +53,7 @@ export function tagsFromHealthSelection(selection: HealthSelection): string[] {
   const tags: string[] = [];
   if (selection.insulinResistance) tags.push(HEALTH_SEGMENT.insulinResistance);
   if (selection.diabetes) tags.push(HEALTH_SEGMENT.diabetes);
-  if (tags.length === 0) tags.push(HEALTH_SEGMENT.general);
+  // Never default to weight-loss — empty means no interest chosen.
   return tags;
 }
 
@@ -63,7 +63,7 @@ export const HEALTH_SEGMENT_LABELS_EN: Record<
 > = {
   [HEALTH_SEGMENT.insulinResistance]: "Insulin resistance",
   [HEALTH_SEGMENT.diabetes]: "Type 2 Diabetes",
-  [HEALTH_SEGMENT.general]: "General weight loss / energy",
+  [HEALTH_SEGMENT.general]: "General weight loss / more energy",
 };
 
 export const HEALTH_INTEREST_OPTIONS = [

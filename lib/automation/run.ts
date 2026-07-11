@@ -3,6 +3,8 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { subscriberMatchesAutomationAudience, automationMatchesPurchaseProducts } from "@/lib/automation/audience";
+import { expandAudienceKeys } from "@/lib/segments/hierarchy";
+import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
 import { buildBrandedEmail } from "@/lib/email/compose";
 import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
@@ -114,7 +116,41 @@ function segmentMatches(
   segments: Segment[],
   groups: SegmentGroup[],
 ): boolean {
-  return subscriberMatchesAutomationAudience(automation, tags, segments, groups);
+  if (!subscriberMatchesAutomationAudience(automation, tags, segments, groups)) {
+    return false;
+  }
+
+  // Interest exclusivity for free-menu style tags (diabetes / IR / weight-loss).
+  const subHealth = tags.filter((t) =>
+    (ALL_HEALTH_TAG_KEYS as string[]).includes(t),
+  );
+  if (subHealth.length === 0) return true;
+
+  const segmentKeys = automation.segment_keys?.filter(Boolean) ?? [];
+  const groupIds = automation.group_ids?.filter(Boolean) ?? [];
+  if (segmentKeys.length === 0 && groupIds.length === 0) {
+    // Empty audience = general welcome for everyone.
+    return true;
+  }
+
+  const expanded = expandAudienceKeys(segmentKeys, groupIds, groups, segments);
+  const audienceHealth = expanded.filter((t) =>
+    (ALL_HEALTH_TAG_KEYS as string[]).includes(t),
+  );
+  if (audienceHealth.length === 0) return true;
+
+  const directHealth = segmentKeys.filter((k) =>
+    (ALL_HEALTH_TAG_KEYS as string[]).includes(k),
+  );
+
+  // A parent group that contains ALL interests must not pull every interest drip.
+  // Only a direct segment_key (e.g. weight-loss) targets that interest.
+  if (audienceHealth.length > 1 && directHealth.length === 0) {
+    return false;
+  }
+
+  const required = directHealth.length > 0 ? directHealth : audienceHealth;
+  return required.some((t) => subHealth.includes(t));
 }
 
 function sendAtAfterDays(

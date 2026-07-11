@@ -52,7 +52,7 @@ import {
 import type { FormField, FormSettings } from "@/lib/forms/types";
 import { getFormPreset, FORM_PRESETS } from "@/lib/forms/presets";
 import { getFormSubmissions } from "@/lib/admin/forms-data";
-import { publicFormUrl } from "@/lib/forms/urls";
+import { publicFormInviteUrl } from "@/lib/forms/invite-url";
 import { createFormInviteToken } from "@/lib/forms/form-invite-token";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string; slug?: string };
@@ -2655,7 +2655,7 @@ export async function sendFormByEmail(input: {
       token,
     });
 
-    const formUrl = publicFormUrl(form.slug, locale, form.id, email, sub?.id);
+    const formUrl = publicFormInviteUrl(form.slug, locale, form.id, email, sub?.id);
     const subjectTpl =
       locale === "en" ? form.email_subject_en : form.email_subject_bg;
     const introTpl = locale === "en" ? form.email_intro_en : form.email_intro_bg;

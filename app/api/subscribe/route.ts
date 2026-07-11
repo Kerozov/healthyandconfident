@@ -1,10 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { runAutomations } from "@/lib/automation/send";
 import {
   ALL_HEALTH_TAG_KEYS,
+  applyHealthSelectionToTags,
   fullNameFromParts,
+  healthSelectionFromTags,
 } from "@/lib/site/health-tags";
+import { activityTagsForSource } from "@/lib/site/activity-tags";
 import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
 import { schedulePrePaymentReminders } from "@/lib/contacts/reminders";
 import type { Locale } from "@/lib/supabase/types";
@@ -14,17 +17,23 @@ export const dynamic = "force-dynamic";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEALTH_TAG_SET = new Set<string>(ALL_HEALTH_TAG_KEYS);
 
+/** Merge tags; health interest is exclusive (diabetes replaces weight-loss, etc.). */
 function mergeSubscriberTags(
   existing: string[] | null | undefined,
   incoming: string[],
 ): string[] {
   const incomingHealth = incoming.filter((t) => HEALTH_TAG_SET.has(t));
   const incomingOther = incoming.filter((t) => !HEALTH_TAG_SET.has(t));
-  const kept = (existing ?? []).filter((t) => {
-    if (incomingHealth.length > 0 && HEALTH_TAG_SET.has(t)) return false;
-    return true;
-  });
-  return Array.from(new Set([...kept, ...incomingOther, ...incomingHealth]));
+  const base = (existing ?? []).filter((t) => !HEALTH_TAG_SET.has(t));
+
+  let next: string[];
+  if (incomingHealth.length > 0) {
+    const selection = healthSelectionFromTags(incomingHealth);
+    next = applyHealthSelectionToTags([...base, ...incomingOther], selection);
+  } else {
+    next = Array.from(new Set([...base, ...incomingOther]));
+  }
+  return next;
 }
 
 export async function POST(req: Request) {
@@ -58,9 +67,14 @@ export async function POST(req: Request) {
   const locale = body.locale === "en" ? "en" : "bg";
   const source = body.source || "popup";
   const mailLocale: Locale = locale;
-  const incomingTags = Array.isArray(body.tags)
-    ? body.tags.filter((t) => typeof t === "string" && t.length > 0)
-    : [];
+  const incomingTags = Array.from(
+    new Set([
+      ...(Array.isArray(body.tags)
+        ? body.tags.filter((t) => typeof t === "string" && t.length > 0)
+        : []),
+      ...activityTagsForSource(source),
+    ]),
+  );
 
   const firstName = body.first_name?.trim() || null;
   const lastName = body.last_name?.trim() || null;
@@ -81,7 +95,7 @@ export async function POST(req: Request) {
 
     const isNew = !existing;
     let subscriberId = existing?.id as string | undefined;
-    let finalTags = incomingTags;
+    let finalTags = mergeSubscriberTags([], incomingTags);
 
     const profilePatch = {
       ...(firstName ? { first_name: firstName } : {}),
@@ -92,7 +106,10 @@ export async function POST(req: Request) {
     };
 
     if (existing) {
-      finalTags = mergeSubscriberTags(existing.tags as string[] | null, incomingTags);
+      finalTags = mergeSubscriberTags(
+        existing.tags as string[] | null,
+        incomingTags,
+      );
       await supabase
         .from("subscribers")
         .update({
@@ -114,31 +131,32 @@ export async function POST(req: Request) {
           phone: body.phone?.trim() || null,
           locale,
           source,
-          tags: incomingTags,
+          tags: finalTags,
           consent: true,
         })
         .select("id")
         .single();
       subscriberId = (inserted as { id: string } | null)?.id;
-      finalTags = incomingTags;
     }
 
-    try {
-      await runAutomations({
-        email,
-        name,
-        phone: body.phone?.trim() || null,
-        locale: mailLocale,
-        subscriberId: subscriberId ?? null,
-        tags: finalTags,
-        isNew,
-        source,
-      });
-    } catch (err) {
-      console.error("[subscribe] automations:", err);
-    }
+    // Respond immediately — automations / reminders run after the response.
+    after(async () => {
+      try {
+        await runAutomations({
+          email,
+          name,
+          phone: body.phone?.trim() || null,
+          locale: mailLocale,
+          subscriberId: subscriberId ?? null,
+          tags: finalTags,
+          isNew,
+          source,
+        });
+      } catch (err) {
+        console.error("[subscribe] automations:", err);
+      }
 
-    if (subscriberId) {
+      if (!subscriberId) return;
       try {
         const contact = await ensureContactForSubscriber({
           subscriberId,
@@ -149,9 +167,9 @@ export async function POST(req: Request) {
       } catch (err) {
         console.error("[subscribe] contact reminders:", err);
       }
-    }
+    });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, tags: finalTags });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed" },

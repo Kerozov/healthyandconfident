@@ -782,4 +782,15 @@ alter table public.automations
 
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–036 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 037: interest + activity segments
+insert into public.segments (key, name, description) values
+  ('insulin-resistance', 'Insulin resistance', 'Interested in IR / blood sugar'),
+  ('weight-loss', 'Weight loss', 'Interested in losing weight'),
+  ('diabetes', 'Type 2 Diabetes', 'Diabetes remission audience'),
+  ('free-menu', 'Free menu', 'Downloaded the free menu lead magnet')
+on conflict (key) do update
+set
+  name = excluded.name,
+  description = excluded.description;
+
+select 'Upgrade complete (012–037 applied). Also run 007_automations.sql if not yet applied.' as result;
