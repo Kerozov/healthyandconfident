@@ -16,8 +16,8 @@ const COPY = {
     firstName: "Име",
     lastName: "Фамилия",
     email: "Имейл",
-    facebook: "Facebook профил (линк)",
-    facebookPh: "https://facebook.com/...",
+    facebook: "Facebook профил (име или линк)",
+    facebookPh: "Име във Facebook или линк",
     healthTitle: "Какво те вълнува?",
     healthHint: "Избери едно или повече — така получаваш подходящо съдържание.",
     ir: "Инсулинова резистентност",
@@ -31,8 +31,8 @@ const COPY = {
     firstName: "First name",
     lastName: "Last name",
     email: "Email",
-    facebook: "Facebook profile (link)",
-    facebookPh: "https://facebook.com/...",
+    facebook: "Facebook profile (name or link)",
+    facebookPh: "Facebook name or link",
     healthTitle: "What are you interested in?",
     healthHint: "Pick one or more — we'll send relevant content.",
     ir: "Insulin resistance",
@@ -244,13 +244,14 @@ export function SubscribeForm({
       />
 
       <input
-        type="url"
+        type="text"
         required
         value={facebook}
         onChange={(e) => setFacebook(e.target.value)}
         placeholder={t.facebookPh}
         className={inputClass}
         aria-label={t.facebook}
+        autoComplete="off"
       />
 
       <fieldset className="rounded-xl border border-forest-100 bg-cream/50 p-4">
