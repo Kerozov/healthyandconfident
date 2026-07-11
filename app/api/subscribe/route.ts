@@ -123,30 +123,32 @@ export async function POST(req: Request) {
       finalTags = incomingTags;
     }
 
-    void runAutomations({
-      email,
-      name,
-      phone: body.phone?.trim() || null,
-      locale: mailLocale,
-      subscriberId: subscriberId ?? null,
-      tags: finalTags,
-      isNew,
-      source,
-    });
+    try {
+      await runAutomations({
+        email,
+        name,
+        phone: body.phone?.trim() || null,
+        locale: mailLocale,
+        subscriberId: subscriberId ?? null,
+        tags: finalTags,
+        isNew,
+        source,
+      });
+    } catch (err) {
+      console.error("[subscribe] automations:", err);
+    }
 
     if (subscriberId) {
-      void (async () => {
-        try {
-          const contact = await ensureContactForSubscriber({
-            subscriberId,
-            email,
-            name,
-          });
-          await schedulePrePaymentReminders(contact, mailLocale);
-        } catch (err) {
-          console.error("[subscribe] contact reminders:", err);
-        }
-      })();
+      try {
+        const contact = await ensureContactForSubscriber({
+          subscriberId,
+          email,
+          name,
+        });
+        await schedulePrePaymentReminders(contact, mailLocale);
+      } catch (err) {
+        console.error("[subscribe] contact reminders:", err);
+      }
     }
 
     return NextResponse.json({ ok: true });

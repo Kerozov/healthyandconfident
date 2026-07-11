@@ -31,14 +31,25 @@ export type AutomationRunContext = {
   purchasedProductIds?: string[];
 };
 
+function isSiteSignupSource(source: string): boolean {
+  const s = (source || "").toLowerCase();
+  if (!s) return true;
+  if (s === "purchase" || s === "manual" || s === "import" || s === "system") {
+    return false;
+  }
+  return true;
+}
+
 function resolveTriggerEvents(
   source: string,
   isNew: boolean,
-): AutomationTrigger[] {
+): Array<"purchase" | "new_subscriber" | "registration"> {
   // Payment always starts the purchase flow only — not welcome drips.
   if (source === "purchase") return ["purchase"];
-  if (!isNew) return [];
-  return ["new_subscriber"];
+  // Public site signup (menu, popup, hero, nav…) — even if email already exists.
+  if (isSiteSignupSource(source)) return ["new_subscriber", "registration"];
+  if (isNew) return ["new_subscriber", "registration"];
+  return [];
 }
 
 /** Purchase automations run for every buyer, including existing subscribers. */
@@ -50,7 +61,10 @@ function passesNewSubscriberGate(
   if (ctx.source === "purchase" && automation.trigger_event === "purchase") {
     return true;
   }
-  return ctx.isNew;
+  if (ctx.isNew) return true;
+  // Free menu / popup for an existing email still runs (unless already sent).
+  if (isSiteSignupSource(ctx.source ?? "")) return true;
+  return false;
 }
 
 /**
@@ -511,16 +525,31 @@ async function executeAutomation(
   const email = ctx.email.trim().toLowerCase();
   const tags = ctx.tags ?? [];
 
-  if (!passesNewSubscriberGate(automation, ctx)) return;
-  if (!passesPurchaseSegmentEntryGate(automation, ctx, segments, groups)) return;
-  if (!segmentMatches(automation, tags, segments, groups)) return;
+  if (!passesNewSubscriberGate(automation, ctx)) {
+    console.info(`[automation] skip ${automation.name}: new_subscribers_only`);
+    return;
+  }
+  if (!passesPurchaseSegmentEntryGate(automation, ctx, segments, groups)) {
+    console.info(`[automation] skip ${automation.name}: purchase segment gate`);
+    return;
+  }
+  if (!segmentMatches(automation, tags, segments, groups)) {
+    console.info(
+      `[automation] skip ${automation.name}: audience (tags=${tags.join(",") || "∅"})`,
+    );
+    return;
+  }
   if (
     automation.trigger_event === "purchase" &&
     !automationMatchesPurchaseProducts(automation, ctx.purchasedProductIds ?? [])
   ) {
+    console.info(`[automation] skip ${automation.name}: product filter`);
     return;
   }
-  if (await alreadyQueuedOrSent(automation.id, email)) return;
+  if (await alreadyQueuedOrSent(automation.id, email)) {
+    console.info(`[automation] skip ${automation.name}: already queued/sent`);
+    return;
+  }
 
   if (automation.after_automation_id) {
     const gotPrior = await alreadyQueuedOrSent(
@@ -569,14 +598,24 @@ async function executeAutomation(
 
 /** Run all matching enabled automations for this subscriber event. */
 export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
-  if (!isNotificationWorkerConfigured()) return;
+  if (!isNotificationWorkerConfigured()) {
+    console.error(
+      "[automation] skipped: NOTIFICATION_WORKER_URL / API_KEY not configured",
+    );
+    return;
+  }
 
   const email = ctx.email.trim().toLowerCase();
   if (await isEmailUnsubscribed(email)) return;
 
   const source = ctx.source ?? "popup";
   const events = resolveTriggerEvents(source, ctx.isNew);
-  if (events.length === 0) return;
+  if (events.length === 0) {
+    console.info(
+      `[automation] no trigger for source=${source} isNew=${ctx.isNew} email=${email}`,
+    );
+    return;
+  }
 
   const supabase = getAdminClient();
   const [{ data, error }, { data: segmentRows }, { data: groupRows }] = await Promise.all([
@@ -584,7 +623,7 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
       .from("automations")
       .select("*")
       .eq("enabled", true)
-      .in("trigger_event", events)
+      .in("trigger_event", events as unknown as AutomationTrigger[])
       .order("sort_order", { ascending: true }),
     supabase.from("segments").select("*"),
     supabase.from("segment_groups").select("*"),
@@ -598,6 +637,13 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
   const segments = (segmentRows as Segment[]) ?? [];
   const groups = (groupRows as SegmentGroup[]) ?? [];
   const rules = (data as Automation[]) ?? [];
+  if (rules.length === 0) {
+    console.info(
+      `[automation] no enabled rules for triggers=${events.join(",")} email=${email}`,
+    );
+    return;
+  }
+
   for (const rule of rules) {
     try {
       await executeAutomation(rule, ctx, segments, groups);
