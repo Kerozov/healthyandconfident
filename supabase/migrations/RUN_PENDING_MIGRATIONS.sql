@@ -782,12 +782,11 @@ alter table public.automations
 
 notify pgrst, 'reload schema';
 
--- 037: interest + activity segments
+-- 037: ensure interest segments exist
 insert into public.segments (key, name, description) values
   ('insulin-resistance', 'Insulin resistance', 'Interested in IR / blood sugar'),
   ('weight-loss', 'Weight loss', 'Interested in losing weight'),
-  ('diabetes', 'Type 2 Diabetes', 'Diabetes remission audience'),
-  ('free-menu', 'Free menu', 'Downloaded the free menu lead magnet')
+  ('diabetes', 'Type 2 Diabetes', 'Diabetes remission audience')
 on conflict (key) do update
 set
   name = excluded.name,

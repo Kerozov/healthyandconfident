@@ -9,7 +9,7 @@ export function LeadForm({
   consent,
   success,
   error: _error,
-  segmentTag = "all",
+  segmentTag,
   source = "lead-magnet",
   variant = "default",
   offerPlacementKey,
@@ -22,6 +22,7 @@ export function LeadForm({
   consent: string;
   success: string;
   error: string;
+  /** Extra non-health tag (e.g. newsletter). Do not pass weight-loss / diabetes. */
   segmentTag?: string;
   source?: string;
   variant?: "default" | "gradient" | "light";
@@ -30,11 +31,16 @@ export function LeadForm({
 }) {
   const { tryOpenPlacement } = useOfferPopup();
 
+  const baseTags =
+    segmentTag && segmentTag !== "all" && segmentTag !== "weight-loss"
+      ? [segmentTag]
+      : [];
+
   return (
     <SubscribeForm
       locale={locale}
       source={source}
-      baseTags={segmentTag ? [segmentTag] : []}
+      baseTags={baseTags}
       consent={consent}
       success={success}
       buttonLabel={button}

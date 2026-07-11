@@ -28,7 +28,6 @@ export function LeadMagnet({ dict, locale }: { dict: Dictionary; locale: Locale 
                 consent={leadMagnet.consent}
                 success={leadMagnet.success}
                 error={leadMagnet.error}
-                segmentTag="weight-loss"
                 source="lead-magnet"
                 variant="gradient"
                 offerPlacementKey="leadmagnet_cta"

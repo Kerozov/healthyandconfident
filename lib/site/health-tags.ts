@@ -47,14 +47,17 @@ export function applyHealthSelectionToTags(
 }
 
 export function tagsFromHealthSelection(selection: HealthSelection): string[] {
-  if (selection.general) {
-    return [HEALTH_SEGMENT.general];
+  // Specific interests win over "general" if both are somehow set
+  // (e.g. legacy baseTags weight-loss + diabetes answer).
+  if (selection.insulinResistance || selection.diabetes) {
+    const tags: string[] = [];
+    if (selection.insulinResistance) tags.push(HEALTH_SEGMENT.insulinResistance);
+    if (selection.diabetes) tags.push(HEALTH_SEGMENT.diabetes);
+    return tags;
   }
-  const tags: string[] = [];
-  if (selection.insulinResistance) tags.push(HEALTH_SEGMENT.insulinResistance);
-  if (selection.diabetes) tags.push(HEALTH_SEGMENT.diabetes);
+  if (selection.general) return [HEALTH_SEGMENT.general];
   // Never default to weight-loss — empty means no interest chosen.
-  return tags;
+  return [];
 }
 
 export const HEALTH_SEGMENT_LABELS_EN: Record<

@@ -92,8 +92,7 @@ insert into public.segments (key, name, description) values
   ('all', 'All subscribers', 'Everyone who opted in'),
   ('insulin-resistance', 'Insulin resistance', 'Interested in IR / blood sugar'),
   ('weight-loss', 'Weight loss', 'Interested in losing weight'),
-  ('diabetes', 'Type 2 Diabetes', 'Diabetes remission audience'),
-  ('free-menu', 'Free menu', 'Downloaded the free menu lead magnet')
+  ('diabetes', 'Type 2 Diabetes', 'Diabetes remission audience')
 on conflict (key) do nothing;
 
 -- ── Popup ──────────────────────────────────────────────────────

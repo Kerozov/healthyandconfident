@@ -5,9 +5,8 @@ import {
   ALL_HEALTH_TAG_KEYS,
   applyHealthSelectionToTags,
   fullNameFromParts,
-  healthSelectionFromTags,
+  healthSelectionFromAnswerKey,
 } from "@/lib/site/health-tags";
-import { activityTagsForSource } from "@/lib/site/activity-tags";
 import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
 import { schedulePrePaymentReminders } from "@/lib/contacts/reminders";
 import type { Locale } from "@/lib/supabase/types";
@@ -16,22 +15,42 @@ export const dynamic = "force-dynamic";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEALTH_TAG_SET = new Set<string>(ALL_HEALTH_TAG_KEYS);
+/** Legacy activity tag — no longer assigned; strip on update. */
+const STRIP_TAGS = new Set(["free-menu"]);
 
-/** Merge tags; health interest is exclusive (diabetes replaces weight-loss, etc.). */
-function mergeSubscriberTags(
+function resolveInterestTag(
+  interest: string | null | undefined,
+  tags: string[],
+): string | null {
+  const fromField = interest?.trim() || "";
+  if (fromField && HEALTH_TAG_SET.has(fromField)) return fromField;
+  const fromTags = tags.find((t) => HEALTH_TAG_SET.has(t));
+  return fromTags ?? null;
+}
+
+function buildFinalTags(
   existing: string[] | null | undefined,
-  incoming: string[],
+  incomingOther: string[],
+  interestTag: string | null,
 ): string[] {
-  const incomingHealth = incoming.filter((t) => HEALTH_TAG_SET.has(t));
-  const incomingOther = incoming.filter((t) => !HEALTH_TAG_SET.has(t));
-  const base = (existing ?? []).filter((t) => !HEALTH_TAG_SET.has(t));
-
-  let next: string[];
-  if (incomingHealth.length > 0) {
-    const selection = healthSelectionFromTags(incomingHealth);
-    next = applyHealthSelectionToTags([...base, ...incomingOther], selection);
-  } else {
-    next = Array.from(new Set([...base, ...incomingOther]));
+  const kept = (existing ?? []).filter(
+    (t) =>
+      !HEALTH_TAG_SET.has(t) &&
+      !STRIP_TAGS.has(t) &&
+      t !== "all",
+  );
+  const extras = incomingOther.filter(
+    (t) =>
+      !HEALTH_TAG_SET.has(t) &&
+      !STRIP_TAGS.has(t) &&
+      t !== "all",
+  );
+  let next = Array.from(new Set([...kept, ...extras]));
+  if (interestTag) {
+    const selection = healthSelectionFromAnswerKey(interestTag);
+    if (selection) {
+      next = applyHealthSelectionToTags(next, selection);
+    }
   }
   return next;
 }
@@ -46,6 +65,7 @@ export async function POST(req: Request) {
     phone?: string;
     locale?: string;
     source?: string;
+    interest?: string | null;
     tags?: string[];
     consent?: boolean;
   };
@@ -67,14 +87,11 @@ export async function POST(req: Request) {
   const locale = body.locale === "en" ? "en" : "bg";
   const source = body.source || "popup";
   const mailLocale: Locale = locale;
-  const incomingTags = Array.from(
-    new Set([
-      ...(Array.isArray(body.tags)
-        ? body.tags.filter((t) => typeof t === "string" && t.length > 0)
-        : []),
-      ...activityTagsForSource(source),
-    ]),
-  );
+  const rawTags = Array.isArray(body.tags)
+    ? body.tags.filter((t) => typeof t === "string" && t.length > 0)
+    : [];
+  const interestTag = resolveInterestTag(body.interest, rawTags);
+  const incomingOther = rawTags.filter((t) => !HEALTH_TAG_SET.has(t));
 
   const firstName = body.first_name?.trim() || null;
   const lastName = body.last_name?.trim() || null;
@@ -95,7 +112,11 @@ export async function POST(req: Request) {
 
     const isNew = !existing;
     let subscriberId = existing?.id as string | undefined;
-    let finalTags = mergeSubscriberTags([], incomingTags);
+    const finalTags = buildFinalTags(
+      existing ? (existing.tags as string[] | null) : [],
+      incomingOther,
+      interestTag,
+    );
 
     const profilePatch = {
       ...(firstName ? { first_name: firstName } : {}),
@@ -106,10 +127,6 @@ export async function POST(req: Request) {
     };
 
     if (existing) {
-      finalTags = mergeSubscriberTags(
-        existing.tags as string[] | null,
-        incomingTags,
-      );
       await supabase
         .from("subscribers")
         .update({
@@ -139,7 +156,6 @@ export async function POST(req: Request) {
       subscriberId = (inserted as { id: string } | null)?.id;
     }
 
-    // Respond immediately — automations / reminders run after the response.
     after(async () => {
       try {
         await runAutomations({
@@ -169,7 +185,7 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json({ ok: true, tags: finalTags });
+    return NextResponse.json({ ok: true, tags: finalTags, interest: interestTag });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed" },

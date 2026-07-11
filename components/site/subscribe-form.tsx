@@ -6,8 +6,7 @@ import type { Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 import {
   fullNameFromParts,
-  tagsFromHealthSelection,
-  type HealthSelection,
+  HEALTH_SEGMENT,
 } from "@/lib/site/health-tags";
 import { mergeVisitorTags } from "@/lib/site/visitor-tags";
 
@@ -44,6 +43,13 @@ const COPY = {
   },
 } as const;
 
+/** Radio value = segment key. No intermediate mapping. */
+const INTEREST_OPTIONS = [
+  { value: HEALTH_SEGMENT.insulinResistance, labelKey: "ir" as const },
+  { value: HEALTH_SEGMENT.diabetes, labelKey: "diabetes" as const },
+  { value: HEALTH_SEGMENT.general, labelKey: "general" as const },
+];
+
 export type SubscribeFormPayload = {
   email: string;
   first_name?: string;
@@ -52,6 +58,8 @@ export type SubscribeFormPayload = {
   facebook_url?: string | null;
   locale: Locale;
   source: string;
+  /** Exact segment key from the interest question */
+  interest?: string | null;
   tags: string[];
   consent: boolean;
 };
@@ -82,11 +90,8 @@ export function SubscribeForm({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [facebook, setFacebook] = useState("");
-  const [health, setHealth] = useState<HealthSelection>({
-    insulinResistance: false,
-    diabetes: false,
-    general: false,
-  });
+  /** Segment key: diabetes | insulin-resistance | weight-loss */
+  const [interest, setInterest] = useState("");
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
 
@@ -95,27 +100,24 @@ export function SubscribeForm({
     variant === "gradient" ? "border-white/30" : "border-forest-100",
   );
 
-  function toggleHealth(key: keyof HealthSelection) {
-    setHealth({
-      insulinResistance: key === "insulinResistance",
-      diabetes: key === "diabetes",
-      general: key === "general",
-    });
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
     if (!compact) {
       if (!firstName.trim() || !lastName.trim() || !facebook.trim()) return;
-      const hasHealth =
-        health.insulinResistance || health.diabetes || health.general;
-      if (!hasHealth) return;
+      if (!interest) return;
     }
     if (!marketingConsent) return;
     setState("loading");
-    const healthTags = compact ? [] : tagsFromHealthSelection(health);
-    const tags = Array.from(new Set([...baseTags, ...healthTags]));
+
+    const interestTag = !compact && interest ? interest : null;
+    const tags = Array.from(
+      new Set([
+        ...baseTags.filter((t) => t && t !== "all"),
+        ...(interestTag ? [interestTag] : []),
+      ]),
+    );
+
     const payload: SubscribeFormPayload = {
       email: email.trim(),
       first_name: compact ? undefined : firstName.trim() || undefined,
@@ -124,6 +126,7 @@ export function SubscribeForm({
       facebook_url: compact ? null : facebook.trim() || null,
       locale,
       source,
+      interest: interestTag,
       tags,
       consent: true,
     };
@@ -263,30 +266,26 @@ export function SubscribeForm({
           {t.healthHint}
         </p>
         <div className="space-y-2.5">
-          {(
-            [
-              ["insulinResistance", t.ir],
-              ["diabetes", t.diabetes],
-              ["general", t.general],
-            ] as const
-          ).map(([key, label]) => (
+          {INTEREST_OPTIONS.map((opt) => (
             <label
-              key={key}
+              key={opt.value}
               className={cn(
                 "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors",
-                health[key]
+                interest === opt.value
                   ? "border-forest-400 bg-forest-500/10 text-slate-800"
                   : "border-forest-100 bg-white text-slate-700 hover:border-forest-200",
               )}
             >
               <input
                 type="radio"
-                name="health-interest"
-                checked={health[key]}
-                onChange={() => toggleHealth(key)}
+                name="interest"
+                required
+                value={opt.value}
+                checked={interest === opt.value}
+                onChange={() => setInterest(opt.value)}
                 className="mt-0.5 h-4 w-4 border-forest-300 text-forest-500 focus:ring-forest-300"
               />
-              <span>{label}</span>
+              <span>{t[opt.labelKey]}</span>
             </label>
           ))}
         </div>
@@ -314,7 +313,7 @@ export function SubscribeForm({
 
       <button
         type="submit"
-        disabled={state === "loading" || !marketingConsent}
+        disabled={state === "loading" || !marketingConsent || !interest}
         className={cn(
           "inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg font-bold transition-all disabled:opacity-60",
           variant === "gradient"
