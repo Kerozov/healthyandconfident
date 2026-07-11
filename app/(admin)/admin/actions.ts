@@ -369,7 +369,11 @@ export async function updateAutomation(
 
 export async function deleteAutomation(id: string): Promise<ActionResult> {
   await requireAdmin();
-  await cancelAutomationScheduledJobs(id);
+  try {
+    await cancelAutomationScheduledJobs(id);
+  } catch {
+    // Still delete the rule even if worker cancel fails.
+  }
   const supabase = getAdminClient();
   const { error } = await supabase.from("automations").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -562,7 +566,10 @@ export async function addSubscriber(input: {
   const supabase = getAdminClient();
   const email = input.email.trim().toLowerCase();
   const tags = Array.from(
-    new Set((input.tags ?? []).map((t) => t.trim()).filter(Boolean)),
+    new Set([
+      "manual",
+      ...(input.tags ?? []).map((t) => t.trim()).filter(Boolean),
+    ]),
   );
 
   const { data: existing } = await supabase

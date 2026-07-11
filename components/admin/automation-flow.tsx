@@ -15,6 +15,7 @@ import {
   UserPlus,
   Pencil,
   Plus,
+  Trash2,
 } from "lucide-react";
 import type {
   Automation,
@@ -429,6 +430,7 @@ function TreeBranch({
   selectedId,
   onSelect,
   onAddAfter,
+  onDelete,
 }: {
   node: TreeNode;
   groups: SegmentGroup[];
@@ -439,6 +441,7 @@ function TreeBranch({
   selectedId?: string | null;
   onSelect?: (automation: AutomationRow) => void;
   onAddAfter?: (automation: AutomationRow) => void;
+  onDelete?: (automation: AutomationRow) => void;
 }) {
   const audience = resolveAudience(node.automation, groups, segments);
 
@@ -454,18 +457,35 @@ function TreeBranch({
             selected={selectedId === node.automation.id}
             onSelect={onSelect}
           />
-          {onAddAfter && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddAfter(node.automation);
-              }}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed border-forest-400/50 bg-white px-3 py-1.5 text-xs font-semibold text-forest-700 shadow-sm hover:border-forest-500 hover:bg-forest-50"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Следваща стъпка
-            </button>
+          {(onAddAfter || onDelete) && (
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              {onAddAfter && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddAfter(node.automation);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-forest-400/50 bg-white px-3 py-1.5 text-xs font-semibold text-forest-700 shadow-sm hover:border-forest-500 hover:bg-forest-50"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Следваща стъпка
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(node.automation);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-coral-300 bg-white px-3 py-1.5 text-xs font-semibold text-coral-700 shadow-sm hover:border-coral-400 hover:bg-coral-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Изтрий
+                </button>
+              )}
+            </div>
           )}
         </div>
         {audience.excludes.length > 0 && (
@@ -493,6 +513,7 @@ function TreeBranch({
             selectedId={selectedId}
             onSelect={onSelect}
             onAddAfter={onAddAfter}
+            onDelete={onDelete}
           />
         </>
       )}
@@ -519,6 +540,7 @@ function TreeBranch({
                   selectedId={selectedId}
                   onSelect={onSelect}
                   onAddAfter={onAddAfter}
+                  onDelete={onDelete}
                 />
               </div>
             ))}
@@ -537,6 +559,7 @@ function TriggerSection({
   selectedId,
   onSelect,
   onAddAfter,
+  onDelete,
 }: {
   trigger: AutomationTrigger;
   trees: TreeNode[];
@@ -545,6 +568,7 @@ function TriggerSection({
   selectedId?: string | null;
   onSelect?: (automation: AutomationRow) => void;
   onAddAfter?: (automation: AutomationRow) => void;
+  onDelete?: (automation: AutomationRow) => void;
 }) {
   if (trees.length === 0) return null;
   const meta = TRIGGER_META[trigger];
@@ -588,6 +612,7 @@ function TriggerSection({
               selectedId={selectedId}
               onSelect={onSelect}
               onAddAfter={onAddAfter}
+              onDelete={onDelete}
             />
           </div>
         ))}
@@ -603,6 +628,7 @@ export function AutomationFlowView({
   selectedId,
   onSelectAutomation,
   onAddAfterAutomation,
+  onDeleteAutomation,
 }: {
   automations: AutomationRow[];
   groups: SegmentGroup[];
@@ -610,6 +636,7 @@ export function AutomationFlowView({
   selectedId?: string | null;
   onSelectAutomation?: (automation: AutomationRow) => void;
   onAddAfterAutomation?: (automation: AutomationRow) => void;
+  onDeleteAutomation?: (automation: AutomationRow) => void;
 }) {
   const forest = buildForestByTrigger(automations);
   const hasAny = automations.length > 0;
@@ -629,6 +656,7 @@ export function AutomationFlowView({
           Кликни стъпка за редакция.{" "}
           <strong className="text-forest-700">Следваща стъпка</strong> — добавя
           нова под нея със същия тригър и аудитория.{" "}
+          <strong className="text-coral-700">Изтрий</strong> — премахва стъпката.{" "}
           <span className="text-amber-800">Разклонения</span> = различни пътища.{" "}
           <span className="text-coral-700">Изключения</span> = спират веригата.
         </p>
@@ -659,6 +687,7 @@ export function AutomationFlowView({
             selectedId={selectedId}
             onSelect={onSelectAutomation}
             onAddAfter={onAddAfterAutomation}
+            onDelete={onDeleteAutomation}
           />
         ))}
       </div>

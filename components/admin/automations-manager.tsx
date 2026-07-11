@@ -522,9 +522,21 @@ export function AutomationsManager({
   }
 
   function remove(id: string, name: string) {
-    if (!confirm(`Delete automation "${name}"?`)) return;
+    const childCount = automations.filter((a) => a.after_automation_id === id).length;
+    const childNote =
+      childCount > 0
+        ? `\n\nИма ${childCount} следващ${childCount === 1 ? "а стъпка" : "и стъпки"} — те ще останат, но без връзка към тази.`
+        : "";
+    if (!confirm(`Изтриване на „${name}"?${childNote}`)) return;
+    setError(null);
     startTransition(async () => {
-      await deleteAutomation(id);
+      const res = await deleteAutomation(id);
+      if (!res.ok) {
+        setError(res.message || "Неуспешно изтриване");
+        return;
+      }
+      if (editingId === id) closeEditor();
+      setNote(`Изтрита: ${name}`);
       router.refresh();
     });
   }
@@ -1164,7 +1176,7 @@ export function AutomationsManager({
 
             {error && <p className="text-sm text-coral-600">{error}</p>}
 
-            <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-ink/10 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
+            <div className="sticky bottom-0 -mx-4 flex flex-wrap gap-2 border-t border-ink/10 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
               <button
                 type="button"
                 onClick={save}
@@ -1181,6 +1193,17 @@ export function AutomationsManager({
               >
                 Отказ
               </button>
+              {editingId && editingId !== "new" && (
+                <button
+                  type="button"
+                  onClick={() => remove(editingId, form.name || "автоматизация")}
+                  disabled={pending}
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-coral-200 px-4 text-sm font-medium text-coral-700 hover:bg-coral-50 disabled:opacity-60 sm:ml-auto"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Изтрий
+                </button>
+              )}
             </div>
           </div>
         </Card>
@@ -1197,6 +1220,7 @@ export function AutomationsManager({
             selectedId={editingId !== "new" ? editingId : null}
             onSelectAutomation={openEditFromFlow}
             onAddAfterAutomation={openNewAfter}
+            onDeleteAutomation={(a) => remove(a.id, a.name)}
           />
         </Card>
       ) : (
