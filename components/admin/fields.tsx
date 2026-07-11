@@ -49,7 +49,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border border-ink/10 bg-white p-5 sm:p-6", className)}>
+    <section className={cn("rounded-2xl border border-ink/10 bg-white p-4 sm:p-6", className)}>
       {(title || action) && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           {title ? (

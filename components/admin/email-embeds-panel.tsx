@@ -28,10 +28,10 @@ export function EmailEmbedsPanel({
   disabled?: boolean;
 }) {
   return (
-    <div className="space-y-5 rounded-xl border border-ink/10 bg-cream/30 p-4">
+    <div className="space-y-4 rounded-xl border border-ink/10 bg-cream/30 p-3 sm:p-4">
       <div>
-        <p className="text-sm font-semibold text-ink">Продукти в имейла</p>
-        <div className="mt-3">
+        <p className="text-sm font-semibold text-ink">Продукти</p>
+        <div className="mt-2">
           <EmailProductPicker
             products={products}
             locale={locale}
@@ -42,9 +42,9 @@ export function EmailEmbedsPanel({
         </div>
       </div>
 
-      <div className="border-t border-ink/10 pt-5">
-        <p className="text-sm font-semibold text-ink">Форми в имейла</p>
-        <div className="mt-3">
+      <div className="border-t border-ink/10 pt-4">
+        <p className="text-sm font-semibold text-ink">Форми</p>
+        <div className="mt-2">
           <EmailFormPicker
             forms={forms}
             locale={locale}
@@ -55,13 +55,13 @@ export function EmailEmbedsPanel({
         </div>
       </div>
 
-      <div className="border-t border-ink/10 pt-5">
+      <div className="border-t border-ink/10 pt-4">
         <EmailAttachmentPicker
           path={attachmentPath}
           filename={attachmentFilename}
           onChange={onAttachmentChange}
           label="PDF прикачка"
-          hint="По избор — PDF файл, прикачен към всеки изпратен имейл."
+          hint="По избор — PDF към имейла."
         />
       </div>
     </div>

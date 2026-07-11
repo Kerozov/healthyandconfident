@@ -116,15 +116,6 @@ function sendAtAfterDays(
   return scheduledAtAfterDays(days, sendTime || "09:00", from);
 }
 
-function sendAtNowOrLaterToday(sendTime: string, from?: Date): string {
-  const now = from ? new Date(from) : new Date();
-  const scheduled = scheduledAtAfterDays(0, sendTime || "09:00", now);
-  if (new Date(scheduled).getTime() > now.getTime()) {
-    return scheduled;
-  }
-  return now.toISOString();
-}
-
 function computeAutomationSendAt(
   automation: Automation,
   from?: Date,
@@ -150,7 +141,8 @@ function computeAutomationSendAt(
     return scheduledAtAfterMinutes(delayMinutes, now);
   }
 
-  return sendAtNowOrLaterToday(sendTime, now);
+  // True immediate — send as soon as the event (or chain) fires.
+  return now.toISOString();
 }
 
 function computeChainedSendAt(

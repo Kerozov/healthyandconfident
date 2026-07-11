@@ -38,23 +38,13 @@ export default async function AdminAutomationsPage() {
           forms={forms}
         />
 
-      <section className="mt-10 rounded-2xl border border-ink/10 bg-white p-5 text-sm text-ink-soft">
-        <p className="font-medium text-ink">Бърз пример: welcome серия от 3 имейла</p>
-        <ol className="mt-2 list-inside list-decimal space-y-1">
-          <li>
-            <strong>Имейл 1</strong> — събитие „Нов абонат“, режим „Веднага“, без верига.
-          </li>
-          <li>
-            <strong>Имейл 2</strong> — същото събитие, „След 2 дни“, верига „След Имейл 1“.
-          </li>
-          <li>
-            <strong>Имейл 3</strong> — „След 5 дни“, верига „След Имейл 2“.
-          </li>
+      <section className="mt-8 rounded-2xl border border-ink/10 bg-white p-4 text-sm text-ink-soft sm:p-5">
+        <p className="font-medium text-ink">Пример: welcome серия</p>
+        <ol className="mt-2 list-inside list-decimal space-y-1 text-xs sm:text-sm">
+          <li>Имейл 1 — събитие „Нов абонат“, „Веднага“, без верига.</li>
+          <li>Имейл 2 — „След“ Имейл 1 + 15 мин. (или след дни).</li>
+          <li>Имейл 3 — след Имейл 2.</li>
         </ol>
-        <p className="mt-3 text-xs">
-          Всяка автоматизация се изпраща само веднъж на имейл. Включи ги с бутона
-          „Включена“.
-        </p>
       </section>
     </div>
   );

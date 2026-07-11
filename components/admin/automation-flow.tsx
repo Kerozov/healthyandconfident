@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   UserPlus,
   Pencil,
+  Plus,
 } from "lucide-react";
 import type {
   Automation,
@@ -112,7 +113,7 @@ function scheduleLabel(automation: Automation): string {
   if (automation.after_automation_id) {
     return "Веднага след предишната";
   }
-  return `Веднага / днес ${automation.send_time}`;
+  return "Веднага";
 }
 
 function audienceSummary(
@@ -281,7 +282,7 @@ function FlowCard({
       type="button"
       onClick={() => onSelect?.(automation)}
       className={cn(
-        "w-full min-w-[280px] max-w-md rounded-xl border-2 px-4 py-3 text-left shadow-sm transition-all",
+        "w-full min-w-0 max-w-md rounded-xl border-2 px-3 py-3 text-left shadow-sm transition-all sm:px-4",
         "cursor-pointer hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-400 focus-visible:ring-offset-2",
         selected
           ? "border-forest-500 bg-forest-500/5 ring-2 ring-forest-400/60"
@@ -429,6 +430,7 @@ function TreeBranch({
   depth,
   selectedId,
   onSelect,
+  onAddAfter,
 }: {
   node: TreeNode;
   groups: SegmentGroup[];
@@ -438,20 +440,36 @@ function TreeBranch({
   depth: number;
   selectedId?: string | null;
   onSelect?: (automation: AutomationRow) => void;
+  onAddAfter?: (automation: AutomationRow) => void;
 }) {
   const audience = resolveAudience(node.automation, groups, segments);
 
   return (
     <div className="flex flex-col items-center">
       <div className="grid w-full gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
-        <FlowCard
-          automation={node.automation}
-          audience={audience}
-          stepLabel={`${stepPrefix}${depth}`}
-          parentName={parentName}
-          selected={selectedId === node.automation.id}
-          onSelect={onSelect}
-        />
+        <div className="flex w-full min-w-0 flex-col items-center">
+          <FlowCard
+            automation={node.automation}
+            audience={audience}
+            stepLabel={`${stepPrefix}${depth}`}
+            parentName={parentName}
+            selected={selectedId === node.automation.id}
+            onSelect={onSelect}
+          />
+          {onAddAfter && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddAfter(node.automation);
+              }}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed border-forest-400/50 bg-white px-3 py-1.5 text-xs font-semibold text-forest-700 shadow-sm hover:border-forest-500 hover:bg-forest-50"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Следваща стъпка
+            </button>
+          )}
+        </div>
         {audience.excludes.length > 0 && (
           <div className="flex flex-col gap-2 lg:max-w-[220px]">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-coral-600">
@@ -476,6 +494,7 @@ function TreeBranch({
             depth={depth + 1}
             selectedId={selectedId}
             onSelect={onSelect}
+            onAddAfter={onAddAfter}
           />
         </>
       )}
@@ -483,11 +502,11 @@ function TreeBranch({
       {node.children.length > 1 && (
         <>
           <ForkConnector count={node.children.length} />
-          <div className="flex w-full flex-wrap justify-center gap-6 pt-2">
+          <div className="flex w-full flex-col items-stretch gap-4 pt-2 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-6">
             {node.children.map((child, i) => (
               <div
                 key={child.automation.id}
-                className="flex flex-col items-center border-t-2 border-forest-300/40 pt-4"
+                className="flex w-full min-w-0 flex-col items-center border-t-2 border-forest-300/40 pt-4 sm:w-auto"
               >
                 <span className="mb-2 rounded-full bg-forest-500/10 px-2.5 py-0.5 text-[10px] font-bold text-forest-700">
                   Клон {i + 1}
@@ -501,6 +520,7 @@ function TreeBranch({
                   depth={depth + 1}
                   selectedId={selectedId}
                   onSelect={onSelect}
+                  onAddAfter={onAddAfter}
                 />
               </div>
             ))}
@@ -518,6 +538,7 @@ function TriggerSection({
   segments,
   selectedId,
   onSelect,
+  onAddAfter,
 }: {
   trigger: AutomationTrigger;
   trees: TreeNode[];
@@ -525,6 +546,7 @@ function TriggerSection({
   segments: Segment[];
   selectedId?: string | null;
   onSelect?: (automation: AutomationRow) => void;
+  onAddAfter?: (automation: AutomationRow) => void;
 }) {
   if (trees.length === 0) return null;
   const meta = TRIGGER_META[trigger];
@@ -567,6 +589,7 @@ function TriggerSection({
               depth={1}
               selectedId={selectedId}
               onSelect={onSelect}
+              onAddAfter={onAddAfter}
             />
           </div>
         ))}
@@ -581,12 +604,14 @@ export function AutomationFlowView({
   segments,
   selectedId,
   onSelectAutomation,
+  onAddAfterAutomation,
 }: {
   automations: AutomationRow[];
   groups: SegmentGroup[];
   segments: Segment[];
   selectedId?: string | null;
   onSelectAutomation?: (automation: AutomationRow) => void;
+  onAddAfterAutomation?: (automation: AutomationRow) => void;
 }) {
   const forest = buildForestByTrigger(automations);
   const hasAny = automations.length > 0;
@@ -604,6 +629,8 @@ export function AutomationFlowView({
       <div className="rounded-xl border border-forest-100 bg-cream/50 px-4 py-3 text-sm text-ink-soft">
         <p>
           Кликни стъпка за редакция.{" "}
+          <strong className="text-forest-700">Следваща стъпка</strong> — добавя
+          нова под нея със същия тригър и аудитория.{" "}
           <span className="text-amber-800">Разклонения</span> = различни пътища.{" "}
           <span className="text-coral-700">Изключения</span> = спират веригата.
         </p>
@@ -634,6 +661,7 @@ export function AutomationFlowView({
               segments={segments}
               selectedId={selectedId}
               onSelect={onSelectAutomation}
+              onAddAfter={onAddAfterAutomation}
             />
           ),
         )}

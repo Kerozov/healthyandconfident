@@ -89,7 +89,7 @@ function buildSchedulePreview(
   } else if (form.after_automation_id) {
     when = "веднага след предишната";
   } else {
-    when = `веднага (или днес в ${time}, ако часът още не е минал)`;
+    when = "веднага";
   }
 
   if (afterName) {
@@ -112,7 +112,7 @@ function scheduleSummary(a: Automation, automations: AutomationRow[]): string {
   } else if ((a.delay_minutes ?? 0) > 0) {
     when = `+${a.delay_minutes} мин.`;
   } else {
-    when = after ? "веднага след" : `веднага / ${time}`;
+    when = after ? "веднага след" : "веднага";
   }
 
   if (after) return `След „${after}" → ${when}`;
@@ -408,6 +408,7 @@ export function AutomationsManager({
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>("all");
   const [viewTab, setViewTab] = useState<"list" | "flow">("flow");
+  const [contentLocale, setContentLocale] = useState<"bg" | "en">("bg");
   const editorRef = useRef<HTMLDivElement>(null);
 
   const hasTrackable = automations.some(
@@ -450,6 +451,38 @@ export function AutomationsManager({
     setSaved(false);
   }
 
+  /** New step chained after `parent` — copies trigger, audience, product filter. */
+  function openNewAfter(parent: AutomationRow) {
+    setViewTab("flow");
+    setEditingId("new");
+    setContentLocale("bg");
+    setForm({
+      ...EMPTY_FORM,
+      channel: parent.channel,
+      trigger_event: parent.trigger_event,
+      enabled: false,
+      segment_keys: [...(parent.segment_keys ?? [])],
+      group_ids: [...(parent.group_ids ?? [])],
+      audience_logic: parent.audience_logic === "all" ? "all" : "any",
+      exclude_group_ids: [...(parent.exclude_group_ids ?? [])],
+      exclude_segment_keys: [...(parent.exclude_segment_keys ?? [])],
+      purchase_product_ids: [...(parent.purchase_product_ids ?? [])],
+      new_subscribers_only: parent.new_subscribers_only,
+      after_automation_id: parent.id,
+      delay_days: 0,
+      delay_minutes: 15,
+      send_time: parent.send_time || "09:00",
+      send_date: "",
+      name: `${parent.name} — следваща`,
+      sort_order: (parent.sort_order ?? 0) + 10,
+    });
+    setError(null);
+    setSaved(false);
+    requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   function openEdit(a: AutomationRow) {
     setEditingId(a.id);
     setForm(automationToForm(a));
@@ -460,6 +493,9 @@ export function AutomationsManager({
   function openEditFromFlow(a: AutomationRow) {
     setViewTab("flow");
     openEdit(a);
+    requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function closeEditor() {
@@ -577,14 +613,11 @@ export function AutomationsManager({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm text-ink-soft max-w-2xl">
-            Автоматични имейли или SMS при нов абонат, покупка или с закъснение.
-            По подразбиране се изпращат само веднъж на имейл. При покупка таговете се
-            обновяват — изключените групи спират старите вериги, а автоматизациите
-            „След покупка“ с подходящ сегмент/продукт <strong>започват нова верига</strong>.
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm text-ink-soft">
+            Автоматични имейли и SMS. Кликни стъпка в схемата за редакция.
           </p>
           {note && <p className="mt-1 text-xs text-ink-soft">{note}</p>}
         </div>
@@ -593,30 +626,30 @@ export function AutomationsManager({
             type="button"
             onClick={refreshAll}
             disabled={pending}
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-ink/15 px-3 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
           >
             {pending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
-            Обнови статистика
+            <span className="sm:inline">Обнови</span>
           </button>
           <button
             type="button"
             onClick={() => openNew("email")}
             disabled={pending || editingId !== null}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-gold-400 px-5 font-semibold text-forest-900 hover:bg-gold-500 disabled:opacity-60"
+            className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-gold-400 px-4 text-sm font-semibold text-forest-900 hover:bg-gold-500 disabled:opacity-60 sm:flex-none"
           >
-            <Plus className="h-4 w-4" /> Нов имейл
+            <Plus className="h-4 w-4" /> Имейл
           </button>
           <button
             type="button"
             onClick={() => openNew("sms")}
             disabled={pending || editingId !== null}
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-green-300 bg-white px-5 font-semibold text-green-700 hover:bg-green-50 disabled:opacity-60"
+            className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-green-300 bg-white px-4 text-sm font-semibold text-green-700 hover:bg-green-50 disabled:opacity-60 sm:flex-none"
           >
-            <Plus className="h-4 w-4" /> Нов SMS
+            <Plus className="h-4 w-4" /> SMS
           </button>
         </div>
       </div>
@@ -639,24 +672,36 @@ export function AutomationsManager({
         ]}
       />
 
-      <p className="text-sm text-ink-soft">
-        {viewTab === "flow"
-          ? "Кой получава какъв имейл или SMS, кога и при какъв тригър. Кликни върху стъпка за редакция."
-          : "Всички автоматизации на едно място — име, статистика и редакция."}
-      </p>
-
       <div
         className={cn(
-          "grid gap-6",
-          editingId && viewTab === "flow" && "xl:grid-cols-[minmax(0,32rem)_minmax(0,1fr)] xl:items-start",
+          "grid min-w-0 gap-5",
+          editingId &&
+            viewTab === "flow" &&
+            "2xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] 2xl:items-start",
         )}
       >
       {editingId && (
-        <div ref={editorRef} className="scroll-mt-6 xl:sticky xl:top-6">
-        <Card title={editingId === "new" ? "Нова автоматизация" : `Редакция: ${form.name || "автоматизация"}`}>
-          <div className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Име (заглавие в схемата)">
+        <div
+          ref={editorRef}
+          className="min-w-0 scroll-mt-4 2xl:sticky 2xl:top-4 2xl:max-h-[calc(100vh-1.5rem)] 2xl:overflow-y-auto"
+        >
+        <Card
+          className="overflow-hidden !p-4 sm:!p-5"
+          title={editingId === "new" ? "Нова автоматизация" : `Редакция: ${form.name || "…"}`}
+          action={
+            <button
+              type="button"
+              onClick={closeEditor}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 text-ink-soft hover:bg-ink/5"
+              aria-label="Затвори"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Име">
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -677,7 +722,7 @@ export function AutomationsManager({
                   <option value="sms">SMS</option>
                 </Select>
               </Field>
-              <Field label="Защо се пуска (събитие)">
+              <Field label="Събитие">
                 <Select
                   value={form.trigger_event}
                   onChange={(e) => {
@@ -723,26 +768,16 @@ export function AutomationsManager({
               </div>
             )}
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               <TogglePair
                 label="Статус"
-                hint={
-                  form.enabled
-                    ? "Активна — ще се изпраща при съвпадение."
-                    : "Изключена — нищо не се изпраща."
-                }
                 value={form.enabled}
                 onChange={(enabled) => setForm({ ...form, enabled })}
-                options={{ trueLabel: "Включена", falseLabel: "Изключена" }}
+                options={{ trueLabel: "Включена", falseLabel: "Изкл." }}
                 disabled={pending}
               />
               <TogglePair
                 label="Кой получава"
-                hint={
-                  form.new_subscribers_only
-                    ? "Само първият път, когато имейлът влезе в списъка. Препоръчително за welcome серия."
-                    : "И нови, и вече записани имейли (рядко — може да дублира)."
-                }
                 value={form.new_subscribers_only}
                 onChange={(new_subscribers_only) =>
                   setForm({ ...form, new_subscribers_only })
@@ -755,51 +790,44 @@ export function AutomationsManager({
               />
             </div>
 
-            <div className="rounded-2xl border border-ink/10 bg-white p-5 space-y-5">
-              <div>
-                <p className="text-sm font-semibold text-ink">Аудитория — кой получава</p>
-                <p className="mt-1 text-xs text-ink-soft">
-                  Първо избери <strong>кого включваш</strong>, после по желание{" "}
-                  <strong>кого изключваш</strong>. Изключенията имат приоритет.
-                </p>
-              </div>
+            <div className="rounded-xl border border-ink/10 bg-white p-3 space-y-3 sm:p-4">
+              <p className="text-sm font-semibold text-ink">Аудитория</p>
 
-              <div className="grid gap-5 lg:grid-cols-2">
-                <div className="rounded-xl border border-forest-500/25 bg-forest-50/30 p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="h-4 w-4 text-forest-600" />
-                    <p className="text-sm font-semibold text-forest-800">Включване</p>
-                  </div>
-                  <p className="text-xs text-ink-soft">
-                    Празно = всички абонати. Иначе само избраните групи/сегменти.
-                  </p>
-                  <div className="inline-flex flex-wrap gap-2 rounded-xl border border-ink/15 bg-white p-1">
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => setForm({ ...form, audience_logic: "any" })}
-                      className={cn(
-                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
-                        form.audience_logic !== "all"
-                          ? "bg-forest-600 text-cream"
-                          : "text-ink-soft hover:bg-ink/5",
-                      )}
-                    >
-                      OR
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => setForm({ ...form, audience_logic: "all" })}
-                      className={cn(
-                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
-                        form.audience_logic === "all"
-                          ? "bg-forest-600 text-cream"
-                          : "text-ink-soft hover:bg-ink/5",
-                      )}
-                    >
-                      AND
-                    </button>
+              <div className="grid gap-3">
+                <div className="rounded-xl border border-forest-500/25 bg-forest-50/30 p-3 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="h-4 w-4 text-forest-600" />
+                      <p className="text-sm font-semibold text-forest-800">Включване</p>
+                    </div>
+                    <div className="inline-flex gap-1 rounded-lg border border-ink/15 bg-white p-0.5">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setForm({ ...form, audience_logic: "any" })}
+                        className={cn(
+                          "rounded-md px-2.5 py-1 text-xs font-semibold",
+                          form.audience_logic !== "all"
+                            ? "bg-forest-600 text-cream"
+                            : "text-ink-soft",
+                        )}
+                      >
+                        OR
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setForm({ ...form, audience_logic: "all" })}
+                        className={cn(
+                          "rounded-md px-2.5 py-1 text-xs font-semibold",
+                          form.audience_logic === "all"
+                            ? "bg-forest-600 text-cream"
+                            : "text-ink-soft",
+                        )}
+                      >
+                        AND
+                      </button>
+                    </div>
                   </div>
                   <AudienceTargetChecklist
                     segments={segments}
@@ -813,15 +841,11 @@ export function AutomationsManager({
                   />
                 </div>
 
-                <div className="rounded-xl border border-coral-500/30 bg-coral-500/5 p-4 space-y-3">
+                <div className="rounded-xl border border-coral-500/30 bg-coral-500/5 p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <UserMinus className="h-4 w-4 text-coral-600" />
                     <p className="text-sm font-semibold text-coral-800">Изключване</p>
                   </div>
-                  <p className="text-xs text-ink-soft">
-                    Ако е в тези групи/сегменти — <strong>няма</strong> да получи този
-                    имейл/SMS, дори да отговаря на включването.
-                  </p>
                   <AudienceTargetChecklist
                     segments={segments}
                     groups={groups}
@@ -901,7 +925,7 @@ export function AutomationsManager({
               {scheduleMode === "immediate" && form.after_automation_id ? (
                 <Field
                   label="Минути след предишната"
-                  hint="Напр. 15 — за да не тръгнат два имейла едновременно при късна регистрация."
+                  hint="Напр. 15 — за да не тръгнат два имейла едновременно."
                 >
                   <Input
                     type="number"
@@ -968,21 +992,6 @@ export function AutomationsManager({
                 </div>
               )}
 
-              {scheduleMode === "immediate" && !form.after_automation_id ? (
-                <Field
-                  label="Час (София)"
-                  hint="Ако часът вече е минал — изпраща се веднага."
-                >
-                  <Input
-                    type="time"
-                    value={form.send_time}
-                    onChange={(e) =>
-                      setForm({ ...form, send_time: e.target.value || "09:00" })
-                    }
-                  />
-                </Field>
-              ) : null}
-
               <p className="rounded-xl bg-white/80 px-3 py-2 text-xs leading-relaxed text-ink-soft">
                 {buildSchedulePreview(
                   form,
@@ -993,144 +1002,162 @@ export function AutomationsManager({
             </div>
 
             {form.channel === "email" ? (
-              <div className="grid gap-6 xl:grid-cols-2">
-                <div className="space-y-3 rounded-xl border border-ink/10 p-4">
-                  <p className="font-medium">Bulgarian</p>
-                  <Field label="Subject">
-                    <Input
-                      value={form.subject_bg}
-                      onChange={(e) =>
-                        setForm({ ...form, subject_bg: e.target.value })
-                      }
-                    />
-                  </Field>
-                  <Field label="Съдържание" hint="{{name}}, {{email}} — header/footer автоматично">
-                    <Textarea
-                      rows={6}
-                      className="font-mono text-[13px]"
-                      value={form.html_bg}
-                      onChange={(e) =>
-                        setForm({ ...form, html_bg: e.target.value })
-                      }
-                    />
-                  </Field>
-                  <EmailEmbedsPanel
-                    locale="bg"
-                    html={form.html_bg}
-                    onHtmlChange={(html_bg) => setForm({ ...form, html_bg })}
-                    products={products}
-                    forms={forms}
-                    attachmentPath={form.attachment_path_bg}
-                    attachmentFilename={form.attachment_filename_bg}
-                    onAttachmentChange={(attachment_path_bg, attachment_filename_bg) =>
-                      setForm({ ...form, attachment_path_bg, attachment_filename_bg })
-                    }
-                    disabled={pending}
-                  />
-                  <Field label="Текст на бутона (по избор)">
-                    <Input
-                      value={form.cta_label_bg}
-                      onChange={(e) =>
-                        setForm({ ...form, cta_label_bg: e.target.value })
-                      }
-                      placeholder="Виж събитията"
-                    />
-                  </Field>
-                  <Field
-                    label="Линк на бутона (по избор)"
-                    hint="Смени по всяко време — вече изпратените имейли ще пренасочват към новия линк."
-                  >
-                    <Input
-                      value={form.cta_url_bg}
-                      onChange={(e) =>
-                        setForm({ ...form, cta_url_bg: e.target.value })
-                      }
-                      placeholder="/bg#events или https://www.healthyandconfident.co.uk/bg#contact"
-                    />
-                  </Field>
-                  <EmailTemplatePreview
-                    bodyHtml={form.html_bg}
-                    ctaLabel={form.cta_label_bg}
-                    ctaUrl={form.cta_url_bg}
-                    locale="bg"
-                    products={products}
-                    forms={forms}
-                  />
+              <div className="space-y-3 rounded-xl border border-ink/10 p-3 sm:p-4">
+                <div className="inline-flex w-full gap-1 rounded-xl border border-ink/15 bg-cream-2/40 p-1 sm:w-auto">
+                  {(
+                    [
+                      ["bg", "Български"],
+                      ["en", "English"],
+                    ] as const
+                  ).map(([loc, label]) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setContentLocale(loc)}
+                      className={cn(
+                        "flex-1 rounded-lg px-3 py-2 text-sm font-semibold sm:flex-none",
+                        contentLocale === loc
+                          ? "bg-forest-600 text-cream"
+                          : "text-ink-soft hover:bg-white",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-                <div className="space-y-3 rounded-xl border border-ink/10 p-4">
-                  <p className="font-medium">English</p>
-                  <Field label="Subject">
-                    <Input
-                      value={form.subject_en}
-                      onChange={(e) =>
-                        setForm({ ...form, subject_en: e.target.value })
+
+                {contentLocale === "bg" ? (
+                  <div className="space-y-3">
+                    <Field label="Тема">
+                      <Input
+                        value={form.subject_bg}
+                        onChange={(e) =>
+                          setForm({ ...form, subject_bg: e.target.value })
+                        }
+                      />
+                    </Field>
+                    <Field label="Съдържание" hint="{{name}}, {{email}}">
+                      <Textarea
+                        rows={5}
+                        className="font-mono text-[13px]"
+                        value={form.html_bg}
+                        onChange={(e) =>
+                          setForm({ ...form, html_bg: e.target.value })
+                        }
+                      />
+                    </Field>
+                    <EmailEmbedsPanel
+                      locale="bg"
+                      html={form.html_bg}
+                      onHtmlChange={(html_bg) => setForm({ ...form, html_bg })}
+                      products={products}
+                      forms={forms}
+                      attachmentPath={form.attachment_path_bg}
+                      attachmentFilename={form.attachment_filename_bg}
+                      onAttachmentChange={(attachment_path_bg, attachment_filename_bg) =>
+                        setForm({ ...form, attachment_path_bg, attachment_filename_bg })
                       }
+                      disabled={pending}
                     />
-                  </Field>
-                  <Field label="Content" hint="{{name}}, {{email}} — header/footer added automatically">
-                    <Textarea
-                      rows={6}
-                      className="font-mono text-[13px]"
-                      value={form.html_en}
-                      onChange={(e) =>
-                        setForm({ ...form, html_en: e.target.value })
+                    <Field label="Бутон (текст)">
+                      <Input
+                        value={form.cta_label_bg}
+                        onChange={(e) =>
+                          setForm({ ...form, cta_label_bg: e.target.value })
+                        }
+                        placeholder="Виж събитията"
+                      />
+                    </Field>
+                    <Field label="Бутон (линк)">
+                      <Input
+                        value={form.cta_url_bg}
+                        onChange={(e) =>
+                          setForm({ ...form, cta_url_bg: e.target.value })
+                        }
+                        placeholder="/bg#events"
+                      />
+                    </Field>
+                    <EmailTemplatePreview
+                      bodyHtml={form.html_bg}
+                      ctaLabel={form.cta_label_bg}
+                      ctaUrl={form.cta_url_bg}
+                      locale="bg"
+                      products={products}
+                      forms={forms}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Field label="Subject">
+                      <Input
+                        value={form.subject_en}
+                        onChange={(e) =>
+                          setForm({ ...form, subject_en: e.target.value })
+                        }
+                      />
+                    </Field>
+                    <Field label="Content" hint="{{name}}, {{email}}">
+                      <Textarea
+                        rows={5}
+                        className="font-mono text-[13px]"
+                        value={form.html_en}
+                        onChange={(e) =>
+                          setForm({ ...form, html_en: e.target.value })
+                        }
+                      />
+                    </Field>
+                    <EmailEmbedsPanel
+                      locale="en"
+                      html={form.html_en}
+                      onHtmlChange={(html_en) => setForm({ ...form, html_en })}
+                      products={products}
+                      forms={forms}
+                      attachmentPath={form.attachment_path_en}
+                      attachmentFilename={form.attachment_filename_en}
+                      onAttachmentChange={(attachment_path_en, attachment_filename_en) =>
+                        setForm({ ...form, attachment_path_en, attachment_filename_en })
                       }
+                      disabled={pending}
                     />
-                  </Field>
-                  <EmailEmbedsPanel
-                    locale="en"
-                    html={form.html_en}
-                    onHtmlChange={(html_en) => setForm({ ...form, html_en })}
-                    products={products}
-                    forms={forms}
-                    attachmentPath={form.attachment_path_en}
-                    attachmentFilename={form.attachment_filename_en}
-                    onAttachmentChange={(attachment_path_en, attachment_filename_en) =>
-                      setForm({ ...form, attachment_path_en, attachment_filename_en })
-                    }
-                    disabled={pending}
-                  />
-                  <Field label="Button text (optional)">
-                    <Input
-                      value={form.cta_label_en}
-                      onChange={(e) =>
-                        setForm({ ...form, cta_label_en: e.target.value })
-                      }
-                      placeholder="Book a free call"
+                    <Field label="Button text">
+                      <Input
+                        value={form.cta_label_en}
+                        onChange={(e) =>
+                          setForm({ ...form, cta_label_en: e.target.value })
+                        }
+                        placeholder="Book a free call"
+                      />
+                    </Field>
+                    <Field label="Button link">
+                      <Input
+                        value={form.cta_url_en}
+                        onChange={(e) =>
+                          setForm({ ...form, cta_url_en: e.target.value })
+                        }
+                        placeholder="/en#events"
+                      />
+                    </Field>
+                    <EmailTemplatePreview
+                      bodyHtml={form.html_en}
+                      ctaLabel={form.cta_label_en}
+                      ctaUrl={form.cta_url_en}
+                      locale="en"
+                      products={products}
+                      forms={forms}
                     />
-                  </Field>
-                  <Field
-                    label="Button link (optional)"
-                    hint="Change anytime — already-sent emails redirect to the new link."
-                  >
-                    <Input
-                      value={form.cta_url_en}
-                      onChange={(e) =>
-                        setForm({ ...form, cta_url_en: e.target.value })
-                      }
-                      placeholder="/en#events or https://www.healthyandconfident.co.uk/en#contact"
-                    />
-                  </Field>
-                  <EmailTemplatePreview
-                    bodyHtml={form.html_en}
-                    ctaLabel={form.cta_label_en}
-                    ctaUrl={form.cta_url_en}
-                    locale="en"
-                    products={products}
-                    forms={forms}
-                  />
-                </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="grid gap-6 xl:grid-cols-2">
-                <Field label="SMS — Bulgarian" hint="{{name}}, {{email}}">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="SMS — BG" hint="{{name}}, {{email}}">
                   <Textarea
                     rows={4}
                     value={form.sms_bg}
                     onChange={(e) => setForm({ ...form, sms_bg: e.target.value })}
                   />
                 </Field>
-                <Field label="SMS — English" hint="{{name}}, {{email}}">
+                <Field label="SMS — EN" hint="{{name}}, {{email}}">
                   <Textarea
                     rows={4}
                     value={form.sms_en}
@@ -1142,22 +1169,22 @@ export function AutomationsManager({
 
             {error && <p className="text-sm text-coral-600">{error}</p>}
 
-            <div className="flex gap-2">
+            <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-ink/10 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
               <button
                 type="button"
                 onClick={save}
                 disabled={pending || !form.name.trim()}
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-forest-600 px-6 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60 sm:flex-none"
               >
                 {saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                Save
+                Запази
               </button>
               <button
                 type="button"
                 onClick={closeEditor}
-                className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-medium hover:bg-ink/5"
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5"
               >
-                <X className="h-4 w-4" /> Cancel
+                Отказ
               </button>
             </div>
           </div>
@@ -1165,15 +1192,16 @@ export function AutomationsManager({
         </div>
       )}
 
-      <div className={cn(editingId && viewTab === "flow" && "min-w-0")}>
+      <div className={cn("min-w-0 overflow-x-auto", editingId && viewTab === "flow" && "2xl:overflow-visible")}>
       {viewTab === "flow" ? (
-        <Card title="Кой · какво · кога">
+        <Card title="Схема" className="min-w-0">
           <AutomationFlowView
             automations={automations}
             groups={groups}
             segments={segments}
             selectedId={editingId !== "new" ? editingId : null}
             onSelectAutomation={openEditFromFlow}
+            onAddAfterAutomation={openNewAfter}
           />
         </Card>
       ) : (

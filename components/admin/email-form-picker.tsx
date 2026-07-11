@@ -41,10 +41,9 @@ export function EmailFormPicker({
   return (
     <div className="space-y-3">
       <p className="text-xs text-ink-soft">
-        Формите се вмъкват като карточка с бутон. При изпращане всеки получател
-        получава личен линк за попълване.
+        Вмъкват се като карточка с личен линк за всеки получател.
       </p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2">
         {sorted.map((form) => {
           const title = locale === "en" ? form.title_en : form.title_bg;
           const isAttached = attached.has(form.id.toLowerCase());
@@ -53,14 +52,14 @@ export function EmailFormPicker({
             <div
               key={form.id}
               className={cn(
-                "flex items-center gap-3 rounded-xl border p-3",
+                "flex min-w-0 items-center gap-2 rounded-xl border p-2.5 sm:gap-3 sm:p-3",
                 isAttached
                   ? "border-forest-500/30 bg-forest-500/5"
                   : "border-ink/10 bg-white",
                 !form.enabled && "opacity-60",
               )}
             >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-forest-500/10 text-lg">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-forest-500/10 text-base sm:h-14 sm:w-14 sm:text-lg">
                 📋
               </div>
               <div className="min-w-0 flex-1">
@@ -76,10 +75,11 @@ export function EmailFormPicker({
                 type="button"
                 disabled={disabled || !form.enabled}
                 onClick={() => addForm(form.id)}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink/15 text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-40 sm:h-auto sm:w-auto sm:gap-1 sm:px-3 sm:py-1.5 sm:text-xs sm:font-semibold"
+                aria-label="Добави"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Добави
+                <span className="hidden sm:inline">Добави</span>
               </button>
             </div>
           );

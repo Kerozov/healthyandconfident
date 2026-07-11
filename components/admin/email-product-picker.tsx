@@ -39,10 +39,9 @@ export function EmailProductPicker({
   return (
     <div className="space-y-3">
       <p className="text-xs text-ink-soft">
-        Продуктите се вмъкват като карточка в имейла. При изпращане се зареждат
-        актуалните заглавие, цена, снимка и линк от магазина.
+        Вмъкват се като карточка с актуални данни при изпращане.
       </p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2">
         {sorted.map((product) => {
           const title = locale === "en" ? product.title_en : product.title_bg;
           const price =
@@ -54,14 +53,14 @@ export function EmailProductPicker({
             <div
               key={product.id}
               className={cn(
-                "flex items-center gap-3 rounded-xl border p-3",
+                "flex min-w-0 items-center gap-2 rounded-xl border p-2.5 sm:gap-3 sm:p-3",
                 isAttached
                   ? "border-forest-500/30 bg-forest-500/5"
                   : "border-ink/10 bg-white",
                 !product.enabled && "opacity-60",
               )}
             >
-              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-green-100">
+              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-green-100 sm:h-14 sm:w-14">
                 {product.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -88,11 +87,12 @@ export function EmailProductPicker({
                 type="button"
                 disabled={disabled || !canAdd}
                 onClick={() => addProduct(product.id)}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink/15 text-ink hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-40 sm:h-auto sm:w-auto sm:gap-1 sm:px-3 sm:py-1.5 sm:text-xs sm:font-semibold"
                 title={canAdd ? "Добави в имейла" : "Липсва Stripe линк"}
+                aria-label="Добави"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Добави
+                <span className="hidden sm:inline">Добави</span>
               </button>
             </div>
           );
