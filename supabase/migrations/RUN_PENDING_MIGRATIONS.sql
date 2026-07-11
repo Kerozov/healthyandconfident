@@ -768,6 +768,18 @@ create trigger site_guides_updated_at before update on public.site_guides
 alter table public.automations
   add column if not exists delay_minutes int not null default 0;
 
+-- 036: merge registration → new_subscriber
+update public.automations
+set trigger_event = 'new_subscriber'
+where trigger_event = 'registration';
+
+alter table public.automations
+  drop constraint if exists automations_trigger_event_check;
+
+alter table public.automations
+  add constraint automations_trigger_event_check
+  check (trigger_event in ('purchase', 'new_subscriber'));
+
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–035 applied). Also run 007_automations.sql if not yet applied.' as result;
+select 'Upgrade complete (012–036 applied). Also run 007_automations.sql if not yet applied.' as result;

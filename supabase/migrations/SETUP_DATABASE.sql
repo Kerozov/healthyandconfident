@@ -153,7 +153,7 @@ create table if not exists public.automations (
   name                 text not null,
   channel              text not null check (channel in ('email', 'sms')),
   trigger_event        text not null check (trigger_event in (
-    'registration', 'purchase', 'new_subscriber'
+    'purchase', 'new_subscriber'
   )),
   enabled              boolean not null default false,
   segment_keys         text[] not null default '{}',

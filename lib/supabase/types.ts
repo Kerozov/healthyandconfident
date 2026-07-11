@@ -93,7 +93,7 @@ export type EmailFooterConfig = {
   updated_at: string;
 };
 
-export type AutomationTrigger = "registration" | "purchase" | "new_subscriber";
+export type AutomationTrigger = "purchase" | "new_subscriber";
 
 export type AutomationChannel = "email" | "sms";
 

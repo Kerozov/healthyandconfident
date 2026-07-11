@@ -33,8 +33,21 @@ export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
   return <textarea {...props} className={cn(base, "min-h-[7rem] resize-y", props.className)} />;
 }
 
-export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={cn(base, props.className)} />;
+export function Select({
+  className,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...props}
+      className={cn(
+        base,
+        // Native selects clip text when fixed height fights vertical padding.
+        "appearance-auto leading-normal",
+        className,
+      )}
+    />
+  );
 }
 
 export function Card({

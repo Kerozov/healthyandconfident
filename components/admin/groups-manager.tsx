@@ -157,12 +157,12 @@ export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
                     <p className="text-xs text-ink-soft">{group.description}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <Select
                     value={group.parent_id ?? ""}
                     onChange={(e) => changeParent(group.id, e.target.value || null)}
                     disabled={pending}
-                    className="h-9 min-w-[10rem] text-xs"
+                    className="!h-9 !min-h-9 !w-auto !min-w-[9.5rem] !rounded-lg !px-3 !py-0 text-xs leading-none"
                   >
                     <option value="">Главна група</option>
                     {parents.map((parent) => (
@@ -172,9 +172,11 @@ export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
                     ))}
                   </Select>
                   <button
+                    type="button"
                     onClick={() => remove(group.id, group.name)}
                     disabled={pending}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600 disabled:opacity-40"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600 disabled:opacity-40"
+                    aria-label={`Изтрий ${group.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

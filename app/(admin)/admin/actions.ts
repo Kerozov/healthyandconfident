@@ -259,7 +259,7 @@ export async function saveEmailFooter(input: {
 type AutomationInput = {
   name: string;
   channel: "email" | "sms";
-  trigger_event: "registration" | "purchase" | "new_subscriber";
+  trigger_event: "purchase" | "new_subscriber";
   enabled: boolean;
   segment_keys: string[];
   group_ids: string[];

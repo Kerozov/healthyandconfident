@@ -11,7 +11,6 @@ import {
   Tag,
   Zap,
   Split,
-  UserCheck,
   ShoppingBag,
   UserPlus,
   Pencil,
@@ -42,17 +41,18 @@ const TRIGGER_META: Record<
     icon: UserPlus,
     color: "bg-sky-100 text-sky-800 border-sky-200",
   },
-  registration: {
-    label: "Записване от сайта",
-    icon: UserCheck,
-    color: "bg-forest-500/15 text-forest-800 border-forest-200",
-  },
   purchase: {
     label: "След покупка",
     icon: ShoppingBag,
     color: "bg-amber-100 text-amber-900 border-amber-200",
   },
 };
+
+/** Maps legacy DB value `registration` until migration 036 is applied. */
+function normalizeTrigger(trigger: string): AutomationTrigger {
+  if (trigger === "purchase") return "purchase";
+  return "new_subscriber";
+}
 
 type ResolvedAudience = {
   groups: { id: string; name: string }[];
@@ -147,7 +147,6 @@ function buildForestByTrigger(
   const byId = new Map(automations.map((a) => [a.id, a]));
   const forest: Record<AutomationTrigger, TreeNode[]> = {
     new_subscriber: [],
-    registration: [],
     purchase: [],
   };
 
@@ -156,7 +155,7 @@ function buildForestByTrigger(
     .sort((a, b) => a.sort_order - b.sort_order);
 
   for (const root of roots) {
-    forest[root.trigger_event].push(buildTree(automations, root));
+    forest[normalizeTrigger(root.trigger_event)].push(buildTree(automations, root));
   }
 
   return forest;
@@ -164,7 +163,6 @@ function buildForestByTrigger(
 
 export const TRIGGER_SECTION_LABELS: Record<AutomationTrigger, string> = {
   new_subscriber: "Нов абонат",
-  registration: "Записване от сайта",
   purchase: "След покупка",
 };
 
@@ -182,7 +180,7 @@ export function flattenAutomationsForDisplay(
 ): FlatAutomationRow[] {
   const forest = buildForestByTrigger(automations);
   const result: FlatAutomationRow[] = [];
-  const triggers: AutomationTrigger[] = ["new_subscriber", "registration", "purchase"];
+  const triggers: AutomationTrigger[] = ["new_subscriber", "purchase"];
 
   for (const trigger of triggers) {
     forest[trigger].forEach((tree, pathIndex) => {
@@ -651,20 +649,18 @@ export function AutomationFlowView({
       </div>
 
       <div className="space-y-8">
-        {(["registration", "new_subscriber", "purchase"] as const).map(
-          (trigger) => (
-            <TriggerSection
-              key={trigger}
-              trigger={trigger}
-              trees={forest[trigger]}
-              groups={groups}
-              segments={segments}
-              selectedId={selectedId}
-              onSelect={onSelectAutomation}
-              onAddAfter={onAddAfterAutomation}
-            />
-          ),
-        )}
+        {(["new_subscriber", "purchase"] as const).map((trigger) => (
+          <TriggerSection
+            key={trigger}
+            trigger={trigger}
+            trees={forest[trigger]}
+            groups={groups}
+            segments={segments}
+            selectedId={selectedId}
+            onSelect={onSelectAutomation}
+            onAddAfter={onAddAfterAutomation}
+          />
+        ))}
       </div>
     </div>
   );

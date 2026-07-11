@@ -35,15 +35,10 @@ function resolveTriggerEvents(
   source: string,
   isNew: boolean,
 ): AutomationTrigger[] {
-  // Payment always starts the purchase flow only — not welcome/registration drips.
+  // Payment always starts the purchase flow only — not welcome drips.
   if (source === "purchase") return ["purchase"];
-
-  const events: AutomationTrigger[] = [];
-  if (isNew) {
-    events.push("new_subscriber");
-    events.push("registration");
-  }
-  return events;
+  if (!isNew) return [];
+  return ["new_subscriber"];
 }
 
 /** Purchase automations run for every buyer, including existing subscribers. */
