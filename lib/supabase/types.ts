@@ -126,6 +126,8 @@ export type Automation = {
   new_subscribers_only: boolean;
   after_automation_id: string | null;
   delay_days: number;
+  /** Minutes after previous automation (or event) when delay_days is 0 */
+  delay_minutes: number;
   /** Local send time (Europe/Sofia) on the target day, HH:MM */
   send_time: string;
   /** Optional fixed calendar date — overrides delay_days when set */

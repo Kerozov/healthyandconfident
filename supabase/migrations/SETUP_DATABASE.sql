@@ -165,6 +165,7 @@ create table if not exists public.automations (
   new_subscribers_only boolean not null default true,
   after_automation_id  uuid references public.automations(id) on delete set null,
   delay_days           int not null default 0,
+  delay_minutes        int not null default 0,
   send_time            text not null default '09:00',
   send_date            date,
   subject_bg           text not null default '',
@@ -733,6 +734,7 @@ alter table public.subscribers
 -- automations: attachments + purchase filter
 alter table public.automations
   add column if not exists delay_days int not null default 0,
+  add column if not exists delay_minutes int not null default 0,
   add column if not exists send_time text not null default '09:00',
   add column if not exists send_date date,
   add column if not exists cta_label_bg text not null default '',

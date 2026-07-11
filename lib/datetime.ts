@@ -125,6 +125,16 @@ export function scheduledAtOnDate(
   ).toISOString();
 }
 
+/** UTC ISO for N minutes after an anchor moment. */
+export function scheduledAtAfterMinutes(
+  minutes: number,
+  from?: Date,
+): string {
+  const anchor = from ? new Date(from) : new Date();
+  const ms = Math.max(0, Math.round(minutes)) * 60_000;
+  return new Date(anchor.getTime() + ms).toISOString();
+}
+
 /** UTC ISO for N days from anchor at HH:MM in Europe/Sofia. */
 export function scheduledAtAfterDays(
   days: number,

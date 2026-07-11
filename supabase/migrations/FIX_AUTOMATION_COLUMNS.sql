@@ -5,6 +5,9 @@ alter table public.automations
   add column if not exists delay_days int not null default 0;
 
 alter table public.automations
+  add column if not exists delay_minutes int not null default 0;
+
+alter table public.automations
   add column if not exists send_time text not null default '09:00';
 
 alter table public.automations

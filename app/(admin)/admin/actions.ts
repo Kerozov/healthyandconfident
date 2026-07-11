@@ -270,6 +270,7 @@ type AutomationInput = {
   new_subscribers_only: boolean;
   after_automation_id?: string | null;
   delay_days?: number;
+  delay_minutes?: number;
   send_time?: string;
   send_date?: string | null;
   subject_bg: string;
@@ -319,6 +320,7 @@ export async function createAutomation(
       purchase_product_ids: input.purchase_product_ids ?? [],
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
+      delay_minutes: Math.max(0, input.delay_minutes ?? 0),
       send_time: normalizeSendTime(input.send_time),
       send_date: normalizeSendDate(input.send_date),
       sort_order: input.sort_order ?? 0,
@@ -350,6 +352,7 @@ export async function updateAutomation(
       purchase_product_ids: input.purchase_product_ids ?? [],
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
+      delay_minutes: Math.max(0, input.delay_minutes ?? 0),
       send_time: normalizeSendTime(input.send_time),
       send_date: normalizeSendDate(input.send_date),
       updated_at: new Date().toISOString(),

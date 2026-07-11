@@ -8,7 +8,11 @@ import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
 import { unsubscribeLinkForEmail, isEmailUnsubscribed } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
-import { scheduledAtAfterDays, scheduledAtOnDate } from "@/lib/datetime";
+import {
+  scheduledAtAfterDays,
+  scheduledAtAfterMinutes,
+  scheduledAtOnDate,
+} from "@/lib/datetime";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { sendEmail, scheduleEmail } from "@/lib/worker/email";
 import { sendSms, scheduleSms } from "@/lib/worker/sms";
@@ -140,7 +144,40 @@ function computeAutomationSendAt(
   if (delayDays > 0) {
     return sendAtAfterDays(delayDays, sendTime, now);
   }
+
+  const delayMinutes = automation.delay_minutes ?? 0;
+  if (delayMinutes > 0) {
+    return scheduledAtAfterMinutes(delayMinutes, now);
+  }
+
   return sendAtNowOrLaterToday(sendTime, now);
+}
+
+function computeChainedSendAt(
+  automation: Automation,
+  parentAt: Date,
+): string {
+  if (automation.send_date) {
+    return computeAutomationSendAt(automation, parentAt);
+  }
+
+  const delayDays = automation.delay_days ?? 0;
+  if (delayDays > 0) {
+    return sendAtAfterDays(
+      delayDays,
+      automation.send_time ?? "09:00",
+      parentAt,
+    );
+  }
+
+  const delayMinutes = automation.delay_minutes ?? 0;
+  if (delayMinutes > 0) {
+    return scheduledAtAfterMinutes(delayMinutes, parentAt);
+  }
+
+  // Same moment as parent would collide — schedule right after parent time.
+  const at = parentAt.getTime() > Date.now() ? parentAt : new Date();
+  return at.toISOString();
 }
 
 function idempotencyKey(automationId: string, email: string): string {
@@ -223,23 +260,21 @@ async function scheduleChainedFromParent(
       continue;
     }
     if (await alreadyQueuedOrSent(rule.id, email)) continue;
-    const childDelay = rule.delay_days ?? 0;
     try {
-      if (childDelay > 0 || rule.send_date) {
-        const sendAt = rule.send_date
-          ? computeAutomationSendAt(rule, parentAt)
-          : sendAtAfterDays(
-              childDelay,
-              rule.send_time ?? "09:00",
-              parentAt,
-            );
-        await scheduleAutomation(rule, ctx, sendAt);
-        await scheduleChainedFromParent(rule.id, sendAt, ctx);
-      } else {
+      const sendAt = computeChainedSendAt(rule, parentAt);
+      const sendNow = new Date(sendAt).getTime() <= Date.now() + 1000;
+      if (sendNow) {
         const sent = await sendAutomationNow(rule, ctx);
         if (sent) {
-          await scheduleChainedFromParent(rule.id, new Date().toISOString(), ctx);
+          await scheduleChainedFromParent(
+            rule.id,
+            new Date().toISOString(),
+            ctx,
+          );
         }
+      } else {
+        await scheduleAutomation(rule, ctx, sendAt);
+        await scheduleChainedFromParent(rule.id, sendAt, ctx);
       }
     } catch (err) {
       console.error(`[automation] chain ${rule.id}:`, err);
@@ -506,7 +541,9 @@ async function executeAutomation(
       email,
     );
     if (!gotPrior) return;
-    if (automation.delay_days > 0 && !opts?.fromChain) return;
+    const hasRelativeDelay =
+      (automation.delay_days ?? 0) > 0 || (automation.delay_minutes ?? 0) > 0;
+    if (hasRelativeDelay && !opts?.fromChain) return;
   }
 
   try {
@@ -514,6 +551,7 @@ async function executeAutomation(
     const sendNow =
       !automation.send_date &&
       (automation.delay_days ?? 0) === 0 &&
+      (automation.delay_minutes ?? 0) === 0 &&
       new Date(sendAt).getTime() <= Date.now() + 1000;
 
     if (sendNow) {

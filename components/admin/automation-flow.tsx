@@ -101,12 +101,18 @@ function resolveAudience(
 
 function scheduleLabel(automation: Automation): string {
   if (automation.send_date) {
-    return `Фиксирана дата: ${automation.send_date} · ${automation.send_time}`;
+    return `Дата: ${automation.send_date} · ${automation.send_time}`;
   }
   if ((automation.delay_days ?? 0) > 0) {
-    return `След ${automation.delay_days} дн. · ${automation.send_time} (София)`;
+    return `След ${automation.delay_days} дн. · ${automation.send_time}`;
   }
-  return `Веднага / днес ${automation.send_time} (София)`;
+  if ((automation.delay_minutes ?? 0) > 0) {
+    return `След ${automation.delay_minutes} мин.`;
+  }
+  if (automation.after_automation_id) {
+    return "Веднага след предишната";
+  }
+  return `Веднага / днес ${automation.send_time}`;
 }
 
 function audienceSummary(
@@ -595,29 +601,13 @@ export function AutomationFlowView({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-forest-100 bg-cream/50 px-4 py-3 text-sm leading-relaxed text-ink-soft">
-        <p className="font-medium text-slate-800">Как да четеш схемата</p>
-        <ul className="mt-2 list-inside list-disc space-y-1">
-          <li>
-            <strong className="text-slate-800">Кога</strong> — при записване, покупка или
-            със закъснение (виж под всяка стъпка)
-          </li>
-          <li>
-            <strong className="text-slate-800">Кой</strong> — групи и сегменти, които
-            получават съобщението
-          </li>
-          <li>
-            <strong className="text-slate-800">Какво</strong> — имейл или SMS; кликни
-            стъпката за редакция на текст, бутон и график
-          </li>
-        </ul>
-        <p className="mt-2">
-          <strong className="text-amber-800">Разклонения</strong> — различни следващи
-          стъпки за различна аудитория.{" "}
-          <strong className="text-coral-700">Изключения</strong> — тези хора спират
-          веригата на тази стъпка (след покупка планираните имейли се отменяват).
+      <div className="rounded-xl border border-forest-100 bg-cream/50 px-4 py-3 text-sm text-ink-soft">
+        <p>
+          Кликни стъпка за редакция.{" "}
+          <span className="text-amber-800">Разклонения</span> = различни пътища.{" "}
+          <span className="text-coral-700">Изключения</span> = спират веригата.
         </p>
-        <div className="mt-3 flex flex-wrap gap-3 text-xs">
+        <div className="mt-2 flex flex-wrap gap-3 text-xs">
           <span className="inline-flex items-center gap-1">
             <Users className="h-3 w-3 text-forest-600" /> Група
           </span>

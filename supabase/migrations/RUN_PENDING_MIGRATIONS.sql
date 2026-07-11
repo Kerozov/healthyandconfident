@@ -764,6 +764,10 @@ drop trigger if exists site_guides_updated_at on public.site_guides;
 create trigger site_guides_updated_at before update on public.site_guides
   for each row execute function public.set_updated_at();
 
+-- 035: minutes after previous automation in a chain
+alter table public.automations
+  add column if not exists delay_minutes int not null default 0;
+
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–034 applied). Also run 007_automations.sql if not yet applied.' as result;
+select 'Upgrade complete (012–035 applied). Also run 007_automations.sql if not yet applied.' as result;
