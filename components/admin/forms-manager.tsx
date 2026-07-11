@@ -40,7 +40,7 @@ import {
   type FormFieldDefault,
 } from "@/lib/forms/field-defaults";
 import { resolveTagsOnSubmit } from "@/lib/forms/tags-on-submit";
-import { siteConfig } from "@/lib/site";
+import { publicFormUrl, siteOrigin } from "@/lib/forms/urls";
 import { formatDate } from "@/lib/utils";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
 import { cn } from "@/lib/utils";
@@ -258,7 +258,7 @@ export function FormsManager({
     });
   }
 
-  const publicBase = process.env.NEXT_PUBLIC_SITE_URL?.trim() || siteConfig.domain;
+  const publicBase = siteOrigin();
 
   return (
     <div className="space-y-6">
@@ -746,7 +746,7 @@ export function FormsManager({
                 </div>
                 <div className="flex gap-1">
                   <a
-                    href={`${publicBase}/bg/forms/${f.slug}`}
+                    href={publicFormUrl(f.slug, "bg")}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5"

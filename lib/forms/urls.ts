@@ -2,22 +2,20 @@ import { siteConfig } from "@/lib/site";
 import { createFormInviteToken } from "@/lib/forms/form-invite-token";
 import type { Locale } from "@/i18n/config";
 
+/** Always the public marketing site — not localhost / preview / worker URLs. */
 export function siteOrigin(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL?.trim() || siteConfig.domain).replace(
-    /\/$/,
-    "",
-  );
+  return siteConfig.domain.replace(/\/$/, "");
 }
 
 export function publicFormUrl(
   slug: string,
   locale: Locale,
-  formId: string,
+  formId?: string,
   email?: string,
   subscriberId?: string | null,
 ): string {
   const base = `${siteOrigin()}/${locale}/forms/${slug}`;
-  if (!email) return base;
+  if (!email || !formId) return base;
   const token = createFormInviteToken({
     f: formId,
     e: email,

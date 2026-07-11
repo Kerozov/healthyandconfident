@@ -1,14 +1,22 @@
 import "server-only";
 
+import { siteConfig } from "@/lib/site";
+
 /**
  * Notification-worker client config (email + SMS share URL + API key).
  * SMS sender + Notifier key are on the worker tenant — see notification-worker seed.
  */
+export function defaultEmailFromAddress(): string {
+  return `${siteConfig.brand} <${siteConfig.email}>`;
+}
+
 export function getNotificationWorkerConfig() {
   const url = (process.env.NOTIFICATION_WORKER_URL || "").replace(/\/$/, "");
   const key = (process.env.NOTIFICATION_WORKER_API_KEY || "").trim();
-  const from = process.env.NOTIFICATION_WORKER_FROM;
-  const replyTo = process.env.NOTIFICATION_WORKER_REPLY_TO;
+  const from =
+    process.env.NOTIFICATION_WORKER_FROM?.trim() || defaultEmailFromAddress();
+  const replyTo =
+    process.env.NOTIFICATION_WORKER_REPLY_TO?.trim() || siteConfig.email;
   return { url, key, from, replyTo };
 }
 
