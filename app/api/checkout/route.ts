@@ -3,6 +3,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { createProductCheckoutSession } from "@/lib/stripe/create-checkout";
 import { recordContactEvent } from "@/lib/contacts/events";
 import { getContactById } from "@/lib/contacts/ensure";
+import { schedulePrePaymentReminders } from "@/lib/contacts/reminders";
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
           source: "site",
           metadata: { product_ids: productIds, locale },
         }).catch(() => {});
+        if (contact.payment_status !== "paid") {
+          void schedulePrePaymentReminders(contact, locale).catch(() => {});
+        }
       }
     }
 

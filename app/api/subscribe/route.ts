@@ -8,7 +8,6 @@ import {
   healthSelectionFromAnswerKey,
 } from "@/lib/site/health-tags";
 import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
-import { schedulePrePaymentReminders } from "@/lib/contacts/reminders";
 import type { Locale } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -174,14 +173,13 @@ export async function POST(req: Request) {
     if (subscriberId) {
       after(async () => {
         try {
-          const contact = await ensureContactForSubscriber({
+          await ensureContactForSubscriber({
             subscriberId,
             email,
             name,
           });
-          await schedulePrePaymentReminders(contact, mailLocale);
         } catch (err) {
-          console.error("[subscribe] contact reminders:", err);
+          console.error("[subscribe] contact ensure:", err);
         }
       });
     }
