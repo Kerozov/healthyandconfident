@@ -2,6 +2,7 @@ import { getAutomations, getSegments, getSegmentGroups, getSiteProducts } from "
 import { getFormTemplates } from "@/lib/admin/forms-data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { AutomationsManager } from "@/components/admin/automations-manager";
+import { AutomationDiagnostics } from "@/components/admin/automation-diagnostics";
 import { Alert, PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,8 @@ export default async function AdminAutomationsPage() {
           products={products}
           forms={forms}
         />
+
+      <AutomationDiagnostics />
 
       <section className="mt-8 rounded-2xl border border-ink/10 bg-white p-4 text-sm text-ink-soft sm:p-5">
         <p className="font-medium text-ink">Пример: welcome серия</p>

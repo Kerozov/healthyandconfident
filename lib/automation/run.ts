@@ -23,7 +23,10 @@ import {
 import {
   prepareEmailAutomationJob,
 } from "@/lib/automation/prepare-email";
-import { isNotificationWorkerConfigured } from "@/lib/worker/config";
+import {
+  getNotificationWorkerConfig,
+  isNotificationWorkerConfigured,
+} from "@/lib/worker/config";
 import { sendEmail, scheduleEmail, submitEmailJobsBatch } from "@/lib/worker/email";
 import { sendSms, scheduleSms } from "@/lib/worker/sms";
 
@@ -902,4 +905,140 @@ export async function runAutomationsForSubscriber(
   ctx: AutomationRunContext,
 ): Promise<AutomationRunReport> {
   return runAutomations(ctx);
+}
+
+export type AutomationDiagnosisRule = {
+  name: string;
+  enabled: boolean;
+  channel: string;
+  triggerEvent: string;
+  wouldSend: boolean;
+  reason: string;
+  emptyContent: boolean;
+};
+
+export type AutomationDiagnosis = {
+  workerConfigured: boolean;
+  workerUrl: string;
+  workerFrom: string;
+  unsubscribed: boolean;
+  isNew: boolean;
+  source: string;
+  tags: string[];
+  triggerEvents: string[];
+  enabledRulesForTrigger: number;
+  wouldSendCount: number;
+  rules: AutomationDiagnosisRule[];
+  notes: string[];
+};
+
+/**
+ * Dry-run: evaluate every enabled automation for this context WITHOUT sending.
+ * Explains, per rule, whether it would fire and why not. Used by admin diagnostics.
+ */
+export async function diagnoseAutomations(
+  ctx: AutomationRunContext,
+): Promise<AutomationDiagnosis> {
+  const cfg = getNotificationWorkerConfig();
+  const email = ctx.email.trim().toLowerCase();
+  const source = ctx.source ?? "popup";
+  const events = resolveTriggerEvents(source, ctx.isNew);
+  const notes: string[] = [];
+
+  const diagnosis: AutomationDiagnosis = {
+    workerConfigured: isNotificationWorkerConfigured(),
+    workerUrl: cfg.url || "(не е зададен)",
+    workerFrom: cfg.from,
+    unsubscribed: false,
+    isNew: ctx.isNew,
+    source,
+    tags: ctx.tags ?? [],
+    triggerEvents: events,
+    enabledRulesForTrigger: 0,
+    wouldSendCount: 0,
+    rules: [],
+    notes,
+  };
+
+  if (!diagnosis.workerConfigured) {
+    notes.push(
+      "NOTIFICATION_WORKER_URL / API_KEY липсват — нищо няма да се изпрати.",
+    );
+  }
+
+  if (await isEmailUnsubscribed(email)) {
+    diagnosis.unsubscribed = true;
+    notes.push("Този имейл е отписан (unsubscribed) — автоматизации не се пращат.");
+    return diagnosis;
+  }
+
+  if (events.length === 0) {
+    notes.push(
+      `source="${source}" не задейства нищо (не е разпознат като записване или покупка).`,
+    );
+    return diagnosis;
+  }
+
+  const supabase = getAdminClient();
+  const [{ data, error }, { data: segmentRows }, { data: groupRows }] = await Promise.all([
+    supabase
+      .from("automations")
+      .select("*")
+      .eq("enabled", true)
+      .in("trigger_event", events as unknown as AutomationTrigger[])
+      .order("sort_order", { ascending: true }),
+    supabase.from("segments").select("*"),
+    supabase.from("segment_groups").select("*"),
+  ]);
+
+  if (error) {
+    notes.push(`Грешка при зареждане на автоматизациите: ${error.message}`);
+    return diagnosis;
+  }
+
+  const segments = (segmentRows as Segment[]) ?? [];
+  const groups = (groupRows as SegmentGroup[]) ?? [];
+  const rules = (data as Automation[]) ?? [];
+  diagnosis.enabledRulesForTrigger = rules.length;
+
+  if (rules.length === 0) {
+    notes.push(
+      `Няма включени (enabled) автоматизации за тригер ${events.join(", ")}.`,
+    );
+    return diagnosis;
+  }
+
+  for (const rule of rules) {
+    const gate = await passesAutomationGates(rule, ctx, segments, groups);
+    const locale: Locale = ctx.locale === "en" ? "en" : "bg";
+    const subjectRaw = locale === "en" ? rule.subject_en : rule.subject_bg;
+    const htmlRaw = locale === "en" ? rule.html_en : rule.html_bg;
+    const emptyContent =
+      rule.channel === "email" && (!subjectRaw?.trim() || !htmlRaw?.trim());
+
+    const wouldSend = gate.ok && !emptyContent;
+    if (wouldSend) diagnosis.wouldSendCount += 1;
+
+    diagnosis.rules.push({
+      name: rule.name,
+      enabled: rule.enabled,
+      channel: rule.channel,
+      triggerEvent: rule.trigger_event,
+      wouldSend,
+      reason: gate.ok
+        ? emptyContent
+          ? `празно съдържание за ${locale.toUpperCase()} (subject/body)`
+          : "ще изпрати"
+        : gate.reason,
+      emptyContent,
+    });
+  }
+
+  if (diagnosis.wouldSendCount === 0) {
+    notes.push(
+      "Нито една автоматизация не би се изпратила — виж причините по-долу.",
+    );
+  }
+
+  return diagnosis;
 }

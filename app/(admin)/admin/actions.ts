@@ -416,6 +416,53 @@ export async function toggleAutomationEnabled(
   return { ok: true };
 }
 
+export async function diagnoseAutomationsForEmail(email: string): Promise<
+  | {
+      ok: true;
+      subscriberFound: boolean;
+      diagnosis: import("@/lib/automation/run").AutomationDiagnosis;
+    }
+  | { ok: false; message: string }
+> {
+  await requireAdmin();
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !normalized.includes("@")) {
+    return { ok: false, message: "Въведи валиден имейл." };
+  }
+
+  const supabase = getAdminClient();
+  const { data: sub } = await supabase
+    .from("subscribers")
+    .select("id, tags, locale, source, name, phone")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  const subscriber = sub as {
+    id: string;
+    tags: string[] | null;
+    locale: string | null;
+    source: string | null;
+    name: string | null;
+    phone: string | null;
+  } | null;
+
+  const { diagnoseAutomations } = await import("@/lib/automation/run");
+  const diagnosis = await diagnoseAutomations({
+    email: normalized,
+    name: subscriber?.name ?? null,
+    phone: subscriber?.phone ?? null,
+    locale: subscriber?.locale === "en" ? "en" : "bg",
+    subscriberId: subscriber?.id ?? null,
+    tags: subscriber?.tags ?? [],
+    // Simulate a fresh signup so gates that need "new" don't hide the reason;
+    // "new + existing" automations are unaffected.
+    isNew: !subscriber,
+    source: subscriber?.source || "free-menu-banner",
+  });
+
+  return { ok: true, subscriberFound: Boolean(subscriber), diagnosis };
+}
+
 export async function syncAutomation(id: string): Promise<ActionResult> {
   await requireAdmin();
   const result = await syncAutomationDeliveries(id);
