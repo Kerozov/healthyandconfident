@@ -48,6 +48,10 @@ export async function createProductCheckoutSession(
   const mode = prices[0].type === "recurring" ? "subscription" : "payment";
   const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim() || siteConfig.domain;
 
+  const stripeProductIds = ordered
+    .map((p) => p.stripe_product_id?.trim())
+    .filter(Boolean);
+
   const session = await stripe.checkout.sessions.create({
     mode,
     line_items: priceIds.map((price) => ({ price, quantity: 1 })),
@@ -56,6 +60,7 @@ export async function createProductCheckoutSession(
     locale: locale === "bg" ? "bg" : "en",
     metadata: {
       product_ids: productIds.join(","),
+      stripe_product_ids: stripeProductIds.join(","),
       locale,
       ...(contactId ? { contact_id: contactId } : {}),
     },

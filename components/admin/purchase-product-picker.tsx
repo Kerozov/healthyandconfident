@@ -34,7 +34,7 @@ export function PurchaseProductPicker({
   return (
     <div className="space-y-2">
       <p className="text-xs text-ink-soft">
-        Празно = при всяка покупка. Иначе само когато клиентът купи избран продукт/програма.
+        Задължително избери поне един продукт — автоматизацията се пуска само при негова покупка.
       </p>
       <div className="flex flex-col gap-2">
         {products.map((product) => {

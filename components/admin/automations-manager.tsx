@@ -501,6 +501,13 @@ export function AutomationsManager({
 
   function save() {
     setError(null);
+    if (
+      form.trigger_event === "purchase" &&
+      (form.purchase_product_ids?.filter(Boolean).length ?? 0) === 0
+    ) {
+      setError("При „След покупка“ избери поне един продукт.");
+      return;
+    }
     startTransition(async () => {
       const payload = {
         ...form,

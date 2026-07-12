@@ -143,6 +143,7 @@ export function MenuPopupProvider({
                 <SubscribeForm
                   locale={locale}
                   source={source}
+                  baseTags={["free-menu"]}
                   consent={copy.consent}
                   success={copy.success}
                   buttonLabel={copy.button}

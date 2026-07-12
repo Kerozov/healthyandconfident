@@ -11,6 +11,8 @@ export type MarkContactPaidInput = {
   stripeSessionId?: string | null;
   amountCents?: number | null;
   currency?: string | null;
+  productIds?: string[];
+  stripeProductIds?: string[];
 };
 
 /** Mark contact paid, record event, cancel pre-payment reminders. Idempotent. */
@@ -53,6 +55,8 @@ export async function markContactPaid(input: MarkContactPaidInput): Promise<{
         stripe_session_id: input.stripeSessionId ?? null,
         amount_cents: input.amountCents ?? null,
         currency: input.currency ?? null,
+        product_ids: input.productIds ?? [],
+        stripe_product_ids: input.stripeProductIds ?? [],
       },
     });
   }
@@ -79,6 +83,8 @@ export async function syncContactAfterPurchase(input: {
   stripeSessionId: string;
   amountCents?: number | null;
   currency?: string | null;
+  productIds?: string[];
+  stripeProductIds?: string[];
 }): Promise<{ remindersCanceled: number }> {
   const contact = await ensureContactForSubscriber({
     subscriberId: input.subscriberId,
@@ -91,6 +97,8 @@ export async function syncContactAfterPurchase(input: {
     stripeSessionId: input.stripeSessionId,
     amountCents: input.amountCents,
     currency: input.currency,
+    productIds: input.productIds,
+    stripeProductIds: input.stripeProductIds,
   });
 
   return { remindersCanceled };

@@ -17,6 +17,11 @@ export type ContactSummary = {
 
 export type PersonPurchase = {
   productTitle: string;
+  productId: string | null;
+  stripeProductId: string | null;
+  paymentStatus: "paid" | "refunded" | "failed";
+  amountCents: number | null;
+  currency: string | null;
   purchasedAt: string;
 };
 
@@ -120,7 +125,9 @@ export async function getPersonProfile(email: string): Promise<{
   ] = await Promise.all([
     supabase
       .from("subscriber_purchases")
-      .select("purchased_at, site_products(title_bg)")
+      .select(
+        "purchased_at, product_id, stripe_product_id, payment_status, amount_cents, currency, site_products(title_bg)",
+      )
       .eq("email", normalized)
       .order("purchased_at", { ascending: false })
       .limit(20),
@@ -144,13 +151,23 @@ export async function getPersonProfile(email: string): Promise<{
   const purchases: PersonPurchase[] = [];
   for (const row of (purchaseRows as {
     purchased_at: string;
+    product_id: string | null;
+    stripe_product_id: string | null;
+    payment_status: PersonPurchase["paymentStatus"];
+    amount_cents: number | null;
+    currency: string | null;
     site_products: { title_bg: string } | { title_bg: string }[] | null;
   }[] | null) ?? []) {
     const product = Array.isArray(row.site_products)
       ? row.site_products[0]
       : row.site_products;
     purchases.push({
-      productTitle: product?.title_bg?.trim() || "Продукт",
+      productTitle: product?.title_bg?.trim() || row.stripe_product_id || "Продукт",
+      productId: row.product_id,
+      stripeProductId: row.stripe_product_id,
+      paymentStatus: row.payment_status ?? "paid",
+      amountCents: row.amount_cents,
+      currency: row.currency,
       purchasedAt: row.purchased_at,
     });
   }

@@ -1,10 +1,80 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { fulfillPurchase } from "@/lib/purchase/fulfill";
-import { resolveProductIdsFromCheckoutSession } from "@/lib/stripe/resolve-products";
+import { updatePurchaseStatusBySession } from "@/lib/purchase/status";
+import { resolveLineItemsFromCheckoutSession } from "@/lib/stripe/resolve-products";
 import { getStripe } from "@/lib/stripe/server";
 
 export const dynamic = "force-dynamic";
+
+async function handlePaidSession(session: Stripe.Checkout.Session) {
+  const email =
+    session.customer_details?.email?.trim().toLowerCase() ||
+    session.customer_email?.trim().toLowerCase() ||
+    "";
+
+  if (!email) {
+    console.warn("[stripe] paid session without email", session.id);
+    return { ok: true, skipped: "no_email" };
+  }
+
+  const lineItems = await resolveLineItemsFromCheckoutSession(session);
+  if (lineItems.length === 0) {
+    console.warn("[stripe] no mapped products for session", session.id);
+    return { ok: true, skipped: "no_products" };
+  }
+
+  const locale = session.metadata?.locale === "en" ? "en" : "bg";
+  const name = session.customer_details?.name ?? null;
+
+  await fulfillPurchase({
+    email,
+    name,
+    locale,
+    lineItems,
+    stripeSessionId: session.id,
+    paymentStatus: "paid",
+    amountCents: session.amount_total ?? null,
+    currency: session.currency ?? null,
+  });
+
+  return { ok: true };
+}
+
+async function handleFailedSession(session: Stripe.Checkout.Session) {
+  const email =
+    session.customer_details?.email?.trim().toLowerCase() ||
+    session.customer_email?.trim().toLowerCase() ||
+    "";
+
+  const lineItems = await resolveLineItemsFromCheckoutSession(session);
+  if (lineItems.length === 0) {
+    return { ok: true, skipped: "no_products" };
+  }
+
+  await fulfillPurchase({
+    email: email || "unknown@stripe.local",
+    locale: session.metadata?.locale === "en" ? "en" : "bg",
+    lineItems,
+    stripeSessionId: session.id,
+    paymentStatus: "failed",
+    amountCents: session.amount_total ?? null,
+    currency: session.currency ?? null,
+  });
+
+  return { ok: true };
+}
+
+async function findSessionForPaymentIntent(
+  paymentIntentId: string,
+): Promise<Stripe.Checkout.Session | null> {
+  const stripe = getStripe();
+  const sessions = await stripe.checkout.sessions.list({
+    payment_intent: paymentIntentId,
+    limit: 1,
+  });
+  return sessions.data[0] ?? null;
+}
 
 export async function POST(req: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
@@ -34,36 +104,31 @@ export async function POST(req: Request) {
     if (session.payment_status !== "paid" && session.status !== "complete") {
       return NextResponse.json({ ok: true, skipped: "not_paid" });
     }
+    const result = await handlePaidSession(session);
+    return NextResponse.json(result);
+  }
 
-    const email =
-      session.customer_details?.email?.trim().toLowerCase() ||
-      session.customer_email?.trim().toLowerCase() ||
-      "";
+  if (event.type === "checkout.session.async_payment_failed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const result = await handleFailedSession(session);
+    return NextResponse.json(result);
+  }
 
-    if (!email) {
-      console.warn("[stripe] checkout.session.completed without email", session.id);
-      return NextResponse.json({ ok: true, skipped: "no_email" });
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    const piId =
+      typeof charge.payment_intent === "string"
+        ? charge.payment_intent
+        : charge.payment_intent?.id;
+
+    if (piId) {
+      const session = await findSessionForPaymentIntent(piId);
+      if (session) {
+        const lineItems = await resolveLineItemsFromCheckoutSession(session);
+        await updatePurchaseStatusBySession(session.id, "refunded", lineItems);
+      }
     }
-
-    const { productIds, priceIds } = await resolveProductIdsFromCheckoutSession(session);
-    if (productIds.length === 0) {
-      console.warn("[stripe] no mapped products for session", session.id);
-      return NextResponse.json({ ok: true, skipped: "no_products" });
-    }
-
-    const locale = session.metadata?.locale === "en" ? "en" : "bg";
-    const name = session.customer_details?.name ?? null;
-
-    await fulfillPurchase({
-      email,
-      name,
-      locale,
-      productIds,
-      stripeSessionId: session.id,
-      stripePriceIds: priceIds,
-      amountCents: session.amount_total ?? null,
-      currency: session.currency ?? null,
-    });
+    return NextResponse.json({ ok: true });
   }
 
   if (event.type === "payment_intent.succeeded") {
@@ -76,25 +141,8 @@ export async function POST(req: Request) {
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       if (session.payment_status === "paid") {
-        const email =
-          session.customer_details?.email?.trim().toLowerCase() ||
-          session.customer_email?.trim().toLowerCase() ||
-          "";
-        if (email) {
-          const { productIds, priceIds } = await resolveProductIdsFromCheckoutSession(session);
-          if (productIds.length > 0) {
-            await fulfillPurchase({
-              email,
-              name: session.customer_details?.name ?? null,
-              locale: session.metadata?.locale === "en" ? "en" : "bg",
-              productIds,
-              stripeSessionId: session.id,
-              stripePriceIds: priceIds,
-              amountCents: session.amount_total ?? intent.amount_received ?? null,
-              currency: session.currency ?? intent.currency ?? null,
-            });
-          }
-        }
+        const result = await handlePaidSession(session);
+        return NextResponse.json(result);
       }
     }
   }

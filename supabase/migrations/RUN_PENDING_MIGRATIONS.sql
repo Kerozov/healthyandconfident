@@ -782,8 +782,9 @@ alter table public.automations
 
 notify pgrst, 'reload schema';
 
--- 037: ensure interest segments exist
+-- 037 + 038: activity (free-menu) + health segments
 insert into public.segments (key, name, description) values
+  ('free-menu', 'Free menu', 'Signed up for the free menu lead magnet'),
   ('insulin-resistance', 'Insulin resistance', 'Interested in IR / blood sugar'),
   ('weight-loss', 'Weight loss', 'Interested in losing weight'),
   ('diabetes', 'Type 2 Diabetes', 'Diabetes remission audience')
@@ -792,4 +793,30 @@ set
   name = excluded.name,
   description = excluded.description;
 
-select 'Upgrade complete (012–037 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 038: stripe product id + purchase payment status
+alter table public.site_products
+  add column if not exists stripe_product_id text not null default '';
+
+alter table public.subscriber_purchases
+  add column if not exists stripe_product_id text,
+  add column if not exists payment_status text not null default 'paid',
+  add column if not exists amount_cents int,
+  add column if not exists currency text;
+
+alter table public.subscriber_purchases
+  drop constraint if exists subscriber_purchases_payment_status_check;
+
+alter table public.subscriber_purchases
+  add constraint subscriber_purchases_payment_status_check
+  check (payment_status in ('paid', 'refunded', 'failed'));
+
+create unique index if not exists subscriber_purchases_session_stripe_product_idx
+  on public.subscriber_purchases (stripe_session_id, stripe_product_id)
+  where stripe_session_id is not null
+    and stripe_product_id is not null
+    and stripe_product_id <> '';
+
+create index if not exists subscriber_purchases_stripe_product_idx
+  on public.subscriber_purchases (stripe_product_id, payment_status);
+
+select 'Upgrade complete (012–038 applied). Also run 007_automations.sql if not yet applied.' as result;

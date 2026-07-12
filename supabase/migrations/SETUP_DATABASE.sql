@@ -90,6 +90,7 @@ create index if not exists segments_group_idx on public.segments (group_id);
 
 insert into public.segments (key, name, description) values
   ('all', 'All subscribers', 'Everyone who opted in'),
+  ('free-menu', 'Free menu', 'Signed up for the free menu lead magnet'),
   ('insulin-resistance', 'Insulin resistance', 'Interested in IR / blood sugar'),
   ('weight-loss', 'Weight loss', 'Interested in losing weight'),
   ('diabetes', 'Type 2 Diabetes', 'Diabetes remission audience')
@@ -268,6 +269,7 @@ create table if not exists public.site_products (
   description_bg  text not null default '',
   description_en  text not null default '',
   stripe_url      text not null,
+  stripe_product_id text not null default '',
   stripe_price_id text not null default '',
   price_label_bg  text not null default '',
   price_label_en  text not null default '',
@@ -315,11 +317,28 @@ create table if not exists public.subscriber_purchases (
   product_id         uuid references public.site_products(id) on delete set null,
   stripe_session_id  text,
   stripe_price_id    text,
+  stripe_product_id  text,
+  payment_status     text not null default 'paid',
+  amount_cents       int,
+  currency           text,
   purchased_at       timestamptz not null default now()
 );
 
+alter table public.subscriber_purchases
+  drop constraint if exists subscriber_purchases_payment_status_check;
+
+alter table public.subscriber_purchases
+  add constraint subscriber_purchases_payment_status_check
+  check (payment_status in ('paid', 'refunded', 'failed'));
+
 create unique index if not exists subscriber_purchases_session_product_idx
   on public.subscriber_purchases (stripe_session_id, product_id);
+
+create unique index if not exists subscriber_purchases_session_stripe_product_idx
+  on public.subscriber_purchases (stripe_session_id, stripe_product_id)
+  where stripe_session_id is not null
+    and stripe_product_id is not null
+    and stripe_product_id <> '';
 
 create index if not exists subscriber_purchases_email_idx
   on public.subscriber_purchases (email, purchased_at desc);
@@ -753,6 +772,7 @@ alter table public.automations
 
 -- site products
 alter table public.site_products
+  add column if not exists stripe_product_id text not null default '',
   add column if not exists stripe_price_id text not null default '',
   add column if not exists offer_type text not null default 'upsell',
   add column if not exists headline_bg text not null default '',
@@ -800,11 +820,28 @@ create table if not exists public.subscriber_purchases (
   product_id         uuid references public.site_products(id) on delete set null,
   stripe_session_id  text,
   stripe_price_id    text,
+  stripe_product_id  text,
+  payment_status     text not null default 'paid',
+  amount_cents       int,
+  currency           text,
   purchased_at       timestamptz not null default now()
 );
 
+alter table public.subscriber_purchases
+  drop constraint if exists subscriber_purchases_payment_status_check;
+
+alter table public.subscriber_purchases
+  add constraint subscriber_purchases_payment_status_check
+  check (payment_status in ('paid', 'refunded', 'failed'));
+
 create unique index if not exists subscriber_purchases_session_product_idx
   on public.subscriber_purchases (stripe_session_id, product_id);
+
+create unique index if not exists subscriber_purchases_session_stripe_product_idx
+  on public.subscriber_purchases (stripe_session_id, stripe_product_id)
+  where stripe_session_id is not null
+    and stripe_product_id is not null
+    and stripe_product_id <> '';
 
 create index if not exists subscriber_purchases_email_idx
   on public.subscriber_purchases (email, purchased_at desc);

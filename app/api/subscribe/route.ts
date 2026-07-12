@@ -12,13 +12,13 @@ import { schedulePrePaymentReminders } from "@/lib/contacts/reminders";
 import type { Locale } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
+/** Enough time to call the notification worker before the response returns. */
+export const maxDuration = 60;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEALTH_TAG_SET = new Set<string>(ALL_HEALTH_TAG_KEYS);
-/** Legacy activity tag — no longer assigned; strip on update. */
-const STRIP_TAGS = new Set(["free-menu"]);
 
-function resolveInterestTag(
+function resolveHealthSegment(
   interest: string | null | undefined,
   tags: string[],
 ): string | null {
@@ -28,26 +28,24 @@ function resolveInterestTag(
   return fromTags ?? null;
 }
 
+/**
+ * Keep non-health tags (incl. free-menu activity), replace health with the
+ * single answer from the form.
+ */
 function buildFinalTags(
   existing: string[] | null | undefined,
   incomingOther: string[],
-  interestTag: string | null,
+  healthSegment: string | null,
 ): string[] {
   const kept = (existing ?? []).filter(
-    (t) =>
-      !HEALTH_TAG_SET.has(t) &&
-      !STRIP_TAGS.has(t) &&
-      t !== "all",
+    (t) => !HEALTH_TAG_SET.has(t) && t !== "all",
   );
   const extras = incomingOther.filter(
-    (t) =>
-      !HEALTH_TAG_SET.has(t) &&
-      !STRIP_TAGS.has(t) &&
-      t !== "all",
+    (t) => !HEALTH_TAG_SET.has(t) && t !== "all",
   );
   let next = Array.from(new Set([...kept, ...extras]));
-  if (interestTag) {
-    const selection = healthSelectionFromAnswerKey(interestTag);
+  if (healthSegment) {
+    const selection = healthSelectionFromAnswerKey(healthSegment);
     if (selection) {
       next = applyHealthSelectionToTags(next, selection);
     }
@@ -90,7 +88,7 @@ export async function POST(req: Request) {
   const rawTags = Array.isArray(body.tags)
     ? body.tags.filter((t) => typeof t === "string" && t.length > 0)
     : [];
-  const interestTag = resolveInterestTag(body.interest, rawTags);
+  const healthSegment = resolveHealthSegment(body.interest, rawTags);
   const incomingOther = rawTags.filter((t) => !HEALTH_TAG_SET.has(t));
 
   const firstName = body.first_name?.trim() || null;
@@ -115,7 +113,7 @@ export async function POST(req: Request) {
     const finalTags = buildFinalTags(
       existing ? (existing.tags as string[] | null) : [],
       incomingOther,
-      interestTag,
+      healthSegment,
     );
 
     const profilePatch = {
@@ -156,36 +154,43 @@ export async function POST(req: Request) {
       subscriberId = (inserted as { id: string } | null)?.id;
     }
 
-    after(async () => {
-      try {
-        await runAutomations({
-          email,
-          name,
-          phone: body.phone?.trim() || null,
-          locale: mailLocale,
-          subscriberId: subscriberId ?? null,
-          tags: finalTags,
-          isNew,
-          source,
-        });
-      } catch (err) {
-        console.error("[subscribe] automations:", err);
-      }
+    // Await automations so the worker is actually called before the serverless
+    // function ends. `after()` alone was dropping sends on Vercel.
+    try {
+      await runAutomations({
+        email,
+        name,
+        phone: body.phone?.trim() || null,
+        locale: mailLocale,
+        subscriberId: subscriberId ?? null,
+        tags: finalTags,
+        isNew,
+        source,
+      });
+    } catch (err) {
+      console.error("[subscribe] automations:", err);
+    }
 
-      if (!subscriberId) return;
-      try {
-        const contact = await ensureContactForSubscriber({
-          subscriberId,
-          email,
-          name,
-        });
-        await schedulePrePaymentReminders(contact, mailLocale);
-      } catch (err) {
-        console.error("[subscribe] contact reminders:", err);
-      }
+    if (subscriberId) {
+      after(async () => {
+        try {
+          const contact = await ensureContactForSubscriber({
+            subscriberId,
+            email,
+            name,
+          });
+          await schedulePrePaymentReminders(contact, mailLocale);
+        } catch (err) {
+          console.error("[subscribe] contact reminders:", err);
+        }
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      tags: finalTags,
+      interest: healthSegment,
     });
-
-    return NextResponse.json({ ok: true, tags: finalTags, interest: interestTag });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed" },

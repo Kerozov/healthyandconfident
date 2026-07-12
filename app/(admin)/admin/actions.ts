@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import { productPlacementKey } from "@/lib/site/product-placement";
 import { productPlacementLabel } from "@/lib/site/cta-placements";
+import { enrichStripePriceFromProduct } from "@/lib/stripe/sync-product";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
   sendEmail,
@@ -305,10 +306,21 @@ function normalizeSendDate(value?: string | null): string | null {
   return match ? trimmed : null;
 }
 
+function validatePurchaseAutomation(input: AutomationInput): string | null {
+  if (input.trigger_event !== "purchase") return null;
+  const ids = input.purchase_product_ids?.filter(Boolean) ?? [];
+  if (ids.length === 0) {
+    return "При автоматизация „След покупка“ избери поне един продукт.";
+  }
+  return null;
+}
+
 export async function createAutomation(
   input: AutomationInput,
 ): Promise<ActionResult & { id?: string }> {
   await requireAdmin();
+  const purchaseErr = validatePurchaseAutomation(input);
+  if (purchaseErr) return { ok: false, message: purchaseErr };
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from("automations")
@@ -341,6 +353,8 @@ export async function updateAutomation(
   input: AutomationInput,
 ): Promise<ActionResult> {
   await requireAdmin();
+  const purchaseErr = validatePurchaseAutomation(input);
+  if (purchaseErr) return { ok: false, message: purchaseErr };
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("automations")
@@ -2320,6 +2334,7 @@ export async function saveSiteProduct(input: {
   description_bg?: string;
   description_en?: string;
   stripe_url: string;
+  stripe_product_id?: string;
   stripe_price_id?: string;
   price_label_bg?: string;
   price_label_en?: string;
@@ -2343,13 +2358,25 @@ export async function saveSiteProduct(input: {
     return { ok: false, message: "Попълни Stripe линк." };
   }
 
+  let stripeIds = {
+    stripe_product_id: input.stripe_product_id?.trim() ?? "",
+    stripe_price_id: input.stripe_price_id?.trim() ?? "",
+  };
+  try {
+    stripeIds = await enrichStripePriceFromProduct(stripeIds);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe product lookup failed";
+    return { ok: false, message };
+  }
+
   const row = {
     title_bg: titleBg,
     title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
     description_en: input.description_en?.trim() ?? "",
     stripe_url: input.stripe_url.trim(),
-    stripe_price_id: input.stripe_price_id?.trim() ?? "",
+    stripe_product_id: stripeIds.stripe_product_id,
+    stripe_price_id: stripeIds.stripe_price_id,
     price_label_bg: input.price_label_bg?.trim() ?? "",
     price_label_en: input.price_label_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,

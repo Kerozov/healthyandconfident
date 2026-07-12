@@ -30,7 +30,7 @@ export function automationMatchesPurchaseProducts(
   purchasedProductIds: string[],
 ): boolean {
   const required = automation.purchase_product_ids?.filter(Boolean) ?? [];
-  if (required.length === 0) return true;
+  if (required.length === 0) return false;
   if (purchasedProductIds.length === 0) return false;
   return required.some((id) => purchasedProductIds.includes(id));
 }

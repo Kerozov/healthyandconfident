@@ -149,6 +149,7 @@ const EMPTY_PRODUCT = {
   description_bg: "",
   description_en: "",
   stripe_url: "",
+  stripe_product_id: "",
   stripe_price_id: "",
   price_label_bg: "",
   price_label_en: "",
@@ -311,6 +312,7 @@ export function WebsiteManager({
       description_bg: product.description_bg,
       description_en: product.description_en,
       stripe_url: product.stripe_url,
+      stripe_product_id: product.stripe_product_id ?? "",
       stripe_price_id: product.stripe_price_id ?? "",
       price_label_bg: product.price_label_bg,
       price_label_en: product.price_label_en,
@@ -449,8 +451,20 @@ export function WebsiteManager({
                   />
                 </Field>
                 <Field
+                  label="Stripe Product ID"
+                  hint="prod_… — default цената (price_…) се взима автоматично от Stripe"
+                >
+                  <Input
+                    value={productForm.stripe_product_id}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, stripe_product_id: e.target.value })
+                    }
+                    placeholder="prod_1ABC..."
+                  />
+                </Field>
+                <Field
                   label="Stripe Price ID"
-                  hint="price_… от Stripe Dashboard — за комбинирано плащане (продукт + upsell)"
+                  hint="price_… — попълва се автоматично от default цената на продукта"
                 >
                   <Input
                     value={productForm.stripe_price_id}

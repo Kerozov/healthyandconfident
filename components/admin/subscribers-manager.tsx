@@ -40,11 +40,11 @@ import { cn, formatDate } from "@/lib/utils";
 import {
   ALL_HEALTH_TAG_KEYS,
   applyHealthSelectionToTags,
-  healthInterestLabelsFromTags,
   healthSelectionFromTags,
   HEALTH_SEGMENT_LABELS_BG,
   type HealthSelection,
 } from "@/lib/site/health-tags";
+import { activityInterestLabelsFromTags, isActivityTag } from "@/lib/site/activity-tags";
 
 export function SubscribersManager({
   subscribers,
@@ -466,10 +466,10 @@ export function SubscribersManager({
       {editing && (
         <Card title={`Сегменти и интерес — ${editing.email}`}>
           <div className="rounded-xl border border-forest-100 bg-cream/40 p-4">
-            <p className="text-sm font-semibold text-slate-800">Какво го вълнува?</p>
+            <p className="text-sm font-semibold text-slate-800">Здравен сегмент</p>
             <p className="mt-1 text-xs text-ink-soft">
-              Същото като при записване от сайта — инсулинова резистентност, диабет или
-              общо отслабване.
+              Отговорът от формата (диабет / ИР / общо отслабване) — отива в колоната
+              Сегменти. Колоната Интерес показва „Безплатно меню“, ако има таг free-menu.
             </p>
             <div className="mt-3 flex flex-col gap-2">
               {(
@@ -657,10 +657,10 @@ export function SubscribersManager({
                       <td className="py-3 pr-4 uppercase text-ink-soft">{s.locale}</td>
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-1">
-                          {healthInterestLabelsFromTags(s.tags).length === 0 ? (
+                          {activityInterestLabelsFromTags(s.tags).length === 0 ? (
                             <span className="text-ink-soft/50">—</span>
                           ) : (
-                            healthInterestLabelsFromTags(s.tags).map((label) => (
+                            activityInterestLabelsFromTags(s.tags).map((label) => (
                               <span
                                 key={label}
                                 className="rounded-full bg-gold-400/20 px-2 py-0.5 text-xs text-amber-900"
@@ -673,10 +673,12 @@ export function SubscribersManager({
                       </td>
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-1">
-                          {s.tags.length === 0 ? (
-                            <span className="text-ink-soft/50">—</span>
-                          ) : (
-                            s.tags.map((t) => {
+                          {(() => {
+                            const segmentTags = s.tags.filter((t) => !isActivityTag(t));
+                            if (segmentTags.length === 0) {
+                              return <span className="text-ink-soft/50">—</span>;
+                            }
+                            return segmentTags.map((t) => {
                               const isHealth = ALL_HEALTH_TAG_KEYS.includes(
                                 t as (typeof ALL_HEALTH_TAG_KEYS)[number],
                               );
@@ -693,8 +695,8 @@ export function SubscribersManager({
                                   {segmentNameByKey(t)}
                                 </span>
                               );
-                            })
-                          )}
+                            });
+                          })()}
                         </div>
                       </td>
                       <td className="py-3 pr-4">
@@ -932,11 +934,27 @@ export function SubscribersManager({
                                   <ul className="space-y-2 rounded-xl border border-ink/10 bg-white p-3">
                                     {statsDetail.profile.purchases.map((purchase) => (
                                       <li
-                                        key={`${purchase.productTitle}-${purchase.purchasedAt}`}
+                                        key={`${purchase.productTitle}-${purchase.purchasedAt}-${purchase.stripeProductId ?? ""}`}
                                         className="flex flex-wrap justify-between gap-2 text-sm"
                                       >
                                         <span className="font-medium">
                                           {purchase.productTitle}
+                                          <span
+                                            className={cn(
+                                              "ml-2 rounded-full px-2 py-0.5 text-xs",
+                                              purchase.paymentStatus === "paid"
+                                                ? "bg-forest-500/15 text-forest-700"
+                                                : purchase.paymentStatus === "refunded"
+                                                  ? "bg-gold-400/20 text-amber-900"
+                                                  : "bg-coral-500/15 text-coral-700",
+                                            )}
+                                          >
+                                            {purchase.paymentStatus === "paid"
+                                              ? "Платено"
+                                              : purchase.paymentStatus === "refunded"
+                                                ? "Възстановено"
+                                                : "Неуспешно"}
+                                          </span>
                                         </span>
                                         <span className="text-xs text-ink-soft">
                                           {formatDate(purchase.purchasedAt, "bg")}
