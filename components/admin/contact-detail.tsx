@@ -129,6 +129,7 @@ export function ContactDetailView({
               <tr>
                 <th className="py-2 pr-4">Влязъл</th>
                 <th className="py-2 pr-4">Излязъл</th>
+                <th className="py-2 pr-4">Meeting ID</th>
                 <th className="py-2">Време в срещата</th>
               </tr>
             </thead>
@@ -145,6 +146,13 @@ export function ContactDetailView({
                     <td className="py-2.5 pr-4 text-ink-soft">
                       {formatDate(e.created_at, "bg")}
                     </td>
+                    <td className="py-2.5 pr-4 font-mono text-xs text-ink-soft">
+                      {typeof e.metadata?.meeting_id === "string"
+                        ? (e.metadata.meeting_id as string).length > 14
+                          ? `…${(e.metadata.meeting_id as string).slice(-10)}`
+                          : (e.metadata.meeting_id as string)
+                        : "—"}
+                    </td>
                     <td className="py-2.5 font-medium text-forest-700">
                       {typeof e.metadata?.duration_minutes === "number"
                         ? `${e.metadata.duration_minutes} мин.`
@@ -154,7 +162,7 @@ export function ContactDetailView({
                 ))}
               {events.filter((e) => e.event_type === "zoom_left").length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-6 text-center text-ink-soft">
+                  <td colSpan={4} className="py-6 text-center text-ink-soft">
                     {contact.zoom_attended
                       ? "Има участие, но няма записани сесии с продължителност."
                       : "Няма Zoom участие още."}

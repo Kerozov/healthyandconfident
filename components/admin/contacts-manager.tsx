@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ContactListRow } from "@/lib/contacts/types";
+import { formatMeetingLabel } from "@/lib/admin/zoom-display";
 import { formatDate } from "@/lib/utils";
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -12,9 +14,14 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 export function ContactsManager({
   contacts,
+  meetingOptions = [],
+  activeMeetingId = null,
 }: {
   contacts: ContactListRow[];
+  meetingOptions?: { meetingId: string; participantCount: number }[];
+  activeMeetingId?: string | null;
 }) {
+  const router = useRouter();
   const [paymentFilter, setPaymentFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [reminderFilter, setReminderFilter] = useState<"all" | "yes" | "no">("all");
   const [zoomFilter, setZoomFilter] = useState<"all" | "yes" | "no">("all");
@@ -37,6 +44,20 @@ export function ContactsManager({
 
   return (
     <div className="space-y-4">
+      {activeMeetingId && (
+        <p className="rounded-lg bg-forest-500/10 px-4 py-2 text-sm text-forest-800">
+          Филтър по среща:{" "}
+          <span className="font-mono">{formatMeetingLabel(activeMeetingId)}</span>
+          {" · "}
+          <Link href="/admin/contacts" className="font-medium underline">
+            Изчисти
+          </Link>
+          {" · "}
+          <Link href="/admin/zoom" className="font-medium underline">
+            Zoom статистика
+          </Link>
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
         <select
           value={paymentFilter}
@@ -55,6 +76,21 @@ export function ContactsManager({
           <option value="all">Всички — reminders</option>
           <option value="yes">С pending reminders</option>
           <option value="no">Без pending reminders</option>
+        </select>
+        <select
+          value={activeMeetingId ?? ""}
+          onChange={(e) => {
+            const id = e.target.value;
+            router.push(id ? `/admin/contacts?meeting=${encodeURIComponent(id)}` : "/admin/contacts");
+          }}
+          className="min-w-[180px] rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm"
+        >
+          <option value="">Всички срещи</option>
+          {meetingOptions.map((m) => (
+            <option key={m.meetingId} value={m.meetingId}>
+              {formatMeetingLabel(m.meetingId)} ({m.participantCount} души)
+            </option>
+          ))}
         </select>
         <select
           value={zoomFilter}

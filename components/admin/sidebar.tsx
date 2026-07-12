@@ -20,6 +20,7 @@ import {
   Route,
   Menu,
   X,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/subscribers", label: "Абонати", icon: Users },
       { href: "/admin/contacts", label: "Контакти", icon: Route },
+      { href: "/admin/zoom", label: "Zoom", icon: Video },
       { href: "/admin/forms", label: "Форми", icon: ClipboardList },
     ],
   },

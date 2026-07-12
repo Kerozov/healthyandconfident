@@ -928,6 +928,7 @@ export function SubscribersManager({
                                         <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
                                           <th className="px-3 py-2">Влязъл</th>
                                           <th className="px-3 py-2">Излязъл</th>
+                                          <th className="px-3 py-2">Meeting</th>
                                           <th className="px-3 py-2">Време</th>
                                         </tr>
                                       </thead>
@@ -944,6 +945,13 @@ export function SubscribersManager({
                                             </td>
                                             <td className="px-3 py-2 text-xs text-ink-soft">
                                               {formatDate(session.leftAt, "bg")}
+                                            </td>
+                                            <td className="px-3 py-2 font-mono text-xs text-ink-soft">
+                                              {session.meetingId
+                                                ? session.meetingId.length > 14
+                                                  ? `…${session.meetingId.slice(-10)}`
+                                                  : session.meetingId
+                                                : "—"}
                                             </td>
                                             <td className="px-3 py-2 font-medium text-forest-700">
                                               {session.durationMinutes} мин.

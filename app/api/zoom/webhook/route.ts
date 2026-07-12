@@ -111,6 +111,7 @@ export async function POST(req: Request) {
       source: "zoom",
       metadata: {
         meeting_id: body.payload?.object?.id ?? null,
+        join_time: joinTime?.toISOString() ?? participant?.join_time ?? null,
         leave_time: participant?.leave_time ?? now,
         duration_minutes: durationMinutes,
       },
