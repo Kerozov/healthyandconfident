@@ -13,10 +13,14 @@ import { renderEmailTemplate } from "@/lib/automation/template";
 import {
   scheduledAtAfterDays,
   scheduledAtAfterMinutes,
-  scheduledAtOnDate,
 } from "@/lib/datetime";
+import { computeAutomationSendAt } from "@/lib/automation/send-at";
+import {
+  automationIdFromIdempotencyKey,
+  prepareEmailAutomationJob,
+} from "@/lib/automation/prepare-email";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
-import { sendEmail, scheduleEmail } from "@/lib/worker/email";
+import { sendEmail, scheduleEmail, submitEmailJobsBatch } from "@/lib/worker/email";
 import { sendSms, scheduleSms } from "@/lib/worker/sms";
 
 export type AutomationRunContext = {
@@ -159,35 +163,6 @@ function sendAtAfterDays(
   from?: Date,
 ): string {
   return scheduledAtAfterDays(days, sendTime || "09:00", from);
-}
-
-function computeAutomationSendAt(
-  automation: Automation,
-  from?: Date,
-): string {
-  const sendTime = automation.send_time ?? "09:00";
-  const now = from ? new Date(from) : new Date();
-
-  if (automation.send_date) {
-    const fixed = scheduledAtOnDate(automation.send_date, sendTime);
-    if (new Date(fixed).getTime() > now.getTime()) {
-      return fixed;
-    }
-    return now.toISOString();
-  }
-
-  const delayDays = automation.delay_days ?? 0;
-  if (delayDays > 0) {
-    return sendAtAfterDays(delayDays, sendTime, now);
-  }
-
-  const delayMinutes = automation.delay_minutes ?? 0;
-  if (delayMinutes > 0) {
-    return scheduledAtAfterMinutes(delayMinutes, now);
-  }
-
-  // True immediate — send as soon as the event (or chain) fires.
-  return now.toISOString();
 }
 
 function computeChainedSendAt(
@@ -551,6 +526,56 @@ async function sendAutomationNow(
   return true;
 }
 
+async function passesAutomationGates(
+  automation: Automation,
+  ctx: AutomationRunContext,
+  segments: Segment[],
+  groups: SegmentGroup[],
+  opts?: { fromChain?: boolean },
+): Promise<boolean> {
+  const email = ctx.email.trim().toLowerCase();
+  const tags = ctx.tags ?? [];
+
+  if (!passesNewSubscriberGate(automation, ctx)) {
+    console.info(`[automation] skip ${automation.name}: new_subscribers_only`);
+    return false;
+  }
+  if (!passesPurchaseSegmentEntryGate(automation, ctx, segments, groups)) {
+    console.info(`[automation] skip ${automation.name}: purchase segment gate`);
+    return false;
+  }
+  if (!segmentMatches(automation, tags, segments, groups)) {
+    console.info(
+      `[automation] skip ${automation.name}: audience (tags=${tags.join(",") || "∅"})`,
+    );
+    return false;
+  }
+  if (
+    automation.trigger_event === "purchase" &&
+    !automationMatchesPurchaseProducts(automation, ctx.purchasedProductIds ?? [])
+  ) {
+    console.info(`[automation] skip ${automation.name}: product filter`);
+    return false;
+  }
+  if (await alreadyQueuedOrSent(automation.id, email)) {
+    console.info(`[automation] skip ${automation.name}: already queued/sent`);
+    return false;
+  }
+
+  if (automation.after_automation_id) {
+    const gotPrior = await alreadyQueuedOrSent(
+      automation.after_automation_id,
+      email,
+    );
+    if (!gotPrior) return false;
+    const hasRelativeDelay =
+      (automation.delay_days ?? 0) > 0 || (automation.delay_minutes ?? 0) > 0;
+    if (hasRelativeDelay && !opts?.fromChain) return false;
+  }
+
+  return true;
+}
+
 async function executeAutomation(
   automation: Automation,
   ctx: AutomationRunContext,
@@ -559,43 +584,9 @@ async function executeAutomation(
   opts?: { fromChain?: boolean },
 ): Promise<void> {
   const email = ctx.email.trim().toLowerCase();
-  const tags = ctx.tags ?? [];
 
-  if (!passesNewSubscriberGate(automation, ctx)) {
-    console.info(`[automation] skip ${automation.name}: new_subscribers_only`);
+  if (!(await passesAutomationGates(automation, ctx, segments, groups, opts))) {
     return;
-  }
-  if (!passesPurchaseSegmentEntryGate(automation, ctx, segments, groups)) {
-    console.info(`[automation] skip ${automation.name}: purchase segment gate`);
-    return;
-  }
-  if (!segmentMatches(automation, tags, segments, groups)) {
-    console.info(
-      `[automation] skip ${automation.name}: audience (tags=${tags.join(",") || "∅"})`,
-    );
-    return;
-  }
-  if (
-    automation.trigger_event === "purchase" &&
-    !automationMatchesPurchaseProducts(automation, ctx.purchasedProductIds ?? [])
-  ) {
-    console.info(`[automation] skip ${automation.name}: product filter`);
-    return;
-  }
-  if (await alreadyQueuedOrSent(automation.id, email)) {
-    console.info(`[automation] skip ${automation.name}: already queued/sent`);
-    return;
-  }
-
-  if (automation.after_automation_id) {
-    const gotPrior = await alreadyQueuedOrSent(
-      automation.after_automation_id,
-      email,
-    );
-    if (!gotPrior) return;
-    const hasRelativeDelay =
-      (automation.delay_days ?? 0) > 0 || (automation.delay_minutes ?? 0) > 0;
-    if (hasRelativeDelay && !opts?.fromChain) return;
   }
 
   try {
@@ -680,11 +671,92 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
     return;
   }
 
+  const smsRules: Automation[] = [];
+  const emailRules: Automation[] = [];
+
   for (const rule of rules) {
+    if (!(await passesAutomationGates(rule, ctx, segments, groups))) continue;
+    if (rule.channel === "sms") smsRules.push(rule);
+    else emailRules.push(rule);
+  }
+
+  if (emailRules.length > 0) {
+    const prepared = (
+      await Promise.all(
+        emailRules.map((rule) => prepareEmailAutomationJob(rule, ctx)),
+      )
+    ).filter((job) => job !== null);
+
+    if (prepared.length > 0) {
+      try {
+        const batch = await submitEmailJobsBatch(
+          prepared.map((job) => ({
+            subject: job.subject,
+            html: job.html,
+            recipients: job.recipients,
+            sendAt: job.sendAt,
+            idempotencyKey: job.idempotencyKey,
+            attachments: job.attachments,
+          })),
+        );
+
+        console.info(
+          `[automation] batch ${prepared.length} email(s) for ${email} → worker`,
+        );
+
+        for (const item of batch.results) {
+          const automationId = automationIdFromIdempotencyKey(item.idempotencyKey);
+          if (!automationId) continue;
+
+          const isSent =
+            item.status === "sent" ||
+            item.dispatch === "immediate" ||
+            (item.sent ?? 0) > 0;
+          const status = item.error
+            ? "failed"
+            : isSent
+              ? "sent"
+              : "scheduled";
+
+          await recordDelivery({
+            automationId,
+            subscriberId: ctx.subscriberId,
+            email,
+            phone: ctx.phone,
+            channel: "email",
+            status,
+            workerJobId: item.jobId || null,
+            error: item.error ?? null,
+            scheduledFor: status === "scheduled" ? item.sendAt : null,
+          });
+
+          if (status === "sent" || status === "scheduled") {
+            await scheduleChainedFromParent(automationId, item.sendAt, ctx);
+          }
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Batch send failed";
+        console.error("[automation] email batch:", message);
+        for (const job of prepared) {
+          await recordDelivery({
+            automationId: job.automationId,
+            subscriberId: ctx.subscriberId,
+            email,
+            phone: ctx.phone,
+            channel: "email",
+            status: "failed",
+            error: message,
+          });
+        }
+      }
+    }
+  }
+
+  for (const rule of smsRules) {
     try {
       await executeAutomation(rule, ctx, segments, groups);
     } catch (err) {
-      console.error(`[automation] rule ${rule.id}:`, err);
+      console.error(`[automation] sms rule ${rule.id}:`, err);
     }
   }
 }

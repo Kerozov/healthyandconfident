@@ -37,6 +37,31 @@ export type WorkerSendResult = {
   sendAt?: string;
 };
 
+export type WorkerBatchJobItem = {
+  subject: string;
+  html: string;
+  recipients: string[];
+  sendAt: string;
+  idempotencyKey?: string;
+  attachments?: SendArgs["attachments"];
+};
+
+export type WorkerBatchResultItem = {
+  idempotencyKey?: string;
+  jobId: string;
+  status: string;
+  sendAt: string;
+  dispatch?: string;
+  sent?: number;
+  failed?: number;
+  error?: string;
+};
+
+export type WorkerBatchResult = {
+  ok: boolean;
+  results: WorkerBatchResultItem[];
+};
+
 export type JobTracking = {
   total: number;
   opened: number;
@@ -190,6 +215,27 @@ export async function sendEmail(args: SendArgs): Promise<WorkerSendResult> {
     from: args.from || from,
     replyTo: args.replyTo || replyTo,
     attachments: args.attachments?.length ? args.attachments : undefined,
+  });
+}
+
+/** One HTTP call — worker creates/schedules all jobs (immediate + delayed). */
+export async function submitEmailJobsBatch(
+  jobs: WorkerBatchJobItem[],
+): Promise<WorkerBatchResult> {
+  if (jobs.length === 0) {
+    return { ok: true, results: [] };
+  }
+  const { from, replyTo } = getNotificationWorkerConfig();
+  return post<WorkerBatchResult>("/api/v1/jobs/batch", {
+    from,
+    replyTo,
+    jobs: jobs.map((job) => ({
+      subject: job.subject,
+      html: job.html,
+      recipients: job.recipients,
+      sendAt: job.sendAt,
+      idempotencyKey: job.idempotencyKey,
+    })),
   });
 }
 
