@@ -168,12 +168,9 @@ function segmentMatches(
     (ALL_HEALTH_TAG_KEYS as string[]).includes(k),
   );
 
-  // A parent group that contains ALL interests must not pull every interest drip.
-  // Only a direct segment_key (e.g. weight-loss) targets that interest.
-  if (audienceHealth.length > 1 && directHealth.length === 0) {
-    return false;
-  }
-
+  // Targeting a GROUP (e.g. "Primary" = IR + diabetes) means everyone in it —
+  // subscriberMatchesAutomationAudience already confirmed membership above.
+  // Only a DIRECT health segment_key narrows to that specific interest.
   const required = directHealth.length > 0 ? directHealth : audienceHealth;
   return required.some((t) => subHealth.includes(t));
 }
