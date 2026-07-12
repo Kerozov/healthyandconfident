@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Download, Upload, Trash2, Tag, UserMinus, UserCheck, X, ChevronDown, ChevronUp, BarChart3, Loader2 } from "lucide-react";
 import type { Subscriber, Segment, SegmentGroup } from "@/lib/supabase/types";
 import type { EmailEngagementSummary, EngagementActivityItem, ClickEventItem } from "@/lib/admin/engagement";
+import type { PersonEmailItem } from "@/lib/admin/person-email";
 import type {
   ContactSummary,
   PersonFormSubmission,
@@ -45,6 +46,7 @@ import {
   type HealthSelection,
 } from "@/lib/site/health-tags";
 import { activityInterestLabelsFromTags, isActivityTag } from "@/lib/site/activity-tags";
+import { PersonEmailsTable } from "@/components/admin/person-emails-table";
 
 export function SubscribersManager({
   subscribers,
@@ -98,6 +100,7 @@ export function SubscribersManager({
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsDetail, setStatsDetail] = useState<{
     summary: EmailEngagementSummary;
+    emails: PersonEmailItem[];
     activity: EngagementActivityItem[];
     clickEvents: ClickEventItem[];
     profile: {
@@ -229,6 +232,7 @@ export function SubscribersManager({
     if (res.ok) {
       setStatsDetail({
         summary: res.summary,
+        emails: res.emails,
         activity: res.activity,
         clickEvents: res.clickEvents,
         profile: res.profile,
@@ -626,6 +630,7 @@ export function SubscribersManager({
                 <th className="py-2 pr-4">Zoom</th>
                 <th className="py-2 pr-4">Source</th>
                 <th className="py-2 pr-4">Status</th>
+                <th className="py-2 pr-4 text-center">Имейли</th>
                 <th className="py-2 pr-4 text-center">Отворени</th>
                 <th className="py-2 pr-4 text-center">Кликове</th>
                 <th className="py-2 pr-4 text-right">Actions</th>
@@ -733,6 +738,29 @@ export function SubscribersManager({
                           {s.status}
                         </span>
                       </td>
+                      <td className="py-3 pr-4 text-center text-xs text-ink-soft">
+                        {stats && (stats.emailsSent > 0 || stats.emailsScheduled > 0 || stats.emailsFailed > 0) ? (
+                          <div>
+                            {stats.emailsSent > 0 && (
+                              <span className="font-medium text-forest-700">
+                                {stats.emailsSent} изпр.
+                              </span>
+                            )}
+                            {stats.emailsScheduled > 0 && (
+                              <span className="block text-gold-700">
+                                {stats.emailsScheduled} планир.
+                              </span>
+                            )}
+                            {stats.emailsFailed > 0 && (
+                              <span className="block text-coral-700">
+                                {stats.emailsFailed} грешка
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="py-3 pr-4 text-center text-ink-soft">
                         {stats?.emailsOpened ?? 0}
                         {stats && stats.emailsSent > 0 && (
@@ -787,7 +815,7 @@ export function SubscribersManager({
                     </tr>
                     {isStatsOpen && (
                       <tr className="border-b border-ink/5 bg-cream-2/30">
-                        <td colSpan={12} className="px-4 py-4">
+                        <td colSpan={13} className="px-4 py-4">
                           {statsLoading ? (
                             <p className="flex items-center gap-2 text-sm text-ink-soft">
                               <Loader2 className="h-4 w-4 animate-spin" /> Зареждане…
@@ -1002,52 +1030,16 @@ export function SubscribersManager({
                                 </div>
                               )}
 
-                              {statsDetail.activity.length > 0 && (
+                              {statsDetail.emails.length > 0 && (
                                 <div>
-                                  <p className="mb-2 text-sm font-semibold">Имейл активност</p>
-                                  <div className="overflow-x-auto rounded-xl border border-ink/10 bg-white">
-                                    <table className="w-full text-sm">
-                                      <thead>
-                                        <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
-                                          <th className="px-3 py-2">Имейл</th>
-                                          <th className="px-3 py-2">Тип</th>
-                                          <th className="px-3 py-2">Изпратен</th>
-                                          <th className="px-3 py-2">Отворен</th>
-                                          <th className="px-3 py-2">Кликове</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {statsDetail.activity.map((item, i) => (
-                                          <tr
-                                            key={`${item.title}-${item.sentAt}-${i}`}
-                                            className="border-b border-ink/5 last:border-0"
-                                          >
-                                            <td className="px-3 py-2 font-medium">
-                                              {item.title}
-                                            </td>
-                                            <td className="px-3 py-2 text-ink-soft">
-                                              {item.kind === "campaign"
-                                                ? "Кампания"
-                                                : "Автоматизация"}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs text-ink-soft">
-                                              {formatDate(item.sentAt, "bg")}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs text-ink-soft">
-                                              {item.opened
-                                                ? item.openedAt
-                                                  ? formatDate(item.openedAt, "bg")
-                                                  : "Да"
-                                                : "—"}
-                                            </td>
-                                            <td className="px-3 py-2 font-medium text-forest-700">
-                                              {item.clicks}
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
+                                  <p className="mb-2 text-sm font-semibold">
+                                    Имейли на човека
+                                  </p>
+                                  <p className="mb-3 text-xs text-ink-soft">
+                                    Автоматизации, кампании и напомняния — изпратени,
+                                    планирани и неуспешни.
+                                  </p>
+                                  <PersonEmailsTable emails={statsDetail.emails} />
                                 </div>
                               )}
 
@@ -1074,12 +1066,12 @@ export function SubscribersManager({
                                 </div>
                               )}
 
-                              {statsDetail.activity.length === 0 &&
+                              {statsDetail.emails.length === 0 &&
                                 statsDetail.profile.zoomSessions.length === 0 &&
                                 statsDetail.profile.purchases.length === 0 &&
                                 statsDetail.profile.formSubmissions.length === 0 && (
                                   <p className="text-sm text-ink-soft">
-                                    Още няма записана активност за този имейл.
+                                    Още няма записани имейли или активност за този човек.
                                   </p>
                                 )}
                             </div>

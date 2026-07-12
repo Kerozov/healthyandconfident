@@ -155,8 +155,9 @@ export async function POST(req: Request) {
 
     // Await automations so the worker is actually called before the serverless
     // function ends. `after()` alone was dropping sends on Vercel.
+    let automationReport;
     try {
-      await runAutomations({
+      automationReport = await runAutomations({
         email,
         name,
         phone: body.phone?.trim() || null,
@@ -168,6 +169,17 @@ export async function POST(req: Request) {
       });
     } catch (err) {
       console.error("[subscribe] automations:", err);
+      automationReport = {
+        workerConfigured: false,
+        unsubscribed: false,
+        triggerEvents: [],
+        rulesLoaded: 0,
+        matchedEmail: 0,
+        prepared: 0,
+        submitted: 0,
+        skipped: [],
+        errors: [err instanceof Error ? err.message : "automation_failed"],
+      };
     }
 
     if (subscriberId) {
@@ -188,6 +200,7 @@ export async function POST(req: Request) {
       ok: true,
       tags: finalTags,
       interest: healthSegment,
+      automation: automationReport,
     });
   } catch (err) {
     return NextResponse.json(

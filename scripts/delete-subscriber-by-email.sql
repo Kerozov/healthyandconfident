@@ -70,4 +70,5 @@ BEGIN
   RAISE NOTICE 'form_submissions: %', deleted_forms;
   RAISE NOTICE 'form_invitations: %', deleted_invites;
   RAISE NOTICE 'Готово. Регистрирай се отново със същия имейл за чист тест.';
+  RAISE NOTICE 'Worker: стари jobs по имейл не се трият тук — виж scripts/delete-worker-jobs-by-email.sql';
 END $$;

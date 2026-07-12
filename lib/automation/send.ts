@@ -47,3 +47,4 @@ export async function sendRegistrationWelcomeEmail(
 }
 
 export { runAutomations, runAutomationsForSubscriber } from "@/lib/automation/run";
+export type { AutomationRunReport } from "@/lib/automation/run";

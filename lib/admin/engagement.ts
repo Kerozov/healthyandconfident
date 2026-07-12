@@ -1,11 +1,17 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
+import {
+  getPersonEmailHistory,
+  type PersonEmailItem,
+} from "@/lib/admin/email-history";
 
 export type EngagementTier = "hot" | "warm" | "cold" | "none";
 
 export type EmailEngagementSummary = {
   emailsSent: number;
+  emailsScheduled: number;
+  emailsFailed: number;
   emailsOpened: number;
   emailsWithClicks: number;
   totalClicks: number;
@@ -93,11 +99,13 @@ function bumpAcc(acc: Acc, opened: boolean, clicks: number) {
   }
 }
 
-function accToSummary(acc: Acc): EmailEngagementSummary {
+function accToSummary(acc: Acc & { scheduled?: number; failed?: number }): EmailEngagementSummary {
   const openRate = rate(acc.emailsOpened, acc.emailsSent);
   const clickRate = rate(acc.emailsWithClicks, acc.emailsSent);
   return {
     emailsSent: acc.emailsSent,
+    emailsScheduled: acc.scheduled ?? 0,
+    emailsFailed: acc.failed ?? 0,
     emailsOpened: acc.emailsOpened,
     emailsWithClicks: acc.emailsWithClicks,
     totalClicks: acc.totalClicks,
@@ -146,6 +154,8 @@ export async function getEngagementSummaryForEmails(
       emailsOpened: 0,
       emailsWithClicks: 0,
       totalClicks: 0,
+      scheduled: 0,
+      failed: 0,
     });
   }
 
@@ -153,37 +163,55 @@ export async function getEngagementSummaryForEmails(
 
   const { data: autoRows } = await supabase
     .from("automation_deliveries")
-    .select("email, opened_at, click_count, recipient_status")
+    .select("email, status, opened_at, click_count, recipient_status")
     .eq("channel", "email")
-    .eq("status", "sent")
     .in("email", normalized);
 
   for (const row of (autoRows as {
     email: string;
+    status: string;
     opened_at: string | null;
     click_count: number;
     recipient_status: string | null;
   }[] | null) ?? []) {
-    const acc = byEmail.get(row.email.toLowerCase());
+    const acc = byEmail.get(row.email.toLowerCase()) as Acc & {
+      scheduled?: number;
+      failed?: number;
+    };
     if (!acc) continue;
-    bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
+    if (row.status === "sent") {
+      bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
+    } else if (row.status === "scheduled") {
+      acc.scheduled = (acc.scheduled ?? 0) + 1;
+    } else if (row.status === "failed") {
+      acc.failed = (acc.failed ?? 0) + 1;
+    }
   }
 
   const { data: campRows } = await supabase
     .from("campaign_deliveries")
-    .select("email, opened_at, click_count, recipient_status")
-    .eq("status", "sent")
+    .select("email, status, opened_at, click_count, recipient_status")
     .in("email", normalized);
 
   for (const row of (campRows as {
     email: string;
+    status: string;
     opened_at: string | null;
     click_count: number;
     recipient_status: string | null;
   }[] | null) ?? []) {
-    const acc = byEmail.get(row.email.toLowerCase());
+    const acc = byEmail.get(row.email.toLowerCase()) as Acc & {
+      scheduled?: number;
+      failed?: number;
+    };
     if (!acc) continue;
-    bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
+    if (row.status === "sent") {
+      bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
+    } else if (row.status === "scheduled") {
+      acc.scheduled = (acc.scheduled ?? 0) + 1;
+    } else if (row.status === "failed") {
+      acc.failed = (acc.failed ?? 0) + 1;
+    }
   }
 
   for (const [email, acc] of byEmail) {
@@ -248,87 +276,37 @@ export async function getClickEventsForEmail(
 
 export async function getSubscriberEngagementDetail(email: string): Promise<{
   summary: EmailEngagementSummary;
+  emails: PersonEmailItem[];
   activity: EngagementActivityItem[];
   clickEvents: ClickEventItem[];
 }> {
   const normalized = email.trim().toLowerCase();
-  const summaryMap = await getEngagementSummaryForEmails([normalized]);
+  const [summaryMap, emails, clickEvents] = await Promise.all([
+    getEngagementSummaryForEmails([normalized]),
+    getPersonEmailHistory(normalized),
+    getClickEventsForEmail(normalized),
+  ]);
   const summary = summaryMap.get(normalized) ?? accToSummary({
     emailsSent: 0,
     emailsOpened: 0,
     emailsWithClicks: 0,
     totalClicks: 0,
+    scheduled: 0,
+    failed: 0,
   });
 
-  const supabase = getAdminClient();
-  const activity: EngagementActivityItem[] = [];
+  const activity: EngagementActivityItem[] = emails
+    .filter((item) => item.status === "sent")
+    .map((item) => ({
+      kind: item.kind === "reminder" ? "automation" : item.kind,
+      title: item.title,
+      sentAt: item.at,
+      opened: item.opened,
+      openedAt: item.openedAt,
+      clicks: item.clicks,
+    }));
 
-  const { data: autoDeliveries } = await supabase
-    .from("automation_deliveries")
-    .select("automation_id, sent_at, opened_at, click_count, recipient_status, automations(name)")
-    .eq("email", normalized)
-    .eq("channel", "email")
-    .eq("status", "sent")
-    .order("sent_at", { ascending: false })
-    .limit(50);
-
-  for (const row of (autoDeliveries as {
-    automation_id: string;
-    sent_at: string;
-    opened_at: string | null;
-    click_count: number;
-    recipient_status: string | null;
-    automations: { name: string } | { name: string }[] | null;
-  }[] | null) ?? []) {
-    const auto = Array.isArray(row.automations)
-      ? row.automations[0]
-      : row.automations;
-    activity.push({
-      kind: "automation",
-      title: auto?.name ?? row.automation_id,
-      sentAt: row.sent_at,
-      opened: isOpenedRow(row),
-      openedAt: row.opened_at,
-      clicks: row.click_count ?? 0,
-    });
-  }
-
-  const { data: campDeliveries } = await supabase
-    .from("campaign_deliveries")
-    .select("campaign_id, sent_at, opened_at, click_count, recipient_status, email_campaigns(subject)")
-    .eq("email", normalized)
-    .eq("status", "sent")
-    .order("sent_at", { ascending: false })
-    .limit(50);
-
-  for (const row of (campDeliveries as {
-    campaign_id: string;
-    sent_at: string;
-    opened_at: string | null;
-    click_count: number;
-    recipient_status: string | null;
-    email_campaigns: { subject: string } | { subject: string }[] | null;
-  }[] | null) ?? []) {
-    const camp = Array.isArray(row.email_campaigns)
-      ? row.email_campaigns[0]
-      : row.email_campaigns;
-    activity.push({
-      kind: "campaign",
-      title: camp?.subject ?? row.campaign_id,
-      sentAt: row.sent_at,
-      opened: isOpenedRow(row),
-      openedAt: row.opened_at,
-      clicks: row.click_count ?? 0,
-    });
-  }
-
-  activity.sort(
-    (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
-  );
-
-  const clickEvents = await getClickEventsForEmail(normalized);
-
-  return { summary, activity: activity.slice(0, 40), clickEvents };
+  return { summary, emails, activity, clickEvents };
 }
 
 async function aggregateTopLinks(): Promise<TopLinkRow[]> {

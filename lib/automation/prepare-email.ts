@@ -8,6 +8,7 @@ import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
 import { unsubscribeLinkForEmail } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { computeAutomationSendAt } from "@/lib/automation/send-at";
+import { automationJobIdempotencyKey } from "@/lib/automation/idempotency";
 import type { Locale } from "@/lib/supabase/types";
 
 export type PreparedEmailJob = {
@@ -25,10 +26,6 @@ export type PreparedEmailJob = {
     contentType: string;
   }[];
 };
-
-function idempotencyKey(automationId: string, email: string): string {
-  return `auto-${automationId}-${email}`;
-}
 
 /** Build one email job payload for the worker batch endpoint. */
 export async function prepareEmailAutomationJob(
@@ -97,19 +94,13 @@ export async function prepareEmailAutomationJob(
     html,
     recipients: [email],
     sendAt,
-    idempotencyKey: idempotencyKey(automation.id, email),
+    idempotencyKey: automationJobIdempotencyKey(automation.id, {
+      email,
+      subscriberId: ctx.subscriberId,
+    }),
     sendNow,
     attachments: attachments.length ? attachments : undefined,
   };
 }
 
-export function automationIdFromIdempotencyKey(key: string | undefined): string | null {
-  if (!key?.startsWith("auto-")) return null;
-  const rest = key.slice(5);
-  if (rest.length < 38 || rest[36] !== "-") return null;
-  const automationId = rest.slice(0, 36);
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(automationId)) {
-    return null;
-  }
-  return automationId;
-}
+export { automationIdFromIdempotencyKey } from "@/lib/automation/idempotency";

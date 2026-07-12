@@ -17,6 +17,10 @@ import {
 import { computeAutomationSendAt } from "@/lib/automation/send-at";
 import {
   automationIdFromIdempotencyKey,
+  automationJobIdempotencyKey,
+  deliveryStatusFromWorkerResult,
+} from "@/lib/automation/idempotency";
+import {
   prepareEmailAutomationJob,
 } from "@/lib/automation/prepare-email";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
@@ -53,10 +57,24 @@ function resolveTriggerEvents(
   // Payment always starts the purchase flow only — not welcome drips.
   if (source === "purchase") return ["purchase"];
   // Public site signup (menu, popup, hero, nav…) — even if email already exists.
-  if (isSiteSignupSource(source)) return ["new_subscriber", "registration"];
+  if (isSiteSignupSource(source)) {
+    return ["new_subscriber", "registration"];
+  }
   if (isNew) return ["new_subscriber", "registration"];
   return [];
 }
+
+export type AutomationRunReport = {
+  workerConfigured: boolean;
+  unsubscribed: boolean;
+  triggerEvents: string[];
+  rulesLoaded: number;
+  matchedEmail: number;
+  prepared: number;
+  submitted: number;
+  skipped: Array<{ name: string; reason: string }>;
+  errors: string[];
+};
 
 /** Purchase automations run for every buyer, including existing subscribers. */
 function passesNewSubscriberGate(
@@ -192,8 +210,11 @@ function computeChainedSendAt(
   return at.toISOString();
 }
 
-function idempotencyKey(automationId: string, email: string): string {
-  return `auto-${automationId}-${email}`;
+function idempotencyKey(
+  automationId: string,
+  ctx: { email: string; subscriberId?: string | null },
+): string {
+  return automationJobIdempotencyKey(automationId, ctx);
 }
 
 async function alreadyQueuedOrSent(
@@ -312,7 +333,10 @@ async function scheduleAutomation(
     return false;
   }
   const locale: Locale = ctx.locale === "en" ? "en" : "bg";
-  const key = idempotencyKey(automation.id, email);
+  const key = idempotencyKey(automation.id, {
+    email,
+    subscriberId: ctx.subscriberId,
+  });
 
   if (automation.channel === "sms") {
     const phone = ctx.phone?.trim();
@@ -457,7 +481,10 @@ async function sendAutomationNow(
     const res = await sendSms({
       body,
       recipients: [phone],
-      idempotencyKey: idempotencyKey(automation.id, email),
+      idempotencyKey: idempotencyKey(automation.id, {
+        email,
+        subscriberId: ctx.subscriberId,
+      }),
     });
     await recordDelivery({
       automationId: automation.id,
@@ -532,34 +559,30 @@ async function passesAutomationGates(
   segments: Segment[],
   groups: SegmentGroup[],
   opts?: { fromChain?: boolean },
-): Promise<boolean> {
+): Promise<{ ok: true } | { ok: false; reason: string }> {
   const email = ctx.email.trim().toLowerCase();
   const tags = ctx.tags ?? [];
 
   if (!passesNewSubscriberGate(automation, ctx)) {
-    console.info(`[automation] skip ${automation.name}: new_subscribers_only`);
-    return false;
+    return { ok: false, reason: "new_subscribers_only" };
   }
   if (!passesPurchaseSegmentEntryGate(automation, ctx, segments, groups)) {
-    console.info(`[automation] skip ${automation.name}: purchase segment gate`);
-    return false;
+    return { ok: false, reason: "purchase_segment_gate" };
   }
   if (!segmentMatches(automation, tags, segments, groups)) {
-    console.info(
-      `[automation] skip ${automation.name}: audience (tags=${tags.join(",") || "∅"})`,
-    );
-    return false;
+    return {
+      ok: false,
+      reason: `audience (tags=${tags.join(",") || "∅"})`,
+    };
   }
   if (
     automation.trigger_event === "purchase" &&
     !automationMatchesPurchaseProducts(automation, ctx.purchasedProductIds ?? [])
   ) {
-    console.info(`[automation] skip ${automation.name}: product filter`);
-    return false;
+    return { ok: false, reason: "product_filter" };
   }
   if (await alreadyQueuedOrSent(automation.id, email)) {
-    console.info(`[automation] skip ${automation.name}: already queued/sent`);
-    return false;
+    return { ok: false, reason: "already_queued_or_sent" };
   }
 
   if (automation.after_automation_id) {
@@ -567,13 +590,17 @@ async function passesAutomationGates(
       automation.after_automation_id,
       email,
     );
-    if (!gotPrior) return false;
+    if (!gotPrior) {
+      return { ok: false, reason: "waiting_for_parent_automation" };
+    }
     const hasRelativeDelay =
       (automation.delay_days ?? 0) > 0 || (automation.delay_minutes ?? 0) > 0;
-    if (hasRelativeDelay && !opts?.fromChain) return false;
+    if (hasRelativeDelay && !opts?.fromChain) {
+      return { ok: false, reason: "chained_delay_not_from_parent" };
+    }
   }
 
-  return true;
+  return { ok: true };
 }
 
 async function executeAutomation(
@@ -585,7 +612,7 @@ async function executeAutomation(
 ): Promise<void> {
   const email = ctx.email.trim().toLowerCase();
 
-  if (!(await passesAutomationGates(automation, ctx, segments, groups, opts))) {
+  if (!(await passesAutomationGates(automation, ctx, segments, groups, opts)).ok) {
     return;
   }
 
@@ -624,24 +651,45 @@ async function executeAutomation(
 }
 
 /** Run all matching enabled automations for this subscriber event. */
-export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
-  if (!isNotificationWorkerConfigured()) {
+export async function runAutomations(
+  ctx: AutomationRunContext,
+): Promise<AutomationRunReport> {
+  const report: AutomationRunReport = {
+    workerConfigured: isNotificationWorkerConfigured(),
+    unsubscribed: false,
+    triggerEvents: [],
+    rulesLoaded: 0,
+    matchedEmail: 0,
+    prepared: 0,
+    submitted: 0,
+    skipped: [],
+    errors: [],
+  };
+
+  if (!report.workerConfigured) {
     console.error(
       "[automation] skipped: NOTIFICATION_WORKER_URL / API_KEY not configured",
     );
-    return;
+    report.errors.push("worker_not_configured");
+    return report;
   }
 
   const email = ctx.email.trim().toLowerCase();
-  if (await isEmailUnsubscribed(email)) return;
+  if (await isEmailUnsubscribed(email)) {
+    report.unsubscribed = true;
+    report.errors.push("unsubscribed");
+    return report;
+  }
 
   const source = ctx.source ?? "popup";
   const events = resolveTriggerEvents(source, ctx.isNew);
+  report.triggerEvents = events;
   if (events.length === 0) {
     console.info(
       `[automation] no trigger for source=${source} isNew=${ctx.isNew} email=${email}`,
     );
-    return;
+    report.errors.push("no_trigger_for_source");
+    return report;
   }
 
   const supabase = getAdminClient();
@@ -658,34 +706,77 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
 
   if (error) {
     console.error("[automation] load rules:", error.message);
-    return;
+    report.errors.push(`load_rules: ${error.message}`);
+    return report;
   }
 
   const segments = (segmentRows as Segment[]) ?? [];
   const groups = (groupRows as SegmentGroup[]) ?? [];
   const rules = (data as Automation[]) ?? [];
+  report.rulesLoaded = rules.length;
   if (rules.length === 0) {
     console.info(
       `[automation] no enabled rules for triggers=${events.join(",")} email=${email}`,
     );
-    return;
+    report.errors.push("no_enabled_rules");
+    return report;
   }
 
   const smsRules: Automation[] = [];
   const emailRules: Automation[] = [];
 
   for (const rule of rules) {
-    if (!(await passesAutomationGates(rule, ctx, segments, groups))) continue;
+    const gate = await passesAutomationGates(rule, ctx, segments, groups);
+    if (!gate.ok) {
+      report.skipped.push({ name: rule.name, reason: gate.reason });
+      console.info(`[automation] skip ${rule.name}: ${gate.reason}`);
+      continue;
+    }
     if (rule.channel === "sms") smsRules.push(rule);
     else emailRules.push(rule);
   }
 
+  report.matchedEmail = emailRules.length;
+
+  if (rules.length > 0 && emailRules.length === 0 && smsRules.length === 0) {
+    console.warn(
+      `[automation] ${rules.length} enabled rule(s) for ${events.join(",")} but none matched ${email} (tags=${(ctx.tags ?? []).join(",") || "∅"})`,
+    );
+  }
+
   if (emailRules.length > 0) {
-    const prepared = (
-      await Promise.all(
-        emailRules.map((rule) => prepareEmailAutomationJob(rule, ctx)),
-      )
-    ).filter((job) => job !== null);
+    const settled = await Promise.allSettled(
+      emailRules.map((rule) => prepareEmailAutomationJob(rule, ctx)),
+    );
+    const prepared: NonNullable<Awaited<ReturnType<typeof prepareEmailAutomationJob>>>[] =
+      [];
+
+    for (let i = 0; i < settled.length; i += 1) {
+      const result = settled[i];
+      const rule = emailRules[i];
+      if (result.status === "fulfilled" && result.value) {
+        prepared.push(result.value);
+        continue;
+      }
+      const message =
+        result.status === "rejected"
+          ? result.reason instanceof Error
+            ? result.reason.message
+            : "prepare_failed"
+          : "empty_subject_or_body";
+      report.skipped.push({ name: rule.name, reason: message });
+      if (result.status === "rejected") {
+        report.errors.push(`${rule.name}: ${message}`);
+      }
+    }
+
+    report.prepared = prepared.length;
+
+    if (emailRules.length > 0 && prepared.length === 0) {
+      console.warn(
+        `[automation] ${emailRules.length} email rule(s) matched but none could be prepared for ${email}`,
+      );
+    }
 
     if (prepared.length > 0) {
       try {
@@ -704,19 +795,13 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
           `[automation] batch ${prepared.length} email(s) for ${email} → worker`,
         );
 
+        report.submitted = batch.results.length;
+
         for (const item of batch.results) {
           const automationId = automationIdFromIdempotencyKey(item.idempotencyKey);
           if (!automationId) continue;
 
-          const isSent =
-            item.status === "sent" ||
-            item.dispatch === "immediate" ||
-            (item.sent ?? 0) > 0;
-          const status = item.error
-            ? "failed"
-            : isSent
-              ? "sent"
-              : "scheduled";
+          const status = deliveryStatusFromWorkerResult(item);
 
           await recordDelivery({
             automationId,
@@ -726,7 +811,7 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
             channel: "email",
             status,
             workerJobId: item.jobId || null,
-            error: item.error ?? null,
+            error: item.error ?? (status === "failed" ? `Worker status: ${item.status}` : null),
             scheduledFor: status === "scheduled" ? item.sendAt : null,
           });
 
@@ -737,16 +822,64 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Batch send failed";
         console.error("[automation] email batch:", message);
+        report.errors.push(message);
+        // Per-job fallback when batch endpoint is missing or rejects the payload.
         for (const job of prepared) {
-          await recordDelivery({
-            automationId: job.automationId,
-            subscriberId: ctx.subscriberId,
-            email,
-            phone: ctx.phone,
-            channel: "email",
-            status: "failed",
-            error: message,
-          });
+          try {
+            const sendNow = new Date(job.sendAt).getTime() <= Date.now() + 1000;
+            const res = sendNow
+              ? await sendEmail({
+                  subject: job.subject,
+                  html: job.html,
+                  recipients: job.recipients,
+                  attachments: job.attachments,
+                })
+              : await scheduleEmail({
+                  subject: job.subject,
+                  html: job.html,
+                  recipients: job.recipients,
+                  sendAt: job.sendAt,
+                  idempotencyKey: job.idempotencyKey,
+                  attachments: job.attachments,
+                });
+            const item = {
+              idempotencyKey: job.idempotencyKey,
+              jobId: res.jobId,
+              status: res.status,
+              sendAt: job.sendAt,
+              dispatch: sendNow ? "immediate" : undefined,
+              sent: res.sent,
+              failed: res.failed,
+            };
+            const status = deliveryStatusFromWorkerResult(item);
+            report.submitted += 1;
+            await recordDelivery({
+              automationId: job.automationId,
+              subscriberId: ctx.subscriberId,
+              email,
+              phone: ctx.phone,
+              channel: "email",
+              status,
+              workerJobId: res.jobId,
+              scheduledFor: status === "scheduled" ? job.sendAt : null,
+            });
+            if (status === "sent" || status === "scheduled") {
+              await scheduleChainedFromParent(job.automationId, job.sendAt, ctx);
+            }
+          } catch (jobErr) {
+            const jobMessage =
+              jobErr instanceof Error ? jobErr.message : "Send failed";
+            report.errors.push(`${job.automationName}: ${jobMessage}`);
+            await recordDelivery({
+              automationId: job.automationId,
+              subscriberId: ctx.subscriberId,
+              email,
+              phone: ctx.phone,
+              channel: "email",
+              status: "failed",
+              error: jobMessage,
+            });
+          }
         }
       }
     }
@@ -756,9 +889,13 @@ export async function runAutomations(ctx: AutomationRunContext): Promise<void> {
     try {
       await executeAutomation(rule, ctx, segments, groups);
     } catch (err) {
+      const message = err instanceof Error ? err.message : "SMS send failed";
+      report.errors.push(`${rule.name}: ${message}`);
       console.error(`[automation] sms rule ${rule.id}:`, err);
     }
   }
+
+  return report;
 }
 
 export async function runAutomationsForSubscriber(

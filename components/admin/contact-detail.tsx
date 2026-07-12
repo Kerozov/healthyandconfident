@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, XCircle } from "lucide-react";
 import type { Contact, ContactEvent, ContactWorkerJob } from "@/lib/contacts/types";
 import type { JobEngagement } from "@/lib/admin/contacts-data";
+import type { PersonEmailItem } from "@/lib/admin/person-email";
+import { PersonEmailsTable } from "@/components/admin/person-emails-table";
 import { cancelContactJobAction } from "@/app/(admin)/admin/actions";
 import { formatDate } from "@/lib/utils";
 
@@ -52,11 +54,13 @@ export function ContactDetailView({
   events,
   jobs,
   jobEngagement,
+  emails,
 }: {
   contact: Contact;
   events: ContactEvent[];
   jobs: ContactWorkerJob[];
   jobEngagement: Record<string, JobEngagement>;
+  emails: PersonEmailItem[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -194,6 +198,16 @@ export function ContactDetailView({
               )}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-ink/10 bg-white p-6">
+        <h2 className="font-display text-xl font-semibold">Имейли на човека</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Автоматизации, кампании и напомняния — изпратени, планирани и неуспешни.
+        </p>
+        <div className="mt-4">
+          <PersonEmailsTable emails={emails} />
         </div>
       </section>
 

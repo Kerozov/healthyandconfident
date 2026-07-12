@@ -3,6 +3,7 @@ import {
   getContactDetail,
   getContactJobEngagement,
 } from "@/lib/admin/contacts-data";
+import { getPersonEmailHistory } from "@/lib/admin/email-history";
 import { ContactDetailView } from "@/components/admin/contact-detail";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +18,15 @@ export default async function AdminContactDetailPage({
 
   if (!contact) notFound();
 
-  const engagementEntries = await Promise.all(
-    jobs.map(async (j) => {
-      const eng = await getContactJobEngagement(j.worker_job_id);
-      return [j.worker_job_id, eng] as const;
-    }),
-  );
+  const [engagementEntries, emails] = await Promise.all([
+    Promise.all(
+      jobs.map(async (j) => {
+        const eng = await getContactJobEngagement(j.worker_job_id);
+        return [j.worker_job_id, eng] as const;
+      }),
+    ),
+    getPersonEmailHistory(contact.email),
+  ]);
 
   const jobEngagement = Object.fromEntries(engagementEntries);
 
@@ -36,6 +40,7 @@ export default async function AdminContactDetailPage({
           events={events}
           jobs={jobs}
           jobEngagement={jobEngagement}
+          emails={emails}
         />
       </div>
     </div>

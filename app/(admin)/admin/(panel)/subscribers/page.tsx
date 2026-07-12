@@ -29,7 +29,7 @@ export default async function AdminSubscribersPage() {
     <div>
       <PageHeader
         title="Абонати"
-        description="Управление на списъка — сегменти, имейл активност, Zoom и покупки. Кликни иконата за статистика до имейла за пълен профил."
+        description="Управление на списъка — сегменти, имейли на човека, Zoom и покупки. Кликни иконата 📊 до имейла за пълен профил и история на имейлите."
       />
       <div className="space-y-8">
         <GroupsManager groups={groups} />
