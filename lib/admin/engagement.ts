@@ -88,6 +88,8 @@ type Acc = {
   emailsOpened: number;
   emailsWithClicks: number;
   totalClicks: number;
+  scheduled: number;
+  failed: number;
 };
 
 function bumpAcc(acc: Acc, opened: boolean, clicks: number) {
@@ -99,13 +101,13 @@ function bumpAcc(acc: Acc, opened: boolean, clicks: number) {
   }
 }
 
-function accToSummary(acc: Acc & { scheduled?: number; failed?: number }): EmailEngagementSummary {
+function accToSummary(acc: Acc): EmailEngagementSummary {
   const openRate = rate(acc.emailsOpened, acc.emailsSent);
   const clickRate = rate(acc.emailsWithClicks, acc.emailsSent);
   return {
     emailsSent: acc.emailsSent,
-    emailsScheduled: acc.scheduled ?? 0,
-    emailsFailed: acc.failed ?? 0,
+    emailsScheduled: acc.scheduled,
+    emailsFailed: acc.failed,
     emailsOpened: acc.emailsOpened,
     emailsWithClicks: acc.emailsWithClicks,
     totalClicks: acc.totalClicks,
@@ -174,17 +176,14 @@ export async function getEngagementSummaryForEmails(
     click_count: number;
     recipient_status: string | null;
   }[] | null) ?? []) {
-    const acc = byEmail.get(row.email.toLowerCase()) as Acc & {
-      scheduled?: number;
-      failed?: number;
-    };
+    const acc = byEmail.get(row.email.toLowerCase());
     if (!acc) continue;
     if (row.status === "sent") {
       bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
     } else if (row.status === "scheduled") {
-      acc.scheduled = (acc.scheduled ?? 0) + 1;
+      acc.scheduled += 1;
     } else if (row.status === "failed") {
-      acc.failed = (acc.failed ?? 0) + 1;
+      acc.failed += 1;
     }
   }
 
@@ -200,17 +199,14 @@ export async function getEngagementSummaryForEmails(
     click_count: number;
     recipient_status: string | null;
   }[] | null) ?? []) {
-    const acc = byEmail.get(row.email.toLowerCase()) as Acc & {
-      scheduled?: number;
-      failed?: number;
-    };
+    const acc = byEmail.get(row.email.toLowerCase());
     if (!acc) continue;
     if (row.status === "sent") {
       bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
     } else if (row.status === "scheduled") {
-      acc.scheduled = (acc.scheduled ?? 0) + 1;
+      acc.scheduled += 1;
     } else if (row.status === "failed") {
-      acc.failed = (acc.failed ?? 0) + 1;
+      acc.failed += 1;
     }
   }
 
@@ -372,6 +368,8 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
       emailsOpened: 0,
       emailsWithClicks: 0,
       totalClicks: 0,
+      scheduled: 0,
+      failed: 0,
     };
     bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
     byEmail.set(key, acc);
@@ -394,6 +392,8 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
       emailsOpened: 0,
       emailsWithClicks: 0,
       totalClicks: 0,
+      scheduled: 0,
+      failed: 0,
     };
     bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
     byEmail.set(key, acc);
@@ -404,6 +404,8 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
     emailsOpened: 0,
     emailsWithClicks: 0,
     totalClicks: 0,
+    scheduled: 0,
+    failed: 0,
   };
   for (const acc of byEmail.values()) {
     totalsAcc.emailsSent += acc.emailsSent;

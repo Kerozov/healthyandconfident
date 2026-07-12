@@ -900,6 +900,6 @@ export async function runAutomations(
 
 export async function runAutomationsForSubscriber(
   ctx: AutomationRunContext,
-): Promise<void> {
+): Promise<AutomationRunReport> {
   return runAutomations(ctx);
 }
