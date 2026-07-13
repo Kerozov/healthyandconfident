@@ -55,7 +55,10 @@ export async function POST(req: Request) {
     body.payload?.object?.id != null ? String(body.payload.object.id) : "";
 
   if (
-    (event === "meeting.started" || event.includes("meeting.started")) &&
+    (event === "meeting.started" ||
+      event.includes("meeting.started") ||
+      event === "webinar.started" ||
+      event.includes("webinar.started")) &&
     meetingId
   ) {
     await setZoomMeetingLive({
@@ -67,7 +70,10 @@ export async function POST(req: Request) {
   }
 
   if (
-    (event === "meeting.ended" || event.includes("meeting.ended")) &&
+    (event === "meeting.ended" ||
+      event.includes("meeting.ended") ||
+      event === "webinar.ended" ||
+      event.includes("webinar.ended")) &&
     meetingId
   ) {
     await setZoomMeetingEnded(meetingId);
