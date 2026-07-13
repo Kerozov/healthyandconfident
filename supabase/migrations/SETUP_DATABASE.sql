@@ -944,3 +944,6 @@ create trigger contacts_updated_at before update on public.contacts
 notify pgrst, 'reload schema';
 
 select 'Setup complete — schema up to date (incl. purchase_product_ids)' as result;
+
+
+
