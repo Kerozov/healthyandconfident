@@ -19,6 +19,10 @@ const buttonVariants = cva(
         ghost: "text-slate-800 hover:bg-cream-2",
         gold:
           "bg-slate-800 font-semibold text-white shadow-sm hover:bg-slate-700",
+        onDark:
+          "bg-white font-semibold text-slate-800 hover:bg-cream-50",
+        onDarkOutline:
+          "border border-white/60 bg-transparent font-semibold text-white hover:bg-white/10",
       },
       size: {
         sm: "h-10 px-5 text-sm font-semibold",

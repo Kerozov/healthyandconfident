@@ -22,6 +22,7 @@ import {
 import type { Locale } from "@/i18n/config";
 import type { ProgramLandingContent } from "@/lib/programs/types";
 import { Container } from "@/components/ui/container";
+import { buttonVariants } from "@/components/ui/button";
 import { CtaLink } from "@/components/site/cta-link";
 import { LeadForm } from "@/components/site/lead-form";
 import { ProgramCountdown } from "@/components/site/program-countdown";
@@ -228,18 +229,18 @@ export function ProgramLanding({
               )}
 
               {hero.priceLine && (
-                <p className="mt-6 font-display text-2xl font-bold tracking-wide text-gold-200 sm:mt-8 sm:text-3xl">
+                <p className="mt-6 text-balance font-display text-xl font-semibold leading-snug text-white sm:mt-8 sm:text-2xl">
                   {hero.priceLine}
                 </p>
               )}
 
-              <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
+              <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-3">
                 <CtaLink
                   placementKey={placementKey}
                   href={hero.primaryHref}
-                  variant="gold"
+                  variant="onDark"
                   size="lg"
-                  className="w-full shadow-lg shadow-gold-400/20 sm:w-auto"
+                  className="w-full sm:w-auto"
                   target={hero.primaryHref.startsWith("http") ? "_blank" : undefined}
                   rel={hero.primaryHref.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
@@ -248,7 +249,10 @@ export function ProgramLanding({
                 {hero.secondaryCta && hero.secondaryHref && (
                   <Link
                     href={hero.secondaryHref}
-                    className="inline-flex w-full items-center justify-center rounded-full border-2 border-white/30 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto sm:text-lg"
+                    className={cn(
+                      buttonVariants({ variant: "onDarkOutline", size: "lg" }),
+                      "w-full sm:w-auto",
+                    )}
                   >
                     {hero.secondaryCta}
                   </Link>
@@ -967,9 +971,9 @@ export function ProgramLanding({
                     <CtaLink
                       placementKey={placementKey}
                       href={href}
-                      variant={i === 0 ? "gold" : "forest"}
+                      variant={i === 0 ? "forest" : "outline"}
                       size="lg"
-                      className="mt-4 w-full whitespace-normal px-4 py-4 text-sm font-bold sm:text-base"
+                      className="mt-4 w-full"
                       target={href.startsWith("http") ? "_blank" : undefined}
                       rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
                     >
@@ -1085,9 +1089,9 @@ export function ProgramLanding({
             <CtaLink
               placementKey={placementKey}
               href={content.finalCta.href}
-              variant="gold"
+              variant="onDark"
               size="lg"
-              className="mt-8 shadow-lg"
+              className="mt-8"
               target={content.finalCta.href.startsWith("http") ? "_blank" : undefined}
               rel={content.finalCta.href.startsWith("http") ? "noopener noreferrer" : undefined}
             >

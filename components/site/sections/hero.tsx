@@ -114,11 +114,7 @@ export function Hero({
               </p>
             </div>
           </div>
-          <p className="mt-5 text-center text-xs text-ink-soft sm:mt-7 sm:text-sm lg:text-left">
-            <span className="font-semibold text-slate-800">
-              {locale === "bg" ? "Веси Ней" : "Vessie Nay"}
-            </span>
-            {" · "}
+          <p className="mt-5 text-center text-xs text-ink-soft sm:mt-6 sm:text-sm lg:text-left">
             {hero.imageAlt}
           </p>
         </div>

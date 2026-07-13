@@ -31,7 +31,7 @@ export const garnituriBg: ProgramLandingContent = {
     {
       title: "Вкусни гарнитури",
       titleAccent: "без вина",
-      images: ["/images/11.jpg", "/images/12.jpg", "/images/13.jpg", "/images/14.jpg", "/images/15.jpg", "/images/16.jpg"],
+      images: ["/images/11.jpg", "/images/12.jpg", "/images/6.jpg", "/images/7.jpg", "/images/8.jpg", "/images/10.jpg"],
     },
   ],
   pain: {

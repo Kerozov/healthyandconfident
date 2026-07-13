@@ -118,6 +118,15 @@ export function AutomationDiagnostics() {
             </ul>
           )}
 
+          {result?.subscriberFound &&
+            d.rules.some((r) => r.reason === "already_queued_or_sent") && (
+              <p className="rounded-lg border border-forest-200 bg-forest-50/50 px-3 py-2 text-xs text-forest-800">
+                Абонатът е намерен. „Нови + стари“ работи — но стъпките, които вече са
+                изпратени, не се пращат отново. За тест използвай друг имейл или изтрий
+                доставката от историята на автоматизацията.
+              </p>
+            )}
+
           {d.rules.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-ink/10">
               <table className="w-full text-sm">
@@ -186,10 +195,11 @@ function StatusRow({
 
 const REASONS: Record<string, string> = {
   new_subscribers_only:
-    "настроена е само за нови абонати, а този вече съществува",
+    "настроена е само за нови абонати, а този вече съществува в списъка",
   purchase_segment_gate: "не влиза в сегмента за покупка",
   product_filter: "не съвпада с избрания продукт",
-  already_queued_or_sent: "вече е изпратена/планирана за този имейл",
+  already_queued_or_sent:
+    "вече е изпратена/планирана за този имейл — не се дублира (дори при „нови + стари“)",
   waiting_for_parent_automation:
     "чака предходния имейл от веригата да се изпрати",
   chained_delay_not_from_parent: "част от верига — стартира се от родителя",
@@ -200,6 +210,9 @@ function translateReason(reason: string): string {
   if (REASONS[reason]) return REASONS[reason];
   if (reason.startsWith("audience")) {
     return `аудиторията не съвпада — ${reason.replace("audience ", "")}`;
+  }
+  if (reason.startsWith("signup_source")) {
+    return `източникът не съвпада — ${reason.replace("signup_source ", "")}`;
   }
   if (reason.startsWith("празно съдържание")) return reason;
   return reason;

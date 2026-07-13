@@ -1,4 +1,4 @@
-/** Local food photos from /public/images for program landings */
+/** Food-only photos from /public/images for program landings (6–12). */
 export const PROGRAM_FOOD_IMAGES = [
   "/images/6.jpg",
   "/images/7.jpg",
@@ -7,14 +7,13 @@ export const PROGRAM_FOOD_IMAGES = [
   "/images/10.jpg",
   "/images/11.jpg",
   "/images/12.jpg",
-  "/images/13.jpg",
 ] as const;
 
+/** Second food gallery — different order, still food only. */
 export const PROGRAM_FOOD_IMAGES_2 = [
-  "/images/14.jpg",
-  "/images/15.jpg",
-  "/images/16.jpg",
-  "/images/17.jpg",
+  "/images/11.jpg",
+  "/images/12.jpg",
+  "/images/10.jpg",
   "/images/6.jpg",
   "/images/7.jpg",
   "/images/8.jpg",

@@ -23,8 +23,8 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
     subtitle:
       "Лесни решения за умни заети жени, без енергия, с подут корем и силен апетит.",
     bullets: ["10 минути на ден, които връщат лекотата и спокойствието"],
-    priceLine: "ВСИЧКО ЗА САМО €38/МЕСЕЦ",
-    primaryCta: "ДА, ИСКАМ ДА СЕ СПРАВЯ",
+    priceLine: "Всичко за само €38/месец",
+    primaryCta: "Да, искам да се справя",
     primaryHref: checkout38,
     secondaryCta: "Какво включва клубът",
     secondaryHref: "#includes",
@@ -289,7 +289,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         label: "Месечен достъп",
         price: "€38/месец",
         note: "Първите 100 души — после таксата се увеличава · Обща стойност €530",
-        cta: "ИСКАМ ДОСТЪП СЕГА",
+        cta: "Искам достъп сега",
         href: checkout38,
       },
       {
@@ -297,7 +297,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         badge: "Най-изгоден",
         price: "28€ на месец",
         note: "Абонамент за 12 месеца с 25% отстъпка — само за 336€, вместо 456€",
-        cta: "ИСКАМ ДОСТЪП СЕГА",
+        cta: "Искам достъп сега",
         href: checkout12m,
       },
       {
@@ -305,7 +305,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         badge: "Най-популярен",
         price: "30€ на месец",
         note: "Абонамент за 3 месеца с 20% отстъпка — само за 90€, вместо 114€",
-        cta: "ИСКАМ ДОСТЪП СЕГА",
+        cta: "Искам достъп сега",
         href: checkout3m,
       },
     ],
@@ -335,7 +335,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
   ],
   finalCta: {
     title: "ГОТОВА СЪМ!",
-    cta: "ИСКАМ ДОСТЪП СЕГА",
+    cta: "Искам достъп сега",
     href: checkout38,
   },
 };

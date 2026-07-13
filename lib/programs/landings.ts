@@ -198,8 +198,8 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       subtitle:
         "Easy solutions for smart busy women — low energy, bloated belly, strong appetite.",
       bullets: ["10 minutes a day that bring back lightness and calm"],
-      priceLine: "EVERYTHING FOR ONLY €38/MONTH",
-      primaryCta: "YES, I WANT TO HANDLE IT",
+      priceLine: "Everything for only €38/month",
+      primaryCta: "Yes, I want to handle it",
       secondaryCta: "What's included",
     },
     audience: {
@@ -262,14 +262,14 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
         ...o,
         label: ["Monthly access", "Option 1", "Option 2"][i],
         badge: i === 1 ? "Best value" : i === 2 ? "Most popular" : undefined,
-        cta: "I WANT ACCESS NOW",
+        cta: "I want access now",
       })),
       ps: "Tap the button — we'll guide you to payment and Skool access.",
     },
     faq: preprogramiraiApetitaBg.faq,
     finalCta: {
       title: "I'M READY!",
-      cta: "I WANT ACCESS NOW",
+      cta: "I want access now",
       href: preprogramiraiApetitaBg.finalCta!.href,
     },
   },

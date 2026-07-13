@@ -809,6 +809,7 @@ export function AutomationsManager({
                   trueLabel: "Само нови",
                   falseLabel: "Нови + стари",
                 }}
+                hint="„Нови + стари“ включва и вече записани при нов запис от сайта. Същият имейл не се праща повторно, ако вече е получил тази стъпка."
                 disabled={pending}
               />
             </div>
