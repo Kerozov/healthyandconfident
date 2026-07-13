@@ -56,15 +56,9 @@ export async function recordZoomSession(input: {
   });
 }
 
-export type ZoomWebhookLogRow = {
-  id: string;
-  zoom_event: string;
-  meeting_id: string | null;
-  email: string | null;
-  status: string;
-  detail: string | null;
-  created_at: string;
-};
+import type { ZoomWebhookLog } from "@/lib/supabase/types";
+
+export type ZoomWebhookLogRow = ZoomWebhookLog;
 
 export async function getRecentZoomWebhookLog(
   limit = 15,

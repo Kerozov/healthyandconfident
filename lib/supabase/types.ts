@@ -327,6 +327,29 @@ export type ZoomLiveConfig = {
   updated_at: string;
 };
 
+export type ZoomWebhookLog = {
+  id: string;
+  zoom_event: string;
+  meeting_id: string | null;
+  email: string | null;
+  status: string;
+  detail: string | null;
+  created_at: string;
+};
+
+export type ZoomSessionEvent = {
+  id: string;
+  contact_id: string | null;
+  meeting_id: string;
+  email: string | null;
+  participant_name: string | null;
+  join_time: string | null;
+  leave_time: string;
+  duration_minutes: number;
+  zoom_event: string | null;
+  created_at: string;
+};
+
 export type SiteVideo = {
   id: string;
   title_bg: string;
