@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { recordContactEvent } from "@/lib/contacts/events";
 import { getContactByEmail } from "@/lib/contacts/ensure";
+import { setZoomMeetingEnded, setZoomMeetingLive } from "@/lib/zoom/live";
 
 export const dynamic = "force-dynamic";
 
@@ -15,15 +16,17 @@ type ZoomWebhookBody = {
         join_time?: string;
         leave_time?: string;
       };
-      id?: string;
+      id?: string | number;
+      topic?: string;
+      start_time?: string;
     };
   };
 };
 
 /**
- * Zoom meeting webhook stub.
+ * Zoom meeting webhook.
  * Configure ZOOM_WEBHOOK_SECRET when Zoom is connected.
- * Events: meeting.participant_joined / meeting.participant_left
+ * Events: meeting.started / meeting.ended / meeting.participant_joined / meeting.participant_left
  */
 export async function POST(req: Request) {
   const secret = process.env.ZOOM_WEBHOOK_SECRET?.trim();
@@ -47,6 +50,30 @@ export async function POST(req: Request) {
     }
   }
 
+  const event = body.event ?? "";
+  const meetingId =
+    body.payload?.object?.id != null ? String(body.payload.object.id) : "";
+
+  if (
+    (event === "meeting.started" || event.includes("meeting.started")) &&
+    meetingId
+  ) {
+    await setZoomMeetingLive({
+      meetingId,
+      topic: body.payload?.object?.topic ?? null,
+      startedAt: body.payload?.object?.start_time ?? new Date().toISOString(),
+    });
+    return NextResponse.json({ received: true, live: true });
+  }
+
+  if (
+    (event === "meeting.ended" || event.includes("meeting.ended")) &&
+    meetingId
+  ) {
+    await setZoomMeetingEnded(meetingId);
+    return NextResponse.json({ received: true, live: false });
+  }
+
   const participant = body.payload?.object?.participant;
   const email = participant?.email?.trim().toLowerCase();
   if (!email) {
@@ -60,7 +87,6 @@ export async function POST(req: Request) {
 
   const supabase = getAdminClient();
   const now = new Date().toISOString();
-  const event = body.event ?? "";
 
   if (event.includes("participant_joined") || event === "meeting.participant_joined") {
     await supabase

@@ -6,7 +6,7 @@ import { locales, isLocale, localeHtmlLang, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { getPublicSiteContent } from "@/lib/site/content";
 import { siteConfig } from "@/lib/site";
-import { Navbar } from "@/components/site/navbar";
+import { SiteHeader } from "@/components/site/site-header";
 import { Footer } from "@/components/site/footer";
 import { Popup } from "@/components/site/popup";
 import { MenuPopupProvider } from "@/components/site/menu-popup";
@@ -94,7 +94,7 @@ export default async function SiteLayout({
               success: dict.leadMagnet.success,
             }}
           >
-            <Navbar locale={l} items={dict.nav.items} cta={dict.nav.cta} />
+            <SiteHeader locale={l} items={dict.nav.items} cta={dict.nav.cta} />
             <main>{children}</main>
             <Footer locale={l} dict={dict} />
             <Popup locale={l} />

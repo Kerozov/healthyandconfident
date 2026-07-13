@@ -23,10 +23,14 @@ export function Navbar({
   locale,
   items,
   cta,
+  className,
+  spacerClassName,
 }: {
   locale: Locale;
   items: NavItem[];
   cta: string;
+  className?: string;
+  spacerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -59,6 +63,7 @@ export function Navbar({
         className={cn(
           "fixed inset-x-0 top-0 z-50 border-b border-forest-100 bg-cream/95 backdrop-blur-md transition-shadow duration-300",
           scrolled && "shadow-md",
+          className,
         )}
       >
         <Container className="grid h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:h-16 lg:gap-3">
@@ -200,7 +205,10 @@ export function Navbar({
         )}
       </header>
 
-      <div className="h-14 shrink-0 sm:h-16" aria-hidden />
+      <div
+        className={cn("h-14 shrink-0 sm:h-16", spacerClassName)}
+        aria-hidden
+      />
     </>
   );
 }

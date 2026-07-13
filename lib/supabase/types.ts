@@ -312,6 +312,21 @@ export type SiteEvent = {
   updated_at: string;
 };
 
+export type ZoomLiveConfig = {
+  key: string;
+  feature_enabled: boolean;
+  watch_meeting_id: string | null;
+  join_url: string;
+  label_bg: string;
+  label_en: string;
+  manual_is_live: boolean;
+  is_live: boolean;
+  active_meeting_id: string | null;
+  active_topic: string | null;
+  live_started_at: string | null;
+  updated_at: string;
+};
+
 export type SiteVideo = {
   id: string;
   title_bg: string;

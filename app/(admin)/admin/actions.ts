@@ -2799,3 +2799,35 @@ export async function cancelContactJobAction(
   return { ok: true, message: "Reminder canceled." };
 }
 
+export async function saveZoomLiveConfig(input: {
+  feature_enabled: boolean;
+  watch_meeting_id: string | null;
+  join_url: string;
+  label_bg: string;
+  label_en: string;
+  manual_is_live: boolean;
+}): Promise<{ ok: boolean; message?: string }> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("zoom_live_config")
+    .update({
+      feature_enabled: input.feature_enabled,
+      watch_meeting_id: input.watch_meeting_id,
+      join_url: input.join_url,
+      label_bg: input.label_bg,
+      label_en: input.label_en,
+      manual_is_live: input.manual_is_live,
+    })
+    .eq("key", "default");
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/admin/zoom");
+  revalidatePath("/bg");
+  revalidatePath("/en");
+  return { ok: true, message: "Настройките за „На живо“ са запазени." };
+}
+

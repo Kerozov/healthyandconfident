@@ -17,6 +17,7 @@ import type {
   SiteGuide,
   SiteVideo,
   SiteCtaPlacement,
+  ZoomLiveConfig,
 } from "@/lib/supabase/types";
 import type { FormTemplateRecord, FormSubmissionRecord } from "@/lib/forms/types";
 import type { Contact, ContactWorkerJob, ContactEvent } from "@/lib/contacts/types";
@@ -92,6 +93,7 @@ export type Database = {
       contact_events: TableShape<ContactEvent>;
       site_videos: TableShape<SiteVideo>;
       site_cta_placements: TableShape<SiteCtaPlacement>;
+      zoom_live_config: TableShape<ZoomLiveConfig>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

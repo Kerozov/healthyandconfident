@@ -819,4 +819,29 @@ create unique index if not exists subscriber_purchases_session_stripe_product_id
 create index if not exists subscriber_purchases_stripe_product_idx
   on public.subscriber_purchases (stripe_product_id, payment_status);
 
-select 'Upgrade complete (012–038 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 039: zoom live banner config
+create table if not exists public.zoom_live_config (
+  key                 text primary key default 'default',
+  feature_enabled     boolean not null default true,
+  watch_meeting_id    text,
+  join_url            text not null default '',
+  label_bg            text not null default 'Присъедини се на живо',
+  label_en            text not null default 'Join live',
+  manual_is_live      boolean not null default false,
+  is_live             boolean not null default false,
+  active_meeting_id   text,
+  active_topic        text,
+  live_started_at     timestamptz,
+  updated_at          timestamptz not null default now()
+);
+
+insert into public.zoom_live_config (key)
+values ('default')
+on conflict (key) do nothing;
+
+drop trigger if exists zoom_live_config_updated_at on public.zoom_live_config;
+create trigger zoom_live_config_updated_at
+  before update on public.zoom_live_config
+  for each row execute function public.set_updated_at();
+
+select 'Upgrade complete (012–039 applied). Also run 007_automations.sql if not yet applied.' as result;
