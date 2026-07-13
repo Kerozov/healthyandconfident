@@ -29,6 +29,7 @@ import {
 } from "@/lib/worker/config";
 import { sendEmail, scheduleEmail, submitEmailJobsBatch } from "@/lib/worker/email";
 import { sendSms, scheduleSms } from "@/lib/worker/sms";
+import { isSiteSignupSource } from "@/lib/automation/subscriber-origins";
 
 export type AutomationRunContext = {
   email: string;
@@ -44,7 +45,7 @@ export type AutomationRunContext = {
   purchasedProductIds?: string[];
 };
 
-import { isSiteSignupSource } from "@/lib/automation/subscriber-origins";
+function resolveTriggerEvents(
   source: string,
   isNew: boolean,
 ): Array<"purchase" | "new_subscriber" | "registration"> {

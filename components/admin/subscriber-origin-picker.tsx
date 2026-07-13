@@ -31,6 +31,13 @@ export function SubscriberOriginPicker({
         Кой тип запис задейства автоматизацията. Празно = по подразбиране (нови +
         вече регистрирани от сайт). Не е сегмент и не е източник (форма/меню).
       </p>
+      <p className="rounded-lg border border-violet-200/80 bg-white/80 px-3 py-2 text-xs leading-relaxed text-violet-950">
+        Всяка автоматизация е отделна. Ако някой вече е минал през серия А, може да
+        влезе в серия Б (напр. нова форма) — стига тук да е избран подходящият тип и
+        по-долу конкретният източник. Блокира се само повторно изпращане на{" "}
+        <strong>същата стъпка от същата</strong> автоматизация, не всички бъдещи
+        имейли.
+      </p>
       <div className="flex flex-wrap gap-2">
         {SUBSCRIBER_ORIGIN_OPTIONS.map((opt) => {
           const active = selected.includes(opt.value);
