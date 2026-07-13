@@ -1678,6 +1678,7 @@ export async function resendToNonOpeners(input: {
         segment_tag: string;
         attachment_path: string | null;
         attachment_filename: string | null;
+        hero_image_url: string | null;
       }
     | null;
 
