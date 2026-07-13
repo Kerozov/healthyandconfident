@@ -7,12 +7,12 @@ import { startGuideCheckout } from "@/lib/site/stripe-checkout";
 
 function GuideCardImage({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="flex min-h-[168px] items-center justify-center overflow-hidden bg-cream-2 sm:min-h-[200px]">
+    <div className="relative aspect-[4/3] overflow-hidden bg-cream-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt={alt}
-        className="h-auto max-h-[240px] w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02] sm:object-cover"
       />
     </div>
   );
@@ -30,7 +30,7 @@ export function GuidesGrid({
   if (guides.length === 0) return null;
 
   return (
-    <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div className="mt-14 grid w-full min-w-0 grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
       {guides.map((guide) => {
         const title = locale === "bg" ? guide.title_bg : guide.title_en;
         const description =
@@ -55,7 +55,7 @@ export function GuidesGrid({
               }
             }}
             disabled={!canCheckout}
-            className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
+            className="group flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             {guide.image_url ? (
               <GuideCardImage src={guide.image_url} alt={title} />

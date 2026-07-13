@@ -16,8 +16,8 @@ export function Programs({
 }) {
   const { programs } = dict;
   return (
-    <section id="programs" className="section-pad scroll-mt-24 bg-cream">
-      <Container>
+    <section id="programs" className="overflow-x-clip section-pad scroll-mt-24 bg-cream">
+      <Container className="min-w-0">
         <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow text-forest-500">
             <Star className="h-4 w-4" /> {locale === "bg" ? "Програми" : "Programs"}
@@ -28,12 +28,12 @@ export function Programs({
           <p className="mt-4 text-ink-soft">{programs.subtitle}</p>
         </div>
 
-        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+        <div className="mt-14 grid w-full min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
           {programs.items.map((p, index) => (
             <div
               key={p.title}
               className={cn(
-                "relative flex flex-col overflow-hidden rounded-2xl border transition-all",
+                "relative flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border transition-all",
                 p.highlight
                   ? "border-2 border-forest-500 bg-white shadow-lg lg:scale-[1.02]"
                   : "border-forest-100 bg-white hover:border-forest-300 hover:shadow-md",
@@ -46,6 +46,7 @@ export function Programs({
                     alt={mediaAlt(p.image, locale) || p.title}
                     fill
                     sizes="(max-width: 1024px) 100vw, 33vw"
+                    imageClassName="object-contain sm:object-cover"
                   />
                 </figure>
               )}
