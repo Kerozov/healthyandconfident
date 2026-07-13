@@ -3,6 +3,11 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { recordContactEvent } from "@/lib/contacts/events";
 import { getContactByEmail } from "@/lib/contacts/ensure";
 import { setZoomMeetingEnded, setZoomMeetingLive } from "@/lib/zoom/live";
+import {
+  logZoomWebhook,
+  participantEmail,
+  recordZoomSession,
+} from "@/lib/zoom/sessions";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +15,7 @@ type ZoomWebhookBody = {
   event?: string;
   payload?: {
     object?: {
-      participant?: {
-        email?: string;
-        user_name?: string;
-        join_time?: string;
-        leave_time?: string;
-      };
+      participant?: Record<string, unknown>;
       id?: string | number;
       topic?: string;
       start_time?: string;
@@ -23,10 +23,14 @@ type ZoomWebhookBody = {
   };
 };
 
+function meetingIdFrom(body: ZoomWebhookBody): string {
+  const id = body.payload?.object?.id;
+  return id != null ? String(id) : "";
+}
+
 /**
  * Zoom meeting webhook.
- * Configure ZOOM_WEBHOOK_SECRET when Zoom is connected.
- * Events: meeting.started / meeting.ended / meeting.participant_joined / meeting.participant_left
+ * Events: meeting/webinar started/ended + participant joined/left.
  */
 export async function POST(req: Request) {
   const secret = process.env.ZOOM_WEBHOOK_SECRET?.trim();
@@ -51,104 +55,182 @@ export async function POST(req: Request) {
   }
 
   const event = body.event ?? "";
-  const meetingId =
-    body.payload?.object?.id != null ? String(body.payload.object.id) : "";
-
-  if (
-    (event === "meeting.started" ||
-      event.includes("meeting.started") ||
-      event === "webinar.started" ||
-      event.includes("webinar.started")) &&
-    meetingId
-  ) {
-    await setZoomMeetingLive({
-      meetingId,
-      topic: body.payload?.object?.topic ?? null,
-      startedAt: body.payload?.object?.start_time ?? new Date().toISOString(),
-    });
-    return NextResponse.json({ received: true, live: true });
-  }
-
-  if (
-    (event === "meeting.ended" ||
-      event.includes("meeting.ended") ||
-      event === "webinar.ended" ||
-      event.includes("webinar.ended")) &&
-    meetingId
-  ) {
-    await setZoomMeetingEnded(meetingId);
-    return NextResponse.json({ received: true, live: false });
-  }
-
+  const meetingId = meetingIdFrom(body);
   const participant = body.payload?.object?.participant;
-  const email = participant?.email?.trim().toLowerCase();
-  if (!email) {
-    return NextResponse.json({ ok: true, skipped: "no_email" });
-  }
+  const email = participantEmail(participant);
+  const participantName =
+    typeof participant?.user_name === "string" ? participant.user_name : null;
 
-  const contact = await getContactByEmail(email);
-  if (!contact) {
-    return NextResponse.json({ ok: true, skipped: "no_contact" });
-  }
+  try {
+    if (
+      (event === "meeting.started" ||
+        event.includes("meeting.started") ||
+        event === "webinar.started" ||
+        event.includes("webinar.started")) &&
+      meetingId
+    ) {
+      await setZoomMeetingLive({
+        meetingId,
+        topic: body.payload?.object?.topic ?? null,
+        startedAt: body.payload?.object?.start_time ?? new Date().toISOString(),
+      });
+      await logZoomWebhook({
+        zoomEvent: event,
+        meetingId,
+        status: "live_on",
+        detail: body.payload?.object?.topic ?? null,
+      });
+      return NextResponse.json({ received: true, live: true });
+    }
 
-  const supabase = getAdminClient();
-  const now = new Date().toISOString();
+    if (
+      (event === "meeting.ended" ||
+        event.includes("meeting.ended") ||
+        event === "webinar.ended" ||
+        event.includes("webinar.ended")) &&
+      meetingId
+    ) {
+      await setZoomMeetingEnded(meetingId);
+      await logZoomWebhook({
+        zoomEvent: event,
+        meetingId,
+        status: "live_off",
+      });
+      return NextResponse.json({ received: true, live: false });
+    }
 
-  if (event.includes("participant_joined") || event === "meeting.participant_joined") {
-    await supabase
-      .from("contacts")
-      .update({
-        zoom_attended: true,
-        zoom_last_joined_at: participant?.join_time ?? now,
-        updated_at: now,
-      })
-      .eq("id", contact.id);
+    if (event.includes("participant_joined")) {
+      const contact = email ? await getContactByEmail(email) : null;
+      if (contact) {
+        const supabase = getAdminClient();
+        const now = new Date().toISOString();
+        const joinTime =
+          typeof participant?.join_time === "string" ? participant.join_time : now;
 
-    await recordContactEvent({
-      contactId: contact.id,
-      eventType: "zoom_joined",
-      source: "zoom",
-      metadata: {
-        meeting_id: body.payload?.object?.id ?? null,
-        join_time: participant?.join_time ?? now,
-        name: participant?.user_name ?? null,
-      },
+        await supabase
+          .from("contacts")
+          .update({
+            zoom_attended: true,
+            zoom_last_joined_at: joinTime,
+            updated_at: now,
+          })
+          .eq("id", contact.id);
+
+        await recordContactEvent({
+          contactId: contact.id,
+          eventType: "zoom_joined",
+          source: "zoom",
+          metadata: {
+            meeting_id: meetingId || null,
+            join_time: joinTime,
+            name: participantName,
+          },
+        });
+      }
+
+      await logZoomWebhook({
+        zoomEvent: event,
+        meetingId: meetingId || null,
+        email,
+        status: contact ? "joined" : email ? "joined_no_contact" : "joined_no_email",
+        detail: participantName,
+      });
+      return NextResponse.json({ received: true });
+    }
+
+    if (event.includes("participant_left")) {
+      const now = new Date().toISOString();
+      const joinTime =
+        typeof participant?.join_time === "string" ? participant.join_time : null;
+      const leaveTime =
+        typeof participant?.leave_time === "string" ? participant.leave_time : now;
+      const joinDate = joinTime ? new Date(joinTime) : null;
+      const leaveDate = new Date(leaveTime);
+      const durationMinutes =
+        joinDate && !Number.isNaN(leaveDate.getTime())
+          ? Math.max(0, Math.round((leaveDate.getTime() - joinDate.getTime()) / 60000))
+          : 0;
+
+      const contact = email ? await getContactByEmail(email) : null;
+
+      if (contact) {
+        const supabase = getAdminClient();
+        const contactJoin = contact.zoom_last_joined_at
+          ? new Date(contact.zoom_last_joined_at)
+          : joinDate;
+        const mins =
+          contactJoin && !Number.isNaN(leaveDate.getTime())
+            ? Math.max(
+                0,
+                Math.round((leaveDate.getTime() - contactJoin.getTime()) / 60000),
+              )
+            : durationMinutes;
+
+        await supabase
+          .from("contacts")
+          .update({
+            zoom_last_left_at: leaveTime,
+            zoom_total_minutes: (contact.zoom_total_minutes ?? 0) + mins,
+            updated_at: now,
+          })
+          .eq("id", contact.id);
+
+        await recordContactEvent({
+          contactId: contact.id,
+          eventType: "zoom_left",
+          source: "zoom",
+          metadata: {
+            meeting_id: meetingId || null,
+            join_time: contactJoin?.toISOString() ?? joinTime,
+            leave_time: leaveTime,
+            duration_minutes: mins,
+            name: participantName,
+          },
+        });
+      }
+
+      if (meetingId) {
+        await recordZoomSession({
+          contactId: contact?.id ?? null,
+          meetingId,
+          email,
+          participantName,
+          joinTime,
+          leaveTime,
+          durationMinutes,
+          zoomEvent: event,
+        });
+      }
+
+      await logZoomWebhook({
+        zoomEvent: event,
+        meetingId: meetingId || null,
+        email,
+        status: contact
+          ? "left"
+          : email
+            ? "left_no_contact"
+            : "left_no_email",
+        detail: participantName,
+      });
+      return NextResponse.json({ received: true });
+    }
+
+    await logZoomWebhook({
+      zoomEvent: event || "unknown",
+      meetingId: meetingId || null,
+      email,
+      status: "ignored",
     });
-  }
-
-  if (event.includes("participant_left") || event === "meeting.participant_left") {
-    const joinTime = contact.zoom_last_joined_at
-      ? new Date(contact.zoom_last_joined_at)
-      : participant?.join_time
-        ? new Date(participant.join_time)
-        : null;
-    const leaveTime = participant?.leave_time ? new Date(participant.leave_time) : new Date();
-    const durationMinutes =
-      joinTime && !Number.isNaN(leaveTime.getTime())
-        ? Math.max(0, Math.round((leaveTime.getTime() - joinTime.getTime()) / 60000))
-        : 0;
-
-    await supabase
-      .from("contacts")
-      .update({
-        zoom_last_left_at: participant?.leave_time ?? now,
-        zoom_total_minutes: (contact.zoom_total_minutes ?? 0) + durationMinutes,
-        updated_at: now,
-      })
-      .eq("id", contact.id);
-
-    await recordContactEvent({
-      contactId: contact.id,
-      eventType: "zoom_left",
-      source: "zoom",
-      metadata: {
-        meeting_id: body.payload?.object?.id ?? null,
-        join_time: joinTime?.toISOString() ?? participant?.join_time ?? null,
-        leave_time: participant?.leave_time ?? now,
-        duration_minutes: durationMinutes,
-      },
+    return NextResponse.json({ received: true, ignored: true });
+  } catch (err) {
+    await logZoomWebhook({
+      zoomEvent: event || "unknown",
+      meetingId: meetingId || null,
+      email,
+      status: "error",
+      detail: err instanceof Error ? err.message : "unknown",
     });
+    throw err;
   }
-
-  return NextResponse.json({ received: true });
 }

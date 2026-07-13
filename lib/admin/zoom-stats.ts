@@ -15,6 +15,48 @@ export type {
   ZoomSessionRow,
 } from "@/lib/admin/zoom-types";
 
+type SessionDbRow = {
+  id: string;
+  contact_id: string | null;
+  meeting_id: string;
+  email: string | null;
+  participant_name: string | null;
+  join_time: string | null;
+  leave_time: string;
+  duration_minutes: number;
+};
+
+function sessionFromDb(row: SessionDbRow): ZoomSessionRow {
+  return {
+    eventId: row.id,
+    contactId: row.contact_id ?? "",
+    email: row.email ?? "",
+    name: row.participant_name,
+    meetingId: row.meeting_id.trim() || "unknown",
+    joinedAt: row.join_time,
+    leftAt: row.leave_time,
+    durationMinutes: row.duration_minutes,
+  };
+}
+
+async function loadZoomSessions(): Promise<ZoomSessionRow[]> {
+  const supabase = getAdminClient();
+  const { data: zoomRows } = await supabase
+    .from("zoom_session_events")
+    .select(
+      "id, contact_id, meeting_id, email, participant_name, join_time, leave_time, duration_minutes",
+    )
+    .order("leave_time", { ascending: false })
+    .limit(500);
+
+  if (zoomRows && zoomRows.length > 0) {
+    return (zoomRows as SessionDbRow[]).map(sessionFromDb);
+  }
+
+  const rows = await loadZoomLeftRowsLegacy();
+  return parseSessions(rows);
+}
+
 type RawRow = {
   id: string;
   contact_id: string;
@@ -62,7 +104,7 @@ function parseSessions(rows: RawRow[]): ZoomSessionRow[] {
   return sessions;
 }
 
-async function loadZoomLeftRows(): Promise<RawRow[]> {
+async function loadZoomLeftRowsLegacy(): Promise<RawRow[]> {
   const supabase = getAdminClient();
   const { data } = await supabase
     .from("contact_events")
@@ -75,8 +117,7 @@ async function loadZoomLeftRows(): Promise<RawRow[]> {
 }
 
 export async function getZoomOverview(): Promise<ZoomOverview> {
-  const rows = await loadZoomLeftRows();
-  const sessions = parseSessions(rows);
+  const sessions = await loadZoomSessions();
 
   const byMeeting = new Map<string, ZoomSessionRow[]>();
   const byContact = new Map<string, ZoomAttendeeSummary>();
@@ -86,7 +127,11 @@ export async function getZoomOverview(): Promise<ZoomOverview> {
     list.push(session);
     byMeeting.set(session.meetingId, list);
 
-    const key = session.contactId;
+    const key =
+      session.contactId ||
+      session.email ||
+      session.name ||
+      session.eventId;
     const existing = byContact.get(key) ?? {
       contactId: session.contactId,
       email: session.email,
@@ -106,7 +151,9 @@ export async function getZoomOverview(): Promise<ZoomOverview> {
   const meetings: ZoomMeetingSummary[] = [...byMeeting.entries()]
     .map(([meetingId, list]) => {
       const totalMinutes = list.reduce((s, r) => s + r.durationMinutes, 0);
-      const emails = new Set(list.map((r) => r.email));
+      const emails = new Set(
+        list.map((r) => r.email || r.name || "unknown").filter(Boolean),
+      );
       const times = list.map((r) => new Date(r.leftAt).getTime()).filter(Number.isFinite);
       return {
         meetingId,
@@ -152,8 +199,8 @@ export async function getZoomOverview(): Promise<ZoomOverview> {
 export async function getZoomSessionsForMeeting(
   meetingId: string,
 ): Promise<ZoomSessionRow[]> {
-  const rows = await loadZoomLeftRows();
-  return parseSessions(rows)
+  const sessions = await loadZoomSessions();
+  return sessions
     .filter((s) => s.meetingId === meetingId)
     .sort((a, b) => b.durationMinutes - a.durationMinutes);
 }
@@ -163,7 +210,7 @@ export async function getContactIdsForMeeting(
   meetingId: string,
 ): Promise<string[]> {
   const sessions = await getZoomSessionsForMeeting(meetingId);
-  return [...new Set(sessions.map((s) => s.contactId))];
+  return [...new Set(sessions.map((s) => s.contactId).filter(Boolean))];
 }
 
 export async function getZoomMeetingOptions(): Promise<

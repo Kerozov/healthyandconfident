@@ -4,9 +4,29 @@ import { useState, useTransition } from "react";
 import { Save } from "lucide-react";
 import { saveZoomLiveConfig } from "@/app/(admin)/admin/actions";
 import type { ZoomLiveConfig } from "@/lib/supabase/types";
+import type { ZoomWebhookLogRow } from "@/lib/zoom/sessions";
 import { formatDate } from "@/lib/utils";
 
-export function ZoomLiveSettings({ config }: { config: ZoomLiveConfig }) {
+const STATUS_LABELS: Record<string, string> = {
+  live_on: "Среща започна",
+  live_off: "Среща свърши",
+  joined: "Влязъл (контакт)",
+  joined_no_contact: "Влязъл (без контакт в сайта)",
+  joined_no_email: "Влязъл (без имейл в Zoom)",
+  left: "Излязъл (контакт)",
+  left_no_contact: "Излязъл (записано)",
+  left_no_email: "Излязъл (без имейл)",
+  ignored: "Игнорирано",
+  error: "Грешка",
+};
+
+export function ZoomLiveSettings({
+  config,
+  webhookLog,
+}: {
+  config: ZoomLiveConfig;
+  webhookLog: ZoomWebhookLogRow[];
+}) {
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
     feature_enabled: config.feature_enabled,
@@ -134,6 +154,30 @@ export function ZoomLiveSettings({ config }: { config: ZoomLiveConfig }) {
           <code>/api/zoom/webhook</code> — добави събития{" "}
           <code>meeting.started</code> и <code>meeting.ended</code> в Zoom App.
         </p>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-ink/10 bg-white px-4 py-3">
+        <p className="text-sm font-semibold">Последни webhook събития</p>
+        {webhookLog.length === 0 ? (
+          <p className="mt-2 text-xs text-ink-soft">
+            Няма получени webhook-и. Провери Secret Token в Vercel и пусни нова
+            среща.
+          </p>
+        ) : (
+          <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-xs text-ink-soft">
+            {webhookLog.map((row) => (
+              <li key={row.id} className="flex flex-wrap gap-x-2 border-b border-ink/5 py-1">
+                <span className="text-ink">{formatDate(row.created_at, "bg")}</span>
+                <span>{STATUS_LABELS[row.status] ?? row.status}</span>
+                {row.email && <span className="font-mono">{row.email}</span>}
+                {row.meeting_id && (
+                  <span className="font-mono">mtg {row.meeting_id}</span>
+                )}
+                {row.detail && <span>· {row.detail}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );
