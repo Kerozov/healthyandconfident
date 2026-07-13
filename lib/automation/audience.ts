@@ -1,4 +1,5 @@
 import type { Automation, Segment, SegmentGroup } from "@/lib/supabase/types";
+import { signupSourceMatches } from "@/lib/automation/signup-sources";
 import {
   expandAudienceKeys,
   getSegmentKeysForGroup,
@@ -33,6 +34,13 @@ export function automationMatchesPurchaseProducts(
   if (required.length === 0) return false;
   if (purchasedProductIds.length === 0) return false;
   return required.some((id) => purchasedProductIds.includes(id));
+}
+
+export function automationMatchesSignupSource(
+  automation: Automation,
+  source?: string | null,
+): boolean {
+  return signupSourceMatches(automation.signup_sources ?? [], source);
 }
 
 /** Whether a subscriber should receive this automation (include + exclude rules). */

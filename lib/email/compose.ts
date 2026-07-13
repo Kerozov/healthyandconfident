@@ -13,6 +13,7 @@ export async function buildBrandedEmail(input: {
   vars?: { name?: string | null; email: string };
   unsubscribeHref?: string | null;
   footerConfig?: EmailFooterConfig | null;
+  heroImageUrl?: string | null;
 }): Promise<string> {
   const locale = input.locale ?? "bg";
   const body = input.vars
@@ -33,5 +34,6 @@ export async function buildBrandedEmail(input: {
     cta,
     unsubscribeHref: input.unsubscribeHref,
     footerConfig,
+    heroImageUrl: input.heroImageUrl,
   });
 }

@@ -25,6 +25,7 @@ import type {
   SegmentGroup,
 } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
+import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
 
 type AutomationRow = Automation & AutomationStats;
 
@@ -276,6 +277,8 @@ function FlowCard({
   selected?: boolean;
   onSelect?: (automation: AutomationRow) => void;
 }) {
+  const signupLine = formatSignupSourcesLine(automation.signup_sources ?? []);
+
   return (
     <button
       type="button"
@@ -350,6 +353,11 @@ function FlowCard({
         <p className="mt-2 text-[10px] leading-snug text-slate-600">
           {audienceSummary(automation, audience)}
         </p>
+        {signupLine && (
+          <p className="mt-2 text-[10px] leading-snug text-sky-800">
+            Източник: {signupLine}
+          </p>
+        )}
       </div>
 
       {audience.excludes.length > 0 && (

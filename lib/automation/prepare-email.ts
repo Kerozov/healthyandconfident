@@ -70,6 +70,9 @@ export async function prepareEmailAutomationJob(
         )
       : null;
 
+  const heroImageUrl =
+    locale === "en" ? automation.hero_image_url_en : automation.hero_image_url_bg;
+
   const html = await buildBrandedEmail({
     bodyHtml,
     locale,
@@ -78,6 +81,7 @@ export async function prepareEmailAutomationJob(
       : null,
     vars: { name: ctx.name, email },
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
+    heroImageUrl,
   });
 
   const sendAt = computeAutomationSendAt(automation);

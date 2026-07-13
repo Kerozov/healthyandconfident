@@ -4,6 +4,19 @@ import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteGuide } from "@/lib/supabase/types";
 
+function GuideCardImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="flex min-h-[168px] items-center justify-center overflow-hidden bg-cream-2 sm:min-h-[200px]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className="h-auto max-h-[240px] w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+      />
+    </div>
+  );
+}
+
 export function GuidesGrid({
   guides,
   locale,
@@ -36,25 +49,25 @@ export function GuidesGrid({
             disabled={!checkoutUrl}
             className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">
-              {guide.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={guide.image_url}
-                  alt={title}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90">
-                  PDF
-                </div>
-              )}
-            </div>
+            {guide.image_url ? (
+              <GuideCardImage src={guide.image_url} alt={title} />
+            ) : (
+              <div className="flex min-h-[168px] items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90 sm:min-h-[200px]">
+                PDF
+              </div>
+            )}
             <div className="flex flex-1 flex-col p-6">
-              {price && (
-                <p className="font-display text-2xl font-semibold text-slate-800">{price}</p>
-              )}
-              <h3 className="mt-2 font-display text-xl font-semibold leading-snug text-slate-800 transition-colors group-hover:text-forest-500">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-forest-50 px-2.5 py-1 text-xs font-semibold text-forest-700">
+                  {locale === "bg" ? "наръчник" : "guide"}
+                </span>
+                {price && (
+                  <span className="rounded-full bg-cream-2 px-2.5 py-1 text-xs font-semibold text-slate-800">
+                    {price}
+                  </span>
+                )}
+              </div>
+              <h3 className="mt-3 font-display text-xl font-semibold leading-snug text-slate-800 transition-colors group-hover:text-forest-500">
                 {title}
               </h3>
               {description && (

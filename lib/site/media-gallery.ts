@@ -194,6 +194,23 @@ export function mediaAlt(src: string, locale: Locale): string {
   return item?.alt[locale] ?? "";
 }
 
+/** Stable width/height for Next/Image when showing full photos without crop. */
+export function mediaIntrinsicSize(src: string): { width: number; height: number } {
+  const item = siteMedia.find((m) => m.src === src);
+  switch (item?.aspect) {
+    case "portrait":
+      return { width: 600, height: 800 };
+    case "landscape":
+      return { width: 800, height: 600 };
+    case "square":
+      return { width: 700, height: 700 };
+    case "wide":
+      return { width: 1200, height: 675 };
+    default:
+      return { width: 800, height: 600 };
+  }
+}
+
 export function allMediaAltTexts(locale: Locale): string[] {
   return siteMedia.map((m) => m.alt[locale]);
 }

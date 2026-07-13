@@ -32,6 +32,8 @@ import { FormOptionSegmentEditor } from "@/components/admin/form-option-segment-
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { DynamicForm } from "@/components/site/dynamic-form";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { ImageUploadField } from "@/components/admin/image-upload-field";
+import { EmailAttachmentPicker } from "@/components/admin/email-attachment-picker";
 import { normalizeFormFields } from "@/lib/forms/answer-tags";
 import {
   deleteCustomFieldDefault,
@@ -140,6 +142,9 @@ export function FormsManager({
     email_subject_en: "",
     email_intro_bg: "",
     email_intro_en: "",
+    hero_image_url: "",
+    attachment_path: "",
+    attachment_filename: "",
     enabled: true,
   });
 
@@ -171,6 +176,9 @@ export function FormsManager({
         email_subject_en: preset.email_subject_en,
         email_intro_bg: preset.email_intro_bg,
         email_intro_en: preset.email_intro_en,
+        hero_image_url: "",
+        attachment_path: "",
+        attachment_filename: "",
         enabled: true,
       });
       router.refresh();
@@ -199,6 +207,9 @@ export function FormsManager({
       email_subject_en: row.email_subject_en,
       email_intro_bg: row.email_intro_bg,
       email_intro_en: row.email_intro_en,
+      hero_image_url: row.hero_image_url ?? "",
+      attachment_path: row.attachment_path ?? "",
+      attachment_filename: row.attachment_filename ?? "",
       enabled: row.enabled,
     });
     setError(null);
@@ -655,6 +666,23 @@ export function FormsManager({
               <p className="md:col-span-2 text-xs text-ink-soft">
                 Бутонът в имейла води към формата с персонален линк за всеки получател.
               </p>
+              <div className="md:col-span-2 space-y-4 rounded-xl border border-ink/10 bg-cream/30 p-4">
+                <ImageUploadField
+                  label="Банер в началото на имейла"
+                  hint="Голяма снимка най-отгоре при изпращане на формата."
+                  value={form.hero_image_url}
+                  onChange={(hero_image_url) => setForm({ ...form, hero_image_url })}
+                  folder="email"
+                  previewFit="contain"
+                />
+                <EmailAttachmentPicker
+                  path={form.attachment_path}
+                  filename={form.attachment_filename}
+                  onChange={(attachment_path, attachment_filename) =>
+                    setForm({ ...form, attachment_path, attachment_filename })
+                  }
+                />
+              </div>
             </div>
           )}
 

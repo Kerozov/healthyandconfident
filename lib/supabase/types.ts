@@ -123,6 +123,8 @@ export type Automation = {
   exclude_segment_keys: string[];
   /** When trigger is purchase — only fire if buyer purchased one of these products (empty = any). */
   purchase_product_ids: string[];
+  /** Optional signup origin filter (popup, form slug, free menu, etc.). Empty = any. */
+  signup_sources: string[];
   new_subscribers_only: boolean;
   after_automation_id: string | null;
   delay_days: number;
@@ -144,6 +146,8 @@ export type Automation = {
   attachment_filename_bg: string | null;
   attachment_path_en: string | null;
   attachment_filename_en: string | null;
+  hero_image_url_bg: string | null;
+  hero_image_url_en: string | null;
   sms_bg: string;
   sms_en: string;
   sort_order: number;
@@ -241,6 +245,7 @@ export type EmailCampaign = {
   target_tags: string[] | null;
   attachment_path: string | null;
   attachment_filename: string | null;
+  hero_image_url: string | null;
 };
 
 export type AudienceMode = "segment" | "tags";

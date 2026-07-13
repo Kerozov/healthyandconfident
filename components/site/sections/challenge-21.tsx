@@ -3,7 +3,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt } from "@/lib/site/media-gallery";
+import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
 
 const COLLAGE_IMAGES = [
   "/images/6.jpg",
@@ -13,6 +13,25 @@ const COLLAGE_IMAGES = [
 ] as const;
 
 const SIGNUP_URL = "https://www.subscribepage.com/21_days_24";
+
+function ChallengePromoCard({ challenge21 }: { challenge21: Dictionary["challenge21"] }) {
+  return (
+    <div className="rounded-3xl border border-white/30 bg-white/95 px-5 py-6 text-center shadow-2xl backdrop-blur-sm sm:px-7 sm:py-7">
+      <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-coral-500 text-sm font-bold text-white shadow-lg sm:h-16 sm:w-16 sm:text-base">
+        {challenge21.discount}
+      </span>
+      <p className="mt-4 text-[11px] font-bold uppercase leading-snug text-coral-600 sm:text-xs">
+        {challenge21.cardLine1}
+      </p>
+      <p className="mt-2 font-display text-lg font-bold leading-tight text-slate-800 sm:text-xl">
+        {challenge21.cardLine2}
+      </p>
+      <p className="mt-2 font-display text-base italic text-slate-700 sm:text-lg">
+        {challenge21.cardSignature}
+      </p>
+    </div>
+  );
+}
 
 export function Challenge21Section({
   dict,
@@ -38,40 +57,30 @@ export function Challenge21Section({
           </p>
         </header>
 
-        <div className="mt-14 grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <div className="relative mx-auto w-full max-w-lg">
+        <div className="mt-14 grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className="mx-auto w-full max-w-lg space-y-6">
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              {COLLAGE_IMAGES.map((src) => (
-                <div
-                  key={src}
-                  className="relative aspect-square overflow-hidden rounded-lg bg-slate-700 ring-1 ring-white/10"
-                >
-                  <SiteImage
-                    src={src}
-                    alt={mediaAlt(src, locale)}
-                    fill
-                    sizes="250px"
-                  />
-                </div>
-              ))}
+              {COLLAGE_IMAGES.map((src) => {
+                const size = mediaIntrinsicSize(src);
+                return (
+                  <figure
+                    key={src}
+                    className="overflow-hidden rounded-lg bg-slate-700/80 ring-1 ring-white/10"
+                  >
+                    <SiteImage
+                      src={src}
+                      alt={mediaAlt(src, locale)}
+                      width={size.width}
+                      height={size.height}
+                      sizes="(max-width: 1024px) 45vw, 250px"
+                      className="h-auto w-full"
+                    />
+                  </figure>
+                );
+              })}
             </div>
 
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
-              <div className="relative max-w-[85%] rounded-3xl border border-white/30 bg-white/95 px-5 py-5 text-center shadow-2xl backdrop-blur-sm sm:px-7 sm:py-6">
-                <span className="absolute -left-3 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-coral-500 text-sm font-bold text-white shadow-lg sm:-left-5 sm:h-16 sm:w-16 sm:text-base">
-                  {challenge21.discount}
-                </span>
-                <p className="text-[11px] font-bold uppercase leading-snug text-coral-600 sm:text-xs">
-                  {challenge21.cardLine1}
-                </p>
-                <p className="mt-2 font-display text-lg font-bold uppercase leading-tight text-slate-800 sm:text-xl">
-                  {challenge21.cardLine2}
-                </p>
-                <p className="mt-2 font-display text-base italic text-slate-700 sm:text-lg">
-                  {challenge21.cardSignature}
-                </p>
-              </div>
-            </div>
+            <ChallengePromoCard challenge21={challenge21} />
           </div>
 
           <div>

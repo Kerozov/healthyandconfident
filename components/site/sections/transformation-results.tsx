@@ -4,7 +4,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaByCategory } from "@/lib/site/media-gallery";
+import { mediaByCategory, mediaIntrinsicSize } from "@/lib/site/media-gallery";
 
 const CLIENT_RESULTS = [
   "/images/14.jpg",
@@ -24,6 +24,8 @@ export function TransformationResults({
   const resultMedia = mediaByCategory("result");
   const altFor = (src: string) =>
     resultMedia.find((r) => r.src === src)?.alt[locale] ?? "";
+  const mainSrc = "/images/13.jpg";
+  const mainSize = mediaIntrinsicSize(mainSrc);
 
   return (
     <section id="results" className="section-pad scroll-mt-24 bg-cream-2">
@@ -39,12 +41,12 @@ export function TransformationResults({
         <div className="mt-12 grid items-stretch gap-8 lg:grid-cols-2">
           <figure className="overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-forest-100">
             <SiteImage
-              src="/images/13.jpg"
-              alt={altFor("/images/13.jpg")}
-              width={800}
-              height={900}
+              src={mainSrc}
+              alt={altFor(mainSrc)}
+              width={mainSize.width}
+              height={mainSize.height}
               sizes="(max-width: 1024px) 100vw, 50vw"
-              className="w-full"
+              className="h-auto w-full"
             />
             <figcaption className="border-t border-forest-100 px-5 py-4 text-center text-sm text-slate-800">
               {results.beforeAfterCaption}
@@ -85,27 +87,30 @@ export function TransformationResults({
           <p className="mx-auto mt-2 max-w-xl text-center text-sm text-ink-soft">
             {results.clientsSubtitle}
           </p>
-          <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-            {CLIENT_RESULTS.map((src, i) => (
-              <figure
-                key={src}
-                className="overflow-hidden rounded-xl bg-white shadow-card ring-1 ring-forest-100"
-              >
-                <div className="relative aspect-[3/4]">
+          <div className="mt-8 grid grid-cols-2 items-start gap-3 lg:grid-cols-4 lg:gap-4">
+            {CLIENT_RESULTS.map((src, i) => {
+              const size = mediaIntrinsicSize(src);
+              return (
+                <figure
+                  key={src}
+                  className="overflow-hidden rounded-xl bg-white shadow-card ring-1 ring-forest-100"
+                >
                   <SiteImage
                     src={src}
                     alt={altFor(src)}
-                    fill
+                    width={size.width}
+                    height={size.height}
                     sizes="(max-width: 1024px) 50vw, 25vw"
+                    className="h-auto w-full"
                   />
-                </div>
-                {results.clientCaptions[i] && (
-                  <figcaption className="px-3 py-2.5 text-center text-[11px] leading-snug text-ink-soft">
-                    {results.clientCaptions[i]}
-                  </figcaption>
-                )}
-              </figure>
-            ))}
+                  {results.clientCaptions[i] && (
+                    <figcaption className="px-3 py-2.5 text-center text-[11px] leading-snug text-ink-soft">
+                      {results.clientCaptions[i]}
+                    </figcaption>
+                  )}
+                </figure>
+              );
+            })}
           </div>
         </div>
       </Container>

@@ -4,7 +4,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt } from "@/lib/site/media-gallery";
+import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
 
 /** Main portrait + two accents — each file used once (no duplicate award thumbs). */
 const MAIN = "/images/3.jpg";
@@ -18,34 +18,42 @@ export function About({
   locale: Locale;
 }) {
   const { about } = dict;
+  const mainSize = mediaIntrinsicSize(MAIN);
 
   return (
     <section id="about" className="section-pad scroll-mt-24 bg-cream-2">
       <Container className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
         <div className="mx-auto w-full max-w-md lg:max-w-none">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-2xl shadow-soft ring-1 ring-white/80">
+          <figure className="overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ring-white/80">
             <SiteImage
               src={MAIN}
               alt={mediaAlt(MAIN, locale)}
-              fill
+              width={mainSize.width}
+              height={mainSize.height}
               sizes="(max-width: 1024px) 85vw, 420px"
+              className="h-auto w-full"
             />
-          </div>
+          </figure>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {ACCENTS.map((src) => (
-              <figure
-                key={src}
-                className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-sm ring-1 ring-forest-100"
-              >
-                <SiteImage
-                  src={src}
-                  alt={mediaAlt(src, locale)}
-                  fill
-                  sizes="(max-width: 1024px) 45vw, 220px"
-                />
-              </figure>
-            ))}
+          <div className="mt-4 grid grid-cols-2 items-start gap-3">
+            {ACCENTS.map((src) => {
+              const size = mediaIntrinsicSize(src);
+              return (
+                <figure
+                  key={src}
+                  className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-forest-100"
+                >
+                  <SiteImage
+                    src={src}
+                    alt={mediaAlt(src, locale)}
+                    width={size.width}
+                    height={size.height}
+                    sizes="(max-width: 1024px) 45vw, 220px"
+                    className="h-auto w-full"
+                  />
+                </figure>
+              );
+            })}
           </div>
         </div>
 

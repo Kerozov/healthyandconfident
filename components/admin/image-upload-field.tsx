@@ -14,6 +14,7 @@ export function ImageUploadField({
   onChange,
   folder,
   className,
+  previewFit = "cover",
 }: {
   label: string;
   hint?: string;
@@ -21,6 +22,8 @@ export function ImageUploadField({
   onChange: (url: string) => void;
   folder: MediaFolder;
   className?: string;
+  /** `contain` shows the full image (emails, portraits). `cover` crops to fill (product cards). */
+  previewFit?: "cover" | "contain";
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
@@ -88,12 +91,21 @@ export function ImageUploadField({
           )}
         >
           {value ? (
-            <div className="relative inline-block">
+            <div
+              className={cn(
+                "relative w-full p-2",
+                previewFit === "contain" && "flex justify-center",
+              )}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={value}
                 alt=""
-                className="max-h-40 rounded-xl object-cover"
+                className={cn(
+                  previewFit === "contain"
+                    ? "max-h-80 max-w-full object-contain"
+                    : "max-h-40 w-full rounded-xl object-cover",
+                )}
               />
             </div>
           ) : (

@@ -14,6 +14,7 @@ export function EmailTemplatePreview({
   locale = "bg",
   products = [],
   forms = [],
+  heroImageUrl = "",
 }: {
   bodyHtml: string;
   ctaLabel: string;
@@ -21,6 +22,7 @@ export function EmailTemplatePreview({
   locale?: "bg" | "en";
   products?: SiteProduct[];
   forms?: FormTemplateRecord[];
+  heroImageUrl?: string;
 }) {
   const srcDoc = useMemo(() => {
     const label = ctaLabel.trim();
@@ -48,8 +50,9 @@ export function EmailTemplatePreview({
       locale,
       cta: label && href ? { label, href } : null,
       unsubscribeHref: `/${locale}/unsubscribe?token=example`,
+      heroImageUrl: heroImageUrl.trim() || null,
     });
-  }, [bodyHtml, ctaLabel, ctaUrl, locale, products, forms]);
+  }, [bodyHtml, ctaLabel, ctaUrl, locale, products, forms, heroImageUrl]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-ink/10 bg-ink/5">

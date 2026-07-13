@@ -48,6 +48,8 @@ import { TabList } from "@/components/admin/ui";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
 import { PurchaseProductPicker } from "@/components/admin/purchase-product-picker";
+import { SignupSourcePicker } from "@/components/admin/signup-source-picker";
+import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -317,6 +319,7 @@ const EMPTY_FORM = {
   exclude_group_ids: [] as string[],
   exclude_segment_keys: [] as string[],
   purchase_product_ids: [] as string[],
+  signup_sources: [] as string[],
   new_subscribers_only: true,
   after_automation_id: "" as string,
   delay_days: 0,
@@ -335,6 +338,8 @@ const EMPTY_FORM = {
   attachment_filename_bg: "",
   attachment_path_en: "",
   attachment_filename_en: "",
+  hero_image_url_bg: "",
+  hero_image_url_en: "",
   sms_bg: "",
   sms_en: "",
   sort_order: 0,
@@ -352,6 +357,7 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     exclude_group_ids: a.exclude_group_ids ?? [],
     exclude_segment_keys: a.exclude_segment_keys ?? [],
     purchase_product_ids: a.purchase_product_ids ?? [],
+    signup_sources: a.signup_sources ?? [],
     new_subscribers_only: a.new_subscribers_only,
     after_automation_id: a.after_automation_id ?? "",
     delay_days: a.delay_days ?? 0,
@@ -370,6 +376,8 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     attachment_filename_bg: a.attachment_filename_bg ?? "",
     attachment_path_en: a.attachment_path_en ?? "",
     attachment_filename_en: a.attachment_filename_en ?? "",
+    hero_image_url_bg: a.hero_image_url_bg ?? "",
+    hero_image_url_en: a.hero_image_url_en ?? "",
     sms_bg: a.sms_bg,
     sms_en: a.sms_en,
     sort_order: a.sort_order,
@@ -462,6 +470,7 @@ export function AutomationsManager({
       exclude_group_ids: [...(parent.exclude_group_ids ?? [])],
       exclude_segment_keys: [...(parent.exclude_segment_keys ?? [])],
       purchase_product_ids: [...(parent.purchase_product_ids ?? [])],
+      signup_sources: [...(parent.signup_sources ?? [])],
       new_subscribers_only: parent.new_subscribers_only,
       after_automation_id: parent.id,
       delay_days: 0,
@@ -878,6 +887,18 @@ export function AutomationsManager({
               </div>
             </div>
 
+            {form.trigger_event !== "purchase" && (
+              <div className="rounded-xl border border-sky-500/25 bg-sky-50/30 p-4 space-y-3">
+                <p className="text-sm font-semibold text-sky-900">Източник на записване</p>
+                <SignupSourcePicker
+                  forms={forms}
+                  selected={form.signup_sources}
+                  onChange={(signup_sources) => setForm({ ...form, signup_sources })}
+                  disabled={pending}
+                />
+              </div>
+            )}
+
             <div className="rounded-2xl border border-forest-500/20 bg-forest-50/40 p-4 space-y-4">
               <Field
                 label="След коя стъпка"
@@ -1066,6 +1087,10 @@ export function AutomationsManager({
                       onHtmlChange={(html_bg) => setForm({ ...form, html_bg })}
                       products={products}
                       forms={forms}
+                      heroImageUrl={form.hero_image_url_bg}
+                      onHeroImageChange={(hero_image_url_bg) =>
+                        setForm({ ...form, hero_image_url_bg })
+                      }
                       attachmentPath={form.attachment_path_bg}
                       attachmentFilename={form.attachment_filename_bg}
                       onAttachmentChange={(attachment_path_bg, attachment_filename_bg) =>
@@ -1098,6 +1123,7 @@ export function AutomationsManager({
                       locale="bg"
                       products={products}
                       forms={forms}
+                      heroImageUrl={form.hero_image_url_bg}
                     />
                   </div>
                 ) : (
@@ -1126,6 +1152,10 @@ export function AutomationsManager({
                       onHtmlChange={(html_en) => setForm({ ...form, html_en })}
                       products={products}
                       forms={forms}
+                      heroImageUrl={form.hero_image_url_en}
+                      onHeroImageChange={(hero_image_url_en) =>
+                        setForm({ ...form, hero_image_url_en })
+                      }
                       attachmentPath={form.attachment_path_en}
                       attachmentFilename={form.attachment_filename_en}
                       onAttachmentChange={(attachment_path_en, attachment_filename_en) =>
@@ -1158,6 +1188,7 @@ export function AutomationsManager({
                       locale="en"
                       products={products}
                       forms={forms}
+                      heroImageUrl={form.hero_image_url_en}
                     />
                   </div>
                 )}
@@ -1266,6 +1297,7 @@ export function AutomationsManager({
             if (showHeader) lastTrigger = trigger;
             const rate = openRate(a);
             const audienceLine = formatAutomationAudienceLine(a, groups, segments);
+            const signupSourcesLine = formatSignupSourcesLine(a.signup_sources ?? [], forms);
             const rowBusy = busyId === a.id && pending;
             const isExpanded = expandedId === a.id;
             const canResend =
@@ -1321,6 +1353,7 @@ export function AutomationsManager({
                   <p className="mt-1 text-sm text-ink-soft">
                     {triggerSummary(a)}
                     {audienceLine && ` · ${audienceLine}`}
+                    {signupSourcesLine && ` · източник: ${signupSourcesLine}`}
                     {` · ${audienceSummary(a.new_subscribers_only)}`}
                   </p>
                   <p className="mt-1 text-sm font-medium text-forest-700">

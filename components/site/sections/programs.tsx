@@ -4,7 +4,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt } from "@/lib/site/media-gallery";
+import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
 import { cn } from "@/lib/utils";
 
 export function Programs({
@@ -29,7 +29,10 @@ export function Programs({
         </div>
 
         <div className="mt-14 grid gap-6 lg:grid-cols-3">
-          {programs.items.map((p, index) => (
+          {programs.items.map((p, index) => {
+            const imageSize = p.image ? mediaIntrinsicSize(p.image) : null;
+
+            return (
             <div
               key={p.title}
               className={cn(
@@ -39,15 +42,17 @@ export function Programs({
                   : "border-forest-100 bg-white hover:border-forest-300 hover:shadow-md",
               )}
             >
-              {p.image && (
-                <div className="relative aspect-[16/10] w-full">
+              {p.image && imageSize && (
+                <figure className="overflow-hidden bg-cream-2">
                   <SiteImage
                     src={p.image}
                     alt={mediaAlt(p.image, locale) || p.title}
-                    fill
+                    width={imageSize.width}
+                    height={imageSize.height}
                     sizes="(max-width: 1024px) 100vw, 33vw"
+                    className="h-auto w-full"
                   />
-                </div>
+                </figure>
               )}
               <div className="flex flex-1 flex-col p-6">
                 {p.badge && (
@@ -93,7 +98,8 @@ export function Programs({
                 </CtaLink>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </Container>
     </section>

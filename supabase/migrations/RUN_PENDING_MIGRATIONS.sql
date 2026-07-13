@@ -878,4 +878,19 @@ create table if not exists public.zoom_webhook_log (
 create index if not exists zoom_webhook_log_created_idx
   on public.zoom_webhook_log (created_at desc);
 
-select 'Upgrade complete (012–040 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 041: optional signup-source filter on automations
+alter table public.automations
+  add column if not exists signup_sources text[] not null default '{}';
+
+-- 042: hero/banner image at top of emails
+alter table public.automations
+  add column if not exists hero_image_url_bg text,
+  add column if not exists hero_image_url_en text;
+
+alter table public.email_campaigns
+  add column if not exists hero_image_url text;
+
+alter table public.form_templates
+  add column if not exists hero_image_url text;
+
+select 'Upgrade complete (012–042 applied). Also run 007_automations.sql if not yet applied.' as result;

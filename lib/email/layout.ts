@@ -1,4 +1,5 @@
 import { siteConfig } from "@/lib/site";
+import { renderEmailHeroImage } from "@/lib/email/hero-image";
 import { DEFAULT_EMAIL_FOOTER } from "@/lib/email/footer-defaults";
 import { renderEmailSignatureAndFooter } from "@/lib/email/footer-html";
 import type { EmailFooterConfig } from "@/lib/supabase/types";
@@ -14,6 +15,8 @@ export type ComposeEmailOptions = {
   cta?: EmailCta | null;
   unsubscribeHref?: string | null;
   footerConfig?: EmailFooterConfig | null;
+  /** Large banner image at the very top of the email card. */
+  heroImageUrl?: string | null;
 };
 
 const COLORS = {
@@ -80,7 +83,14 @@ function resolveFooterConfig(
 
 /** Full branded HTML email — header, body, optional CTA, footer. */
 export function composeBrandedEmail(options: ComposeEmailOptions): string {
-  const { bodyHtml, locale = "bg", cta, unsubscribeHref, footerConfig } = options;
+  const {
+    bodyHtml,
+    locale = "bg",
+    cta,
+    unsubscribeHref,
+    footerConfig,
+    heroImageUrl,
+  } = options;
 
   if (bodyHtml.includes(MARKER)) {
     return bodyHtml;
@@ -95,6 +105,7 @@ export function composeBrandedEmail(options: ComposeEmailOptions): string {
     locale,
     unsubscribeHref,
   );
+  const heroRow = renderEmailHeroImage(heroImageUrl);
 
   return `<!DOCTYPE html>
 <html lang="${locale === "en" ? "en" : "bg"}">
@@ -110,6 +121,7 @@ ${MARKER}
   <tr>
     <td align="center" style="padding:32px 16px">
       <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:${COLORS.bgCard};border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(61,43,31,0.08)">
+        ${heroRow}
         <tr>
           <td style="background-color:${COLORS.green};padding:36px 28px;text-align:center">
             <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:600;color:#ffffff;line-height:1.2">

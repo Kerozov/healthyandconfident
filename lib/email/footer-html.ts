@@ -42,8 +42,8 @@ function signatureBlock(config: EmailFooterConfig): string {
 
   const imageCell = config.signature_image_url?.trim()
     ? `
-    <td valign="top" style="padding-right:16px;width:72px">
-      <img src="${escapeHtml(config.signature_image_url.trim())}" alt="" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:50%;object-fit:cover;border:0" />
+    <td valign="top" style="padding-right:16px;width:100px">
+      <img src="${escapeHtml(config.signature_image_url.trim())}" alt="" width="96" style="display:block;width:96px;max-width:96px;height:auto;max-height:160px;border-radius:12px;object-fit:contain;border:0" />
     </td>`
     : "";
 

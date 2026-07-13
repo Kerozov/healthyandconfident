@@ -3,7 +3,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaByCategory } from "@/lib/site/media-gallery";
+import { mediaByCategory, mediaIntrinsicSize } from "@/lib/site/media-gallery";
 
 const FOOD_ITEMS = mediaByCategory("food");
 const FEATURED = "/images/11.jpg";
@@ -20,6 +20,7 @@ export function FoodShowcase({
     FOOD_ITEMS.find((f) => f.src === src)?.alt[locale] ?? foodGallery.featuredAlt;
 
   const gridItems = FOOD_ITEMS.filter((f) => f.src !== FEATURED);
+  const featuredSize = mediaIntrinsicSize(FEATURED);
 
   return (
     <section id="food" className="section-pad scroll-mt-24 bg-white">
@@ -34,53 +35,63 @@ export function FoodShowcase({
           </p>
         </div>
 
-        <div className="mt-12 overflow-hidden rounded-2xl shadow-card ring-1 ring-forest-100">
-          <div className="relative aspect-[4/3] min-h-[180px] w-full sm:aspect-[21/9] sm:min-h-[220px]">
-            <SiteImage
-              src={FEATURED}
-              alt={altFor(FEATURED)}
-              fill
-              sizes="(max-width: 1200px) 100vw, 1152px"
-            />
-          </div>
-          <div className="border-t border-forest-100 bg-cream px-6 py-5 sm:px-8">
+        <figure className="mt-12 overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-forest-100">
+          <SiteImage
+            src={FEATURED}
+            alt={altFor(FEATURED)}
+            width={featuredSize.width}
+            height={featuredSize.height}
+            sizes="(max-width: 1200px) 100vw, 1152px"
+            className="h-auto w-full"
+          />
+          <figcaption className="border-t border-forest-100 bg-cream px-6 py-5 sm:px-8">
             <p className="font-display text-lg font-semibold text-slate-800">
               {foodGallery.featuredCaption}
             </p>
             <p className="mt-1 text-sm text-ink-soft">{foodGallery.featuredNote}</p>
-          </div>
+          </figcaption>
+        </figure>
+
+        <div className="mt-6 grid grid-cols-2 items-start gap-3 sm:gap-4 lg:grid-cols-4">
+          {gridItems.slice(0, 4).map((item) => {
+            const size = mediaIntrinsicSize(item.src);
+            return (
+              <figure
+                key={item.src}
+                className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-forest-100"
+              >
+                <SiteImage
+                  src={item.src}
+                  alt={altFor(item.src)}
+                  width={size.width}
+                  height={size.height}
+                  sizes="(max-width: 1024px) 50vw, 25vw"
+                  className="h-auto w-full"
+                />
+              </figure>
+            );
+          })}
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {gridItems.slice(0, 4).map((item) => (
-            <figure
-              key={item.src}
-              className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-sm ring-1 ring-forest-100"
-            >
-              <SiteImage
-                src={item.src}
-                alt={altFor(item.src)}
-                fill
-                sizes="(max-width: 1024px) 50vw, 25vw"
-              />
-            </figure>
-          ))}
-        </div>
-
-        <div className="mt-3 grid grid-cols-3 gap-3 sm:gap-4">
-          {gridItems.slice(4).map((item) => (
-            <figure
-              key={item.src}
-              className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-sm ring-1 ring-forest-100"
-            >
-              <SiteImage
-                src={item.src}
-                alt={altFor(item.src)}
-                fill
-                sizes="(max-width: 768px) 33vw, 20vw"
-              />
-            </figure>
-          ))}
+        <div className="mt-3 grid grid-cols-3 items-start gap-3 sm:gap-4">
+          {gridItems.slice(4).map((item) => {
+            const size = mediaIntrinsicSize(item.src);
+            return (
+              <figure
+                key={item.src}
+                className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-forest-100"
+              >
+                <SiteImage
+                  src={item.src}
+                  alt={altFor(item.src)}
+                  width={size.width}
+                  height={size.height}
+                  sizes="(max-width: 768px) 33vw, 20vw"
+                  className="h-auto w-full"
+                />
+              </figure>
+            );
+          })}
         </div>
 
         <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

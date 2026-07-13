@@ -90,7 +90,7 @@ export function Hero({
             <div
               className={cn(
                 "relative overflow-hidden rounded-2xl shadow-soft ring-1 ring-forest-100/80",
-                "aspect-[5/4] max-h-[min(72vw,320px)] sm:aspect-[4/5] sm:max-h-none",
+                "aspect-[3/4] w-full sm:aspect-[4/5]",
               )}
             >
               <SiteImage
@@ -99,10 +99,11 @@ export function Hero({
                 fill
                 priority
                 sizes="(max-width: 640px) 90vw, (max-width: 1024px) 85vw, 480px"
+                imageClassName="object-cover object-[center_18%]"
               />
             </div>
 
-            <div className="absolute -bottom-3 left-3 right-3 rounded-xl border border-forest-100 bg-white px-3.5 py-3 shadow-lg sm:left-5 sm:right-auto sm:max-w-[13rem] sm:px-4 sm:py-3.5 lg:-left-4">
+            <div className="mx-auto mt-3 max-w-[14rem] rounded-xl border border-forest-100 bg-white px-3.5 py-3 shadow-lg sm:absolute sm:-bottom-3 sm:left-5 sm:mx-0 sm:mt-0 sm:max-w-[13rem] sm:px-4 sm:py-3.5 lg:-left-4">
               <p className="font-display text-3xl font-semibold leading-none text-forest-500 sm:text-4xl">
                 94%
               </p>

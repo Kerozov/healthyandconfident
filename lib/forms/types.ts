@@ -63,6 +63,7 @@ export type FormTemplateRecord = {
   enabled: boolean;
   attachment_path?: string | null;
   attachment_filename?: string | null;
+  hero_image_url?: string | null;
   created_at: string;
   updated_at: string;
 };

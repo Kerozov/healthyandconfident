@@ -2,7 +2,7 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
-import { subscriberMatchesAutomationAudience, automationMatchesPurchaseProducts } from "@/lib/automation/audience";
+import { subscriberMatchesAutomationAudience, automationMatchesPurchaseProducts, automationMatchesSignupSource } from "@/lib/automation/audience";
 import { expandAudienceKeys } from "@/lib/segments/hierarchy";
 import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
 import { buildBrandedEmail } from "@/lib/email/compose";
@@ -292,6 +292,12 @@ async function scheduleChainedFromParent(
     ) {
       continue;
     }
+    if (
+      rule.trigger_event !== "purchase" &&
+      !automationMatchesSignupSource(rule, ctx.source)
+    ) {
+      continue;
+    }
     if (await alreadyQueuedOrSent(rule.id, email)) continue;
     try {
       const sendAt = computeChainedSendAt(rule, parentAt);
@@ -409,6 +415,8 @@ async function scheduleAutomation(
           ctx.subscriberId ?? undefined,
         )
       : null;
+  const heroImageUrl =
+    locale === "en" ? automation.hero_image_url_en : automation.hero_image_url_bg;
   const html = await buildBrandedEmail({
     bodyHtml,
     locale,
@@ -417,6 +425,7 @@ async function scheduleAutomation(
       : null,
     vars: { name: ctx.name, email },
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
+    heroImageUrl,
   });
 
   const res = await scheduleEmail({
@@ -530,6 +539,8 @@ async function sendAutomationNow(
           ctx.subscriberId ?? undefined,
         )
       : null;
+  const heroImageUrl =
+    locale === "en" ? automation.hero_image_url_en : automation.hero_image_url_bg;
   const html = await buildBrandedEmail({
     bodyHtml,
     locale,
@@ -538,6 +549,7 @@ async function sendAutomationNow(
       : null,
     vars: { name: ctx.name, email },
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
+    heroImageUrl,
   });
 
   const res = await sendEmail({ subject, html, recipients: [email], attachments });
@@ -580,6 +592,12 @@ async function passesAutomationGates(
     !automationMatchesPurchaseProducts(automation, ctx.purchasedProductIds ?? [])
   ) {
     return { ok: false, reason: "product_filter" };
+  }
+  if (
+    automation.trigger_event !== "purchase" &&
+    !automationMatchesSignupSource(automation, ctx.source)
+  ) {
+    return { ok: false, reason: `signup_source (${ctx.source ?? "∅"})` };
   }
   if (await alreadyQueuedOrSent(automation.id, email)) {
     return { ok: false, reason: "already_queued_or_sent" };

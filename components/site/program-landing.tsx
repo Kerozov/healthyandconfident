@@ -26,7 +26,7 @@ import { CtaLink } from "@/components/site/cta-link";
 import { LeadForm } from "@/components/site/lead-form";
 import { ProgramCountdown } from "@/components/site/program-countdown";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt } from "@/lib/site/media-gallery";
+import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
 import { cn } from "@/lib/utils";
 
 const pillarIcons = [Flame, Heart, Zap];
@@ -56,6 +56,58 @@ function SectionTitle({
   );
 }
 
+function LandingFigure({
+  src,
+  alt = "",
+  figureClassName,
+  imageClassName,
+  priority,
+  sizes,
+}: {
+  src: string;
+  alt?: string;
+  figureClassName?: string;
+  imageClassName?: string;
+  priority?: boolean;
+  sizes?: string;
+}) {
+  const isRemote = src.startsWith("http");
+
+  if (isRemote) {
+    return (
+      <figure className={cn("overflow-hidden bg-cream-2", figureClassName)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          className={cn("h-auto w-full object-contain", imageClassName)}
+          loading={priority ? "eager" : "lazy"}
+        />
+      </figure>
+    );
+  }
+
+  const { width, height } = mediaIntrinsicSize(src);
+  return (
+    <figure className={cn("overflow-hidden bg-cream-2", figureClassName)}>
+      <SiteImage
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        sizes={sizes}
+        className={cn("h-auto w-full", imageClassName)}
+        imageClassName="object-contain"
+        priority={priority}
+      />
+    </figure>
+  );
+}
+
+/** Text left / image right on desktop; image first on mobile. */
+const splitTextCol = "order-2 lg:order-1";
+const splitImageCol = "order-1 lg:order-2";
+
 function FoodGallery({
   gallery,
   locale,
@@ -67,22 +119,25 @@ function FoodGallery({
     <section className="bg-white py-16">
       <Container>
         <SectionTitle title={gallery.title} accent={gallery.titleAccent} />
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {gallery.images.map((src) => (
-            <div
-              key={src}
-              className="relative aspect-square overflow-hidden rounded-2xl bg-forest-100 shadow-md ring-1 ring-forest-100/80"
-            >
-              <SiteImage
-                src={src}
-                alt={mediaAlt(src, locale) || gallery.title}
-                fill
-                sizes="(max-width: 768px) 50vw, 25vw"
-                className="object-cover"
-                imageClassName="object-cover"
-              />
-            </div>
-          ))}
+        <div className="mt-10 grid grid-cols-2 items-start gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {gallery.images.map((src) => {
+            const size = mediaIntrinsicSize(src);
+            return (
+              <figure
+                key={src}
+                className="overflow-hidden rounded-2xl bg-cream-2 shadow-md ring-1 ring-forest-100/80"
+              >
+                <SiteImage
+                  src={src}
+                  alt={mediaAlt(src, locale) || gallery.title}
+                  width={size.width}
+                  height={size.height}
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  className="h-auto w-full"
+                />
+              </figure>
+            );
+          })}
         </div>
       </Container>
     </section>
@@ -100,9 +155,9 @@ export function ProgramLanding({
   const placementKey = hero.placementKey ?? `product_${content.slug}`;
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-x-hidden">
       {/* Hero */}
-      <section className="relative bg-slate-800 pb-24 pt-12 text-white">
+      <section className="relative bg-slate-800 pb-16 pt-4 text-white sm:pb-24 sm:pt-6">
         <div className="pointer-events-none absolute -right-40 top-0 h-[500px] w-[500px] rounded-full bg-gold-400/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-32 bottom-0 h-96 w-96 rounded-full bg-forest-400/10 blur-3xl" />
 
@@ -117,59 +172,74 @@ export function ProgramLanding({
 
           <div
             className={cn(
-              "mt-10 gap-12",
-              hero.image ? "grid items-center lg:grid-cols-2" : "max-w-4xl",
+              "mt-6 grid gap-8 sm:mt-8 sm:gap-10",
+              hero.image
+                ? "lg:grid-cols-2 lg:items-center lg:gap-12"
+                : "max-w-4xl",
             )}
           >
-            <div>
+            {hero.image && (
+              <LandingFigure
+                src={hero.image}
+                alt={mediaAlt(hero.image, locale) || hero.title}
+                priority
+                sizes="(max-width: 1024px) 100vw, 480px"
+                figureClassName={cn(
+                  "order-1 rounded-2xl border border-white/10 bg-white/5 shadow-2xl sm:rounded-3xl lg:order-2",
+                )}
+                imageClassName="mx-auto max-h-[min(50vh,360px)] object-contain sm:max-h-[min(65vh,480px)] lg:max-h-none"
+              />
+            )}
+
+            <div className={cn(hero.image && splitTextCol)}>
               <span className="inline-flex items-center gap-2 rounded-full border border-gold-400/40 bg-gold-400/10 px-4 py-1.5 text-sm font-semibold text-gold-300">
                 <Sparkles className="h-4 w-4" /> {hero.eyebrow}
               </span>
 
               <h1
                 className={cn(
-                  "mt-6 font-bold leading-[1.12] tracking-normal text-white",
+                  "mt-4 font-bold leading-[1.12] tracking-normal text-white sm:mt-6",
                   locale === "bg"
-                    ? "font-sans text-[2rem] sm:text-5xl lg:text-[3.25rem]"
-                    : "font-display text-4xl sm:text-5xl lg:text-6xl",
+                    ? "font-sans text-[1.75rem] sm:text-5xl lg:text-[3.25rem]"
+                    : "font-display text-3xl sm:text-5xl lg:text-6xl",
                 )}
               >
                 <span className="block">{hero.title}</span>
                 {hero.titleAccent && (
-                  <span className="mt-2 block text-gold-200 sm:mt-3">{hero.titleAccent}</span>
+                  <span className="mt-1 block text-gold-200 sm:mt-3">{hero.titleAccent}</span>
                 )}
               </h1>
 
-              <p className="mt-6 text-lg leading-relaxed text-slate-200 sm:text-xl">
+              <p className="mt-4 text-base leading-relaxed text-slate-200 sm:mt-6 sm:text-lg lg:text-xl">
                 {hero.subtitle}
               </p>
 
               {hero.bullets && hero.bullets.length > 0 && (
-                <ul className="mt-8 space-y-3">
+                <ul className="mt-5 space-y-2.5 sm:mt-8 sm:space-y-3">
                   {hero.bullets.map((b) => (
                     <li key={b} className="flex items-start gap-3 text-slate-100">
                       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold-400/20">
                         <Check className="h-3.5 w-3.5 text-gold-300" />
                       </span>
-                      <span className="text-base sm:text-lg">{b}</span>
+                      <span className="text-sm sm:text-base lg:text-lg">{b}</span>
                     </li>
                   ))}
                 </ul>
               )}
 
               {hero.priceLine && (
-                <p className="mt-8 font-display text-2xl font-bold tracking-wide text-gold-200 sm:text-3xl">
+                <p className="mt-6 font-display text-2xl font-bold tracking-wide text-gold-200 sm:mt-8 sm:text-3xl">
                   {hero.priceLine}
                 </p>
               )}
 
-              <div className="mt-10 flex flex-wrap gap-4">
+              <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
                 <CtaLink
                   placementKey={placementKey}
                   href={hero.primaryHref}
                   variant="gold"
                   size="lg"
-                  className="shadow-lg shadow-gold-400/20"
+                  className="w-full shadow-lg shadow-gold-400/20 sm:w-auto"
                   target={hero.primaryHref.startsWith("http") ? "_blank" : undefined}
                   rel={hero.primaryHref.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
@@ -178,27 +248,13 @@ export function ProgramLanding({
                 {hero.secondaryCta && hero.secondaryHref && (
                   <Link
                     href={hero.secondaryHref}
-                    className="inline-flex items-center justify-center rounded-full border-2 border-white/30 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-white/10"
+                    className="inline-flex w-full items-center justify-center rounded-full border-2 border-white/30 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto sm:text-lg"
                   >
                     {hero.secondaryCta}
                   </Link>
                 )}
               </div>
             </div>
-
-            {hero.image && (
-              <div className="overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
-                <SiteImage
-                  src={hero.image}
-                  alt={mediaAlt(hero.image, locale) || hero.title}
-                  width={640}
-                  height={640}
-                  className="aspect-[4/3] w-full object-cover lg:aspect-square"
-                  imageClassName="object-cover"
-                  priority
-                />
-              </div>
-            )}
           </div>
         </Container>
       </section>
@@ -232,11 +288,11 @@ export function ProgramLanding({
           <Container
             className={cn(
               content.vision.image
-                ? "grid max-w-5xl items-center gap-12 lg:grid-cols-2"
+                ? "grid max-w-5xl items-start gap-8 sm:gap-12 lg:grid-cols-2 lg:items-center"
                 : "max-w-3xl text-center",
             )}
           >
-            <div className={content.vision.image ? "" : "mx-auto"}>
+            <div className={cn(content.vision.image && splitTextCol, !content.vision.image && "mx-auto")}>
               <h2 className="font-display text-3xl font-semibold text-forest-600 sm:text-4xl">
                 {content.vision.title}
               </h2>
@@ -252,16 +308,11 @@ export function ProgramLanding({
               </div>
             </div>
             {content.vision.image && (
-              <div className="overflow-hidden rounded-3xl shadow-xl ring-1 ring-forest-100/80">
-                <SiteImage
-                  src={content.vision.image}
-                  alt={mediaAlt(content.vision.image, locale) || content.vision.title}
-                  width={640}
-                  height={480}
-                  className="aspect-[4/3] w-full object-cover"
-                  imageClassName="object-cover"
-                />
-              </div>
+              <LandingFigure
+                src={content.vision.image}
+                alt={mediaAlt(content.vision.image, locale) || content.vision.title}
+                figureClassName={cn("rounded-3xl shadow-xl ring-1 ring-forest-100/80", splitImageCol)}
+              />
             )}
           </Container>
         </section>
@@ -316,8 +367,8 @@ export function ProgramLanding({
       {/* Представи си */}
       {content.visualize && (
         <section className="bg-white py-20">
-          <Container className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
+          <Container className="grid items-start gap-8 sm:gap-12 lg:grid-cols-2 lg:items-center">
+            <div className={splitTextCol}>
               <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
                 {content.visualize.title}
               </h2>
@@ -331,15 +382,10 @@ export function ProgramLanding({
               </ul>
             </div>
             {content.visualize.image && (
-              <div className="overflow-hidden rounded-3xl shadow-xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={content.visualize.image}
-                  alt=""
-                  className="aspect-[4/3] w-full object-cover"
-                  loading="lazy"
-                />
-              </div>
+              <LandingFigure
+                src={content.visualize.image}
+                figureClassName={cn("rounded-3xl shadow-xl", splitImageCol)}
+              />
             )}
           </Container>
         </section>
@@ -384,8 +430,8 @@ export function ProgramLanding({
       {/* Promo strip — 94% */}
       {content.promoStrip && (
         <section className="bg-cream-50 py-20">
-          <Container className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
+          <Container className="grid items-start gap-8 sm:gap-12 lg:grid-cols-2 lg:items-center">
+            <div className={splitTextCol}>
               <p className="text-sm font-semibold uppercase tracking-widest text-forest-500">
                 {content.promoStrip.subtitle}
               </p>
@@ -410,15 +456,10 @@ export function ProgramLanding({
               )}
             </div>
             {content.promoStrip.image && (
-              <div className="overflow-hidden rounded-3xl shadow-xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={content.promoStrip.image}
-                  alt=""
-                  className="aspect-[4/3] w-full object-cover"
-                  loading="lazy"
-                />
-              </div>
+              <LandingFigure
+                src={content.promoStrip.image}
+                figureClassName={cn("rounded-3xl shadow-xl", splitImageCol)}
+              />
             )}
           </Container>
         </section>
@@ -436,12 +477,10 @@ export function ProgramLanding({
                   className="overflow-hidden rounded-3xl border border-forest-100 bg-cream-50/50 shadow-sm"
                 >
                   {mod.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <LandingFigure
                       src={mod.image}
-                      alt=""
-                      className="aspect-[3/2] w-full object-cover"
-                      loading="lazy"
+                      figureClassName="rounded-none bg-cream-100"
+                      imageClassName="max-h-56 object-contain sm:max-h-64"
                     />
                   )}
                   <div className="p-6">
@@ -465,12 +504,10 @@ export function ProgramLanding({
                   className="overflow-hidden rounded-3xl border border-gold-200/60 bg-gold-50/30 shadow-sm"
                 >
                   {bonus.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <LandingFigure
                       src={bonus.image}
-                      alt=""
-                      className="aspect-[3/2] w-full object-cover"
-                      loading="lazy"
+                      figureClassName="rounded-none bg-gold-50/50"
+                      imageClassName="max-h-56 object-contain sm:max-h-64"
                     />
                   )}
                   <div className="p-6">
@@ -503,9 +540,9 @@ export function ProgramLanding({
             {content.education.sections.map((section) => (
               <div
                 key={section.title}
-                className="grid items-center gap-10 lg:grid-cols-2"
+                className="grid items-start gap-8 sm:gap-10 lg:grid-cols-2 lg:items-center"
               >
-                <div>
+                <div className={splitTextCol}>
                   <h2 className="font-display text-2xl font-semibold text-forest-900 sm:text-3xl">
                     {section.title}
                   </h2>
@@ -519,15 +556,10 @@ export function ProgramLanding({
                   </ul>
                 </div>
                 {section.image && (
-                  <div className="overflow-hidden rounded-3xl shadow-lg">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={section.image}
-                      alt=""
-                      className="aspect-[4/3] w-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
+                  <LandingFigure
+                    src={section.image}
+                    figureClassName={cn("rounded-3xl shadow-lg", splitImageCol)}
+                  />
                 )}
               </div>
             ))}
@@ -589,15 +621,10 @@ export function ProgramLanding({
                   ПРЕДИ
                 </p>
                 {content.transformation.beforeImage && (
-                  <div className="mt-4 overflow-hidden rounded-2xl shadow-lg">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={content.transformation.beforeImage}
-                      alt=""
-                      className="aspect-[3/4] w-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
+                  <LandingFigure
+                    src={content.transformation.beforeImage}
+                    figureClassName="mt-4 rounded-2xl shadow-lg"
+                  />
                 )}
               </div>
               <div className="max-w-md text-center lg:px-4">
@@ -628,15 +655,10 @@ export function ProgramLanding({
                   СЛЕД
                 </p>
                 {content.transformation.afterImage && (
-                  <div className="mt-4 overflow-hidden rounded-2xl shadow-lg">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={content.transformation.afterImage}
-                      alt=""
-                      className="aspect-[3/4] w-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
+                  <LandingFigure
+                    src={content.transformation.afterImage}
+                    figureClassName="mt-4 rounded-2xl shadow-lg"
+                  />
                 )}
               </div>
             </div>
@@ -810,8 +832,8 @@ export function ProgramLanding({
       {/* Trust / About */}
       {content.trust && (
         <section className="bg-white py-24">
-          <Container className="grid items-center gap-14 lg:grid-cols-2">
-            <div>
+          <Container className="grid items-start gap-10 sm:gap-14 lg:grid-cols-2 lg:items-center">
+            <div className={splitTextCol}>
               <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
                 {content.trust.title}
               </h2>
@@ -833,13 +855,12 @@ export function ProgramLanding({
                 ))}
               </div>
             </div>
-            <div className="relative mx-auto w-full max-w-lg">
-              <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-forest-100 to-cream-100 p-2 shadow-xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+            <div className={cn("relative mx-auto w-full max-w-lg", splitImageCol)}>
+              <div className="rounded-3xl bg-gradient-to-br from-forest-100 to-cream-100 p-2 shadow-xl">
+                <LandingFigure
                   src={content.trust.image ?? "/images/vessie-about.jpg"}
                   alt={content.trust.greeting}
-                  className="w-full rounded-2xl object-cover"
+                  figureClassName="rounded-2xl bg-white"
                 />
               </div>
             </div>
@@ -1022,20 +1043,16 @@ export function ProgramLanding({
             )}
 
             {content.newsletter && (
-              <div className="mx-auto mt-16 grid max-w-5xl items-center gap-10 lg:grid-cols-2">
-                <div className="overflow-hidden rounded-3xl shadow-lg">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={
-                      content.galleries?.[0]?.images[0] ??
-                      content.hero.image ??
-                      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=750&fit=crop"
-                    }
-                    alt=""
-                    className="aspect-[16/10] w-full object-cover"
-                  />
-                </div>
-                <div>
+              <div className="mx-auto mt-16 grid max-w-5xl items-start gap-8 sm:gap-10 lg:grid-cols-2 lg:items-center">
+                <LandingFigure
+                  src={
+                    content.galleries?.[0]?.images[0] ??
+                    content.hero.image ??
+                    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=750&fit=crop"
+                  }
+                  figureClassName={cn("rounded-3xl shadow-lg", splitImageCol)}
+                />
+                <div className={splitTextCol}>
                   <h3 className="font-display text-xl font-semibold leading-snug text-forest-900 sm:text-2xl">
                     {content.newsletter.title}
                   </h3>

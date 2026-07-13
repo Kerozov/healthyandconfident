@@ -130,6 +130,7 @@ export async function POST(req: Request) {
           tags: finalTags,
           status: "subscribed",
           consent: true,
+          source,
           ...profilePatch,
         })
         .eq("id", existing.id as string);

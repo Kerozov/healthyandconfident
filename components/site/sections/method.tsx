@@ -2,12 +2,14 @@ import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt } from "@/lib/site/media-gallery";
+import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
 
 const METHOD_FOOD = "/images/6.jpg";
 
 export function Method({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const { method } = dict;
+  const foodSize = mediaIntrinsicSize(METHOD_FOOD);
+
   return (
     <section id="method" className="section-pad scroll-mt-24 bg-white">
       <Container>
@@ -22,14 +24,16 @@ export function Method({ dict, locale }: { dict: Dictionary; locale: Locale }) {
         </div>
 
         <div className="mt-12 grid items-start gap-10 lg:grid-cols-2 lg:gap-14">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl ring-1 ring-forest-100 lg:sticky lg:top-28">
+          <figure className="overflow-hidden rounded-2xl bg-white ring-1 ring-forest-100 lg:sticky lg:top-28">
             <SiteImage
               src={METHOD_FOOD}
               alt={mediaAlt(METHOD_FOOD, locale)}
-              fill
+              width={foodSize.width}
+              height={foodSize.height}
               sizes="(max-width: 1024px) 100vw, 50vw"
+              className="h-auto w-full"
             />
-          </div>
+          </figure>
 
           <div className="space-y-4">
             {method.pillars.map((p, i) => (

@@ -44,6 +44,7 @@ export function CampaignComposer({
     cta_url: "",
     attachment_path: "",
     attachment_filename: "",
+    hero_image_url: "",
     audience: { ...EMPTY_AUDIENCE } as AudienceInput,
     scheduled_at: "",
   });
@@ -68,6 +69,7 @@ export function CampaignComposer({
           : undefined,
         attachment_path: email.attachment_path || undefined,
         attachment_filename: email.attachment_filename || undefined,
+        hero_image_url: email.hero_image_url || undefined,
       });
       setResult(res);
       if (res.ok) {
@@ -78,6 +80,7 @@ export function CampaignComposer({
           cta_url: "",
           attachment_path: "",
           attachment_filename: "",
+          hero_image_url: "",
           audience: { ...EMPTY_AUDIENCE },
           scheduled_at: "",
         });
@@ -140,6 +143,10 @@ export function CampaignComposer({
             onHtmlChange={(html) => setEmail({ ...email, html })}
             products={products}
             forms={forms}
+            heroImageUrl={email.hero_image_url}
+            onHeroImageChange={(hero_image_url) =>
+              setEmail({ ...email, hero_image_url })
+            }
             attachmentPath={email.attachment_path}
             attachmentFilename={email.attachment_filename}
             onAttachmentChange={(attachment_path, attachment_filename) =>
@@ -154,6 +161,7 @@ export function CampaignComposer({
             locale={email.audience.locale === "en" ? "en" : "bg"}
             products={products}
             forms={forms}
+            heroImageUrl={email.hero_image_url}
           />
           <div className="rounded-xl border border-ink/10 p-4">
             <label className="flex cursor-pointer items-center gap-3">

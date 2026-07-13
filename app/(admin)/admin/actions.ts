@@ -274,6 +274,7 @@ type AutomationInput = {
   exclude_group_ids?: string[];
   exclude_segment_keys?: string[];
   purchase_product_ids?: string[];
+  signup_sources?: string[];
   new_subscribers_only: boolean;
   after_automation_id?: string | null;
   delay_days?: number;
@@ -292,6 +293,8 @@ type AutomationInput = {
   attachment_filename_bg?: string;
   attachment_path_en?: string;
   attachment_filename_en?: string;
+  hero_image_url_bg?: string;
+  hero_image_url_en?: string;
   sms_bg: string;
   sms_en: string;
   sort_order?: number;
@@ -336,6 +339,7 @@ export async function createAutomation(
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
       purchase_product_ids: input.purchase_product_ids ?? [],
+      signup_sources: input.signup_sources ?? [],
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
       delay_minutes: Math.max(0, input.delay_minutes ?? 0),
@@ -346,6 +350,8 @@ export async function createAutomation(
       attachment_filename_bg: input.attachment_filename_bg?.trim() || null,
       attachment_path_en: input.attachment_path_en?.trim() || null,
       attachment_filename_en: input.attachment_filename_en?.trim() || null,
+      hero_image_url_bg: input.hero_image_url_bg?.trim() || null,
+      hero_image_url_en: input.hero_image_url_en?.trim() || null,
     })
     .select("id")
     .single();
@@ -370,6 +376,7 @@ export async function updateAutomation(
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
       purchase_product_ids: input.purchase_product_ids ?? [],
+      signup_sources: input.signup_sources ?? [],
       after_automation_id: input.after_automation_id || null,
       delay_days: Math.max(0, input.delay_days ?? 0),
       delay_minutes: Math.max(0, input.delay_minutes ?? 0),
@@ -380,6 +387,8 @@ export async function updateAutomation(
       attachment_filename_bg: input.attachment_filename_bg?.trim() || null,
       attachment_path_en: input.attachment_path_en?.trim() || null,
       attachment_filename_en: input.attachment_filename_en?.trim() || null,
+      hero_image_url_bg: input.hero_image_url_bg?.trim() || null,
+      hero_image_url_en: input.hero_image_url_en?.trim() || null,
     })
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -610,6 +619,10 @@ export async function resendAutomationToNonOpeners(
         locale === "en"
           ? automation.attachment_filename_en ?? undefined
           : automation.attachment_filename_bg ?? undefined,
+      hero_image_url:
+        locale === "en"
+          ? automation.hero_image_url_en ?? undefined
+          : automation.hero_image_url_bg ?? undefined,
     });
   }
 
@@ -1258,6 +1271,7 @@ type CampaignInsert = {
   parentCampaignId?: string;
   attachment_path?: string;
   attachment_filename?: string;
+  hero_image_url?: string;
 };
 
 /** Core sender: create the worker job, then persist a campaign row with the
@@ -1303,6 +1317,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
       parent_campaign_id: input.parentCampaignId || null,
       attachment_path: input.attachment_path?.trim() || null,
       attachment_filename: input.attachment_filename?.trim() || null,
+      hero_image_url: input.hero_image_url?.trim() || null,
     })
     .select("id")
     .single();
@@ -1358,6 +1373,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
         cta: ctaHref ? { label: ctaLabel, href: ctaHref } : null,
         unsubscribeHref: unsubscribeLinkForEmail(recipient, mailLocale),
         footerConfig,
+        heroImageUrl: input.hero_image_url,
       });
 
       try {
@@ -1502,6 +1518,7 @@ export async function sendEmailCampaign(input: {
   scheduled_at?: string;
   attachment_path?: string;
   attachment_filename?: string;
+  hero_image_url?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
   const ctaLabel = input.cta_label?.trim() ?? "";
@@ -1525,6 +1542,9 @@ export async function sendEmailCampaign(input: {
     target_tags: audience.target_tags,
     recipients: audience.emails,
     scheduledAt: input.scheduled_at || undefined,
+    attachment_path: input.attachment_path,
+    attachment_filename: input.attachment_filename,
+    hero_image_url: input.hero_image_url,
   });
 }
 
@@ -1690,6 +1710,7 @@ export async function resendToNonOpeners(input: {
     parentCampaignId: input.campaignId,
     attachment_path: parent.attachment_path ?? undefined,
     attachment_filename: parent.attachment_filename ?? undefined,
+    hero_image_url: parent.hero_image_url ?? undefined,
   });
 }
 
@@ -2730,6 +2751,9 @@ export async function saveFormTemplate(input: {
   email_intro_bg: string;
   email_intro_en: string;
   enabled: boolean;
+  attachment_path?: string;
+  attachment_filename?: string;
+  hero_image_url?: string;
 }): Promise<ActionResult & { id?: string }> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -2752,6 +2776,9 @@ export async function saveFormTemplate(input: {
     email_intro_bg: input.email_intro_bg.trim(),
     email_intro_en: input.email_intro_en.trim(),
     enabled: input.enabled,
+    attachment_path: input.attachment_path?.trim() || null,
+    attachment_filename: input.attachment_filename?.trim() || null,
+    hero_image_url: input.hero_image_url?.trim() || null,
     updated_at: new Date().toISOString(),
   };
 
@@ -2871,6 +2898,7 @@ export async function sendFormByEmail(input: {
       },
       unsubscribeHref: unsubscribeLinkForEmail(email, locale),
       footerConfig: locale === "en" ? footerEn : footerBg,
+      heroImageUrl: form.hero_image_url,
     });
 
     try {

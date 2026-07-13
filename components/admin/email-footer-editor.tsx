@@ -128,10 +128,11 @@ export function EmailFooterEditor({ config }: { config: EmailFooterConfig }) {
 
         <ImageUploadField
           label="Снимка за подпис"
-          hint="Кръгла аватар снимка в долната част на имейла"
+          hint="Портрет в долната част на имейла — показва се цялата снимка, без изрязване."
           value={form.signature_image_url}
           onChange={(url) => set("signature_image_url", url)}
           folder="email"
+          previewFit="contain"
         />
 
         <Field label="Затварящ ред">

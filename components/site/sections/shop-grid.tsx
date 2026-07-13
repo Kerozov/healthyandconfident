@@ -61,13 +61,13 @@ export function ShopProductGrid({
             disabled={!canCheckout}
             className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">
+            <div className="flex min-h-[168px] items-center justify-center overflow-hidden bg-cream-2 sm:min-h-[200px]">
               {product.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={product.image_url}
                   alt={productTitle}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="h-auto max-h-[240px] w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90">
