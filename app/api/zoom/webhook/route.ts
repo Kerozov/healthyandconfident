@@ -90,6 +90,31 @@ export async function POST(req: Request) {
         event.includes("webinar.ended")) &&
       meetingId
     ) {
+      const { getZoomLiveConfig } = await import("@/lib/zoom/live");
+      const liveConfig = await getZoomLiveConfig();
+      const startedAt =
+        liveConfig.live_started_at ??
+        body.payload?.object?.start_time ??
+        null;
+      const topic =
+        liveConfig.active_topic ?? body.payload?.object?.topic ?? null;
+      const endedAt = new Date().toISOString();
+      const startDate = startedAt ? new Date(startedAt) : null;
+      const endDate = new Date(endedAt);
+      const durationMinutes =
+        startDate && !Number.isNaN(endDate.getTime())
+          ? Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000))
+          : 0;
+
+      await recordZoomSession({
+        meetingId,
+        participantName: topic || "На живо среща",
+        joinTime: startedAt,
+        leaveTime: endedAt,
+        durationMinutes,
+        zoomEvent: event,
+      });
+
       await setZoomMeetingEnded(meetingId);
       await logZoomWebhook({
         zoomEvent: event,

@@ -43,37 +43,34 @@ export function ZoomDashboard({ overview }: { overview: ZoomOverview }) {
   return (
     <div className="space-y-8">
       <p className="text-sm text-ink-soft">
-        Статистика от Zoom webhook — кой колко е стоял и в коя среща. Имейлът в
-        Zoom трябва да съвпада с този в сайта.
+        Тук виждаш проведените срещи и колко е останал всеки човек. За отделни
+        хора трябва да влязат в Zoom със същия имейл, който имат в сайта.
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Zoom сесии" value={overview.totalSessions} />
-        <Stat
-          label="Уникални участници"
-          value={overview.uniqueParticipants}
-        />
+        <Stat label="Проведени срещи" value={overview.meetings.length} />
+        <Stat label="Хора (с имейл)" value={overview.uniqueParticipants} />
         <Stat
           label="Общо време"
           value={`${overview.totalMinutes} мин.`}
         />
-        <Stat label="Различни срещи" value={overview.meetings.length} />
+        <Stat label="Участия" value={overview.totalSessions} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="rounded-2xl border border-ink/10 bg-white p-5">
-          <h2 className="font-display text-lg font-semibold">По среща</h2>
+          <h2 className="font-display text-lg font-semibold">Срещи</h2>
           <p className="mt-1 text-xs text-ink-soft">
-            Кликни среща за детайли. Сортирано по брой участници.
+            Кликни за подробности. Подредени по брой хора.
           </p>
           {overview.meetings.length === 0 ? (
-            <p className="mt-4 text-sm text-ink-soft">Няма Zoom данни още.</p>
+            <p className="mt-4 text-sm text-ink-soft">Все още няма срещи.</p>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
-                    <th className="py-2 pr-3">Meeting ID</th>
+                    <th className="py-2 pr-3">Среща</th>
                     <th className="py-2 pr-3">Хора</th>
                     <th className="py-2 pr-3">Общо мин.</th>
                     <th className="py-2 pr-3">Средно</th>
@@ -117,10 +114,13 @@ export function ZoomDashboard({ overview }: { overview: ZoomOverview }) {
 
         <section className="rounded-2xl border border-ink/10 bg-white p-5">
           <h2 className="font-display text-lg font-semibold">
-            Топ участници (време)
+            Най-дълго останали
           </h2>
           {overview.topAttendees.length === 0 ? (
-            <p className="mt-4 text-sm text-ink-soft">Няма данни.</p>
+            <p className="mt-4 text-sm text-ink-soft">
+              Още няма записани хора — само ти си била в срещата, или гостите
+              не са влезли с имейл от сайта.
+            </p>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
@@ -168,7 +168,7 @@ export function ZoomDashboard({ overview }: { overview: ZoomOverview }) {
       )}
 
       <section className="rounded-2xl border border-ink/10 bg-white p-5">
-        <h2 className="font-display text-lg font-semibold">Последни сесии</h2>
+        <h2 className="font-display text-lg font-semibold">Последни записи</h2>
         <SessionTable sessions={overview.recentSessions} />
       </section>
     </div>
@@ -197,7 +197,7 @@ function MeetingDetail({
     <section className="rounded-2xl border border-forest-500/20 bg-forest-500/5 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold">Детайли за среща</h2>
+          <h2 className="font-display text-lg font-semibold">Подробности</h2>
           <p className="mt-1 font-mono text-xs text-ink-soft">{meetingId}</p>
         </div>
         <Link
@@ -218,7 +218,7 @@ function MeetingDetail({
           средно <strong>{summary.avgMinutes}</strong> мин./човек
         </span>
         <span>
-          <strong>{summary.sessionCount}</strong> сесии
+          <strong>{summary.sessionCount}</strong> записа
         </span>
       </div>
       <div className="mt-4">
@@ -239,7 +239,7 @@ function SessionTable({
   showRank?: boolean;
 }) {
   if (sessions.length === 0) {
-    return <p className="mt-3 text-sm text-ink-soft">Няма сесии.</p>;
+    return <p className="mt-3 text-sm text-ink-soft">Няма записи.</p>;
   }
 
   return (
@@ -248,26 +248,32 @@ function SessionTable({
         <thead>
           <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
             {showRank && <th className="py-2 pr-3">#</th>}
-            <th className="py-2 pr-3">Имейл</th>
-            <th className="py-2 pr-3">Meeting</th>
-            <th className="py-2 pr-3">Влязъл</th>
-            <th className="py-2 pr-3">Излязъл</th>
+            <th className="py-2 pr-3">Име / имейл</th>
+            <th className="py-2 pr-3">Среща</th>
+            <th className="py-2 pr-3">От</th>
+            <th className="py-2 pr-3">До</th>
             <th className="py-2">Минути</th>
           </tr>
         </thead>
         <tbody>
-          {sessions.map((s, i) => (
+          {sessions.map((s, i) => {
+            const label = s.email || s.name || "Среща";
+            return (
             <tr key={s.eventId} className="border-b border-ink/5">
               {showRank && (
                 <td className="py-2.5 pr-3 text-ink-soft">{i + 1}</td>
               )}
               <td className="py-2.5 pr-3">
-                <Link
-                  href={`/admin/contacts/${s.contactId}`}
-                  className="text-forest-700 hover:underline"
-                >
-                  {s.email}
-                </Link>
+                {s.contactId ? (
+                  <Link
+                    href={`/admin/contacts/${s.contactId}`}
+                    className="text-forest-700 hover:underline"
+                  >
+                    {label}
+                  </Link>
+                ) : (
+                  <span>{label}</span>
+                )}
               </td>
               <td className="py-2.5 pr-3 font-mono text-xs text-ink-soft">
                 {formatMeetingLabel(s.meetingId)}
@@ -282,7 +288,8 @@ function SessionTable({
                 {s.durationMinutes}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

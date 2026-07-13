@@ -4,29 +4,9 @@ import { useState, useTransition } from "react";
 import { Save } from "lucide-react";
 import { saveZoomLiveConfig } from "@/app/(admin)/admin/actions";
 import type { ZoomLiveConfig } from "@/lib/supabase/types";
-import type { ZoomWebhookLogRow } from "@/lib/zoom/sessions";
 import { formatDate } from "@/lib/utils";
 
-const STATUS_LABELS: Record<string, string> = {
-  live_on: "Среща започна",
-  live_off: "Среща свърши",
-  joined: "Влязъл (контакт)",
-  joined_no_contact: "Влязъл (без контакт в сайта)",
-  joined_no_email: "Влязъл (без имейл в Zoom)",
-  left: "Излязъл (контакт)",
-  left_no_contact: "Излязъл (записано)",
-  left_no_email: "Излязъл (без имейл)",
-  ignored: "Игнорирано",
-  error: "Грешка",
-};
-
-export function ZoomLiveSettings({
-  config,
-  webhookLog,
-}: {
-  config: ZoomLiveConfig;
-  webhookLog: ZoomWebhookLogRow[];
-}) {
+export function ZoomLiveSettings({ config }: { config: ZoomLiveConfig }) {
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
     feature_enabled: config.feature_enabled,
@@ -54,17 +34,16 @@ export function ZoomLiveSettings({
 
   return (
     <section className="rounded-2xl border border-ink/10 bg-white p-5">
-      <h2 className="font-display text-lg font-semibold">Бутон „На живо“ в сайта</h2>
+      <h2 className="font-display text-lg font-semibold">Бутон „На живо“ на сайта</h2>
       <p className="mt-1 text-sm text-ink-soft">
-        Zoom webhook <code className="text-xs">meeting.started</code> /{" "}
-        <code className="text-xs">meeting.ended</code> показва червена лента горе с
-        бутон за присъединяване. Задай Zoom join линка веднъж — webhook-ът го
-        включва/изключва автоматично.
+        Когато пуснеш Zoom среща, на сайта се появява червен бутон за
+        присъединяване. Сложи линка към срещата веднъж — после става
+        автоматично.
       </p>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <label className="block text-sm">
-          <span className="font-medium">Zoom join линк</span>
+        <label className="block text-sm md:col-span-2">
+          <span className="font-medium">Линк за влизане в Zoom</span>
           <input
             className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm"
             value={form.join_url}
@@ -73,18 +52,7 @@ export function ZoomLiveSettings({
           />
         </label>
         <label className="block text-sm">
-          <span className="font-medium">Meeting ID (по избор)</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm"
-            value={form.watch_meeting_id}
-            onChange={(e) =>
-              setForm({ ...form, watch_meeting_id: e.target.value })
-            }
-            placeholder="Празно = всяка среща"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="font-medium">Текст на бутона — BG</span>
+          <span className="font-medium">Текст на бутона — български</span>
           <input
             className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm"
             value={form.label_bg}
@@ -92,7 +60,7 @@ export function ZoomLiveSettings({
           />
         </label>
         <label className="block text-sm">
-          <span className="font-medium">Текст на бутона — EN</span>
+          <span className="font-medium">Текст на бутона — английски</span>
           <input
             className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm"
             value={form.label_en}
@@ -110,17 +78,7 @@ export function ZoomLiveSettings({
               setForm({ ...form, feature_enabled: e.target.checked })
             }
           />
-          Включи функцията
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={form.manual_is_live}
-            onChange={(e) =>
-              setForm({ ...form, manual_is_live: e.target.checked })
-            }
-          />
-          Ръчно „на живо“ (тест без Zoom)
+          Показвай бутона на сайта
         </label>
       </div>
 
@@ -136,47 +94,18 @@ export function ZoomLiveSettings({
         {message && <p className="text-sm text-ink-soft">{message}</p>}
       </div>
 
-      <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm text-ink-soft">
+      <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm">
         <p>
-          Статус от webhook:{" "}
+          Сега:{" "}
           <strong className={config.is_live ? "text-red-600" : "text-ink"}>
-            {config.is_live ? "НА ЖИВО" : "не е на живо"}
+            {config.is_live ? "на живо" : "няма активна среща"}
           </strong>
           {config.active_topic ? ` · ${config.active_topic}` : ""}
         </p>
         {config.live_started_at && (
-          <p className="mt-1 text-xs">
+          <p className="mt-1 text-xs text-ink-soft">
             Започна: {formatDate(config.live_started_at, "bg")}
           </p>
-        )}
-        <p className="mt-2 text-xs">
-          Webhook URL:{" "}
-          <code>/api/zoom/webhook</code> — добави събития{" "}
-          <code>meeting.started</code> и <code>meeting.ended</code> в Zoom App.
-        </p>
-      </div>
-
-      <div className="mt-4 rounded-xl border border-ink/10 bg-white px-4 py-3">
-        <p className="text-sm font-semibold">Последни webhook събития</p>
-        {webhookLog.length === 0 ? (
-          <p className="mt-2 text-xs text-ink-soft">
-            Няма получени webhook-и. Провери Secret Token в Vercel и пусни нова
-            среща.
-          </p>
-        ) : (
-          <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-xs text-ink-soft">
-            {webhookLog.map((row) => (
-              <li key={row.id} className="flex flex-wrap gap-x-2 border-b border-ink/5 py-1">
-                <span className="text-ink">{formatDate(row.created_at, "bg")}</span>
-                <span>{STATUS_LABELS[row.status] ?? row.status}</span>
-                {row.email && <span className="font-mono">{row.email}</span>}
-                {row.meeting_id && (
-                  <span className="font-mono">mtg {row.meeting_id}</span>
-                )}
-                {row.detail && <span>· {row.detail}</span>}
-              </li>
-            ))}
-          </ul>
         )}
       </div>
     </section>

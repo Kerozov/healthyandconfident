@@ -140,6 +140,10 @@ export async function getZoomOverview(): Promise<ZoomOverview> {
       totalMinutes: 0,
       meetingIds: [],
     };
+    if (!session.email) {
+      // Host-only / meeting summary row — counts in meetings, not as a person.
+      continue;
+    }
     existing.sessionCount += 1;
     existing.totalMinutes += session.durationMinutes;
     if (!existing.meetingIds.includes(session.meetingId)) {
@@ -150,17 +154,17 @@ export async function getZoomOverview(): Promise<ZoomOverview> {
 
   const meetings: ZoomMeetingSummary[] = [...byMeeting.entries()]
     .map(([meetingId, list]) => {
-      const totalMinutes = list.reduce((s, r) => s + r.durationMinutes, 0);
-      const emails = new Set(
-        list.map((r) => r.email || r.name || "unknown").filter(Boolean),
+      const people = new Set(
+        list.filter((r) => r.email).map((r) => r.email),
       );
+      const totalMinutes = list.reduce((s, r) => s + r.durationMinutes, 0);
       const times = list.map((r) => new Date(r.leftAt).getTime()).filter(Number.isFinite);
       return {
         meetingId,
-        participantCount: emails.size,
+        participantCount: people.size,
         sessionCount: list.length,
         totalMinutes,
-        avgMinutes: emails.size ? Math.round(totalMinutes / emails.size) : 0,
+        avgMinutes: people.size ? Math.round(totalMinutes / people.size) : totalMinutes,
         firstAt: times.length
           ? new Date(Math.min(...times)).toISOString()
           : list[0]?.leftAt ?? "",

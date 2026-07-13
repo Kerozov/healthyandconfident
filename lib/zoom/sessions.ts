@@ -1,6 +1,9 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
+import type { ZoomWebhookLog } from "@/lib/supabase/types";
+
+export type ZoomWebhookLogRow = ZoomWebhookLog;
 
 export function participantEmail(
   participant: Record<string, unknown> | undefined,
@@ -56,9 +59,6 @@ export async function recordZoomSession(input: {
   });
 }
 
-import type { ZoomWebhookLog } from "@/lib/supabase/types";
-
-export type ZoomWebhookLogRow = ZoomWebhookLog;
 
 export async function getRecentZoomWebhookLog(
   limit = 15,
