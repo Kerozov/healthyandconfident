@@ -1,6 +1,6 @@
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { siteMedia } from "@/lib/site/media-gallery";
 
 export function JsonLd({ data }: { data: object }) {
@@ -12,7 +12,8 @@ export function JsonLd({ data }: { data: object }) {
   );
 }
 
-const bgPersonSchema = {
+function bgPersonSchema(origin: string) {
+  return {
   "@context": "https://schema.org",
   "@type": "Person",
   name: "Веси Ней",
@@ -20,8 +21,8 @@ const bgPersonSchema = {
   jobTitle: "Холистичен диетолог",
   description:
     "Холистичен диетолог, специалист по инсулинова резистентност и Диабет тип 2. NHS Diabetes Practitioner в Англия с 20+ години опит.",
-  url: "https://www.healthyandconfident.co.uk/bg",
-  image: "https://www.healthyandconfident.co.uk/images/3.jpg",
+  url: `${origin}/bg`,
+  image: `${origin}/images/3.jpg`,
   telephone: "+447876565263",
   email: "vessie@healthyandconfident.co.uk",
   sameAs: [
@@ -37,6 +38,7 @@ const bgPersonSchema = {
   ],
   areaServed: ["България", "Великобритания", "Онлайн"],
 };
+}
 
 const bgFaqSchema = {
   "@context": "https://schema.org",
@@ -77,13 +79,14 @@ const bgFaqSchema = {
   ],
 };
 
-const bgProfessionalServiceSchema = {
+function bgProfessionalServiceSchema(origin: string) {
+  return {
   "@context": "https://schema.org",
   "@type": "ProfessionalService",
   name: "Веси Ней — Healthy & Confident",
   description:
     "Холистичен диетолог — инсулинова резистентност, Диабет тип 2 и трайно отслабване",
-  url: "https://www.healthyandconfident.co.uk/bg",
+  url: `${origin}/bg`,
   telephone: "+447876565263",
   email: "vessie@healthyandconfident.co.uk",
   areaServed: ["BG", "GB"],
@@ -100,9 +103,11 @@ const bgProfessionalServiceSchema = {
     reviewCount: "3",
   },
 };
+}
 
 export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale }) {
-  const pageUrl = `${siteConfig.domain}/${locale}`;
+  const origin = publicSiteOrigin();
+  const pageUrl = `${origin}/${locale}`;
   const imageGallery = {
     "@context": "https://schema.org",
     "@type": "ImageGallery",
@@ -114,7 +119,7 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
     url: `${pageUrl}#food`,
     image: siteMedia.map((item) => ({
       "@type": "ImageObject",
-      contentUrl: `${siteConfig.domain}${item.src}`,
+      contentUrl: `${origin}${item.src}`,
       description: item.alt[locale],
     })),
   };
@@ -122,9 +127,9 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
   if (locale === "bg") {
     return (
       <>
-        <JsonLd data={bgPersonSchema} />
+        <JsonLd data={bgPersonSchema(origin)} />
         <JsonLd data={bgFaqSchema} />
-        <JsonLd data={bgProfessionalServiceSchema} />
+        <JsonLd data={bgProfessionalServiceSchema(origin)} />
         <JsonLd data={imageGallery} />
       </>
     );
@@ -135,14 +140,14 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
   const graph = [
     {
       "@type": "ProfessionalService",
-      "@id": `${siteConfig.domain}/#business`,
+      "@id": `${origin}/#business`,
       name: siteConfig.brand,
       alternateName: siteConfig.tagline,
       description: dict.meta.description,
       url,
       email: siteConfig.email,
       telephone: siteConfig.phone,
-      image: `${siteConfig.domain}${siteConfig.ogImage}`,
+      image: `${origin}${siteConfig.ogImage}`,
       priceRange: "££",
       areaServed: ["GB", "BG"],
       founder: {
@@ -153,8 +158,8 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
     },
     {
       "@type": "WebSite",
-      "@id": `${siteConfig.domain}/#website`,
-      url: siteConfig.domain,
+      "@id": `${origin}/#website`,
+      url: origin,
       name: siteConfig.brand,
       alternateName: siteConfig.tagline,
       inLanguage: "en-GB",

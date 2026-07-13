@@ -5,7 +5,7 @@ import { geistSans, fraunces } from "@/app/fonts";
 import { locales, isLocale, localeHtmlLang, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { getPublicSiteContent } from "@/lib/site/content";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { SiteHeader } from "@/components/site/site-header";
 import { Footer } from "@/components/site/footer";
 import { Popup } from "@/components/site/popup";
@@ -25,8 +25,10 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
   const dict = getDictionary(locale);
 
+  const origin = publicSiteOrigin();
+
   return {
-    metadataBase: new URL(siteConfig.domain),
+    metadataBase: new URL(origin),
     title: {
       default: dict.meta.title,
       template: `%s · ${siteConfig.brand}`,
@@ -35,7 +37,7 @@ export async function generateMetadata({
     keywords: dict.meta.keywords,
     authors: [{ name: siteConfig.brand }],
     alternates: {
-      canonical: `${siteConfig.domain}/${locale}`,
+      canonical: `${origin}/${locale}`,
       languages: {
         bg: "/bg",
         en: "/en",
@@ -45,7 +47,7 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       locale: locale === "bg" ? "bg_BG" : "en_GB",
-      url: `${siteConfig.domain}/${locale}`,
+      url: `${origin}/${locale}`,
       siteName: siteConfig.brand,
       title: dict.meta.title,
       description: dict.meta.description,

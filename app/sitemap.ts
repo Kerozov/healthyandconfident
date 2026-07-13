@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 import { locales } from "@/i18n/config";
-import { siteConfig } from "@/lib/site";
+import { publicSiteOrigin } from "@/lib/site";
 import { getAllPublishedSlugs } from "@/lib/blog";
 import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = siteConfig.domain;
+  const base = publicSiteOrigin();
   const now = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = [];

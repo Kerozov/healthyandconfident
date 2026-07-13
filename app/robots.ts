@@ -1,14 +1,15 @@
 import type { MetadataRoute } from "next";
-import { siteConfig } from "@/lib/site";
+import { publicSiteOrigin } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
+  const origin = publicSiteOrigin();
   return {
     rules: {
       userAgent: "*",
       allow: "/",
       disallow: ["/admin", "/api"],
     },
-    sitemap: `${siteConfig.domain}/sitemap.xml`,
-    host: siteConfig.domain,
+    sitemap: `${origin}/sitemap.xml`,
+    host: origin,
   };
 }

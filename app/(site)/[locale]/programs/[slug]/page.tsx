@@ -4,7 +4,7 @@ import { isLocale, locales, type Locale } from "@/i18n/config";
 import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
 import { getProgramLanding } from "@/lib/programs/landings";
 import { ProgramLanding } from "@/components/site/program-landing";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, publicSiteOrigin } from "@/lib/site";
 
 export function generateStaticParams() {
   return locales.flatMap((locale) =>
@@ -22,17 +22,19 @@ export async function generateMetadata({
   const content = getProgramLanding(locale, slug);
   if (!content) return { title: "Not found" };
 
+  const origin = publicSiteOrigin();
+
   return {
     title: content.meta.title,
     description: content.meta.description,
     alternates: {
-      canonical: `${siteConfig.domain}/${locale}/programs/${slug}`,
+      canonical: `${origin}/${locale}/programs/${slug}`,
     },
     openGraph: {
       type: "website",
       title: content.meta.title,
       description: content.meta.description,
-      url: `${siteConfig.domain}/${locale}/programs/${slug}`,
+      url: `${origin}/${locale}/programs/${slug}`,
       images: [{ url: siteConfig.ogImage }],
     },
   };

@@ -9,7 +9,7 @@ import { Container } from "@/components/ui/container";
 import { Markdown } from "@/components/site/markdown";
 import { BlogCard } from "@/components/site/blog-card";
 import { JsonLd } from "@/components/seo/json-ld";
-import { siteConfig } from "@/lib/site";
+import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
 
 export async function generateStaticParams() {
@@ -58,6 +58,8 @@ export default async function BlogPostPage({
     .filter((p) => p.id !== post.id)
     .slice(0, 3);
 
+  const origin = publicSiteOrigin();
+
   const articleLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -72,10 +74,10 @@ export default async function BlogPostPage({
       name: siteConfig.brand,
       logo: {
         "@type": "ImageObject",
-        url: `${siteConfig.domain}/icon.png`,
+        url: `${origin}/icon.png`,
       },
     },
-    mainEntityOfPage: `${siteConfig.domain}/${l}/blog/${slug}`,
+    mainEntityOfPage: `${origin}/${l}/blog/${slug}`,
     inLanguage: l === "bg" ? "bg" : "en-GB",
   };
 

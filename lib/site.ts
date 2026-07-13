@@ -22,3 +22,11 @@ export const siteConfig = {
 } as const;
 
 export type SiteConfig = typeof siteConfig;
+
+/** Canonical public site origin — `NEXT_PUBLIC_SITE_URL` or `siteConfig.domain`. */
+export function publicSiteOrigin(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL?.trim() || siteConfig.domain).replace(
+    /\/$/,
+    "",
+  );
+}

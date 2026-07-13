@@ -1,12 +1,9 @@
-import { siteConfig } from "@/lib/site";
+import { publicSiteOrigin } from "@/lib/site";
 import { createClickToken } from "@/lib/email/click-token";
 
 /** Public site origin used in email CTA redirect links. */
 export function siteOrigin(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL?.trim() || siteConfig.domain).replace(
-    /\/$/,
-    "",
-  );
+  return publicSiteOrigin();
 }
 
 function appendClickToken(baseUrl: string, token: string | null): string {

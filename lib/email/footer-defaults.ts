@@ -1,4 +1,7 @@
 import type { EmailFooterConfig, Locale } from "@/lib/supabase/types";
+import { publicSiteOrigin } from "@/lib/site";
+
+const site = publicSiteOrigin();
 
 export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" | "updated_at">> = {
   bg: {
@@ -13,7 +16,7 @@ export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" |
     signature_phone: "00 44 7876 565 263",
     brand_name: "Healthy and Confident",
     brand_color: "#2563eb",
-    website_url: "https://www.healthyandconfident.co.uk/bg",
+    website_url: `${site}/bg`,
     footer_email: "vessie@healthyandconfident.co.uk",
     footer_phone: "M: 0044 7876 565 263",
     address_line1: "Фарнбъро",
@@ -36,7 +39,7 @@ export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" |
     signature_phone: "00 44 7876 565 263",
     brand_name: "Healthy and Confident",
     brand_color: "#2563eb",
-    website_url: "https://www.healthyandconfident.co.uk/en",
+    website_url: `${site}/en`,
     footer_email: "vessie@healthyandconfident.co.uk",
     footer_phone: "M: 0044 7876 565 263",
     address_line1: "Farnborough",

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveCtaTarget, isSafeCtaTarget } from "@/lib/email/cta-redirect";
 import { recordContactEvent } from "@/lib/contacts/events";
 import { getContactById } from "@/lib/contacts/ensure";
-import { siteConfig } from "@/lib/site";
+import { publicSiteOrigin } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -39,5 +39,5 @@ export async function GET(request: Request) {
   }
 
   const resolved = resolveCtaTarget(target);
-  return NextResponse.redirect(resolved || `${siteConfig.domain}/bg#programs`, 302);
+  return NextResponse.redirect(resolved || `${publicSiteOrigin()}/bg#programs`, 302);
 }
