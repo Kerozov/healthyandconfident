@@ -9,6 +9,8 @@ import type { JobEngagement } from "@/lib/admin/contacts-data";
 import type { PersonEmailItem } from "@/lib/admin/person-email";
 import { PersonEmailsTable } from "@/components/admin/person-emails-table";
 import { cancelContactJobAction } from "@/app/(admin)/admin/actions";
+import type { ZoomAttendeeMeeting } from "@/lib/admin/zoom-types";
+import { formatMeetingLabel } from "@/lib/admin/zoom-display";
 import { formatDate } from "@/lib/utils";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -55,12 +57,14 @@ export function ContactDetailView({
   jobs,
   jobEngagement,
   emails,
+  zoomMeetings = [],
 }: {
   contact: Contact;
   events: ContactEvent[];
   jobs: ContactWorkerJob[];
   jobEngagement: Record<string, JobEngagement>;
   emails: PersonEmailItem[];
+  zoomMeetings?: ZoomAttendeeMeeting[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -122,49 +126,41 @@ export function ContactDetailView({
       </section>
 
       <section className="rounded-xl border border-ink/10 bg-white p-6">
-        <h2 className="font-display text-xl font-semibold">Zoom сесии</h2>
+        <h2 className="font-display text-xl font-semibold">Zoom срещи</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          В кои срещи е участвал и колко минути е останал във всяка.
+        </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[420px] text-left text-sm">
             <thead className="border-b border-ink/10 text-xs uppercase text-ink-soft">
               <tr>
-                <th className="py-2 pr-4">Влязъл</th>
-                <th className="py-2 pr-4">Излязъл</th>
-                <th className="py-2 pr-4">Meeting ID</th>
-                <th className="py-2">Време в срещата</th>
+                <th className="py-2 pr-4">Среща</th>
+                <th className="py-2 pr-4">Дата</th>
+                <th className="py-2">Минути</th>
               </tr>
             </thead>
             <tbody>
-              {events
-                .filter((e) => e.event_type === "zoom_left")
-                .map((e) => (
-                  <tr key={e.id} className="border-b border-ink/5">
-                    <td className="py-2.5 pr-4 text-ink-soft">
-                      {typeof e.metadata?.join_time === "string"
-                        ? formatDate(e.metadata.join_time as string, "bg")
-                        : "—"}
-                    </td>
-                    <td className="py-2.5 pr-4 text-ink-soft">
-                      {formatDate(e.created_at, "bg")}
-                    </td>
-                    <td className="py-2.5 pr-4 font-mono text-xs text-ink-soft">
-                      {typeof e.metadata?.meeting_id === "string"
-                        ? (e.metadata.meeting_id as string).length > 14
-                          ? `…${(e.metadata.meeting_id as string).slice(-10)}`
-                          : (e.metadata.meeting_id as string)
-                        : "—"}
-                    </td>
-                    <td className="py-2.5 font-medium text-forest-700">
-                      {typeof e.metadata?.duration_minutes === "number"
-                        ? `${e.metadata.duration_minutes} мин.`
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              {events.filter((e) => e.event_type === "zoom_left").length === 0 && (
+              {zoomMeetings.map((m) => (
+                <tr key={m.meetingId} className="border-b border-ink/5">
+                  <td className="py-2.5 pr-4">
+                    <p className="font-medium">{m.title}</p>
+                    <p className="font-mono text-[10px] text-ink-soft">
+                      {formatMeetingLabel(m.meetingId)}
+                    </p>
+                  </td>
+                  <td className="py-2.5 pr-4 text-ink-soft">
+                    {formatDate(m.lastAt, "bg")}
+                  </td>
+                  <td className="py-2.5 font-medium text-forest-700">
+                    {m.minutes} мин.
+                  </td>
+                </tr>
+              ))}
+              {zoomMeetings.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-ink-soft">
+                  <td colSpan={3} className="py-6 text-center text-ink-soft">
                     {contact.zoom_attended
-                      ? "Има участие, но няма записани сесии с продължителност."
+                      ? "Няма запис по срещи с имейл — провери дали в Zoom е влязъл със същия имейл."
                       : "Няма Zoom участие още."}
                   </td>
                 </tr>

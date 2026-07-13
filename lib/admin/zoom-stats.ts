@@ -1,7 +1,9 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
+import { formatMeetingLabel } from "@/lib/admin/zoom-display";
 import type {
+  ZoomAttendeeMeeting,
   ZoomAttendeeSummary,
   ZoomMeetingSummary,
   ZoomOverview,
@@ -9,7 +11,9 @@ import type {
 } from "@/lib/admin/zoom-types";
 
 export type {
+  ZoomAttendeeMeeting,
   ZoomAttendeeSummary,
+  ZoomMeetingParticipant,
   ZoomMeetingSummary,
   ZoomOverview,
   ZoomSessionRow,
@@ -26,6 +30,15 @@ type SessionDbRow = {
   duration_minutes: number;
 };
 
+type AttendeeAcc = {
+  contactId: string;
+  email: string;
+  name: string | null;
+  sessionCount: number;
+  totalMinutes: number;
+  byMeeting: Map<string, { minutes: number; lastAt: string }>;
+};
+
 function sessionFromDb(row: SessionDbRow): ZoomSessionRow {
   return {
     eventId: row.id,
@@ -36,6 +49,37 @@ function sessionFromDb(row: SessionDbRow): ZoomSessionRow {
     joinedAt: row.join_time,
     leftAt: row.leave_time,
     durationMinutes: row.duration_minutes,
+  };
+}
+
+function meetingTitleFromSessions(sessions: ZoomSessionRow[]): string {
+  const topic = sessions.find((s) => !s.email && s.name)?.name;
+  const meetingId = sessions[0]?.meetingId ?? "unknown";
+  return topic?.trim() || formatMeetingLabel(meetingId);
+}
+
+function attendeeFromAcc(
+  key: string,
+  acc: AttendeeAcc,
+  meetingTitles: Map<string, string>,
+): ZoomAttendeeSummary {
+  const meetings = [...acc.byMeeting.entries()]
+    .map(([meetingId, row]) => ({
+      meetingId,
+      title: meetingTitles.get(meetingId) ?? formatMeetingLabel(meetingId),
+      minutes: row.minutes,
+      lastAt: row.lastAt,
+    }))
+    .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+
+  return {
+    contactId: acc.contactId,
+    email: acc.email,
+    name: acc.name,
+    sessionCount: acc.sessionCount,
+    totalMinutes: acc.totalMinutes,
+    meetingIds: meetings.map((m) => m.meetingId),
+    meetings,
   };
 }
 
@@ -120,47 +164,60 @@ export async function getZoomOverview(): Promise<ZoomOverview> {
   const sessions = await loadZoomSessions();
 
   const byMeeting = new Map<string, ZoomSessionRow[]>();
-  const byContact = new Map<string, ZoomAttendeeSummary>();
+  const byContact = new Map<string, AttendeeAcc>();
 
   for (const session of sessions) {
     const list = byMeeting.get(session.meetingId) ?? [];
     list.push(session);
     byMeeting.set(session.meetingId, list);
 
-    const key =
-      session.contactId ||
-      session.email ||
-      session.name ||
-      session.eventId;
+    if (!session.email) continue;
+
+    const key = session.email.toLowerCase();
     const existing = byContact.get(key) ?? {
       contactId: session.contactId,
       email: session.email,
       name: session.name,
       sessionCount: 0,
       totalMinutes: 0,
-      meetingIds: [],
+      byMeeting: new Map(),
     };
-    if (!session.email) {
-      // Host-only / meeting summary row — counts in meetings, not as a person.
-      continue;
-    }
     existing.sessionCount += 1;
     existing.totalMinutes += session.durationMinutes;
-    if (!existing.meetingIds.includes(session.meetingId)) {
-      existing.meetingIds.push(session.meetingId);
+    if (!existing.contactId && session.contactId) {
+      existing.contactId = session.contactId;
     }
+    if (!existing.name && session.name) {
+      existing.name = session.name;
+    }
+
+    const meetingRow = existing.byMeeting.get(session.meetingId) ?? {
+      minutes: 0,
+      lastAt: session.leftAt,
+    };
+    meetingRow.minutes += session.durationMinutes;
+    if (session.leftAt > meetingRow.lastAt) {
+      meetingRow.lastAt = session.leftAt;
+    }
+    existing.byMeeting.set(session.meetingId, meetingRow);
     byContact.set(key, existing);
+  }
+
+  const meetingTitles = new Map<string, string>();
+  for (const [meetingId, list] of byMeeting.entries()) {
+    meetingTitles.set(meetingId, meetingTitleFromSessions(list));
   }
 
   const meetings: ZoomMeetingSummary[] = [...byMeeting.entries()]
     .map(([meetingId, list]) => {
       const people = new Set(
-        list.filter((r) => r.email).map((r) => r.email),
+        list.filter((r) => r.email).map((r) => r.email.toLowerCase()),
       );
       const totalMinutes = list.reduce((s, r) => s + r.durationMinutes, 0);
       const times = list.map((r) => new Date(r.leftAt).getTime()).filter(Number.isFinite);
       return {
         meetingId,
+        title: meetingTitles.get(meetingId) ?? formatMeetingLabel(meetingId),
         participantCount: people.size,
         sessionCount: list.length,
         totalMinutes,
@@ -175,18 +232,18 @@ export async function getZoomOverview(): Promise<ZoomOverview> {
     })
     .sort(
       (a, b) =>
-        b.participantCount - a.participantCount ||
-        b.totalMinutes - a.totalMinutes,
+        b.lastAt.localeCompare(a.lastAt) ||
+        b.participantCount - a.participantCount,
     );
 
-  const topAttendees = [...byContact.values()]
+  const allAttendees = [...byContact.entries()]
+    .map(([key, acc]) => attendeeFromAcc(key, acc, meetingTitles))
     .sort(
       (a, b) =>
         b.totalMinutes - a.totalMinutes || b.sessionCount - a.sessionCount,
-    )
-    .slice(0, 20);
+    );
 
-  const uniqueParticipants = byContact.size;
+  const uniqueParticipants = allAttendees.length;
   const totalMinutes = sessions.reduce((s, r) => s + r.durationMinutes, 0);
 
   return {
@@ -194,7 +251,8 @@ export async function getZoomOverview(): Promise<ZoomOverview> {
     uniqueParticipants,
     totalMinutes,
     meetings,
-    topAttendees,
+    allAttendees,
+    topAttendees: allAttendees.slice(0, 20),
     allSessions: sessions,
     recentSessions: sessions.slice(0, 30),
   };
@@ -209,12 +267,57 @@ export async function getZoomSessionsForMeeting(
     .sort((a, b) => b.durationMinutes - a.durationMinutes);
 }
 
-/** Contact IDs that attended a given Zoom meeting. */
+export async function getZoomSessionsForContact(
+  contactId: string,
+  email: string,
+): Promise<ZoomSessionRow[]> {
+  const normalized = email.trim().toLowerCase();
+  const sessions = await loadZoomSessions();
+  return sessions
+    .filter(
+      (s) =>
+        s.email &&
+        (s.contactId === contactId || s.email.toLowerCase() === normalized),
+    )
+    .sort((a, b) => b.leftAt.localeCompare(a.leftAt));
+}
+
 export async function getContactIdsForMeeting(
   meetingId: string,
 ): Promise<string[]> {
   const sessions = await getZoomSessionsForMeeting(meetingId);
   return [...new Set(sessions.map((s) => s.contactId).filter(Boolean))];
+}
+
+export async function getContactZoomMeetings(
+  contactId: string,
+  email: string,
+): Promise<ZoomAttendeeMeeting[]> {
+  const [sessions, overview] = await Promise.all([
+    getZoomSessionsForContact(contactId, email),
+    getZoomOverview(),
+  ]);
+  const titles = new Map(overview.meetings.map((m) => [m.meetingId, m.title]));
+  const map = new Map<string, { minutes: number; lastAt: string }>();
+
+  for (const session of sessions) {
+    const row = map.get(session.meetingId) ?? {
+      minutes: 0,
+      lastAt: session.leftAt,
+    };
+    row.minutes += session.durationMinutes;
+    if (session.leftAt > row.lastAt) row.lastAt = session.leftAt;
+    map.set(session.meetingId, row);
+  }
+
+  return [...map.entries()]
+    .map(([meetingId, row]) => ({
+      meetingId,
+      title: titles.get(meetingId) ?? formatMeetingLabel(meetingId),
+      minutes: row.minutes,
+      lastAt: row.lastAt,
+    }))
+    .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
 }
 
 export async function getZoomMeetingOptions(): Promise<

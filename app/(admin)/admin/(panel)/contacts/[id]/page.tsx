@@ -4,6 +4,7 @@ import {
   getContactJobEngagement,
 } from "@/lib/admin/contacts-data";
 import { getPersonEmailHistory } from "@/lib/admin/email-history";
+import { getContactZoomMeetings } from "@/lib/admin/zoom-stats";
 import { ContactDetailView } from "@/components/admin/contact-detail";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export default async function AdminContactDetailPage({
 
   if (!contact) notFound();
 
-  const [engagementEntries, emails] = await Promise.all([
+  const [engagementEntries, emails, zoomMeetings] = await Promise.all([
     Promise.all(
       jobs.map(async (j) => {
         const eng = await getContactJobEngagement(j.worker_job_id);
@@ -26,6 +27,7 @@ export default async function AdminContactDetailPage({
       }),
     ),
     getPersonEmailHistory(contact.email),
+    getContactZoomMeetings(contact.id, contact.email),
   ]);
 
   const jobEngagement = Object.fromEntries(engagementEntries);
@@ -41,6 +43,7 @@ export default async function AdminContactDetailPage({
           jobs={jobs}
           jobEngagement={jobEngagement}
           emails={emails}
+          zoomMeetings={zoomMeetings}
         />
       </div>
     </div>
