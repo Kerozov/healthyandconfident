@@ -63,6 +63,10 @@ function SectionTitle({
   );
 }
 
+function isGraphicCoverImage(src: string): boolean {
+  return /\.(png|webp)$/i.test(src) || src.includes("cover");
+}
+
 function LandingFigure({
   src,
   alt = "",
@@ -70,6 +74,7 @@ function LandingFigure({
   imageClassName,
   priority,
   sizes,
+  layout = "default",
 }: {
   src: string;
   alt?: string;
@@ -77,8 +82,59 @@ function LandingFigure({
   imageClassName?: string;
   priority?: boolean;
   sizes?: string;
+  layout?: "default" | "hero" | "portrait";
 }) {
   const isRemote = src.startsWith("http");
+  const isGraphic = isGraphicCoverImage(src);
+
+  if (layout === "hero" || layout === "portrait") {
+    const aspectClass =
+      layout === "hero" && isGraphic ? "aspect-[3/4]" : "aspect-[4/5]";
+    const fitClass = isGraphic
+      ? "object-contain p-3 sm:p-4"
+      : "object-cover object-[center_20%]";
+
+    if (isRemote) {
+      return (
+        <figure
+          className={cn(
+            "relative w-full overflow-hidden",
+            isGraphic ? "bg-cream" : "bg-slate-700",
+            aspectClass,
+            figureClassName,
+          )}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={alt}
+            className={cn("h-full w-full", fitClass, imageClassName)}
+            loading={priority ? "eager" : "lazy"}
+          />
+        </figure>
+      );
+    }
+
+    return (
+      <figure
+        className={cn(
+          "relative w-full overflow-hidden",
+          isGraphic ? "bg-cream" : "bg-slate-700",
+          aspectClass,
+          figureClassName,
+        )}
+      >
+        <SiteImage
+          src={src}
+          alt={alt}
+          fill
+          sizes={sizes ?? "(max-width: 1024px) 90vw, 480px"}
+          imageClassName={cn(fitClass, imageClassName)}
+          priority={priority}
+        />
+      </figure>
+    );
+  }
 
   if (isRemote) {
     return (
@@ -198,14 +254,14 @@ export function ProgramLanding({
           >
             {hero.image && (
               <LandingFigure
+                layout="hero"
                 src={hero.image}
                 alt={mediaAlt(hero.image, locale) || hero.title}
                 priority
-                sizes="(max-width: 1024px) 100vw, 480px"
+                sizes="(max-width: 1024px) 90vw, 480px"
                 figureClassName={cn(
-                  "order-1 rounded-2xl border border-white/10 bg-white/5 shadow-2xl sm:rounded-3xl lg:order-2",
+                  "order-1 mx-auto max-w-[min(100%,320px)] rounded-2xl border border-white/10 shadow-2xl sm:max-w-sm sm:rounded-3xl lg:order-2 lg:mx-0 lg:max-w-none",
                 )}
-                imageClassName="mx-auto max-h-[min(50vh,360px)] object-contain sm:max-h-[min(65vh,480px)] lg:max-h-none"
               />
             )}
 
@@ -649,8 +705,9 @@ export function ProgramLanding({
                 </p>
                 {content.transformation.beforeImage && (
                   <LandingFigure
+                    layout="portrait"
                     src={content.transformation.beforeImage}
-                    figureClassName="mt-4 rounded-2xl shadow-lg"
+                    figureClassName="mx-auto mt-4 max-w-[240px] rounded-2xl shadow-lg sm:max-w-xs"
                   />
                 )}
               </div>
@@ -683,8 +740,9 @@ export function ProgramLanding({
                 </p>
                 {content.transformation.afterImage && (
                   <LandingFigure
+                    layout="portrait"
                     src={content.transformation.afterImage}
-                    figureClassName="mt-4 rounded-2xl shadow-lg"
+                    figureClassName="mx-auto mt-4 max-w-[240px] rounded-2xl shadow-lg sm:max-w-xs"
                   />
                 )}
               </div>
