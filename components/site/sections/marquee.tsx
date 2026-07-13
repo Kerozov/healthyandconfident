@@ -1,84 +1,129 @@
-import { Check } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { cn } from "@/lib/utils";
 
-const TOPICS = {
-  bg: [
-    "Инсулинова резистентност",
-    "Трайно отслабване",
-    "Диабет тип 2",
-    "94% успех",
-    "Балансирана кръвна захар",
-    "Повече енергия",
-    "Увереност",
-    "Без диети",
-    "Холистичен подход",
-  ],
-  en: [
-    "Insulin resistance",
-    "Lasting weight loss",
-    "Type 2 Diabetes",
-    "94% success rate",
-    "Balanced blood sugar",
-    "More energy",
-    "Confidence",
-    "No more diets",
-    "Holistic approach",
-  ],
+const COPY = {
+  bg: {
+    label: "С фокус върху",
+    subtitle:
+      "Реални резултати при инсулинова резистентност и диабет тип 2",
+    statValue: "94%",
+    statLabel: "доказан успех при клиентите",
+    topics: [
+      "Инсулинова резистентност",
+      "Трайно отслабване",
+      "Диабет тип 2",
+      "Балансирана кръвна захар",
+      "Повече енергия",
+      "Увереност",
+      "Без диети",
+      "Холистичен подход",
+    ],
+  },
+  en: {
+    label: "Focused on",
+    subtitle: "Real results for insulin resistance and type 2 diabetes",
+    statValue: "94%",
+    statLabel: "proven client success",
+    topics: [
+      "Insulin resistance",
+      "Lasting weight loss",
+      "Type 2 diabetes",
+      "Balanced blood sugar",
+      "More energy",
+      "Confidence",
+      "No more diets",
+      "Holistic approach",
+    ],
+  },
 } as const;
 
-function isHighlightTopic(topic: string) {
-  return topic.includes("94%");
-}
-
 export function Marquee({ locale }: { locale: Locale }) {
-  const topics = locale === "bg" ? TOPICS.bg : TOPICS.en;
-  const label = locale === "bg" ? "С фокус върху" : "Focused on";
-  const subtitle =
-    locale === "bg"
-      ? "Реални резултати при инсулинова резистентност и диабет тип 2"
-      : "Real results for insulin resistance and type 2 diabetes";
+  const copy = locale === "bg" ? COPY.bg : COPY.en;
 
   return (
-    <section className="border-y border-forest-100 bg-cream-2/50 py-10 sm:py-12">
-      <Container>
-        <div className="mx-auto max-w-xl text-center">
-          <p className="eyebrow justify-center">{label}</p>
-          <p className="mt-3 text-sm leading-relaxed text-ink-soft sm:text-base">{subtitle}</p>
+    <section className="relative overflow-hidden border-y border-forest-100/80 bg-cream py-12 sm:py-16">
+      <div
+        className="pointer-events-none absolute -left-24 top-0 h-64 w-64 rounded-full bg-forest-400/10 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -right-16 bottom-0 h-56 w-56 rounded-full bg-gold-400/15 blur-3xl"
+        aria-hidden
+      />
+
+      <Container className="relative">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="eyebrow justify-center">{copy.label}</p>
+          <p className="mt-3 font-display text-xl font-semibold leading-snug text-slate-800 sm:text-2xl">
+            {copy.subtitle}
+          </p>
         </div>
 
-        <ul className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-2.5 sm:mt-10 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
-          {topics.map((topic, index) => {
-            const highlight = isHighlightTopic(topic);
-            return (
-              <li
-                key={topic}
-                className="animate-fade-up flex justify-center"
-                style={{ animationDelay: `${index * 70}ms` }}
-              >
-                <span
-                  className={cn(
-                    "inline-flex w-full max-w-[16rem] items-center gap-2 rounded-xl border px-3.5 py-2.5 text-center text-sm font-medium shadow-sm transition-transform duration-300 hover:-translate-y-0.5 sm:max-w-none sm:rounded-full sm:px-4 sm:text-left",
-                    highlight
-                      ? "border-gold-400/50 bg-white text-slate-800"
-                      : "border-forest-100 bg-white text-slate-800",
-                  )}
+        <div className="mx-auto mt-8 max-w-5xl sm:mt-10">
+          <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:items-stretch">
+            {/* Featured stat */}
+            <div className="relative overflow-hidden rounded-3xl bg-slate-800 p-6 shadow-lg sm:p-8 lg:flex lg:flex-col lg:justify-between">
+              <div
+                className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-gold-400/20 blur-2xl"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-forest-400/15 blur-2xl"
+                aria-hidden
+              />
+
+              <div className="relative">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-300/90">
+                  {locale === "bg" ? "Метод с доказани резултати" : "Proven method"}
+                </p>
+                <p className="mt-4 font-display text-6xl font-semibold tabular-nums leading-none text-white sm:text-7xl">
+                  {copy.statValue.replace("%", "")}
+                  <span className="text-gold-300">%</span>
+                </p>
+                <p className="mt-3 max-w-[14rem] text-sm font-medium leading-snug text-slate-300">
+                  {copy.statLabel}
+                </p>
+              </div>
+
+              <div className="relative mt-8">
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full w-[94%] rounded-full bg-gradient-to-r from-gold-500 to-gold-300 shadow-[0_0_14px_rgba(212,168,67,0.5)]" />
+                </div>
+                <p className="mt-2 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                  {locale === "bg" ? "успеваемост при клиентите" : "client success rate"}
+                </p>
+              </div>
+            </div>
+
+            {/* Topic grid */}
+            <ul className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              {copy.topics.map((topic, index) => (
+                <li
+                  key={topic}
+                  className="animate-fade-up"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <span
+                  <div
                     className={cn(
-                      "mx-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full sm:mx-0",
-                      highlight ? "bg-gold-400/15 text-gold-600" : "bg-forest-50 text-forest-500",
+                      "group flex h-full min-h-[4.5rem] flex-col justify-center rounded-2xl border px-3.5 py-3 transition duration-300 sm:min-h-[5rem] sm:px-4 sm:py-3.5",
+                      "border-forest-100/90 bg-white/90 shadow-sm backdrop-blur-sm",
+                      "hover:-translate-y-0.5 hover:border-forest-200 hover:shadow-md",
                     )}
                   >
-                    <Check className="h-3 w-3" strokeWidth={2.75} aria-hidden />
-                  </span>
-                  <span className="leading-snug">{topic}</span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+                    <span
+                      className="mb-2 h-0.5 w-6 rounded-full bg-gradient-to-r from-forest-500 to-gold-400 transition-all duration-300 group-hover:w-10"
+                      aria-hidden
+                    />
+                    <span className="text-sm font-semibold leading-snug text-slate-800">
+                      {topic}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </Container>
     </section>
   );

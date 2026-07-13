@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { isLocale, locales, type Locale } from "@/i18n/config";
 import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
 import { getProgramLanding } from "@/lib/programs/landings";
+import { getCtaPlacements } from "@/lib/site/content";
 import { ProgramLanding } from "@/components/site/program-landing";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 
@@ -53,5 +54,14 @@ export default async function ProgramPage({
   const content = getProgramLanding(locale as Locale, slug);
   if (!content) notFound();
 
-  return <ProgramLanding content={content} locale={locale as Locale} />;
+  const placementRows = await getCtaPlacements();
+  const ctaPlacements = Object.fromEntries(placementRows.map((p) => [p.key, p]));
+
+  return (
+    <ProgramLanding
+      content={content}
+      locale={locale as Locale}
+      ctaPlacements={ctaPlacements}
+    />
+  );
 }

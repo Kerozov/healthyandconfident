@@ -59,6 +59,21 @@ function resolveTriggerEvents(
   return [];
 }
 
+/** Whether this automation's trigger would run for the resolved event list. */
+function automationTriggerMatchesEvents(
+  automation: Automation,
+  events: string[],
+): boolean {
+  if (events.includes(automation.trigger_event)) return true;
+  if (
+    automation.trigger_event === "new_subscriber" &&
+    events.includes("registration")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export type AutomationRunReport = {
   workerConfigured: boolean;
   unsubscribed: boolean;
@@ -929,14 +944,17 @@ export type AutomationDiagnosis = {
   source: string;
   tags: string[];
   triggerEvents: string[];
+  /** @deprecated use totalRules */
   enabledRulesForTrigger: number;
+  totalRules: number;
+  matchingTriggerCount: number;
   wouldSendCount: number;
   rules: AutomationDiagnosisRule[];
   notes: string[];
 };
 
 /**
- * Dry-run: evaluate every enabled automation for this context WITHOUT sending.
+ * Dry-run: evaluate every automation for this context WITHOUT sending.
  * Explains, per rule, whether it would fire and why not. Used by admin diagnostics.
  */
 export async function diagnoseAutomations(
@@ -958,6 +976,8 @@ export async function diagnoseAutomations(
     tags: ctx.tags ?? [],
     triggerEvents: events,
     enabledRulesForTrigger: 0,
+    totalRules: 0,
+    matchingTriggerCount: 0,
     wouldSendCount: 0,
     rules: [],
     notes,
@@ -972,14 +992,16 @@ export async function diagnoseAutomations(
   if (await isEmailUnsubscribed(email)) {
     diagnosis.unsubscribed = true;
     notes.push("Този имейл е отписан (unsubscribed) — автоматизации не се пращат.");
-    return diagnosis;
   }
 
   if (events.length === 0) {
     notes.push(
-      `source="${source}" не задейства нищо (не е разпознат като записване или покупка).`,
+      `При source="${source}" и isNew=${ctx.isNew} няма активен тригер — автоматизациите за запис/покупка няма да стартират, освен ако не симулираш друго събитие.`,
     );
-    return diagnosis;
+  } else {
+    notes.push(
+      `Активни тригери за тази симулация: ${events.join(", ")}.`,
+    );
   }
 
   const supabase = getAdminClient();
@@ -987,8 +1009,6 @@ export async function diagnoseAutomations(
     supabase
       .from("automations")
       .select("*")
-      .eq("enabled", true)
-      .in("trigger_event", events as unknown as AutomationTrigger[])
       .order("sort_order", { ascending: true }),
     supabase.from("segments").select("*"),
     supabase.from("segment_groups").select("*"),
@@ -1001,30 +1021,72 @@ export async function diagnoseAutomations(
 
   const segments = (segmentRows as Segment[]) ?? [];
   const groups = (groupRows as SegmentGroup[]) ?? [];
-  const rules = (data as Automation[]) ?? [];
-  diagnosis.enabledRulesForTrigger = rules.length;
+  const allRules = (data as Automation[]) ?? [];
+  diagnosis.totalRules = allRules.length;
+  diagnosis.enabledRulesForTrigger = allRules.filter((r) => r.enabled).length;
 
-  if (rules.length === 0) {
-    notes.push(
-      `Няма включени (enabled) автоматизации за тригер ${events.join(", ")}.`,
-    );
+  if (allRules.length === 0) {
+    notes.push("Няма създадени автоматизации.");
     return diagnosis;
   }
 
-  for (const rule of rules) {
-    const gate = await passesAutomationGates(rule, ctx, segments, groups);
+  if (diagnosis.unsubscribed) {
+    for (const rule of allRules) {
+      diagnosis.rules.push({
+        name: rule.name,
+        enabled: rule.enabled,
+        channel: rule.channel,
+        triggerEvent: rule.trigger_event,
+        wouldSend: false,
+        reason: "отписан имейл",
+        emptyContent: false,
+      });
+    }
+    return diagnosis;
+  }
+
+  for (const rule of allRules) {
     const locale: Locale = ctx.locale === "en" ? "en" : "bg";
     const subjectRaw = locale === "en" ? rule.subject_en : rule.subject_bg;
     const htmlRaw = locale === "en" ? rule.html_en : rule.html_bg;
     const emptyContent =
       rule.channel === "email" && (!subjectRaw?.trim() || !htmlRaw?.trim());
 
+    if (!rule.enabled) {
+      diagnosis.rules.push({
+        name: rule.name,
+        enabled: false,
+        channel: rule.channel,
+        triggerEvent: rule.trigger_event,
+        wouldSend: false,
+        reason: "изключена",
+        emptyContent,
+      });
+      continue;
+    }
+
+    if (!automationTriggerMatchesEvents(rule, events)) {
+      diagnosis.rules.push({
+        name: rule.name,
+        enabled: true,
+        channel: rule.channel,
+        triggerEvent: rule.trigger_event,
+        wouldSend: false,
+        reason: `trigger: при source="${source}" isNew=${ctx.isNew} се задейства [${events.join(", ") || "нищо"}], а тази е „${rule.trigger_event}"`,
+        emptyContent,
+      });
+      continue;
+    }
+
+    diagnosis.matchingTriggerCount += 1;
+
+    const gate = await passesAutomationGates(rule, ctx, segments, groups);
     const wouldSend = gate.ok && !emptyContent;
     if (wouldSend) diagnosis.wouldSendCount += 1;
 
     diagnosis.rules.push({
       name: rule.name,
-      enabled: rule.enabled,
+      enabled: true,
       channel: rule.channel,
       triggerEvent: rule.trigger_event,
       wouldSend,
@@ -1039,7 +1101,7 @@ export async function diagnoseAutomations(
 
   if (diagnosis.wouldSendCount === 0) {
     notes.push(
-      "Нито една автоматизация не би се изпратила — виж причините по-долу.",
+      "Нито една автоматизация не би се изпратила при тази симулация — виж причините по-долу.",
     );
   }
 

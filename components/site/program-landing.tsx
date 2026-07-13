@@ -21,6 +21,12 @@ import {
 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { ProgramLandingContent } from "@/lib/programs/types";
+import type { SiteCtaPlacement } from "@/lib/supabase/types";
+import {
+  resolvePlacementButton,
+  programPricingPlacementKey,
+  programSecondaryPlacementKey,
+} from "@/lib/site/cta-placements";
 import { Container } from "@/components/ui/container";
 import { buttonVariants } from "@/components/ui/button";
 import { CtaLink } from "@/components/site/cta-link";
@@ -120,25 +126,21 @@ function FoodGallery({
     <section className="bg-white py-16">
       <Container>
         <SectionTitle title={gallery.title} accent={gallery.titleAccent} />
-        <div className="mt-10 grid grid-cols-2 items-start gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {gallery.images.map((src) => {
-            const size = mediaIntrinsicSize(src);
-            return (
-              <figure
-                key={src}
-                className="overflow-hidden rounded-2xl bg-cream-2 shadow-md ring-1 ring-forest-100/80"
-              >
-                <SiteImage
-                  src={src}
-                  alt={mediaAlt(src, locale) || gallery.title}
-                  width={size.width}
-                  height={size.height}
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                  className="h-auto w-full"
-                />
-              </figure>
-            );
-          })}
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          {gallery.images.map((src) => (
+            <figure
+              key={src}
+              className="relative aspect-square overflow-hidden rounded-2xl bg-cream-2 shadow-md ring-1 ring-forest-100/80"
+            >
+              <SiteImage
+                src={src}
+                alt={mediaAlt(src, locale) || gallery.title}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                imageClassName="object-cover transition duration-500 hover:scale-[1.03]"
+              />
+            </figure>
+          ))}
         </div>
       </Container>
     </section>
@@ -148,15 +150,30 @@ function FoodGallery({
 export function ProgramLanding({
   content,
   locale,
+  ctaPlacements = {},
 }: {
   content: ProgramLandingContent;
   locale: Locale;
+  ctaPlacements?: Record<string, SiteCtaPlacement>;
 }) {
   const { hero } = content;
   const placementKey = hero.placementKey ?? `product_${content.slug}`;
+  const primaryButton = resolvePlacementButton(ctaPlacements, placementKey, locale, {
+    label: hero.primaryCta,
+    href: hero.primaryHref,
+  });
+  const secondaryButton =
+    hero.secondaryCta && hero.secondaryHref
+      ? resolvePlacementButton(
+          ctaPlacements,
+          programSecondaryPlacementKey(placementKey),
+          locale,
+          { label: hero.secondaryCta, href: hero.secondaryHref },
+        )
+      : null;
 
   return (
-    <div className="overflow-x-hidden">
+    <div className="max-w-[100vw] overflow-x-clip">
       {/* Hero */}
       <section className="relative bg-slate-800 pb-16 pt-4 text-white sm:pb-24 sm:pt-6">
         <div className="pointer-events-none absolute -right-40 top-0 h-[500px] w-[500px] rounded-full bg-gold-400/10 blur-3xl" />
@@ -237,25 +254,31 @@ export function ProgramLanding({
               <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-3">
                 <CtaLink
                   placementKey={placementKey}
-                  href={hero.primaryHref}
+                  href={primaryButton.href}
                   variant="onDark"
                   size="lg"
                   className="w-full sm:w-auto"
-                  target={hero.primaryHref.startsWith("http") ? "_blank" : undefined}
-                  rel={hero.primaryHref.startsWith("http") ? "noopener noreferrer" : undefined}
+                  target={primaryButton.href.startsWith("http") ? "_blank" : undefined}
+                  rel={primaryButton.href.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
-                  {hero.primaryCta}
+                  {primaryButton.label}
                 </CtaLink>
-                {hero.secondaryCta && hero.secondaryHref && (
-                  <Link
-                    href={hero.secondaryHref}
-                    className={cn(
-                      buttonVariants({ variant: "onDarkOutline", size: "lg" }),
-                      "w-full sm:w-auto",
-                    )}
+                {secondaryButton && (
+                  <CtaLink
+                    placementKey={programSecondaryPlacementKey(placementKey)}
+                    href={secondaryButton.href}
+                    variant="onDarkOutline"
+                    size="lg"
+                    className="w-full sm:w-auto"
+                    target={secondaryButton.href.startsWith("http") ? "_blank" : undefined}
+                    rel={
+                      secondaryButton.href.startsWith("http")
+                        ? "noopener noreferrer"
+                        : undefined
+                    }
                   >
-                    {hero.secondaryCta}
-                  </Link>
+                    {secondaryButton.label}
+                  </CtaLink>
                 )}
               </div>
             </div>
@@ -874,16 +897,16 @@ export function ProgramLanding({
 
       {/* Pricing */}
       {content.pricing && (
-        <section className="bg-gradient-to-br from-cream-50 via-white to-cream py-24">
+        <section className="overflow-x-clip bg-gradient-to-br from-cream-50 via-white to-cream py-16 sm:py-24">
           <Container className="max-w-5xl">
             <div className="text-center">
-              <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
+              <h2 className="text-balance font-display text-2xl font-semibold text-forest-900 sm:text-4xl">
                 {content.pricing.title}{" "}
                 {content.pricing.titleAccent ? (
                   <span className="text-forest-500">{content.pricing.titleAccent}</span>
                 ) : null}
               </h2>
-              <p className="mt-4 text-lg leading-relaxed text-forest-700">
+              <p className="mt-4 text-balance text-base leading-relaxed text-forest-700 sm:text-lg">
                 {content.pricing.subtitle}
               </p>
             </div>
@@ -934,7 +957,7 @@ export function ProgramLanding({
 
             <div
               className={cn(
-                "mt-12 grid gap-6",
+                "mt-8 grid w-full min-w-0 grid-cols-1 gap-4 sm:mt-12 sm:gap-6",
                 content.pricing.options.length === 1 && "mx-auto max-w-md",
                 content.pricing.options.length === 2 &&
                   "mx-auto max-w-3xl md:grid-cols-2",
@@ -943,12 +966,19 @@ export function ProgramLanding({
               )}
             >
               {content.pricing.options.map((opt, i) => {
-                const href = opt.href ?? hero.primaryHref;
+                const fallbackHref = opt.href ?? hero.primaryHref;
+                const pricingButton = resolvePlacementButton(
+                  ctaPlacements,
+                  programPricingPlacementKey(placementKey, i),
+                  locale,
+                  { label: opt.cta, href: fallbackHref },
+                );
+                const href = pricingButton.href;
                 return (
                   <div
                     key={opt.label}
                     className={cn(
-                      "flex flex-col rounded-3xl border-2 bg-white p-6 shadow-lg",
+                      "flex min-w-0 max-w-full flex-col rounded-2xl border-2 bg-white p-4 shadow-lg sm:rounded-3xl sm:p-6",
                       i === 0 && content.pricing!.options.length > 2
                         ? "border-forest-300 md:col-span-2 lg:col-span-3"
                         : i === 0
@@ -962,22 +992,22 @@ export function ProgramLanding({
                       </p>
                     )}
                     <p className="mt-1 text-sm font-semibold text-forest-600">{opt.label}</p>
-                    <p className="mt-2 font-display text-3xl font-bold text-forest-900">
+                    <p className="mt-2 font-display text-2xl font-bold text-forest-900 sm:text-3xl">
                       {opt.price}
                     </p>
-                    <p className="mt-2 flex-1 text-sm leading-relaxed text-forest-600">
+                    <p className="mt-2 flex-1 text-pretty text-sm leading-relaxed text-forest-600">
                       {opt.note}
                     </p>
                     <CtaLink
-                      placementKey={placementKey}
+                      placementKey={programPricingPlacementKey(placementKey, i)}
                       href={href}
-                      variant={i === 0 ? "forest" : "outline"}
+                      variant={i === 0 ? "forest" : "secondary"}
                       size="lg"
-                      className="mt-4 w-full"
+                      className="mt-4 h-auto min-h-12 w-full max-w-full whitespace-normal px-4 py-3 text-center text-sm leading-snug sm:text-base"
                       target={href.startsWith("http") ? "_blank" : undefined}
                       rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
                     >
-                      {opt.cta}
+                      {pricingButton.label}
                     </CtaLink>
                   </div>
                 );
@@ -985,7 +1015,7 @@ export function ProgramLanding({
             </div>
 
             {content.pricing.ps && (
-              <p className="mt-8 text-center text-sm font-medium text-forest-700">
+              <p className="mt-6 text-balance text-center text-sm font-medium text-forest-700 sm:mt-8">
                 {content.pricing.ps}
               </p>
             )}

@@ -87,30 +87,28 @@ export function TransformationResults({
           <p className="mx-auto mt-2 max-w-xl text-center text-sm text-ink-soft">
             {results.clientsSubtitle}
           </p>
-          <div className="mt-8 grid grid-cols-2 items-start gap-3 lg:grid-cols-4 lg:gap-4">
-            {CLIENT_RESULTS.map((src, i) => {
-              const size = mediaIntrinsicSize(src);
-              return (
-                <figure
-                  key={src}
-                  className="overflow-hidden rounded-xl bg-white shadow-card ring-1 ring-forest-100"
-                >
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            {CLIENT_RESULTS.map((src, i) => (
+              <figure
+                key={src}
+                className="overflow-hidden rounded-xl bg-white shadow-card ring-1 ring-forest-100"
+              >
+                <div className="relative aspect-[3/4]">
                   <SiteImage
                     src={src}
                     alt={altFor(src)}
-                    width={size.width}
-                    height={size.height}
+                    fill
                     sizes="(max-width: 1024px) 50vw, 25vw"
-                    className="h-auto w-full"
+                    imageClassName="object-cover object-center"
                   />
-                  {results.clientCaptions[i] && (
-                    <figcaption className="px-3 py-2.5 text-center text-[11px] leading-snug text-ink-soft">
-                      {results.clientCaptions[i]}
-                    </figcaption>
-                  )}
-                </figure>
-              );
-            })}
+                </div>
+                {results.clientCaptions[i] && (
+                  <figcaption className="px-3 py-2.5 text-center text-[11px] leading-snug text-ink-soft">
+                    {results.clientCaptions[i]}
+                  </figcaption>
+                )}
+              </figure>
+            ))}
           </div>
         </div>
       </Container>

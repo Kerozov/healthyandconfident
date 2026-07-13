@@ -3,7 +3,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
+import { mediaAlt } from "@/lib/site/media-gallery";
 
 const COLLAGE_IMAGES = [
   "/images/6.jpg",
@@ -59,25 +59,21 @@ export function Challenge21Section({
 
         <div className="mt-14 grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
           <div className="mx-auto w-full max-w-lg space-y-6">
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              {COLLAGE_IMAGES.map((src) => {
-                const size = mediaIntrinsicSize(src);
-                return (
-                  <figure
-                    key={src}
-                    className="overflow-hidden rounded-lg bg-slate-700/80 ring-1 ring-white/10"
-                  >
-                    <SiteImage
-                      src={src}
-                      alt={mediaAlt(src, locale)}
-                      width={size.width}
-                      height={size.height}
-                      sizes="(max-width: 1024px) 45vw, 250px"
-                      className="h-auto w-full"
-                    />
-                  </figure>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              {COLLAGE_IMAGES.map((src) => (
+                <figure
+                  key={src}
+                  className="relative aspect-square overflow-hidden rounded-xl bg-slate-700/80 ring-1 ring-white/10"
+                >
+                  <SiteImage
+                    src={src}
+                    alt={mediaAlt(src, locale)}
+                    fill
+                    sizes="(max-width: 1024px) 45vw, 250px"
+                    imageClassName="object-cover"
+                  />
+                </figure>
+              ))}
             </div>
 
             <ChallengePromoCard challenge21={challenge21} />

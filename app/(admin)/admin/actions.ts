@@ -445,7 +445,15 @@ export async function toggleAutomationEnabled(
   return { ok: true };
 }
 
-export async function diagnoseAutomationsForEmail(email: string): Promise<
+export async function diagnoseAutomationsForEmail(
+  email: string,
+  options?: {
+    /** Override subscriber source for what-if (e.g. form:slug, purchase). */
+    simulateSource?: string;
+    /** Override isNew for what-if (e.g. re-signup of existing email). */
+    simulateIsNew?: boolean;
+  },
+): Promise<
   | {
       ok: true;
       subscriberFound: boolean;
@@ -476,6 +484,16 @@ export async function diagnoseAutomationsForEmail(email: string): Promise<
   } | null;
 
   const { diagnoseAutomations } = await import("@/lib/automation/run");
+  const subscriberFound = Boolean(subscriber);
+  const source =
+    options?.simulateSource?.trim() ||
+    subscriber?.source ||
+    "free-menu-banner";
+  const isNew =
+    options?.simulateIsNew !== undefined
+      ? options.simulateIsNew
+      : !subscriberFound;
+
   const diagnosis = await diagnoseAutomations({
     email: normalized,
     name: subscriber?.name ?? null,
@@ -483,13 +501,11 @@ export async function diagnoseAutomationsForEmail(email: string): Promise<
     locale: subscriber?.locale === "en" ? "en" : "bg",
     subscriberId: subscriber?.id ?? null,
     tags: subscriber?.tags ?? [],
-    // Simulate a fresh signup so gates that need "new" don't hide the reason;
-    // "new + existing" automations are unaffected.
-    isNew: !subscriber,
-    source: subscriber?.source || "free-menu-banner",
+    isNew,
+    source,
   });
 
-  return { ok: true, subscriberFound: Boolean(subscriber), diagnosis };
+  return { ok: true, subscriberFound, diagnosis };
 }
 
 export async function syncAutomation(id: string): Promise<ActionResult> {
@@ -2663,6 +2679,9 @@ export async function saveCtaPlacement(input: {
   offer_headline_bg?: string;
   offer_headline_en?: string;
   offer_enabled?: boolean;
+  button_label_bg?: string;
+  button_label_en?: string;
+  button_url?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -2673,6 +2692,9 @@ export async function saveCtaPlacement(input: {
       offer_headline_bg: input.offer_headline_bg?.trim() ?? "",
       offer_headline_en: input.offer_headline_en?.trim() ?? "",
       offer_enabled: input.offer_enabled ?? false,
+      button_label_bg: input.button_label_bg?.trim() ?? "",
+      button_label_en: input.button_label_en?.trim() ?? "",
+      button_url: input.button_url?.trim() ?? "",
       updated_at: new Date().toISOString(),
     })
     .eq("key", input.key);

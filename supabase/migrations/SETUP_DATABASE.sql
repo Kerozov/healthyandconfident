@@ -387,12 +387,15 @@ create table if not exists public.site_cta_placements (
   offer_headline_bg text not null default '',
   offer_headline_en text not null default '',
   offer_enabled     boolean not null default false,
+  button_label_bg   text not null default '',
+  button_label_en   text not null default '',
+  button_url        text not null default '',
   updated_at        timestamptz not null default now()
 );
 
 insert into public.site_cta_placements (key, label_bg, label_en) values
   ('programs_0', 'Програми — картичка „Гарнитури“ (€3)', 'Programs — “Side dishes” card (€3)'),
-  ('programs_1', 'Програма „Живей без резистентност“ — бутон „Кандидатствай“', 'Program “Live Without Resistance” — “Apply now” button'),
+  ('programs_1', 'Живей без резистентност — „Включи се днес“ (горен бутон)', 'Live Without Resistance — “Join today” (hero primary)'),
   ('programs_2', 'Програма „Препрограмирай апетита“ — бутон „Научи повече“', 'Program “Reprogram Your Appetite” — “Learn more” button'),
   ('about_cta', 'Секция „За мен“ — бутон „Работи с мен“', 'About section — “Work with me” button'),
   ('outcomes_cta', 'Секция „Резултати“ — бутон „Запиши безплатен разговор“', 'Outcomes section — “Book a free call” button'),
@@ -400,7 +403,16 @@ insert into public.site_cta_placements (key, label_bg, label_en) values
   ('contact_cta', 'Контакти — WhatsApp (без popup)', 'Contact — WhatsApp (no popup)'),
   ('hero_primary', 'Начало — златен бутон „Виж програмите“ (hero)', 'Home — gold “View programs” button (hero)'),
   ('hero_secondary', 'Начало — втори бутон „Безплатен наръчник“ (hero)', 'Home — secondary lead magnet button (hero)'),
-  ('nav_cta', 'Горно меню — „Запиши безплатен разговор“', 'Top navigation — book a free call CTA')
+  ('nav_cta', 'Горно меню — „Запиши безплатен разговор“', 'Top navigation — book a free call CTA'),
+  ('programs_0_secondary', 'Гарнитури — втори бутон (ако има)', 'Side dishes — secondary button'),
+  ('programs_0_pricing_0', 'Гарнитури — бутон за плащане', 'Side dishes — checkout button'),
+  ('programs_1_secondary', 'Живей без резистентност — „Виж какво включва“', 'Live Without Resistance — “See what''s included”'),
+  ('programs_1_pricing_0', 'Живей без резистентност — месечни вноски', 'Live Without Resistance — monthly plan button'),
+  ('programs_1_pricing_1', 'Живей без резистентност — еднократно плащане', 'Live Without Resistance — one-time payment button'),
+  ('programs_2_secondary', 'Препрограмирай апетита — втори бутон', 'Reprogram appetite — secondary button'),
+  ('programs_2_pricing_0', 'Препрограмирай апетита — месечен достъп', 'Reprogram appetite — monthly access button'),
+  ('programs_2_pricing_1', 'Препрограмирай апетита — вариант 1 (12 мес.)', 'Reprogram appetite — plan 1 button'),
+  ('programs_2_pricing_2', 'Препрограмирай апетита — вариант 2 (3 мес.)', 'Reprogram appetite — plan 2 button')
 on conflict (key) do nothing;
 
 update public.site_cta_placements

@@ -4,7 +4,8 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
+import { mediaAlt } from "@/lib/site/media-gallery";
+import { cn } from "@/lib/utils";
 
 /** Main portrait + two accents — each file used once (no duplicate award thumbs). */
 const MAIN = "/images/3.jpg";
@@ -18,42 +19,51 @@ export function About({
   locale: Locale;
 }) {
   const { about } = dict;
-  const mainSize = mediaIntrinsicSize(MAIN);
 
   return (
     <section id="about" className="section-pad scroll-mt-24 bg-cream-2">
       <Container className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
         <div className="mx-auto w-full max-w-md lg:max-w-none">
-          <figure className="overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ring-white/80">
-            <SiteImage
-              src={MAIN}
-              alt={mediaAlt(MAIN, locale)}
-              width={mainSize.width}
-              height={mainSize.height}
-              sizes="(max-width: 1024px) 85vw, 420px"
-              className="h-auto w-full"
-            />
-          </figure>
+          <div className="relative">
+            <figure
+              className={cn(
+                "relative aspect-[4/5] overflow-hidden rounded-3xl bg-white",
+                "shadow-soft ring-1 ring-white/80",
+              )}
+            >
+              <SiteImage
+                src={MAIN}
+                alt={mediaAlt(MAIN, locale)}
+                fill
+                sizes="(max-width: 1024px) 85vw, 420px"
+                imageClassName="object-cover object-[center_12%]"
+              />
+            </figure>
 
-          <div className="mt-4 grid grid-cols-2 items-start gap-3">
-            {ACCENTS.map((src) => {
-              const size = mediaIntrinsicSize(src);
-              return (
+            <div className="relative z-10 -mt-10 grid grid-cols-2 gap-3 px-4 sm:-mt-12 sm:gap-4 sm:px-6">
+              {ACCENTS.map((src, index) => (
                 <figure
                   key={src}
-                  className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-forest-100"
+                  className={cn(
+                    "relative aspect-[4/5] overflow-hidden rounded-2xl bg-white",
+                    "shadow-lg ring-4 ring-cream-2",
+                    index === 0 && "sm:translate-y-1",
+                    index === 1 && "sm:-translate-y-1",
+                  )}
                 >
                   <SiteImage
                     src={src}
                     alt={mediaAlt(src, locale)}
-                    width={size.width}
-                    height={size.height}
-                    sizes="(max-width: 1024px) 45vw, 220px"
-                    className="h-auto w-full"
+                    fill
+                    sizes="(max-width: 1024px) 42vw, 200px"
+                    imageClassName={cn(
+                      "object-cover",
+                      index === 0 ? "object-center" : "object-[center_15%]",
+                    )}
                   />
                 </figure>
-              );
-            })}
+              ))}
+            </div>
           </div>
         </div>
 

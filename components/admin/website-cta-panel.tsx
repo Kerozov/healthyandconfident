@@ -10,6 +10,60 @@ import { DEFAULT_OFFER_HEADLINE, CTA_PLACEMENT_KEYS, isUpsellSectionPlacement } 
 import { isProductPlacementKey } from "@/lib/site/product-placement";
 import { cn } from "@/lib/utils";
 
+const PROGRAM_PLACEMENT_GROUPS = [
+  {
+    id: "programs_1",
+    title: "Програма „Живей без резистентност“",
+    keys: [
+      "programs_1",
+      "programs_1_secondary",
+      "programs_1_pricing_0",
+      "programs_1_pricing_1",
+    ],
+  },
+  {
+    id: "programs_2",
+    title: "Програма „Препрограмирай апетита“",
+    keys: [
+      "programs_2",
+      "programs_2_secondary",
+      "programs_2_pricing_0",
+      "programs_2_pricing_1",
+      "programs_2_pricing_2",
+    ],
+  },
+  {
+    id: "programs_0",
+    title: "Програма „Гарнитури“",
+    keys: ["programs_0", "programs_0_secondary", "programs_0_pricing_0"],
+  },
+] as const;
+
+function groupSitePlacements(placements: SiteCtaPlacement[]) {
+  const byKey = new Map(placements.map((p) => [p.key, p]));
+  const used = new Set<string>();
+
+  const programGroups = PROGRAM_PLACEMENT_GROUPS.map((group) => ({
+    title: group.title,
+    placements: group.keys
+      .map((key) => byKey.get(key))
+      .filter((p): p is SiteCtaPlacement => {
+        if (!p) return false;
+        used.add(p.key);
+        return true;
+      }),
+  })).filter((g) => g.placements.length > 0);
+
+  const otherPlacements = placements.filter(
+    (p) =>
+      !used.has(p.key) &&
+      !isProductPlacementKey(p.key) &&
+      isUpsellSectionPlacement(p.key),
+  );
+
+  return { programGroups, otherPlacements };
+}
+
 function OfferSelect({
   offers,
   value,
@@ -50,6 +104,9 @@ function PlacementEditor({
     offer_headline_bg: placement.offer_headline_bg,
     offer_headline_en: placement.offer_headline_en,
     offer_enabled: placement.offer_enabled,
+    button_label_bg: placement.button_label_bg ?? "",
+    button_label_en: placement.button_label_en ?? "",
+    button_url: placement.button_url ?? "",
   });
 
   function save() {
@@ -61,6 +118,9 @@ function PlacementEditor({
         offer_headline_bg: form.offer_headline_bg,
         offer_headline_en: form.offer_headline_en,
         offer_enabled: form.offer_enabled,
+        button_label_bg: form.button_label_bg,
+        button_label_en: form.button_label_en,
+        button_url: form.button_url,
       });
       if (!res.ok) {
         setError(res.message || "Failed");
@@ -95,6 +155,47 @@ function PlacementEditor({
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <Field
+          label="Текст на бутона (BG)"
+          hint="Празно = текстът от страницата по подразбиране"
+        >
+          <Input
+            value={form.button_label_bg}
+            onChange={(e) => {
+              setForm({ ...form, button_label_bg: e.target.value });
+              setSaved(false);
+            }}
+            placeholder="Включи се днес"
+          />
+        </Field>
+        <Field
+          label="Текст на бутона (EN)"
+          hint="Празно = default from page content"
+        >
+          <Input
+            value={form.button_label_en}
+            onChange={(e) => {
+              setForm({ ...form, button_label_en: e.target.value });
+              setSaved(false);
+            }}
+            placeholder="Join today"
+          />
+        </Field>
+        <div className="md:col-span-2">
+          <Field
+            label="Линк на бутона"
+            hint="Stripe checkout, WhatsApp (https://wa.me/…), #includes или /bg#shop"
+          >
+            <Input
+              value={form.button_url}
+              onChange={(e) => {
+                setForm({ ...form, button_url: e.target.value });
+                setSaved(false);
+              }}
+              placeholder="https://buy.stripe.com/…"
+            />
+          </Field>
+        </div>
         <Field label="Продукт за popup">
           <OfferSelect
             offers={offers}
@@ -174,12 +275,13 @@ export function CtaPlacementsPanel({
     (p) => !isProductPlacementKey(p.key) && isUpsellSectionPlacement(p.key),
   );
   const productPlacements = sortedPlacements.filter((p) => isProductPlacementKey(p.key));
+  const { programGroups, otherPlacements } = groupSitePlacements(sitePlacements);
 
   if (placements.length === 0) {
     return (
       <p className="text-sm text-ink-soft">
         Няма бутони — пусни миграцията{" "}
-        <code className="text-xs">013_offers_upsell_downsell.sql</code>
+        <code className="text-xs">044_cta_placement_buttons.sql</code> в Supabase SQL Editor.
       </p>
     );
   }
@@ -187,20 +289,40 @@ export function CtaPlacementsPanel({
   return (
     <div className="space-y-6">
       <p className="text-sm text-ink-soft">
-        Popup с допълнителна оферта при клик. Ако и двата продукта имат{" "}
-        <strong>Stripe Price ID</strong>, бутонът „Да, искам и двете“ отваря една сметка с
-        общата цена (продукт + upsell).
+        Текст и линк на бутона (Stripe, WhatsApp и т.н.) + по избор popup с допълнителна
+        оферта при клик. Празни полета за текст/линк = стойностите от кода на страницата.
       </p>
+      {!placements.some((p) => p.key === "programs_1_secondary") && (
+        <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
+          Липсват бутони за „Виж какво включва“ и плащане — пусни миграцията{" "}
+          <code className="text-xs">044_cta_placement_buttons.sql</code> в Supabase SQL Editor
+          и презареди страницата.
+        </p>
+      )}
       {offers.length === 0 && (
         <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
           Първо създай поне един продукт в таб „Продукти“.
         </p>
       )}
 
-      {sitePlacements.length > 0 && (
+      {programGroups.map((group) => (
+        <div key={group.title} className="space-y-4">
+          <h3 className="text-sm font-semibold text-ink">{group.title}</h3>
+          {group.placements.map((p) => (
+            <PlacementEditor
+              key={p.key}
+              placement={p}
+              offers={offers}
+              onSaved={() => router.refresh()}
+            />
+          ))}
+        </div>
+      ))}
+
+      {otherPlacements.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-ink">Секции на сайта</h3>
-          {sitePlacements.map((p) => (
+          <h3 className="text-sm font-semibold text-ink">Други секции на сайта</h3>
+          {otherPlacements.map((p) => (
             <PlacementEditor
               key={p.key}
               placement={p}
@@ -244,7 +366,7 @@ export function WebsiteTabs({
     { id: "guides", label: "Ръководства" },
     { id: "events", label: "Събития" },
     { id: "videos", label: "Видеа" },
-    { id: "buttons", label: "Popup upsell" },
+    { id: "buttons", label: "Бутони" },
   ];
 
   return (

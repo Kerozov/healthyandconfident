@@ -421,5 +421,10 @@ export type SiteCtaPlacement = {
   offer_headline_bg: string;
   offer_headline_en: string;
   offer_enabled: boolean;
+  /** Override visible button text (empty = default from page content). */
+  button_label_bg: string;
+  button_label_en: string;
+  /** Override link: Stripe, WhatsApp, #section (empty = default from page content). */
+  button_url: string;
   updated_at: string;
 };

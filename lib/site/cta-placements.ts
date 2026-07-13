@@ -26,7 +26,8 @@ export type CtaPlacementKey = (typeof CTA_PLACEMENT_KEYS)[number];
 export function isUpsellSectionPlacement(key: string): boolean {
   return (
     key.startsWith("product_") ||
-    (UPSELL_SECTION_PLACEMENT_KEYS as readonly string[]).includes(key)
+    (UPSELL_SECTION_PLACEMENT_KEYS as readonly string[]).includes(key) ||
+    /^programs_\d+_(secondary|pricing_\d+)$/.test(key)
   );
 }
 
@@ -107,6 +108,32 @@ export function placementLabel(placement: SiteCtaPlacement, locale: Locale): str
   return locale === "bg" ? placement.label_bg : placement.label_en;
 }
 
+export function programSecondaryPlacementKey(baseKey: string): string {
+  return `${baseKey}_secondary`;
+}
+
+export function programPricingPlacementKey(baseKey: string, index: number): string {
+  return `${baseKey}_pricing_${index}`;
+}
+
+/** Admin-editable button text/URL with fallback from page content. */
+export function resolvePlacementButton(
+  placements: Record<string, SiteCtaPlacement>,
+  key: string,
+  locale: Locale,
+  fallback: { label: string; href: string },
+): { label: string; href: string } {
+  const placement = placements[key];
+  const customLabel = (
+    locale === "bg" ? placement?.button_label_bg : placement?.button_label_en
+  )?.trim();
+  const customHref = placement?.button_url?.trim();
+  return {
+    label: customLabel || fallback.label,
+    href: customHref || fallback.href,
+  };
+}
+
 /** Human-readable labels for admin (also applied via migration 017). */
 export const SPEAKING_PLACEMENT_LABELS: Record<
   string,
@@ -117,8 +144,8 @@ export const SPEAKING_PLACEMENT_LABELS: Record<
     label_en: "Programs — “Side dishes” card (€3)",
   },
   programs_1: {
-    label_bg: "Програма „Живей без резистентност“ — бутон „Кандидатствай“",
-    label_en: "Program “Live Without Resistance” — “Apply now” button",
+    label_bg: "Живей без резистентност — „Включи се днес“ (горен бутон)",
+    label_en: "Live Without Resistance — “Join today” (hero primary)",
   },
   programs_2: {
     label_bg: "Програма „Препрограмирай апетита“ — бутон „Научи повече“",

@@ -972,7 +972,7 @@ export function WebsiteManager({
       )}
 
       {tab === "buttons" && (
-        <Card title="Popup upsell">
+        <Card title="Бутони на сайта">
           <CtaPlacementsPanel placements={ctaPlacements} offers={products} />
         </Card>
       )}

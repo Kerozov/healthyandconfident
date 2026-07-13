@@ -11,6 +11,31 @@ import { cn } from "@/lib/utils";
 
 const HERO_IMAGE = "/images/5.jpg";
 
+function HeroSuccessOverlay({ locale }: { locale: Locale }) {
+  const label =
+    locale === "bg" ? "доказан успех при клиентите" : "proven client success";
+
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/95 via-slate-900/55 to-transparent px-4 pb-4 pt-20 sm:px-5 sm:pb-5 sm:pt-24">
+      <div className="flex items-end gap-3 sm:gap-4">
+        <p className="font-display text-[2.75rem] font-semibold tabular-nums leading-none text-white sm:text-5xl">
+          94<span className="text-gold-300">%</span>
+        </p>
+        <p className="mb-1 max-w-[9.5rem] text-[11px] font-medium leading-snug text-slate-200/95 sm:mb-1.5 sm:max-w-[11rem] sm:text-xs">
+          {label}
+        </p>
+      </div>
+      <div
+        className="mt-3 h-1 overflow-hidden rounded-full bg-white/15 sm:mt-3.5"
+        role="presentation"
+        aria-hidden
+      >
+        <div className="h-full w-[94%] rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-300 shadow-[0_0_12px_rgba(212,168,67,0.45)]" />
+      </div>
+    </div>
+  );
+}
+
 export function Hero({
   dict,
   locale,
@@ -86,7 +111,7 @@ export function Hero({
         </div>
 
         <div className="order-2 mx-auto w-full max-w-sm sm:max-w-md lg:order-2 lg:max-w-none">
-          <div className="relative">
+          <figure className="group">
             <div
               className={cn(
                 "relative overflow-hidden rounded-2xl shadow-soft ring-1 ring-forest-100/80",
@@ -99,24 +124,14 @@ export function Hero({
                 fill
                 priority
                 sizes="(max-width: 640px) 90vw, (max-width: 1024px) 85vw, 480px"
-                imageClassName="object-cover object-[center_18%]"
+                imageClassName="object-cover object-[center_18%] transition duration-700 group-hover:scale-[1.02]"
               />
+              <HeroSuccessOverlay locale={locale} />
             </div>
-
-            <div className="mx-auto mt-3 max-w-[14rem] rounded-xl border border-forest-100 bg-white px-3.5 py-3 shadow-lg sm:absolute sm:-bottom-3 sm:left-5 sm:mx-0 sm:mt-0 sm:max-w-[13rem] sm:px-4 sm:py-3.5 lg:-left-4">
-              <p className="font-display text-3xl font-semibold leading-none text-forest-500 sm:text-4xl">
-                94%
-              </p>
-              <p className="mt-1 text-[11px] font-medium leading-snug text-ink-soft sm:mt-1.5 sm:text-xs">
-                {locale === "bg"
-                  ? "доказан успех при клиентите"
-                  : "proven client success"}
-              </p>
-            </div>
-          </div>
-          <p className="mt-5 text-center text-xs text-ink-soft sm:mt-6 sm:text-sm lg:text-left">
-            {hero.imageAlt}
-          </p>
+            <figcaption className="mt-4 text-center text-sm font-medium text-slate-700 sm:text-base lg:text-left">
+              {hero.imageAlt}
+            </figcaption>
+          </figure>
         </div>
       </Container>
     </section>

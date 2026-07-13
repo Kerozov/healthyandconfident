@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 
 export function AutomationDiagnostics() {
   const [email, setEmail] = useState("");
+  const [simulateSource, setSimulateSource] = useState("");
+  const [simulateIsNew, setSimulateIsNew] = useState<boolean | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -19,7 +21,10 @@ export function AutomationDiagnostics() {
     setError(null);
     setResult(null);
     startTransition(async () => {
-      const res = await diagnoseAutomationsForEmail(email);
+      const res = await diagnoseAutomationsForEmail(email, {
+        simulateSource: simulateSource.trim() || undefined,
+        simulateIsNew: simulateIsNew ?? undefined,
+      });
       if (!res.ok) {
         setError(res.message);
         return;
@@ -63,6 +68,44 @@ export function AutomationDiagnostics() {
         </button>
       </div>
 
+      <div className="mt-3 grid gap-2 rounded-xl border border-ink/10 bg-cream-2/30 p-3 sm:grid-cols-2">
+        <label className="block text-xs">
+          <span className="font-medium text-ink">Симулирай източник (по избор)</span>
+          <input
+            type="text"
+            value={simulateSource}
+            onChange={(e) => setSimulateSource(e.target.value)}
+            placeholder="form:slug, purchase, free-menu-banner…"
+            className="mt-1 h-10 w-full rounded-lg border border-ink/15 px-3 text-sm"
+          />
+        </label>
+        <label className="block text-xs">
+          <span className="font-medium text-ink">Първи път в списъка?</span>
+          <select
+            value={
+              simulateIsNew === null
+                ? "auto"
+                : simulateIsNew
+                  ? "yes"
+                  : "no"
+            }
+            onChange={(e) => {
+              const v = e.target.value;
+              setSimulateIsNew(v === "auto" ? null : v === "yes");
+            }}
+            className="mt-1 h-10 w-full rounded-lg border border-ink/15 px-3 text-sm"
+          >
+            <option value="auto">Авто (нов ако няма в базата)</option>
+            <option value="yes">Да — нов</option>
+            <option value="no">Не — вече записан</option>
+          </select>
+        </label>
+        <p className="text-xs text-ink-soft sm:col-span-2">
+          Празно при източник = използва записания източник на абоната. Симулацията
+          показва какво би станало при ново събитие (форма, покупка и т.н.).
+        </p>
+      </div>
+
       {error && <p className="mt-3 text-sm text-coral-600">{error}</p>}
 
       {d && (
@@ -81,12 +124,17 @@ export function AutomationDiagnostics() {
             <StatusRow
               ok={d.triggerEvents.length > 0}
               label="Тригер"
-              value={d.triggerEvents.join(", ") || `source="${d.source}" не задейства`}
+              value={d.triggerEvents.join(", ") || `няма при source="${d.source}"`}
             />
             <StatusRow
-              ok={d.enabledRulesForTrigger > 0}
-              label="Включени автоматизации"
-              value={String(d.enabledRulesForTrigger)}
+              ok={d.totalRules > 0}
+              label="Всички автоматизации"
+              value={String(d.totalRules)}
+            />
+            <StatusRow
+              ok={d.matchingTriggerCount > 0}
+              label="Съвпадащ тригер"
+              value={String(d.matchingTriggerCount)}
             />
             <StatusRow
               ok={d.wouldSendCount > 0}
@@ -103,8 +151,8 @@ export function AutomationDiagnostics() {
           <div className="rounded-lg bg-cream-2/40 p-3 text-xs text-ink-soft">
             <span className="font-medium text-ink">Абонат:</span>{" "}
             {result?.subscriberFound
-              ? `намерен · тагове: ${d.tags.join(", ") || "няма"}`
-              : "НЕ е намерен в базата (симулация като нов). Провери имейла."}
+              ? `намерен · source: ${d.source} · isNew=${String(d.isNew)} · тагове: ${d.tags.join(", ") || "няма"}`
+              : `НЕ е намерен (симулация: source=${d.source}, isNew=${String(d.isNew)})`}
           </div>
 
           {d.notes.length > 0 && (
@@ -133,6 +181,7 @@ export function AutomationDiagnostics() {
                 <thead>
                   <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
                     <th className="px-3 py-2">Автоматизация</th>
+                    <th className="px-3 py-2">Тригер</th>
                     <th className="px-3 py-2">Канал</th>
                     <th className="px-3 py-2">Резултат</th>
                     <th className="px-3 py-2">Причина</th>
@@ -140,8 +189,17 @@ export function AutomationDiagnostics() {
                 </thead>
                 <tbody>
                   {d.rules.map((rule, i) => (
-                    <tr key={i} className="border-b border-ink/5 last:border-0">
+                    <tr
+                      key={i}
+                      className={cn(
+                        "border-b border-ink/5 last:border-0",
+                        !rule.enabled && "opacity-60",
+                      )}
+                    >
                       <td className="px-3 py-2 font-medium">{rule.name}</td>
+                      <td className="px-3 py-2 text-xs text-ink-soft">
+                        {rule.triggerEvent}
+                      </td>
                       <td className="px-3 py-2 text-ink-soft">{rule.channel}</td>
                       <td className="px-3 py-2">
                         {rule.wouldSend ? (
@@ -204,10 +262,15 @@ const REASONS: Record<string, string> = {
     "чака предходния имейл от веригата да се изпрати",
   chained_delay_not_from_parent: "част от верига — стартира се от родителя",
   "ще изпрати": "ще изпрати",
+  изключена: "автоматизацията е изключена",
+  "отписан имейл": "имейлът е отписан",
 };
 
 function translateReason(reason: string): string {
   if (REASONS[reason]) return REASONS[reason];
+  if (reason.startsWith("trigger:")) {
+    return `тригерът не съвпада — ${reason.replace("trigger: ", "")}`;
+  }
   if (reason.startsWith("audience")) {
     return `аудиторията не съвпада — ${reason.replace("audience ", "")}`;
   }

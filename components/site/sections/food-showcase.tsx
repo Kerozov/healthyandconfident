@@ -3,7 +3,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaByCategory, mediaIntrinsicSize } from "@/lib/site/media-gallery";
+import { mediaByCategory } from "@/lib/site/media-gallery";
 
 const FOOD_ITEMS = mediaByCategory("food");
 const FEATURED = "/images/11.jpg";
@@ -20,7 +20,6 @@ export function FoodShowcase({
     FOOD_ITEMS.find((f) => f.src === src)?.alt[locale] ?? foodGallery.featuredAlt;
 
   const gridItems = FOOD_ITEMS.filter((f) => f.src !== FEATURED);
-  const featuredSize = mediaIntrinsicSize(FEATURED);
 
   return (
     <section id="food" className="section-pad scroll-mt-24 bg-white">
@@ -35,64 +34,42 @@ export function FoodShowcase({
           </p>
         </div>
 
-        <figure className="mt-12 overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-forest-100">
-          <SiteImage
-            src={FEATURED}
-            alt={altFor(FEATURED)}
-            width={featuredSize.width}
-            height={featuredSize.height}
-            sizes="(max-width: 1200px) 100vw, 1152px"
-            className="h-auto w-full"
-          />
-          <figcaption className="border-t border-forest-100 bg-cream px-6 py-5 sm:px-8">
-            <p className="font-display text-lg font-semibold text-slate-800">
-              {foodGallery.featuredCaption}
-            </p>
-            <p className="mt-1 text-sm text-ink-soft">{foodGallery.featuredNote}</p>
-          </figcaption>
+        <figure className="relative mt-10 overflow-hidden rounded-3xl bg-cream shadow-card ring-1 ring-forest-100 sm:mt-12">
+          <div className="relative aspect-[16/10] w-full sm:aspect-[21/9]">
+            <SiteImage
+              src={FEATURED}
+              alt={altFor(FEATURED)}
+              fill
+              sizes="(max-width: 1200px) 100vw, 1152px"
+              imageClassName="object-cover"
+              priority={false}
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent px-5 pb-5 pt-16 sm:px-8 sm:pb-6">
+              <figcaption>
+                <p className="font-display text-lg font-semibold text-white sm:text-xl">
+                  {foodGallery.featuredCaption}
+                </p>
+                <p className="mt-1 text-sm text-slate-200">{foodGallery.featuredNote}</p>
+              </figcaption>
+            </div>
+          </div>
         </figure>
 
-        <div className="mt-6 grid grid-cols-2 items-start gap-3 sm:gap-4 lg:grid-cols-4">
-          {gridItems.slice(0, 4).map((item) => {
-            const size = mediaIntrinsicSize(item.src);
-            return (
-              <figure
-                key={item.src}
-                className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-forest-100"
-              >
+        <ul className="mt-4 grid grid-cols-2 gap-2.5 sm:mt-5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3">
+          {gridItems.map((item) => (
+            <li key={item.src}>
+              <figure className="relative aspect-square overflow-hidden rounded-2xl bg-cream ring-1 ring-forest-100/80">
                 <SiteImage
                   src={item.src}
                   alt={altFor(item.src)}
-                  width={size.width}
-                  height={size.height}
-                  sizes="(max-width: 1024px) 50vw, 25vw"
-                  className="h-auto w-full"
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 360px"
+                  imageClassName="object-cover transition duration-500 hover:scale-[1.04]"
                 />
               </figure>
-            );
-          })}
-        </div>
-
-        <div className="mt-3 grid grid-cols-3 items-start gap-3 sm:gap-4">
-          {gridItems.slice(4).map((item) => {
-            const size = mediaIntrinsicSize(item.src);
-            return (
-              <figure
-                key={item.src}
-                className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-forest-100"
-              >
-                <SiteImage
-                  src={item.src}
-                  alt={altFor(item.src)}
-                  width={size.width}
-                  height={size.height}
-                  sizes="(max-width: 768px) 33vw, 20vw"
-                  className="h-auto w-full"
-                />
-              </figure>
-            );
-          })}
-        </div>
+            </li>
+          ))}
+        </ul>
 
         <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {foodGallery.highlights.map((line) => (
@@ -106,7 +83,7 @@ export function FoodShowcase({
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-center gap-2.5 sm:mt-10 sm:flex-row sm:gap-3">
+        <div className="mt-10 flex flex-col items-center justify-center gap-2.5 sm:flex-row sm:gap-3">
           <Button href={`/${locale}#programs`} variant="primary" size="lg" className="w-full sm:w-auto">
             {foodGallery.cta}
           </Button>
