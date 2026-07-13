@@ -6,6 +6,7 @@ import { Plus, Save, X } from "lucide-react";
 import type { SiteGuide, SiteSection } from "@/lib/supabase/types";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { saveSiteGuide, deleteSiteGuide } from "@/app/(admin)/admin/actions";
+import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { GuideAdminGrid } from "@/components/admin/guide-admin-grid";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
@@ -16,7 +17,7 @@ const EMPTY_GUIDE = {
   description_bg: "",
   description_en: "",
   stripe_url: "",
-  stripe_price_id: "",
+  stripe_id: "",
   price_label_bg: "",
   price_label_en: "",
   image_url: "",
@@ -112,7 +113,7 @@ export function GuidesManagerPanel({
       description_bg: guide.description_bg,
       description_en: guide.description_en,
       stripe_url: guide.stripe_url,
-      stripe_price_id: guide.stripe_price_id ?? "",
+      stripe_id: formatStripeIdInput({ stripe_price_id: guide.stripe_price_id }),
       price_label_bg: guide.price_label_bg,
       price_label_en: guide.price_label_en,
       image_url: guide.image_url ?? "",
@@ -163,8 +164,8 @@ export function GuidesManagerPanel({
       }
     >
       <p className="mb-4 text-sm text-ink-soft">
-        PDF ръководства и дигитални продукти със Stripe линк и Price ID — показват се в секция
-        „Ръководства“ на сайта.
+        PDF ръководства — добави с <strong>Stripe Price ID</strong> или <strong>Product ID</strong>.
+        По избор Payment Link. Безплатните материали не изискват Stripe.
       </p>
       <SectionToggle section={guidesSection} onSaved={refresh} />
 
@@ -206,18 +207,24 @@ export function GuidesManagerPanel({
                 onChange={(e) => setForm({ ...form, description_en: e.target.value })}
               />
             </Field>
-            <Field label="Stripe линк">
+            <Field
+              label="Stripe Price ID или Product ID"
+              hint="price_… или prod_… — плащане през сайта"
+            >
+              <Input
+                value={form.stripe_id}
+                onChange={(e) => setForm({ ...form, stripe_id: e.target.value })}
+                placeholder="price_1ABC… или prod_1ABC…"
+              />
+            </Field>
+            <Field
+              label="Payment Link (по избор)"
+              hint="buy.stripe.com — ако е попълнен, плащането минава през него"
+            >
               <Input
                 value={form.stripe_url}
                 onChange={(e) => setForm({ ...form, stripe_url: e.target.value })}
                 placeholder="https://buy.stripe.com/..."
-              />
-            </Field>
-            <Field label="Stripe Price ID" hint="price_… от Stripe Dashboard">
-              <Input
-                value={form.stripe_price_id}
-                onChange={(e) => setForm({ ...form, stripe_price_id: e.target.value })}
-                placeholder="price_1ABC..."
               />
             </Field>
             <ImageUploadField
@@ -251,7 +258,11 @@ export function GuidesManagerPanel({
             <button
               type="button"
               onClick={save}
-              disabled={pending || !form.title_bg.trim() || !form.stripe_url.trim()}
+              disabled={
+                pending ||
+                !form.title_bg.trim() ||
+                (!form.stripe_url.trim() && !isValidStripeIdInput(form.stripe_id))
+              }
               className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
             >
               <Save className="h-4 w-4" /> Запази

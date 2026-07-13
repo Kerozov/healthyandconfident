@@ -3,6 +3,7 @@
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteGuide } from "@/lib/supabase/types";
+import { startGuideCheckout } from "@/lib/site/stripe-checkout";
 
 function GuideCardImage({ src, alt }: { src: string; alt: string }) {
   return (
@@ -37,16 +38,23 @@ export function GuidesGrid({
         const price =
           locale === "bg" ? guide.price_label_bg : guide.price_label_en;
         const checkoutUrl = guide.stripe_url?.trim() ?? "";
+        const hasSiteCheckout = Boolean(guide.stripe_price_id?.trim());
+        const canCheckout = Boolean(checkoutUrl || hasSiteCheckout);
 
         return (
           <button
             key={guide.id}
             type="button"
             onClick={() => {
-              if (!checkoutUrl) return;
-              window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+              if (checkoutUrl) {
+                window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+                return;
+              }
+              if (hasSiteCheckout) {
+                void startGuideCheckout(guide.id, locale).catch(() => {});
+              }
             }}
-            disabled={!checkoutUrl}
+            disabled={!canCheckout}
             className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             {guide.image_url ? (

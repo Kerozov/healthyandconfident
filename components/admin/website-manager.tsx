@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -25,6 +25,8 @@ import type {
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
+import { productPlacementKey } from "@/lib/site/product-placement";
+import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { CtaPlacementsPanel, WebsiteTabs } from "@/components/admin/website-cta-panel";
 import {
   saveSiteSection,
@@ -34,11 +36,9 @@ import {
   deleteSiteVideo,
   saveSiteProduct,
   deleteSiteProduct,
-  syncSiteProductFromStripe,
 } from "@/app/(admin)/admin/actions";
 import { GuidesManagerPanel } from "@/components/admin/guides-manager";
 import { ProductAdminGrid } from "@/components/admin/product-admin-grid";
-import { StripeCatalogPanel } from "@/components/admin/stripe-catalog-panel";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { cn } from "@/lib/utils";
@@ -151,8 +151,7 @@ const EMPTY_PRODUCT = {
   description_bg: "",
   description_en: "",
   stripe_url: "",
-  stripe_product_id: "",
-  stripe_price_id: "",
+  stripe_id: "",
   price_label_bg: "",
   price_label_en: "",
   image_url: "",
@@ -160,6 +159,10 @@ const EMPTY_PRODUCT = {
   headline_en: "",
   cta_label_bg: "",
   cta_label_en: "",
+  upsell_offer_id: "",
+  upsell_offer_enabled: false,
+  upsell_offer_headline_bg: "",
+  upsell_offer_headline_en: "",
   purchase_tags: [] as string[],
   enabled: true,
   sort_order: 0,
@@ -198,20 +201,10 @@ export function WebsiteManager({
   const [eventForm, setEventForm] = useState(EMPTY_EVENT);
   const [videoForm, setVideoForm] = useState(EMPTY_VIDEO);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
-  const [pendingEditProductId, setPendingEditProductId] = useState<string | null>(null);
 
   const eventsSection = sections.events ?? DEFAULT_SITE_SECTIONS.events;
   const productsSection = sections.products ?? DEFAULT_SITE_SECTIONS.products;
   const videosSection = sections.videos ?? DEFAULT_SITE_SECTIONS.videos;
-
-  useEffect(() => {
-    if (!pendingEditProductId) return;
-    const product = products.find((p) => p.id === pendingEditProductId);
-    if (product) {
-      openEditProduct(product);
-      setPendingEditProductId(null);
-    }
-  }, [products, pendingEditProductId]);
 
   function refresh() {
     router.refresh();
@@ -317,6 +310,7 @@ export function WebsiteManager({
   }
 
   function openEditProduct(product: SiteProduct) {
+    const placement = ctaPlacements.find((p) => p.key === productPlacementKey(product.id));
     setEditingProductId(product.id);
     setProductForm({
       title_bg: product.title_bg,
@@ -324,8 +318,7 @@ export function WebsiteManager({
       description_bg: product.description_bg,
       description_en: product.description_en,
       stripe_url: product.stripe_url,
-      stripe_product_id: product.stripe_product_id ?? "",
-      stripe_price_id: product.stripe_price_id ?? "",
+      stripe_id: formatStripeIdInput(product),
       price_label_bg: product.price_label_bg,
       price_label_en: product.price_label_en,
       image_url: product.image_url ?? "",
@@ -333,6 +326,10 @@ export function WebsiteManager({
       headline_en: product.headline_en ?? "",
       cta_label_bg: product.cta_label_bg ?? "",
       cta_label_en: product.cta_label_en ?? "",
+      upsell_offer_id: placement?.offer_id ?? "",
+      upsell_offer_enabled: placement?.offer_enabled ?? false,
+      upsell_offer_headline_bg: placement?.offer_headline_bg ?? "",
+      upsell_offer_headline_en: placement?.offer_headline_en ?? "",
       purchase_tags: product.purchase_tags ?? [],
       enabled: product.enabled,
       sort_order: product.sort_order,
@@ -340,30 +337,10 @@ export function WebsiteManager({
     setError(null);
   }
 
-  function openEditProductById(productId: string) {
-    const product = products.find((p) => p.id === productId);
-    if (product) openEditProduct(product);
-  }
-
   function canSaveProduct() {
     if (!productForm.title_bg.trim()) return false;
     if (productForm.stripe_url.trim()) return true;
-    return Boolean(
-      productForm.stripe_price_id.trim() || productForm.stripe_product_id.trim(),
-    );
-  }
-
-  function syncProductFromStripe() {
-    if (!editingProductId || editingProductId === "new") return;
-    setError(null);
-    startTransition(async () => {
-      const res = await syncSiteProductFromStripe(editingProductId);
-      if (!res.ok) {
-        setError(res.message || "Синхронизацията неуспешна");
-        return;
-      }
-      refresh();
-    });
+    return isValidStripeIdInput(productForm.stripe_id);
   }
 
   function saveProduct() {
@@ -373,6 +350,7 @@ export function WebsiteManager({
         id: editingProductId === "new" ? undefined : editingProductId!,
         ...productForm,
         purchase_tags: productForm.purchase_tags,
+        upsell_offer_id: productForm.upsell_offer_id || null,
       });
       if (!res.ok) {
         setError(res.message || "Failed");
@@ -425,16 +403,10 @@ export function WebsiteManager({
           }
         >
           <p className="mb-4 text-sm text-ink-soft">
-            Продукти от Stripe — в магазина на сайта или само за автоматизации и popup.
-            Можеш да ползваш Stripe линк <em>или</em> Product/Price ID за плащане през сайта.
+            Добави продукт ръчно с <strong>Stripe Price ID</strong> (<code>price_…</code>) или{" "}
+            <strong>Product ID</strong> (<code>prod_…</code> — взима default цената). По избор
+            Payment Link вместо checkout през сайта.
           </p>
-          <StripeCatalogPanel
-            onEditProduct={openEditProductById}
-            onImported={(productId) => {
-              setPendingEditProductId(productId);
-              refresh();
-            }}
-          />
           <SectionToggle section={productsSection} onSaved={refresh} />
 
           {editingProductId ? (
@@ -487,8 +459,20 @@ export function WebsiteManager({
                   />
                 </Field>
                 <Field
-                  label="Stripe линк"
-                  hint="По избор — buy.stripe.com. Ако липсва, плащането минава през сайта (трябва Price ID)."
+                  label="Stripe Price ID или Product ID"
+                  hint="price_… за checkout през сайта, или prod_… — default цената се взима от Stripe"
+                >
+                  <Input
+                    value={productForm.stripe_id}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, stripe_id: e.target.value })
+                    }
+                    placeholder="price_1ABC… или prod_1ABC…"
+                  />
+                </Field>
+                <Field
+                  label="Payment Link (по избор)"
+                  hint="buy.stripe.com — ако е попълнен, плащането минава през него вместо checkout през сайта"
                 >
                   <Input
                     value={productForm.stripe_url}
@@ -496,30 +480,6 @@ export function WebsiteManager({
                       setProductForm({ ...productForm, stripe_url: e.target.value })
                     }
                     placeholder="https://buy.stripe.com/..."
-                  />
-                </Field>
-                <Field
-                  label="Stripe Product ID"
-                  hint="prod_… — default цената (price_…) се взима автоматично от Stripe"
-                >
-                  <Input
-                    value={productForm.stripe_product_id}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, stripe_product_id: e.target.value })
-                    }
-                    placeholder="prod_1ABC..."
-                  />
-                </Field>
-                <Field
-                  label="Stripe Price ID"
-                  hint="price_… — попълва се автоматично от default цената на продукта"
-                >
-                  <Input
-                    value={productForm.stripe_price_id}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, stripe_price_id: e.target.value })
-                    }
-                    placeholder="price_1ABC..."
                   />
                 </Field>
                 <ImageUploadField
@@ -583,6 +543,70 @@ export function WebsiteManager({
                 </Field>
               </div>
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
+                <p className="text-sm font-semibold text-forest-800">Popup преди плащане (по избор)</p>
+                <p className="text-xs text-ink-soft">
+                  Показва се при клик върху този продукт в магазина, преди Stripe checkout.
+                </p>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={productForm.upsell_offer_enabled}
+                    onChange={(e) =>
+                      setProductForm({
+                        ...productForm,
+                        upsell_offer_enabled: e.target.checked,
+                      })
+                    }
+                  />
+                  Покажи допълнителна оферта
+                </label>
+                <Field label="Продукт за popup">
+                  <Select
+                    value={productForm.upsell_offer_id}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, upsell_offer_id: e.target.value })
+                    }
+                  >
+                    <option value="">— Без popup —</option>
+                    {products
+                      .filter((p) => p.id !== editingProductId)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title_bg}
+                          {!p.enabled ? " (скрит)" : ""}
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field
+                    label="Заглавие popup — BG"
+                    hint={`Празно = ${DEFAULT_OFFER_HEADLINE.bg}`}
+                  >
+                    <Input
+                      value={productForm.upsell_offer_headline_bg}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          upsell_offer_headline_bg: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field label="Заглавие popup — EN">
+                    <Input
+                      value={productForm.upsell_offer_headline_en}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          upsell_offer_headline_en: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                </div>
+              </div>
+              <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
                 <p className="text-sm font-semibold text-forest-800">Тагове при покупка</p>
                 <p className="text-xs text-ink-soft">
                   Добавят се към абоната след успешно плащане. Полезни за сегменти и кампании.
@@ -616,16 +640,6 @@ export function WebsiteManager({
                 >
                   <Save className="h-4 w-4" /> Запази
                 </button>
-                {editingProductId !== "new" && productForm.stripe_product_id.trim() && (
-                  <button
-                    type="button"
-                    onClick={syncProductFromStripe}
-                    disabled={pending}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-forest-500/30 px-5 text-sm font-medium text-forest-700 hover:bg-forest-50 disabled:opacity-60"
-                  >
-                    Синхронизирай цена от Stripe
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={() => setEditingProductId(null)}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import { productPlacementKey } from "@/lib/site/product-placement";
 import { productPlacementLabel } from "@/lib/site/cta-placements";
+import { parseStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { enrichStripePriceFromProduct } from "@/lib/stripe/sync-product";
 import {
   getStripeCatalogForAdmin,
@@ -2232,11 +2233,21 @@ async function syncProductPlacement(
   productId: string,
   title_bg: string,
   title_en: string,
+  upsell?: {
+    offer_id?: string | null;
+    offer_enabled?: boolean;
+    offer_headline_bg?: string;
+    offer_headline_en?: string;
+  },
 ): Promise<ActionResult> {
   const { error } = await supabase.from("site_cta_placements").upsert(
     {
       key: productPlacementKey(productId),
       ...productPlacementLabel(title_bg, title_en),
+      offer_id: upsell?.offer_id || null,
+      offer_enabled: upsell?.offer_enabled ?? false,
+      offer_headline_bg: upsell?.offer_headline_bg?.trim() ?? "",
+      offer_headline_en: upsell?.offer_headline_en?.trim() ?? "",
       updated_at: new Date().toISOString(),
     },
     { onConflict: "key" },
@@ -2381,7 +2392,8 @@ export async function saveSiteGuide(input: {
   title_en: string;
   description_bg?: string;
   description_en?: string;
-  stripe_url: string;
+  stripe_url?: string;
+  stripe_id?: string;
   stripe_price_id?: string;
   price_label_bg?: string;
   price_label_en?: string;
@@ -2396,8 +2408,25 @@ export async function saveSiteGuide(input: {
   if (!titleBg) {
     return { ok: false, message: "Попълни име на ръководството (BG)." };
   }
-  if (!input.stripe_url?.trim()) {
-    return { ok: false, message: "Попълни Stripe линк." };
+
+  const stripeUrl = input.stripe_url?.trim() ?? "";
+  const parsed = parseStripeIdInput(
+    input.stripe_id?.trim() || input.stripe_price_id?.trim() || "",
+  );
+  let stripePriceId = parsed.stripe_price_id;
+  try {
+    const enriched = await enrichStripePriceFromProduct(parsed);
+    stripePriceId = enriched.stripe_price_id;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe lookup failed";
+    return { ok: false, message };
+  }
+
+  if (!stripeUrl && !stripePriceId) {
+    return {
+      ok: false,
+      message: "Попълни Stripe Price/Product ID или Payment Link.",
+    };
   }
 
   const row = {
@@ -2405,8 +2434,8 @@ export async function saveSiteGuide(input: {
     title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
     description_en: input.description_en?.trim() ?? "",
-    stripe_url: input.stripe_url.trim(),
-    stripe_price_id: input.stripe_price_id?.trim() ?? "",
+    stripe_url: stripeUrl,
+    stripe_price_id: stripePriceId,
     price_label_bg: input.price_label_bg?.trim() ?? "",
     price_label_en: input.price_label_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
@@ -2459,6 +2488,7 @@ export async function saveSiteProduct(input: {
   description_bg?: string;
   description_en?: string;
   stripe_url?: string;
+  stripe_id?: string;
   stripe_product_id?: string;
   stripe_price_id?: string;
   price_label_bg?: string;
@@ -2471,6 +2501,10 @@ export async function saveSiteProduct(input: {
   enabled?: boolean;
   sort_order?: number;
   purchase_tags?: string[];
+  upsell_offer_id?: string | null;
+  upsell_offer_enabled?: boolean;
+  upsell_offer_headline_bg?: string;
+  upsell_offer_headline_en?: string;
 }): Promise<ActionResult & { id?: string }> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -2480,9 +2514,15 @@ export async function saveSiteProduct(input: {
     return { ok: false, message: "Попълни име на продукта (BG)." };
   }
 
+  const parsed = parseStripeIdInput(
+    input.stripe_id?.trim() ||
+      input.stripe_price_id?.trim() ||
+      input.stripe_product_id?.trim() ||
+      "",
+  );
   let stripeIds = {
-    stripe_product_id: input.stripe_product_id?.trim() ?? "",
-    stripe_price_id: input.stripe_price_id?.trim() ?? "",
+    stripe_product_id: parsed.stripe_product_id,
+    stripe_price_id: parsed.stripe_price_id,
   };
   try {
     stripeIds = await enrichStripePriceFromProduct(stripeIds);
@@ -2495,10 +2535,16 @@ export async function saveSiteProduct(input: {
   if (!stripeUrl && !stripeIds.stripe_price_id) {
     return {
       ok: false,
-      message:
-        "Попълни Stripe линк или Stripe Product/Price ID (за плащане през сайта).",
+      message: "Попълни Stripe Price/Product ID (price_… или prod_…) или Payment Link.",
     };
   }
+
+  const upsell = {
+    offer_id: input.upsell_offer_id || null,
+    offer_enabled: input.upsell_offer_enabled ?? false,
+    offer_headline_bg: input.upsell_offer_headline_bg?.trim() ?? "",
+    offer_headline_en: input.upsell_offer_headline_en?.trim() ?? "",
+  };
 
   const row = {
     title_bg: titleBg,
@@ -2526,7 +2572,13 @@ export async function saveSiteProduct(input: {
   if (input.id) {
     const { error } = await supabase.from("site_products").update(row).eq("id", input.id);
     if (error) return { ok: false, message: error.message };
-    const sync = await syncProductPlacement(supabase, input.id, row.title_bg, row.title_en);
+    const sync = await syncProductPlacement(
+      supabase,
+      input.id,
+      row.title_bg,
+      row.title_en,
+      upsell,
+    );
     if (!sync.ok) return sync;
     revalidateSitePaths();
     return { ok: true, id: input.id };
@@ -2539,7 +2591,13 @@ export async function saveSiteProduct(input: {
     .single();
   if (error) return { ok: false, message: error.message };
   const productId = (data as { id: string }).id;
-  const sync = await syncProductPlacement(supabase, productId, row.title_bg, row.title_en);
+  const sync = await syncProductPlacement(
+    supabase,
+    productId,
+    row.title_bg,
+    row.title_en,
+    upsell,
+  );
   if (!sync.ok) return sync;
   revalidateSitePaths();
   return { ok: true, id: productId };
