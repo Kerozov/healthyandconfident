@@ -202,7 +202,7 @@ export const en: Dictionary = {
     title: "Before & after — real transformations",
     subtitle:
       "94% success rate with Vessie's clients. See what the journey looks like — with tasty food, structure and support, not starvation.",
-    beforeAfterCaption: "A real client result from the program — before and after",
+    beforeAfterCaption: "Before and after collage — a real client result from the program",
     stats: [
       { value: "94%", label: "client success rate" },
       { value: "5–15", label: "kg lost sustainably in 3 months" },
@@ -219,11 +219,13 @@ export const en: Dictionary = {
     clientsTitle: "Happy, confident clients",
     clientsSubtitle:
       "After real results — more energy, confidence and joy in everyday life.",
+    beforeLabel: "Before",
+    afterLabel: "After",
     clientCaptions: [
-      "More confidence after transformation",
       "Active, healthy lifestyle",
-      "Energy and joy every day",
+      "More confidence after transformation",
       "Confidence and a healthy lifestyle",
+      "Energy and joy every day",
     ],
   },
   testimonials: {

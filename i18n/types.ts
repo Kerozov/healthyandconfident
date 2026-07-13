@@ -201,6 +201,8 @@ export type Dictionary = {
     awardsTitle: string;
     clientsTitle: string;
     clientsSubtitle: string;
+    beforeLabel: string;
+    afterLabel: string;
     clientCaptions: string[];
   };
   footer: {

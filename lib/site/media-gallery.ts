@@ -133,44 +133,44 @@ export const siteMedia: SiteMediaItem[] = [
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Резултат преди и след — трайно отслабване с програмата на Веси Ней",
-      en: "Before and after result — lasting weight loss with Vessie Nay's program",
+      bg: "Колаж преди и след — трайно отслабване с програмата на Веси Ней",
+      en: "Before and after collage — lasting weight loss with Vessie Nay's program",
     },
   },
   {
-    src: "/images/14.jpg",
+    src: "/images/14-before.jpg",
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Клиентка след успешна трансформация — повече увереност и енергия",
-      en: "Client after a successful transformation — more confidence and energy",
+      bg: "Клиентка преди трансформацията",
+      en: "Client before transformation",
     },
   },
   {
-    src: "/images/15.jpg",
+    src: "/images/14-after.jpg",
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Щастлива клиентка след отслабване — активен и уверен начин на живот",
-      en: "Happy client after weight loss — active and confident lifestyle",
+      bg: "Клиентка след трансформацията — повече увереност и енергия",
+      en: "Client after transformation — more confidence and energy",
     },
   },
   {
-    src: "/images/16.jpg",
+    src: "/images/15-before.jpg",
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Клиентка с постигнати резултати — здравословен начин на живот на открито",
-      en: "Client with achieved results — healthy lifestyle outdoors",
+      bg: "Клиентка преди програмата",
+      en: "Client before the program",
     },
   },
   {
-    src: "/images/17.jpg",
+    src: "/images/15-after.jpg",
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Клиентка след програмата — повече увереност и енергия",
-      en: "Client after the program — more confidence and energy",
+      bg: "Клиентка след програмата — радост и енергия всеки ден",
+      en: "Client after the program — joy and energy every day",
     },
   },
 ];

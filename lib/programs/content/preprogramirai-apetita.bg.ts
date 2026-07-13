@@ -1,5 +1,6 @@
 import type { ProgramLandingContent } from "../types";
 import { PROGRAM_FOOD_IMAGES, PROGRAM_VESI_IMAGES } from "../images";
+import { CLIENT_TRANSFORMATION_PAIRS } from "@/lib/site/transformation-images";
 
 const whatsapp = "https://wa.me/447876565263";
 /** Замени с реалните Stripe линкове от PDF, когато ги имаш */
@@ -211,8 +212,8 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
       "Сашо вече има настроение и си играе с децата",
       "Верчето просто сияе",
     ],
-    beforeImage: "/images/14.jpg",
-    afterImage: "/images/15.jpg",
+    beforeImage: CLIENT_TRANSFORMATION_PAIRS[0].before,
+    afterImage: CLIENT_TRANSFORMATION_PAIRS[0].after,
     audienceTitle: "За кого е:",
     audienceBullets: [
       "За заети жени, които искат",

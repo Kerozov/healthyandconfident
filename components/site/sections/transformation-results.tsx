@@ -5,13 +5,14 @@ import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaByCategory, mediaIntrinsicSize } from "@/lib/site/media-gallery";
+import {
+  CLIENT_TRANSFORMATION_IMAGES,
+  TRANSFORMATION_COLLAGE,
+  isTransformationBeforeImage,
+} from "@/lib/site/transformation-images";
+import { cn } from "@/lib/utils";
 
-const CLIENT_RESULTS = [
-  "/images/14.jpg",
-  "/images/15.jpg",
-  "/images/16.jpg",
-  "/images/17.jpg",
-];
+const CLIENT_RESULTS = CLIENT_TRANSFORMATION_IMAGES;
 
 export function TransformationResults({
   dict,
@@ -24,7 +25,7 @@ export function TransformationResults({
   const resultMedia = mediaByCategory("result");
   const altFor = (src: string) =>
     resultMedia.find((r) => r.src === src)?.alt[locale] ?? "";
-  const mainSrc = "/images/13.jpg";
+  const mainSrc = TRANSFORMATION_COLLAGE;
   const mainSize = mediaIntrinsicSize(mainSrc);
 
   return (
@@ -88,7 +89,11 @@ export function TransformationResults({
             {results.clientsSubtitle}
           </p>
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-            {CLIENT_RESULTS.map((src, i) => (
+            {CLIENT_RESULTS.map((src, i) => {
+              const isBefore = isTransformationBeforeImage(src);
+              const phaseLabel = isBefore ? results.beforeLabel : results.afterLabel;
+
+              return (
               <figure
                 key={src}
                 className="overflow-hidden rounded-xl bg-white shadow-card ring-1 ring-forest-100"
@@ -101,6 +106,16 @@ export function TransformationResults({
                     sizes="(max-width: 1024px) 50vw, 25vw"
                     imageClassName="object-cover object-center"
                   />
+                  <span
+                    className={cn(
+                      "absolute left-2 top-2 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide sm:left-3 sm:top-3 sm:px-3 sm:text-xs",
+                      isBefore
+                        ? "bg-white/95 text-slate-700 ring-1 ring-slate-200"
+                        : "bg-forest-600 text-white shadow-sm",
+                    )}
+                  >
+                    {phaseLabel}
+                  </span>
                 </div>
                 {results.clientCaptions[i] && (
                   <figcaption className="px-3 py-2.5 text-center text-[11px] leading-snug text-ink-soft">
@@ -108,7 +123,8 @@ export function TransformationResults({
                   </figcaption>
                 )}
               </figure>
-            ))}
+              );
+            })}
           </div>
         </div>
       </Container>
