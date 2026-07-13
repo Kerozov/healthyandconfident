@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -34,9 +34,11 @@ import {
   deleteSiteVideo,
   saveSiteProduct,
   deleteSiteProduct,
+  syncSiteProductFromStripe,
 } from "@/app/(admin)/admin/actions";
 import { GuidesManagerPanel } from "@/components/admin/guides-manager";
 import { ProductAdminGrid } from "@/components/admin/product-admin-grid";
+import { StripeCatalogPanel } from "@/components/admin/stripe-catalog-panel";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { cn } from "@/lib/utils";
@@ -196,10 +198,20 @@ export function WebsiteManager({
   const [eventForm, setEventForm] = useState(EMPTY_EVENT);
   const [videoForm, setVideoForm] = useState(EMPTY_VIDEO);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
+  const [pendingEditProductId, setPendingEditProductId] = useState<string | null>(null);
 
   const eventsSection = sections.events ?? DEFAULT_SITE_SECTIONS.events;
   const productsSection = sections.products ?? DEFAULT_SITE_SECTIONS.products;
   const videosSection = sections.videos ?? DEFAULT_SITE_SECTIONS.videos;
+
+  useEffect(() => {
+    if (!pendingEditProductId) return;
+    const product = products.find((p) => p.id === pendingEditProductId);
+    if (product) {
+      openEditProduct(product);
+      setPendingEditProductId(null);
+    }
+  }, [products, pendingEditProductId]);
 
   function refresh() {
     router.refresh();
@@ -328,6 +340,32 @@ export function WebsiteManager({
     setError(null);
   }
 
+  function openEditProductById(productId: string) {
+    const product = products.find((p) => p.id === productId);
+    if (product) openEditProduct(product);
+  }
+
+  function canSaveProduct() {
+    if (!productForm.title_bg.trim()) return false;
+    if (productForm.stripe_url.trim()) return true;
+    return Boolean(
+      productForm.stripe_price_id.trim() || productForm.stripe_product_id.trim(),
+    );
+  }
+
+  function syncProductFromStripe() {
+    if (!editingProductId || editingProductId === "new") return;
+    setError(null);
+    startTransition(async () => {
+      const res = await syncSiteProductFromStripe(editingProductId);
+      if (!res.ok) {
+        setError(res.message || "Синхронизацията неуспешна");
+        return;
+      }
+      refresh();
+    });
+  }
+
   function saveProduct() {
     setError(null);
     startTransition(async () => {
@@ -387,9 +425,16 @@ export function WebsiteManager({
           }
         >
           <p className="mb-4 text-sm text-ink-soft">
-            Продукти със Stripe линк, показвани в отделна секция „Магазин“ на сайта. В таб{" "}
-            <strong>Popup upsell</strong> избираш кой продукт да излиза като popup при клик.
+            Продукти от Stripe — в магазина на сайта или само за автоматизации и popup.
+            Можеш да ползваш Stripe линк <em>или</em> Product/Price ID за плащане през сайта.
           </p>
+          <StripeCatalogPanel
+            onEditProduct={openEditProductById}
+            onImported={(productId) => {
+              setPendingEditProductId(productId);
+              refresh();
+            }}
+          />
           <SectionToggle section={productsSection} onSaved={refresh} />
 
           {editingProductId ? (
@@ -441,7 +486,10 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Stripe линк">
+                <Field
+                  label="Stripe линк"
+                  hint="По избор — buy.stripe.com. Ако липсва, плащането минава през сайта (трябва Price ID)."
+                >
                   <Input
                     value={productForm.stripe_url}
                     onChange={(e) =>
@@ -559,17 +607,25 @@ export function WebsiteManager({
                 />
                 Активен продукт
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={saveProduct}
-                  disabled={
-                    pending || !productForm.title_bg.trim() || !productForm.stripe_url.trim()
-                  }
+                  disabled={pending || !canSaveProduct()}
                   className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
                 >
                   <Save className="h-4 w-4" /> Запази
                 </button>
+                {editingProductId !== "new" && productForm.stripe_product_id.trim() && (
+                  <button
+                    type="button"
+                    onClick={syncProductFromStripe}
+                    disabled={pending}
+                    className="inline-flex h-10 items-center gap-2 rounded-full border border-forest-500/30 px-5 text-sm font-medium text-forest-700 hover:bg-forest-50 disabled:opacity-60"
+                  >
+                    Синхронизирай цена от Stripe
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setEditingProductId(null)}

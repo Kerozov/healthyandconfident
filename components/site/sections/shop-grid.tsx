@@ -4,6 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { productPlacementKey } from "@/lib/site/product-placement";
+import { startStripeCheckout } from "@/lib/site/stripe-checkout";
 import { useOfferPopup } from "@/components/site/offer-popup";
 
 export function ShopProductGrid({
@@ -23,11 +24,22 @@ export function ShopProductGrid({
 
   function openProduct(product: SiteProduct) {
     const checkoutUrl = product.stripe_url?.trim() ?? "";
-    if (!checkoutUrl) return;
-    const placementKey = productPlacementKey(product.id);
-    if (!tryOpenPlacement(placementKey, checkoutUrl, product)) {
-      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+    const hasSiteCheckout = Boolean(product.stripe_price_id?.trim());
+
+    async function goCheckout() {
+      if (checkoutUrl) {
+        const placementKey = productPlacementKey(product.id);
+        if (!tryOpenPlacement(placementKey, checkoutUrl, product)) {
+          window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+        }
+        return;
+      }
+      if (hasSiteCheckout) {
+        await startStripeCheckout([product.id], locale);
+      }
     }
+
+    void goCheckout().catch(() => {});
   }
 
   return (
@@ -39,13 +51,14 @@ export function ShopProductGrid({
         const price =
           locale === "bg" ? product.price_label_bg : product.price_label_en;
         const checkoutUrl = product.stripe_url?.trim() ?? "";
+        const canCheckout = Boolean(checkoutUrl || product.stripe_price_id?.trim());
 
         return (
           <button
             key={product.id}
             type="button"
             onClick={() => openProduct(product)}
-            disabled={!checkoutUrl}
+            disabled={!canCheckout}
             className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">

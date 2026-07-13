@@ -5,6 +5,12 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { productPlacementKey } from "@/lib/site/product-placement";
 import { productPlacementLabel } from "@/lib/site/cta-placements";
 import { enrichStripePriceFromProduct } from "@/lib/stripe/sync-product";
+import {
+  getStripeCatalogForAdmin,
+  refreshSiteProductFromStripe,
+  siteProductRowFromStripeCatalog,
+} from "@/lib/admin/stripe-catalog";
+import type { StripeCatalogItem } from "@/lib/admin/stripe-product-types";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
   sendEmail,
@@ -2380,7 +2386,7 @@ export async function saveSiteProduct(input: {
   title_en: string;
   description_bg?: string;
   description_en?: string;
-  stripe_url: string;
+  stripe_url?: string;
   stripe_product_id?: string;
   stripe_price_id?: string;
   price_label_bg?: string;
@@ -2401,9 +2407,6 @@ export async function saveSiteProduct(input: {
   if (!titleBg) {
     return { ok: false, message: "Попълни име на продукта (BG)." };
   }
-  if (!input.stripe_url?.trim()) {
-    return { ok: false, message: "Попълни Stripe линк." };
-  }
 
   let stripeIds = {
     stripe_product_id: input.stripe_product_id?.trim() ?? "",
@@ -2416,12 +2419,21 @@ export async function saveSiteProduct(input: {
     return { ok: false, message };
   }
 
+  const stripeUrl = input.stripe_url?.trim() ?? "";
+  if (!stripeUrl && !stripeIds.stripe_price_id) {
+    return {
+      ok: false,
+      message:
+        "Попълни Stripe линк или Stripe Product/Price ID (за плащане през сайта).",
+    };
+  }
+
   const row = {
     title_bg: titleBg,
     title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
     description_en: input.description_en?.trim() ?? "",
-    stripe_url: input.stripe_url.trim(),
+    stripe_url: stripeUrl,
     stripe_product_id: stripeIds.stripe_product_id,
     stripe_price_id: stripeIds.stripe_price_id,
     price_label_bg: input.price_label_bg?.trim() ?? "",
@@ -2470,6 +2482,106 @@ export async function deleteSiteProduct(id: string): Promise<ActionResult> {
     .from("site_cta_placements")
     .delete()
     .eq("key", productPlacementKey(id));
+  revalidateSitePaths();
+  return { ok: true };
+}
+
+export async function fetchStripeCatalog(): Promise<
+  ActionResult & { items?: StripeCatalogItem[] }
+> {
+  await requireAdmin();
+  try {
+    const items = await getStripeCatalogForAdmin();
+    return { ok: true, items };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe catalog failed";
+    return { ok: false, message };
+  }
+}
+
+export async function importStripeProduct(
+  stripeProductId: string,
+): Promise<ActionResult & { id?: string }> {
+  await requireAdmin();
+  const prodId = stripeProductId.trim();
+  if (!prodId.startsWith("prod_")) {
+    return { ok: false, message: "Невалиден Stripe Product ID." };
+  }
+
+  const supabase = getAdminClient();
+  const { data: existing } = await supabase
+    .from("site_products")
+    .select("id")
+    .eq("stripe_product_id", prodId)
+    .maybeSingle();
+
+  if (existing) {
+    return { ok: true, id: (existing as { id: string }).id };
+  }
+
+  const catalog = await refreshSiteProductFromStripe(prodId);
+  if (!catalog) {
+    return { ok: false, message: "Продуктът не е намерен в Stripe." };
+  }
+
+  const { count } = await supabase
+    .from("site_products")
+    .select("id", { count: "exact", head: true });
+  const sortOrder = ((count ?? 0) + 1) * 10;
+  const row = siteProductRowFromStripeCatalog(catalog, sortOrder);
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("site_products")
+    .insert({ ...row, updated_at: now })
+    .select("id")
+    .single();
+
+  if (error) return { ok: false, message: error.message };
+  const productId = (data as { id: string }).id;
+  const sync = await syncProductPlacement(supabase, productId, row.title_bg, row.title_en);
+  if (!sync.ok) return sync;
+  revalidateSitePaths();
+  return { ok: true, id: productId };
+}
+
+export async function syncSiteProductFromStripe(
+  siteProductId: string,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+  const { data: product, error } = await supabase
+    .from("site_products")
+    .select("*")
+    .eq("id", siteProductId)
+    .single();
+
+  if (error || !product) {
+    return { ok: false, message: error?.message ?? "Продуктът не е намерен." };
+  }
+
+  const stripeProductId = (product as { stripe_product_id?: string }).stripe_product_id?.trim();
+  if (!stripeProductId) {
+    return { ok: false, message: "Няма Stripe Product ID за синхронизация." };
+  }
+
+  const catalog = await refreshSiteProductFromStripe(stripeProductId);
+  if (!catalog) {
+    return { ok: false, message: "Продуктът не е намерен в Stripe." };
+  }
+
+  const { error: updateError } = await supabase
+    .from("site_products")
+    .update({
+      stripe_price_id: catalog.stripePriceId ?? "",
+      price_label_bg: catalog.priceLabel || (product as { price_label_bg: string }).price_label_bg,
+      price_label_en: catalog.priceLabel || (product as { price_label_en: string }).price_label_en,
+      image_url: catalog.imageUrl ?? (product as { image_url: string | null }).image_url,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", siteProductId);
+
+  if (updateError) return { ok: false, message: updateError.message };
   revalidateSitePaths();
   return { ok: true };
 }

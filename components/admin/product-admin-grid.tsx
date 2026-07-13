@@ -97,6 +97,11 @@ export function ProductAdminGrid({
             >
               {product.enabled ? "Активен" : "Скрит"}
             </span>
+            {!product.stripe_url?.trim() && product.stripe_price_id?.trim() && (
+              <span className="absolute left-2 top-2 rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                Checkout през сайта
+              </span>
+            )}
           </div>
           <div className="flex flex-1 flex-col p-4">
             {product.price_label_bg && (
