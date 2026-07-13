@@ -49,6 +49,14 @@ import { EmailTemplatePreview } from "@/components/admin/email-template-preview"
 import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
 import { PurchaseProductPicker } from "@/components/admin/purchase-product-picker";
 import { SignupSourcePicker } from "@/components/admin/signup-source-picker";
+import { SubscriberOriginPicker } from "@/components/admin/subscriber-origin-picker";
+import {
+  ALL_SUBSCRIBER_ORIGINS,
+  DEFAULT_SUBSCRIBER_ORIGINS,
+  formatSubscriberOriginsLine,
+  subscriberOriginsFromStored,
+  type SubscriberOrigin,
+} from "@/lib/automation/subscriber-origins";
 import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -71,15 +79,19 @@ function buildSchedulePreview(
     send_time: string;
     send_date: string;
     after_automation_id: string;
+    subscriber_origins: SubscriberOrigin[];
     new_subscribers_only: boolean;
   },
   triggerLabel: string,
   afterName?: string,
 ): string {
   const time = form.send_time || "09:00";
-  const audience = form.new_subscribers_only
-    ? "само при първо добавяне"
-    : "нови и съществуващи";
+  const originsLine = formatSubscriberOriginsLine(form.subscriber_origins);
+  const audience = originsLine
+    ? originsLine
+    : form.new_subscribers_only
+      ? "нови + вече регистрирани (по подразбиране)"
+      : "всички типове запис";
 
   let when: string;
   if (form.send_date.trim()) {
@@ -194,8 +206,11 @@ function triggerSummary(a: Automation): string {
   return t?.label ?? a.trigger_event;
 }
 
-function audienceSummary(newOnly: boolean): string {
-  return newOnly ? "само нови" : "нови + стари";
+function audienceSummary(a: Automation): string {
+  const line = formatSubscriberOriginsLine(
+    subscriberOriginsFromStored(a.subscriber_origins, a.new_subscribers_only),
+  );
+  return line ? `тип: ${line}` : "тип: по подразбиране";
 }
 
 type AutomationRow = Automation & AutomationStats;
@@ -320,6 +335,7 @@ const EMPTY_FORM = {
   exclude_segment_keys: [] as string[],
   purchase_product_ids: [] as string[],
   signup_sources: [] as string[],
+  subscriber_origins: [...DEFAULT_SUBSCRIBER_ORIGINS] as SubscriberOrigin[],
   new_subscribers_only: true,
   after_automation_id: "" as string,
   delay_days: 0,
@@ -358,6 +374,10 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     exclude_segment_keys: a.exclude_segment_keys ?? [],
     purchase_product_ids: a.purchase_product_ids ?? [],
     signup_sources: a.signup_sources ?? [],
+    subscriber_origins: subscriberOriginsFromStored(
+      a.subscriber_origins,
+      a.new_subscribers_only,
+    ),
     new_subscribers_only: a.new_subscribers_only,
     after_automation_id: a.after_automation_id ?? "",
     delay_days: a.delay_days ?? 0,
@@ -471,6 +491,10 @@ export function AutomationsManager({
       exclude_segment_keys: [...(parent.exclude_segment_keys ?? [])],
       purchase_product_ids: [...(parent.purchase_product_ids ?? [])],
       signup_sources: [...(parent.signup_sources ?? [])],
+      subscriber_origins: subscriberOriginsFromStored(
+        parent.subscriber_origins,
+        parent.new_subscribers_only,
+      ),
       new_subscribers_only: parent.new_subscribers_only,
       after_automation_id: parent.id,
       delay_days: 0,
@@ -754,7 +778,10 @@ export function AutomationsManager({
                       ...form,
                       trigger_event,
                       ...(trigger_event === "purchase"
-                        ? { new_subscribers_only: false }
+                        ? {
+                            subscriber_origins: [...ALL_SUBSCRIBER_ORIGINS],
+                            new_subscribers_only: false,
+                          }
                         : {}),
                     });
                   }}
@@ -791,28 +818,28 @@ export function AutomationsManager({
               </div>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <TogglePair
-                label="Статус"
-                value={form.enabled}
-                onChange={(enabled) => setForm({ ...form, enabled })}
-                options={{ trueLabel: "Включена", falseLabel: "Изкл." }}
-                disabled={pending}
-              />
-              <TogglePair
-                label="Кой получава"
-                value={form.new_subscribers_only}
-                onChange={(new_subscribers_only) =>
-                  setForm({ ...form, new_subscribers_only })
-                }
-                options={{
-                  trueLabel: "Само нови",
-                  falseLabel: "Нови + стари",
-                }}
-                hint="„Нови + стари“ включва и вече записани при нов запис от сайта. Същият имейл не се праща повторно, ако вече е получил тази стъпка."
-                disabled={pending}
-              />
-            </div>
+            <TogglePair
+              label="Статус"
+              value={form.enabled}
+              onChange={(enabled) => setForm({ ...form, enabled })}
+              options={{ trueLabel: "Включена", falseLabel: "Изкл." }}
+              disabled={pending}
+            />
+
+            {form.trigger_event !== "purchase" && (
+              <div className="rounded-xl border border-violet-500/25 bg-violet-50/30 p-4 space-y-3">
+                <p className="text-sm font-semibold text-violet-900">
+                  Тип на записа
+                </p>
+                <SubscriberOriginPicker
+                  selected={form.subscriber_origins}
+                  onChange={(subscriber_origins) =>
+                    setForm({ ...form, subscriber_origins })
+                  }
+                  disabled={pending}
+                />
+              </div>
+            )}
 
             <div className="rounded-xl border border-ink/10 bg-white p-3 space-y-3 sm:p-4">
               <p className="text-sm font-semibold text-ink">Аудитория</p>
@@ -890,7 +917,9 @@ export function AutomationsManager({
 
             {form.trigger_event !== "purchase" && (
               <div className="rounded-xl border border-sky-500/25 bg-sky-50/30 p-4 space-y-3">
-                <p className="text-sm font-semibold text-sky-900">Източник на записване</p>
+                <p className="text-sm font-semibold text-sky-900">
+                  Само при запис от избран източник
+                </p>
                 <SignupSourcePicker
                   forms={forms}
                   selected={form.signup_sources}
@@ -1355,7 +1384,7 @@ export function AutomationsManager({
                     {triggerSummary(a)}
                     {audienceLine && ` · ${audienceLine}`}
                     {signupSourcesLine && ` · източник: ${signupSourcesLine}`}
-                    {` · ${audienceSummary(a.new_subscribers_only)}`}
+                    {` · ${audienceSummary(a)}`}
                   </p>
                   <p className="mt-1 text-sm font-medium text-forest-700">
                     {scheduleSummary(a, automations)}

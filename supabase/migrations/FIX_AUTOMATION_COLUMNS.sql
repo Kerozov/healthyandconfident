@@ -78,6 +78,18 @@ alter table public.email_campaigns
 alter table public.form_templates
   add column if not exists hero_image_url text;
 
+alter table public.automations
+  add column if not exists subscriber_origins text[] not null default '{}';
+
+update public.automations
+set subscriber_origins = case
+  when new_subscribers_only = false then
+    array['new', 'existing_registered', 'manual', 'import']::text[]
+  else
+    array['new', 'existing_registered']::text[]
+end
+where coalesce(array_length(subscriber_origins, 1), 0) = 0;
+
 create table if not exists public.subscriber_purchases (
   id                 uuid primary key default gen_random_uuid(),
   subscriber_id      uuid references public.subscribers(id) on delete set null,

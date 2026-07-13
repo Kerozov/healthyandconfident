@@ -125,6 +125,8 @@ export type Automation = {
   purchase_product_ids: string[];
   /** Optional signup origin filter (popup, form slug, free menu, etc.). Empty = any. */
   signup_sources: string[];
+  /** new | existing_registered | manual | import — empty uses legacy new_subscribers_only */
+  subscriber_origins: string[];
   new_subscribers_only: boolean;
   after_automation_id: string | null;
   delay_days: number;

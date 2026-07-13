@@ -42,6 +42,7 @@ import {
   getCampaignClickCountsByEmail,
 } from "@/lib/campaign/sync-deliveries";
 import { renderEmailTemplate } from "@/lib/automation/template";
+import { deriveNewSubscribersOnly } from "@/lib/automation/subscriber-origins";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
 import type { Automation, AutomationDelivery, SiteSectionKey } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
@@ -275,6 +276,7 @@ type AutomationInput = {
   exclude_segment_keys?: string[];
   purchase_product_ids?: string[];
   signup_sources?: string[];
+  subscriber_origins?: string[];
   new_subscribers_only: boolean;
   after_automation_id?: string | null;
   delay_days?: number;
@@ -324,6 +326,14 @@ function validatePurchaseAutomation(input: AutomationInput): string | null {
   return null;
 }
 
+function automationOriginsPayload(input: AutomationInput) {
+  const subscriber_origins = input.subscriber_origins?.filter(Boolean) ?? [];
+  return {
+    subscriber_origins,
+    new_subscribers_only: deriveNewSubscribersOnly(subscriber_origins),
+  };
+}
+
 export async function createAutomation(
   input: AutomationInput,
 ): Promise<ActionResult & { id?: string }> {
@@ -331,10 +341,12 @@ export async function createAutomation(
   const purchaseErr = validatePurchaseAutomation(input);
   if (purchaseErr) return { ok: false, message: purchaseErr };
   const supabase = getAdminClient();
+  const origins = automationOriginsPayload(input);
   const { data, error } = await supabase
     .from("automations")
     .insert({
       ...input,
+      ...origins,
       audience_logic: input.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
@@ -368,10 +380,12 @@ export async function updateAutomation(
   const purchaseErr = validatePurchaseAutomation(input);
   if (purchaseErr) return { ok: false, message: purchaseErr };
   const supabase = getAdminClient();
+  const origins = automationOriginsPayload(input);
   const { error } = await supabase
     .from("automations")
     .update({
       ...input,
+      ...origins,
       audience_logic: input.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
@@ -768,6 +782,26 @@ export async function importSubscribers(input: {
 
       if (existing) updated += 1;
       else created += 1;
+
+      if (payload.status === "subscribed") {
+        const isNew = !existing;
+        const { data: row } = await supabase
+          .from("subscribers")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+
+        void runAutomations({
+          email,
+          name: payload.name,
+          phone: payload.phone,
+          locale: payload.locale,
+          subscriberId: (row as { id: string } | null)?.id ?? null,
+          tags: mergedTags,
+          isNew,
+          source: "import",
+        });
+      }
     } catch (err) {
       failed += 1;
       if (errors.length < 5) {

@@ -893,4 +893,17 @@ alter table public.email_campaigns
 alter table public.form_templates
   add column if not exists hero_image_url text;
 
-select 'Upgrade complete (012–042 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 043: subscriber origin filter (new / re-signup / manual / import)
+alter table public.automations
+  add column if not exists subscriber_origins text[] not null default '{}';
+
+update public.automations
+set subscriber_origins = case
+  when new_subscribers_only = false then
+    array['new', 'existing_registered', 'manual', 'import']::text[]
+  else
+    array['new', 'existing_registered']::text[]
+end
+where coalesce(array_length(subscriber_origins, 1), 0) = 0;
+
+select 'Upgrade complete (012–043 applied). Also run 007_automations.sql if not yet applied.' as result;

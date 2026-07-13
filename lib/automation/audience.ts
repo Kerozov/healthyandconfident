@@ -1,5 +1,6 @@
 import type { Automation, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { signupSourceMatches } from "@/lib/automation/signup-sources";
+import { subscriberOriginMatches } from "@/lib/automation/subscriber-origins";
 import {
   expandAudienceKeys,
   getSegmentKeysForGroup,
@@ -41,6 +42,17 @@ export function automationMatchesSignupSource(
   source?: string | null,
 ): boolean {
   return signupSourceMatches(automation.signup_sources ?? [], source);
+}
+
+export function automationMatchesSubscriberOrigin(
+  automation: Automation,
+  ctx: { isNew: boolean; source?: string | null },
+): boolean {
+  return subscriberOriginMatches(
+    automation.subscriber_origins ?? [],
+    { isNew: ctx.isNew, source: ctx.source ?? undefined },
+    automation.new_subscribers_only,
+  );
 }
 
 /** Whether a subscriber should receive this automation (include + exclude rules). */

@@ -2,7 +2,7 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
-import { subscriberMatchesAutomationAudience, automationMatchesPurchaseProducts, automationMatchesSignupSource } from "@/lib/automation/audience";
+import { subscriberMatchesAutomationAudience, automationMatchesPurchaseProducts, automationMatchesSignupSource, automationMatchesSubscriberOrigin } from "@/lib/automation/audience";
 import { expandAudienceKeys } from "@/lib/segments/hierarchy";
 import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
 import { buildBrandedEmail } from "@/lib/email/compose";
@@ -44,16 +44,7 @@ export type AutomationRunContext = {
   purchasedProductIds?: string[];
 };
 
-function isSiteSignupSource(source: string): boolean {
-  const s = (source || "").toLowerCase();
-  if (!s) return true;
-  if (s === "purchase" || s === "manual" || s === "import" || s === "system") {
-    return false;
-  }
-  return true;
-}
-
-function resolveTriggerEvents(
+import { isSiteSignupSource } from "@/lib/automation/subscriber-origins";
   source: string,
   isNew: boolean,
 ): Array<"purchase" | "new_subscriber" | "registration"> {
@@ -80,18 +71,14 @@ export type AutomationRunReport = {
 };
 
 /** Purchase automations run for every buyer, including existing subscribers. */
-function passesNewSubscriberGate(
+function passesSubscriberOriginGate(
   automation: Automation,
   ctx: AutomationRunContext,
 ): boolean {
-  if (!automation.new_subscribers_only) return true;
   if (ctx.source === "purchase" && automation.trigger_event === "purchase") {
     return true;
   }
-  if (ctx.isNew) return true;
-  // Free menu / popup for an existing email still runs (unless already sent).
-  if (isSiteSignupSource(ctx.source ?? "")) return true;
-  return false;
+  return automationMatchesSubscriberOrigin(automation, ctx);
 }
 
 /**
@@ -283,7 +270,7 @@ async function scheduleChainedFromParent(
   const parentAt = new Date(parentSendAt);
   for (const rule of (data as Automation[]) ?? []) {
     const email = ctx.email.trim().toLowerCase();
-    if (!passesNewSubscriberGate(rule, ctx)) continue;
+    if (!passesSubscriberOriginGate(rule, ctx)) continue;
     if (!passesPurchaseSegmentEntryGate(rule, ctx, segments, groups)) continue;
     if (!segmentMatches(rule, ctx.tags ?? [], segments, groups)) continue;
     if (
@@ -575,8 +562,8 @@ async function passesAutomationGates(
   const email = ctx.email.trim().toLowerCase();
   const tags = ctx.tags ?? [];
 
-  if (!passesNewSubscriberGate(automation, ctx)) {
-    return { ok: false, reason: "new_subscribers_only" };
+  if (!passesSubscriberOriginGate(automation, ctx)) {
+    return { ok: false, reason: "subscriber_origin" };
   }
   if (!passesPurchaseSegmentEntryGate(automation, ctx, segments, groups)) {
     return { ok: false, reason: "purchase_segment_gate" };

@@ -26,6 +26,10 @@ import type {
 } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
+import {
+  formatSubscriberOriginsLine,
+  subscriberOriginsFromStored,
+} from "@/lib/automation/subscriber-origins";
 
 type AutomationRow = Automation & AutomationStats;
 
@@ -278,6 +282,12 @@ function FlowCard({
   onSelect?: (automation: AutomationRow) => void;
 }) {
   const signupLine = formatSignupSourcesLine(automation.signup_sources ?? []);
+  const originLine = formatSubscriberOriginsLine(
+    subscriberOriginsFromStored(
+      automation.subscriber_origins,
+      automation.new_subscribers_only,
+    ),
+  );
 
   return (
     <button
@@ -335,9 +345,9 @@ function FlowCard({
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-ink-soft">
-        {automation.new_subscribers_only
-          ? "👤 Само при първо добавяне на имейла"
-          : "👥 Нов и съществуващ имейл в списъка"}
+        {originLine
+          ? `👤 Тип запис: ${originLine}`
+          : "👤 Тип запис: по подразбиране (нови + вече регистрирани)"}
       </p>
 
       <div className="mt-3 rounded-lg bg-cream/80 p-2.5">

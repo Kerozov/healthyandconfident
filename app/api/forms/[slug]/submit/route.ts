@@ -8,6 +8,7 @@ import {
   tagsFromMappedAnswers,
 } from "@/lib/forms/answer-tags";
 import type { FormField } from "@/lib/forms/types";
+import { runAutomations } from "@/lib/automation/run";
 
 function extractEmail(
   fields: FormField[],
@@ -27,6 +28,16 @@ function extractEmail(
     }
   }
   return null;
+}
+
+/** If the form has consent checkboxes, at least one must be checked for marketing. */
+function hasMarketingConsent(
+  fields: FormField[],
+  answers: Record<string, unknown>,
+): boolean {
+  const consentFields = fields.filter((f) => f.type === "consent");
+  if (consentFields.length === 0) return true;
+  return consentFields.some((f) => Boolean(answers[f.id]));
 }
 
 export async function POST(
@@ -123,8 +134,9 @@ export async function POST(
   const fixedTags = resolveTagsOnSubmit(form.settings);
   const answerTags = tagsFromMappedAnswers(fields, answers);
   const hasTagWork = fixedTags.length > 0 || answerTags.length > 0;
+  const formSource = `form:${slug}`;
 
-  if (email && hasTagWork) {
+  if (email && hasMarketingConsent(fields, answers)) {
     const { data: subRow } = await supabase
       .from("subscribers")
       .select("id, tags")
@@ -132,16 +144,22 @@ export async function POST(
       .maybeSingle();
 
     const sub = subRow as { id: string; tags: string[] } | null;
-    const nextTags = mergeAnswerTagsIntoSubscriber(
-      sub?.tags ?? [],
-      answerTags,
-      fixedTags,
-    );
+    const priorTags = sub?.tags ?? [];
+    const nextTags = hasTagWork
+      ? mergeAnswerTagsIntoSubscriber(priorTags, answerTags, fixedTags)
+      : priorTags;
+    const isNew = !sub;
 
     if (sub) {
+      subscriberId = sub.id;
       await supabase
         .from("subscribers")
-        .update({ tags: nextTags, updated_at: new Date().toISOString() })
+        .update({
+          tags: nextTags,
+          source: formSource,
+          locale,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", sub.id);
     } else {
       const { data: inserted } = await supabase
@@ -149,7 +167,7 @@ export async function POST(
         .insert({
           email,
           locale,
-          source: `form:${slug}`,
+          source: formSource,
           tags: nextTags,
           status: "subscribed",
           consent: true,
@@ -157,7 +175,8 @@ export async function POST(
         .select("id")
         .single();
 
-      const newId = (inserted as { id: string } | null)?.id;
+      const newId = (inserted as { id: string } | null)?.id ?? null;
+      subscriberId = newId;
       if (newId) {
         await supabase
           .from("form_submissions")
@@ -166,6 +185,20 @@ export async function POST(
           .eq("email", email)
           .is("subscriber_id", null);
       }
+    }
+
+    try {
+      await runAutomations({
+        email,
+        locale,
+        subscriberId: subscriberId ?? null,
+        tags: nextTags,
+        priorTags: sub ? priorTags : undefined,
+        isNew,
+        source: formSource,
+      });
+    } catch (err) {
+      console.error("[form-submit] automations:", err);
     }
   }
 
