@@ -22,6 +22,7 @@ import {
   type RecipientRow,
 } from "@/lib/worker/email";
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
+import { mapWithConcurrency } from "@/lib/util/concurrency";
 import { runAutomations } from "@/lib/automation/send";
 import { composeBrandedEmail } from "@/lib/email/layout";
 import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
@@ -1393,12 +1394,9 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
   );
 
   try {
-    const jobIds: string[] = [];
-    let sent = 0;
-    let failed = 0;
-    let workerStatus = "pending";
-
-    for (const recipient of input.recipients) {
+    // Fan out per-recipient sends in parallel (bounded). Each task keeps its
+    // own try/catch so one bad recipient can't fail the whole campaign.
+    const outcomes = await mapWithConcurrency(input.recipients, 6, async (recipient) => {
       const email = recipient.trim().toLowerCase();
       const sub = subByEmail.get(email);
       const subscriberId = sub?.id ?? null;
@@ -1437,37 +1435,70 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
             idempotencyKey: `camp-${campaignId}-${recipient}`,
             attachments,
           });
-          jobIds.push(res.jobId);
-          workerStatus = res.status || "pending";
-          await supabase.from("campaign_deliveries").insert({
-            campaign_id: campaignId,
+          return {
+            ok: true as const,
             email,
-            subscriber_id: subscriberId,
-            worker_job_id: res.jobId,
-            status: "scheduled",
-          });
-        } else {
-          const res = await sendEmail({
-            subject: input.subject,
-            html: wrappedHtml,
-            recipients: [recipient],
-            attachments,
-          });
-          jobIds.push(res.jobId);
-          sent += res.sent ?? 1;
-          failed += res.failed ?? 0;
-          workerStatus = res.status || "sent";
-          await supabase.from("campaign_deliveries").insert({
-            campaign_id: campaignId,
-            email,
-            subscriber_id: subscriberId,
-            worker_job_id: res.jobId,
-            status: "sent",
-          });
+            subscriberId,
+            jobId: res.jobId,
+            sent: 0,
+            failed: 0,
+            status: res.status || "pending",
+            deliveryStatus: "scheduled" as const,
+          };
         }
+        const res = await sendEmail({
+          subject: input.subject,
+          html: wrappedHtml,
+          recipients: [recipient],
+          attachments,
+        });
+        return {
+          ok: true as const,
+          email,
+          subscriberId,
+          jobId: res.jobId,
+          sent: res.sent ?? 1,
+          failed: res.failed ?? 0,
+          status: res.status || "sent",
+          deliveryStatus: "sent" as const,
+        };
       } catch {
-        failed += 1;
+        return { ok: false as const };
       }
+    });
+
+    const jobIds: string[] = [];
+    let sent = 0;
+    let failed = 0;
+    let workerStatus = "pending";
+    const deliveryRows: {
+      campaign_id: string;
+      email: string;
+      subscriber_id: string | null;
+      worker_job_id: string;
+      status: "sent" | "scheduled";
+    }[] = [];
+
+    for (const outcome of outcomes) {
+      if (!outcome.ok) {
+        failed += 1;
+        continue;
+      }
+      jobIds.push(outcome.jobId);
+      sent += outcome.sent;
+      failed += outcome.failed;
+      workerStatus = outcome.status;
+      deliveryRows.push({
+        campaign_id: campaignId,
+        email: outcome.email,
+        subscriber_id: outcome.subscriberId,
+        worker_job_id: outcome.jobId,
+        status: outcome.deliveryStatus,
+      });
+    }
+
+    if (deliveryRows.length > 0) {
+      await supabase.from("campaign_deliveries").insert(deliveryRows);
     }
 
     if (jobIds.length === 0 && failed > 0) {
@@ -2955,15 +2986,12 @@ export async function sendFormByEmail(input: {
     ),
   );
 
-  let sent = 0;
-  let failed = 0;
-
   const [footerBg, footerEn] = await Promise.all([
     getEmailFooterConfig("bg"),
     getEmailFooterConfig("en"),
   ]);
 
-  for (const email of audience.emails) {
+  const outcomes = await mapWithConcurrency(audience.emails, 6, async (email) => {
     const sub = subMap.get(email.toLowerCase());
     const locale = sub?.locale === "en" ? "en" : "bg";
     const token = createFormInviteToken({
@@ -2972,8 +3000,7 @@ export async function sendFormByEmail(input: {
       sid: sub?.id,
     });
     if (!token) {
-      failed += 1;
-      continue;
+      return false;
     }
 
     await supabase.from("form_invitations").insert({
@@ -3018,11 +3045,14 @@ export async function sendFormByEmail(input: {
 
     try {
       await sendEmail({ subject, html, recipients: [email], attachments });
-      sent += 1;
+      return true;
     } catch {
-      failed += 1;
+      return false;
     }
-  }
+  });
+
+  const sent = outcomes.filter(Boolean).length;
+  const failed = outcomes.length - sent;
 
   revalidatePath("/admin/forms");
   return {
