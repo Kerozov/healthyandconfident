@@ -121,6 +121,8 @@ export type Automation = {
   audience_logic: "any" | "all";
   exclude_group_ids: string[];
   exclude_segment_keys: string[];
+  /** Buyers of these products never get this automation (scheduled sends are canceled on payment). */
+  exclude_purchase_product_ids: string[];
   /** When trigger is purchase — only fire if buyer purchased one of these products (empty = any). */
   purchase_product_ids: string[];
   /** Optional signup origin filter (popup, form slug, free menu, etc.). Empty = any. */

@@ -23,6 +23,7 @@ import type {
   AutomationTrigger,
   Segment,
   SegmentGroup,
+  SiteProduct,
 } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
@@ -63,13 +64,14 @@ function normalizeTrigger(trigger: string): AutomationTrigger {
 type ResolvedAudience = {
   groups: { id: string; name: string }[];
   segments: { key: string; name: string }[];
-  excludes: { kind: "group" | "segment"; id: string; name: string }[];
+  excludes: { kind: "group" | "segment" | "purchase"; id: string; name: string }[];
 };
 
 function resolveAudience(
   automation: Automation,
   groups: SegmentGroup[],
   segments: Segment[],
+  products: SiteProduct[],
 ): ResolvedAudience {
   const resolvedGroups = (automation.group_ids ?? [])
     .map((id) => {
@@ -100,6 +102,14 @@ function resolveAudience(
       kind: "segment",
       id: key,
       name: segment?.name ?? key,
+    });
+  }
+  for (const id of automation.exclude_purchase_product_ids ?? []) {
+    const product = products.find((p) => p.id === id);
+    excludes.push({
+      kind: "purchase",
+      id,
+      name: `купили „${product?.title_bg ?? id.slice(0, 8)}"`,
     });
   }
 
@@ -442,6 +452,7 @@ function TreeBranch({
   node,
   groups,
   segments,
+  products,
   stepPrefix,
   parentName,
   depth,
@@ -453,6 +464,7 @@ function TreeBranch({
   node: TreeNode;
   groups: SegmentGroup[];
   segments: Segment[];
+  products: SiteProduct[];
   stepPrefix: string;
   parentName?: string;
   depth: number;
@@ -461,7 +473,7 @@ function TreeBranch({
   onAddAfter?: (automation: AutomationRow) => void;
   onDelete?: (automation: AutomationRow) => void;
 }) {
-  const audience = resolveAudience(node.automation, groups, segments);
+  const audience = resolveAudience(node.automation, groups, segments, products);
 
   return (
     <div className="flex flex-col items-center">
@@ -525,6 +537,7 @@ function TreeBranch({
             node={node.children[0]!}
             groups={groups}
             segments={segments}
+            products={products}
             stepPrefix={stepPrefix}
             parentName={node.automation.name}
             depth={depth + 1}
@@ -552,6 +565,7 @@ function TreeBranch({
                   node={child}
                   groups={groups}
                   segments={segments}
+                  products={products}
                   stepPrefix={stepPrefix}
                   parentName={node.automation.name}
                   depth={depth + 1}
@@ -574,6 +588,7 @@ function TriggerSection({
   trees,
   groups,
   segments,
+  products,
   selectedId,
   onSelect,
   onAddAfter,
@@ -583,6 +598,7 @@ function TriggerSection({
   trees: TreeNode[];
   groups: SegmentGroup[];
   segments: Segment[];
+  products: SiteProduct[];
   selectedId?: string | null;
   onSelect?: (automation: AutomationRow) => void;
   onAddAfter?: (automation: AutomationRow) => void;
@@ -625,6 +641,7 @@ function TriggerSection({
               node={tree}
               groups={groups}
               segments={segments}
+              products={products}
               stepPrefix={`${pathIndex + 1}.`}
               depth={1}
               selectedId={selectedId}
@@ -643,6 +660,7 @@ export function AutomationFlowView({
   automations,
   groups,
   segments,
+  products,
   selectedId,
   onSelectAutomation,
   onAddAfterAutomation,
@@ -651,6 +669,7 @@ export function AutomationFlowView({
   automations: AutomationRow[];
   groups: SegmentGroup[];
   segments: Segment[];
+  products: SiteProduct[];
   selectedId?: string | null;
   onSelectAutomation?: (automation: AutomationRow) => void;
   onAddAfterAutomation?: (automation: AutomationRow) => void;
@@ -702,6 +721,7 @@ export function AutomationFlowView({
             trees={forest[trigger]}
             groups={groups}
             segments={segments}
+            products={products}
             selectedId={selectedId}
             onSelect={onSelectAutomation}
             onAddAfter={onAddAfterAutomation}

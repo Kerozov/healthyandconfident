@@ -163,6 +163,7 @@ create table if not exists public.automations (
     check (audience_logic in ('any', 'all')),
   exclude_group_ids    uuid[] not null default '{}',
   exclude_segment_keys text[] not null default '{}',
+  exclude_purchase_product_ids uuid[] not null default '{}',
   new_subscribers_only boolean not null default true,
   after_automation_id  uuid references public.automations(id) on delete set null,
   delay_days           int not null default 0,
@@ -780,7 +781,8 @@ alter table public.automations
   add column if not exists attachment_filename_bg text,
   add column if not exists attachment_path_en text,
   add column if not exists attachment_filename_en text,
-  add column if not exists purchase_product_ids uuid[] not null default '{}';
+  add column if not exists purchase_product_ids uuid[] not null default '{}',
+  add column if not exists exclude_purchase_product_ids uuid[] not null default '{}';
 
 -- site products
 alter table public.site_products

@@ -2,7 +2,8 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
-import { subscriberMatchesAutomationAudience, automationMatchesPurchaseProducts, automationMatchesSignupSource, automationMatchesSubscriberOrigin } from "@/lib/automation/audience";
+import { subscriberMatchesAutomationAudience, automationExcludesBuyer, automationMatchesPurchaseProducts, automationMatchesSignupSource, automationMatchesSubscriberOrigin, type AudienceContext } from "@/lib/automation/audience";
+import { loadPaidProductIds } from "@/lib/purchase/history";
 import { expandAudienceKeys } from "@/lib/segments/hierarchy";
 import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
 import { buildBrandedEmail } from "@/lib/email/compose";
@@ -43,7 +44,31 @@ export type AutomationRunContext = {
   isNew: boolean;
   source?: string;
   purchasedProductIds?: string[];
+  /**
+   * Everything this email ever paid for. Only used by exclude rules — the
+   * purchase trigger itself still looks at `purchasedProductIds`, so an old
+   * order never fires an automation for a different product.
+   */
+  ownedProductIds?: string[];
 };
+
+/** Purchase history for exclude rules ("не праща на купилите X"). */
+function audienceContext(ctx: AutomationRunContext): AudienceContext {
+  return {
+    purchasedProductIds: [
+      ...(ctx.ownedProductIds ?? []),
+      ...(ctx.purchasedProductIds ?? []),
+    ],
+  };
+}
+
+/** Loads the purchase history once so every rule is evaluated against it. */
+async function withPurchaseHistory(
+  ctx: AutomationRunContext,
+): Promise<AutomationRunContext> {
+  if (ctx.ownedProductIds) return ctx;
+  return { ...ctx, ownedProductIds: await loadPaidProductIds(ctx.email) };
+}
 
 function resolveTriggerEvents(
   source: string,
@@ -112,7 +137,16 @@ function passesPurchaseSegmentEntryGate(
   }
 
   const nowTags = ctx.tags ?? [];
-  if (!subscriberMatchesAutomationAudience(automation, nowTags, segments, groups)) {
+  const audience = audienceContext(ctx);
+  if (
+    !subscriberMatchesAutomationAudience(
+      automation,
+      nowTags,
+      segments,
+      groups,
+      audience,
+    )
+  ) {
     return false;
   }
 
@@ -134,6 +168,7 @@ function passesPurchaseSegmentEntryGate(
     priorTags,
     segments,
     groups,
+    audience,
   );
   return !wasIn;
 }
@@ -143,8 +178,17 @@ function segmentMatches(
   tags: string[],
   segments: Segment[],
   groups: SegmentGroup[],
+  audience?: AudienceContext,
 ): boolean {
-  if (!subscriberMatchesAutomationAudience(automation, tags, segments, groups)) {
+  if (
+    !subscriberMatchesAutomationAudience(
+      automation,
+      tags,
+      segments,
+      groups,
+      audience,
+    )
+  ) {
     return false;
   }
 
@@ -288,7 +332,11 @@ async function scheduleChainedFromParent(
     const email = ctx.email.trim().toLowerCase();
     if (!passesSubscriberOriginGate(rule, ctx)) continue;
     if (!passesPurchaseSegmentEntryGate(rule, ctx, segments, groups)) continue;
-    if (!segmentMatches(rule, ctx.tags ?? [], segments, groups)) continue;
+    if (
+      !segmentMatches(rule, ctx.tags ?? [], segments, groups, audienceContext(ctx))
+    ) {
+      continue;
+    }
     if (
       rule.trigger_event === "purchase" &&
       !automationMatchesPurchaseProducts(rule, ctx.purchasedProductIds ?? [])
@@ -581,10 +629,13 @@ async function passesAutomationGates(
   if (!passesSubscriberOriginGate(automation, ctx)) {
     return { ok: false, reason: "subscriber_origin" };
   }
+  if (automationExcludesBuyer(automation, tags, audienceContext(ctx))) {
+    return { ok: false, reason: "excluded_purchase (вече е купил изключен продукт)" };
+  }
   if (!passesPurchaseSegmentEntryGate(automation, ctx, segments, groups)) {
     return { ok: false, reason: "purchase_segment_gate" };
   }
-  if (!segmentMatches(automation, tags, segments, groups)) {
+  if (!segmentMatches(automation, tags, segments, groups, audienceContext(ctx))) {
     return {
       ok: false,
       reason: `audience (tags=${tags.join(",") || "∅"})`,
@@ -701,6 +752,9 @@ export async function runAutomations(
     report.errors.push("unsubscribed");
     return report;
   }
+
+  // From here on every rule is evaluated against the full purchase history.
+  ctx = await withPurchaseHistory(ctx);
 
   const source = ctx.source ?? "popup";
   const events = resolveTriggerEvents(source, ctx.isNew);
@@ -961,6 +1015,7 @@ export async function diagnoseAutomations(
   ctx: AutomationRunContext,
 ): Promise<AutomationDiagnosis> {
   const cfg = getNotificationWorkerConfig();
+  ctx = await withPurchaseHistory(ctx);
   const email = ctx.email.trim().toLowerCase();
   const source = ctx.source ?? "popup";
   const events = resolveTriggerEvents(source, ctx.isNew);

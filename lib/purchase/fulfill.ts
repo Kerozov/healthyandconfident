@@ -4,6 +4,7 @@ import { runAutomations } from "@/lib/automation/run";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
 import { syncContactAfterPurchase } from "@/lib/contacts/payment";
+import { productPurchaseTag } from "@/lib/purchase/product-tags";
 import type { ResolvedLineItem } from "@/lib/stripe/resolve-products";
 import type { PurchasePaymentStatus } from "@/lib/purchase/status";
 import type { Locale, SiteProduct } from "@/lib/supabase/types";
@@ -111,7 +112,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
   const products = (productRows as SiteProduct[]) ?? [];
   const purchaseTags = mergeTags(
     ...products.map((p) => p.purchase_tags ?? []),
-    productIds.map((id) => `product:${id}`),
+    productIds.map(productPurchaseTag),
   );
 
   const { data: existing } = await supabase

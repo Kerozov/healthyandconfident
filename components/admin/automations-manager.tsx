@@ -238,6 +238,7 @@ function formatAutomationAudienceLine(
   a: Automation,
   groups: SegmentGroup[],
   segments: Segment[],
+  products: SiteProduct[],
 ): string | null {
   const includeParts: string[] = [];
   for (const groupId of a.group_ids ?? []) {
@@ -257,6 +258,10 @@ function formatAutomationAudienceLine(
   for (const key of a.exclude_segment_keys ?? []) {
     const segment = segments.find((s) => s.key === key);
     excludeParts.push(segment?.name ?? key);
+  }
+  for (const id of a.exclude_purchase_product_ids ?? []) {
+    const product = products.find((p) => p.id === id);
+    excludeParts.push(`купили „${product?.title_bg ?? id.slice(0, 8)}"`);
   }
 
   if (includeParts.length === 0 && excludeParts.length === 0) return null;
@@ -333,6 +338,7 @@ const EMPTY_FORM = {
   audience_logic: "any" as "any" | "all",
   exclude_group_ids: [] as string[],
   exclude_segment_keys: [] as string[],
+  exclude_purchase_product_ids: [] as string[],
   purchase_product_ids: [] as string[],
   signup_sources: [] as string[],
   subscriber_origins: [...DEFAULT_SUBSCRIBER_ORIGINS] as SubscriberOrigin[],
@@ -372,6 +378,7 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     audience_logic: a.audience_logic === "all" ? "all" : "any",
     exclude_group_ids: a.exclude_group_ids ?? [],
     exclude_segment_keys: a.exclude_segment_keys ?? [],
+    exclude_purchase_product_ids: a.exclude_purchase_product_ids ?? [],
     purchase_product_ids: a.purchase_product_ids ?? [],
     signup_sources: a.signup_sources ?? [],
     subscriber_origins: subscriberOriginsFromStored(
@@ -489,6 +496,9 @@ export function AutomationsManager({
       audience_logic: parent.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: [...(parent.exclude_group_ids ?? [])],
       exclude_segment_keys: [...(parent.exclude_segment_keys ?? [])],
+      exclude_purchase_product_ids: [
+        ...(parent.exclude_purchase_product_ids ?? []),
+      ],
       purchase_product_ids: [...(parent.purchase_product_ids ?? [])],
       signup_sources: [...(parent.signup_sources ?? [])],
       subscriber_origins: subscriberOriginsFromStored(
@@ -911,6 +921,24 @@ export function AutomationsManager({
                     disabled={pending}
                     variant="exclude"
                   />
+
+                  {products.length > 0 && (
+                    <div className="space-y-2 border-t border-coral-500/20 pt-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-coral-700">
+                        Купили продукт
+                      </p>
+                      <PurchaseProductPicker
+                        products={products}
+                        selectedIds={form.exclude_purchase_product_ids}
+                        onChange={(exclude_purchase_product_ids) =>
+                          setForm({ ...form, exclude_purchase_product_ids })
+                        }
+                        disabled={pending}
+                        tone="exclude"
+                        hint="Който вече е платил избран продукт, не получава тази автоматизация — а насрочените ѝ имейли/SMS-и се спират в момента на плащането."
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1285,6 +1313,7 @@ export function AutomationsManager({
             automations={automations}
             groups={groups}
             segments={segments}
+            products={products}
             selectedId={editingId !== "new" ? editingId : null}
             onSelectAutomation={openEditFromFlow}
             onAddAfterAutomation={openNewAfter}
@@ -1326,7 +1355,12 @@ export function AutomationsManager({
             const showHeader = trigger !== lastTrigger;
             if (showHeader) lastTrigger = trigger;
             const rate = openRate(a);
-            const audienceLine = formatAutomationAudienceLine(a, groups, segments);
+            const audienceLine = formatAutomationAudienceLine(
+              a,
+              groups,
+              segments,
+              products,
+            );
             const signupSourcesLine = formatSignupSourcesLine(a.signup_sources ?? [], forms);
             const rowBusy = busyId === a.id && pending;
             const isExpanded = expandedId === a.id;

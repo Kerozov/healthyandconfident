@@ -3,6 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { subscriberMatchesAutomationAudience } from "@/lib/automation/audience";
+import { loadPaidProductIds } from "@/lib/purchase/history";
 import { cancelEmailJob } from "@/lib/worker/email";
 import { cancelSmsJob } from "@/lib/worker/sms";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
@@ -65,13 +66,22 @@ export async function cancelIneligibleAutomationDeliveriesForSubscriber(
   );
   const segments = (segmentRows as Segment[]) ?? [];
   const groups = (groupRows as SegmentGroup[]) ?? [];
+  const audience = { purchasedProductIds: await loadPaidProductIds(normalized) };
 
   let canceled = 0;
   for (const row of rows) {
     const automation = automationsById.get(row.automation_id as string);
     if (!automation) continue;
 
-    if (subscriberMatchesAutomationAudience(automation, tags, segments, groups)) {
+    if (
+      subscriberMatchesAutomationAudience(
+        automation,
+        tags,
+        segments,
+        groups,
+        audience,
+      )
+    ) {
       continue;
     }
 

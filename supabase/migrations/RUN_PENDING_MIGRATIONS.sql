@@ -930,4 +930,8 @@ set
   label_en = 'Live Without Resistance — “Join today” (hero primary)'
 where key = 'programs_1';
 
-select 'Upgrade complete (012–044 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 045: exclude buyers of a product from an automation
+alter table public.automations
+  add column if not exists exclude_purchase_product_ids uuid[] not null default '{}';
+
+select 'Upgrade complete (012–045 applied). Also run 007_automations.sql if not yet applied.' as result;

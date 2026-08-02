@@ -1,6 +1,7 @@
 import type { Automation, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { signupSourceMatches } from "@/lib/automation/signup-sources";
 import { subscriberOriginMatches } from "@/lib/automation/subscriber-origins";
+import { purchasedProductIdsFromTags } from "@/lib/purchase/product-tags";
 import {
   expandAudienceKeys,
   getSegmentKeysForGroup,
@@ -8,12 +9,42 @@ import {
 
 export type AudienceLogic = "any" | "all";
 
+export type AudienceContext = {
+  /** Products the subscriber already paid for (history + the current purchase). */
+  purchasedProductIds?: string[];
+};
+
+/** Products this subscriber owns — from the run context and from `product:<id>` tags. */
+function ownedProductIds(tags: string[], ctx?: AudienceContext): Set<string> {
+  return new Set([
+    ...(ctx?.purchasedProductIds ?? []),
+    ...purchasedProductIdsFromTags(tags),
+  ]);
+}
+
+/** Buyers of an excluded product never enter (or stay in) the automation. */
+export function automationExcludesBuyer(
+  automation: Automation,
+  tags: string[],
+  ctx?: AudienceContext,
+): boolean {
+  const excluded =
+    automation.exclude_purchase_product_ids?.filter(Boolean) ?? [];
+  if (excluded.length === 0) return false;
+
+  const owned = ownedProductIds(tags, ctx);
+  return excluded.some((id) => owned.has(id));
+}
+
 function subscriberInExcludeList(
   automation: Automation,
   tags: string[],
   segments: Segment[],
   groups: SegmentGroup[],
+  ctx?: AudienceContext,
 ): boolean {
+  if (automationExcludesBuyer(automation, tags, ctx)) return true;
+
   const excludeSegments = automation.exclude_segment_keys?.filter(Boolean) ?? [];
   const excludeGroups = automation.exclude_group_ids?.filter(Boolean) ?? [];
 
@@ -61,8 +92,9 @@ export function subscriberMatchesAutomationAudience(
   tags: string[],
   segments: Segment[],
   groups: SegmentGroup[],
+  ctx?: AudienceContext,
 ): boolean {
-  if (subscriberInExcludeList(automation, tags, segments, groups)) {
+  if (subscriberInExcludeList(automation, tags, segments, groups, ctx)) {
     return false;
   }
 

@@ -276,6 +276,7 @@ type AutomationInput = {
   audience_logic?: "any" | "all";
   exclude_group_ids?: string[];
   exclude_segment_keys?: string[];
+  exclude_purchase_product_ids?: string[];
   purchase_product_ids?: string[];
   signup_sources?: string[];
   subscriber_origins?: string[];
@@ -352,6 +353,7 @@ export async function createAutomation(
       audience_logic: input.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
+      exclude_purchase_product_ids: input.exclude_purchase_product_ids ?? [],
       purchase_product_ids: input.purchase_product_ids ?? [],
       signup_sources: input.signup_sources ?? [],
       after_automation_id: input.after_automation_id || null,
@@ -391,6 +393,7 @@ export async function updateAutomation(
       audience_logic: input.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
+      exclude_purchase_product_ids: input.exclude_purchase_product_ids ?? [],
       purchase_product_ids: input.purchase_product_ids ?? [],
       signup_sources: input.signup_sources ?? [],
       after_automation_id: input.after_automation_id || null,
