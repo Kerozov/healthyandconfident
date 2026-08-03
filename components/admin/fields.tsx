@@ -1,3 +1,4 @@
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export function Field({
@@ -25,13 +26,25 @@ export function Field({
 const base =
   "w-full rounded-xl border border-ink/15 bg-white px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft/50 focus:border-forest-400 focus:ring-2 focus:ring-forest-400/20";
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cn(base, props.className)} />;
-}
+export const Input = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(function Input(props, ref) {
+  return <input ref={ref} {...props} className={cn(base, props.className)} />;
+});
 
-export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={cn(base, "min-h-[7rem] resize-y", props.className)} />;
-}
+export const Textarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function Textarea(props, ref) {
+  return (
+    <textarea
+      ref={ref}
+      {...props}
+      className={cn(base, "min-h-[7rem] resize-y", props.className)}
+    />
+  );
+});
 
 export function Select({
   className,

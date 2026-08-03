@@ -12,6 +12,7 @@ import {
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
+import { EmailBodyEditor } from "@/components/admin/email-body-editor";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { datetimeLocalToIso } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
@@ -125,18 +126,11 @@ export function CampaignComposer({
               onChange={(e) => setEmail({ ...email, subject: e.target.value })}
             />
           </Field>
-          <Field
-            label="Съдържание"
-            hint="Само текстът в средата — header и footer се добавят автоматично."
-          >
-            <Textarea
-              rows={8}
-              value={email.html}
-              onChange={(e) => setEmail({ ...email, html: e.target.value })}
-              className="font-mono text-[13px]"
-              placeholder="<p>Здравей,</p><p>Благодарим ти…</p>"
-            />
-          </Field>
+          <EmailBodyEditor
+            value={email.html}
+            onChange={(html) => setEmail({ ...email, html })}
+            disabled={pending}
+          />
           <EmailEmbedsPanel
             locale={email.audience.locale === "en" ? "en" : "bg"}
             html={email.html}
@@ -177,13 +171,16 @@ export function CampaignComposer({
                 }}
                 className="h-4 w-4 rounded border-ink/20 text-coral-500 focus:ring-coral-500"
               />
-              <span className="text-sm font-medium text-ink">Добави бутон</span>
+              <span className="text-sm font-medium text-ink">
+                Главен бутон в края (следене на кликове)
+              </span>
             </label>
             {showButton && (
               <div className="mt-4 space-y-4">
                 <p className="text-xs text-ink-soft/80">
-                  Текстът остава същият в имейла. Линкът може да се смени след
+                  Показва се под съдържанието. Линкът може да се смени след
                   изпращане от списъка с кампании — без повторно изпращане.
+                  Допълнителни бутони добавяй с „Бутон“ над текста.
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Текст на бутона">

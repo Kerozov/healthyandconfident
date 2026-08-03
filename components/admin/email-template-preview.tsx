@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { composeBrandedEmail } from "@/lib/email/layout";
 import { expandEmailProductMarkers } from "@/lib/email/products-block";
 import { expandEmailFormMarkers } from "@/lib/email/forms-block";
+import { normalizeEmailBodyHtml } from "@/lib/email/normalize-body";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import type { SiteProduct } from "@/lib/supabase/types";
 
@@ -34,11 +35,10 @@ export function EmailTemplatePreview({
     const previewHref = new Map(
       forms.map((form) => [form.id.toLowerCase(), `/${locale}/forms/${form.slug}`]),
     );
-    let expandedBody = expandEmailProductMarkers(
-      bodyHtml.trim() || "<p style='color:#9B7B6A;margin:0'>Съдържание на имейла…</p>",
-      productsById,
-      locale,
+    let expandedBody = normalizeEmailBodyHtml(
+      bodyHtml.trim() || "Съдържание на имейла…",
     );
+    expandedBody = expandEmailProductMarkers(expandedBody, productsById, locale);
     expandedBody = expandEmailFormMarkers(
       expandedBody,
       formsById,

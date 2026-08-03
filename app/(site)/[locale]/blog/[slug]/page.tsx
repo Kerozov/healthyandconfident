@@ -74,7 +74,7 @@ export default async function BlogPostPage({
       name: siteConfig.brand,
       logo: {
         "@type": "ImageObject",
-        url: `${origin}/icon.png`,
+        url: `${origin}${siteConfig.ogImage}`,
       },
     },
     mainEntityOfPage: `${origin}/${l}/blog/${slug}`,

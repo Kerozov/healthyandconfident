@@ -7,6 +7,7 @@ import {
   bodyWithAttachment,
   type WorkerAttachment,
 } from "@/lib/email/attachments";
+import { normalizeEmailBodyHtml } from "@/lib/email/normalize-body";
 
 export async function buildEmailBodyForRecipient(input: {
   html: string;
@@ -16,7 +17,8 @@ export async function buildEmailBodyForRecipient(input: {
   attachmentPath?: string | null;
   attachmentFilename?: string | null;
 }): Promise<{ bodyHtml: string; attachments: WorkerAttachment[] }> {
-  const withProducts = await expandEmailProducts(input.html, input.locale);
+  const normalized = normalizeEmailBodyHtml(input.html);
+  const withProducts = await expandEmailProducts(normalized, input.locale);
   const withForms = await expandEmailForms(withProducts, input.locale, {
     email: input.email,
     subscriberId: input.subscriberId,

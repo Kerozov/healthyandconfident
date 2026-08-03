@@ -47,6 +47,7 @@ import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields"
 import { TabList } from "@/components/admin/ui";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
+import { EmailBodyEditor } from "@/components/admin/email-body-editor";
 import { PurchaseProductPicker } from "@/components/admin/purchase-product-picker";
 import { SignupSourcePicker } from "@/components/admin/signup-source-picker";
 import { SubscriberOriginPicker } from "@/components/admin/subscriber-origin-picker";
@@ -1101,16 +1102,12 @@ export function AutomationsManager({
                         }
                       />
                     </Field>
-                    <Field label="Съдържание" hint="{{name}}, {{email}}">
-                      <Textarea
-                        rows={5}
-                        className="font-mono text-[13px]"
-                        value={form.html_bg}
-                        onChange={(e) =>
-                          setForm({ ...form, html_bg: e.target.value })
-                        }
-                      />
-                    </Field>
+                    <EmailBodyEditor
+                      value={form.html_bg}
+                      onChange={(html_bg) => setForm({ ...form, html_bg })}
+                      rows={6}
+                      disabled={pending}
+                    />
                     <EmailEmbedsPanel
                       locale="bg"
                       html={form.html_bg}
@@ -1128,7 +1125,10 @@ export function AutomationsManager({
                       }
                       disabled={pending}
                     />
-                    <Field label="Бутон (текст)">
+                    <Field
+                      label="Главен бутон в края (текст)"
+                      hint="По избор — под съдържанието. Допълнителни бутони: „Бутон“ над текста."
+                    >
                       <Input
                         value={form.cta_label_bg}
                         onChange={(e) =>
@@ -1137,7 +1137,7 @@ export function AutomationsManager({
                         placeholder="Виж събитията"
                       />
                     </Field>
-                    <Field label="Бутон (линк)">
+                    <Field label="Главен бутон в края (линк)">
                       <Input
                         value={form.cta_url_bg}
                         onChange={(e) =>
@@ -1166,16 +1166,13 @@ export function AutomationsManager({
                         }
                       />
                     </Field>
-                    <Field label="Content" hint="{{name}}, {{email}}">
-                      <Textarea
-                        rows={5}
-                        className="font-mono text-[13px]"
-                        value={form.html_en}
-                        onChange={(e) =>
-                          setForm({ ...form, html_en: e.target.value })
-                        }
-                      />
-                    </Field>
+                    <EmailBodyEditor
+                      label="Content"
+                      value={form.html_en}
+                      onChange={(html_en) => setForm({ ...form, html_en })}
+                      rows={6}
+                      disabled={pending}
+                    />
                     <EmailEmbedsPanel
                       locale="en"
                       html={form.html_en}
@@ -1193,7 +1190,10 @@ export function AutomationsManager({
                       }
                       disabled={pending}
                     />
-                    <Field label="Button text">
+                    <Field
+                      label="Main end button (text)"
+                      hint="Optional — below the body. Extra buttons: use “Бутон” above the text."
+                    >
                       <Input
                         value={form.cta_label_en}
                         onChange={(e) =>
@@ -1202,7 +1202,7 @@ export function AutomationsManager({
                         placeholder="Book a free call"
                       />
                     </Field>
-                    <Field label="Button link">
+                    <Field label="Main end button (link)">
                       <Input
                         value={form.cta_url_en}
                         onChange={(e) =>

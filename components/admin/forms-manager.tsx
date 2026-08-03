@@ -34,6 +34,7 @@ import { DynamicForm } from "@/components/site/dynamic-form";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { EmailAttachmentPicker } from "@/components/admin/email-attachment-picker";
+import { EmailBodyEditor } from "@/components/admin/email-body-editor";
 import { normalizeFormFields } from "@/lib/forms/answer-tags";
 import {
   deleteCustomFieldDefault,
@@ -649,22 +650,27 @@ export function FormsManager({
                   onChange={(e) => setForm({ ...form, email_subject_en: e.target.value })}
                 />
               </Field>
-              <Field label="Текст имейл — BG" hint="{{name}}, {{email}}">
-                <Textarea
-                  rows={5}
+              <div className="md:col-span-2">
+                <EmailBodyEditor
+                  label="Текст имейл — BG"
                   value={form.email_intro_bg}
-                  onChange={(e) => setForm({ ...form, email_intro_bg: e.target.value })}
-                />
-              </Field>
-              <Field label="Текст имейл — EN">
-                <Textarea
+                  onChange={(email_intro_bg) => setForm({ ...form, email_intro_bg })}
                   rows={5}
-                  value={form.email_intro_en}
-                  onChange={(e) => setForm({ ...form, email_intro_en: e.target.value })}
+                  disabled={pending}
                 />
-              </Field>
+              </div>
+              <div className="md:col-span-2">
+                <EmailBodyEditor
+                  label="Текст имейл — EN"
+                  value={form.email_intro_en}
+                  onChange={(email_intro_en) => setForm({ ...form, email_intro_en })}
+                  rows={5}
+                  disabled={pending}
+                />
+              </div>
               <p className="md:col-span-2 text-xs text-ink-soft">
-                Бутонът в имейла води към формата с персонален линк за всеки получател.
+                Главният бутон в имейла води към формата с персонален линк. Допълнителни
+                бутони добавяй с „Бутон“ над текста.
               </p>
               <div className="md:col-span-2 space-y-4 rounded-xl border border-ink/10 bg-cream/30 p-4">
                 <ImageUploadField

@@ -184,6 +184,10 @@ create table if not exists public.automations (
   attachment_path_en   text,
   attachment_filename_en text,
   purchase_product_ids uuid[] not null default '{}',
+  signup_sources       text[] not null default '{}',
+  subscriber_origins   text[] not null default '{}',
+  hero_image_url_bg    text,
+  hero_image_url_en    text,
   sort_order           int not null default 0,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
@@ -460,6 +464,7 @@ create table if not exists public.email_campaigns (
   clicked_count        int not null default 0,
   attachment_path      text,
   attachment_filename  text,
+  hero_image_url       text,
   last_synced_at       timestamptz,
   parent_campaign_id   uuid references public.email_campaigns(id) on delete set null,
   created_at           timestamptz not null default now()
@@ -610,6 +615,7 @@ create table if not exists public.form_templates (
   email_intro_en   text not null default '',
   attachment_path  text,
   attachment_filename text,
+  hero_image_url   text,
   enabled          boolean not null default true,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
@@ -707,6 +713,64 @@ drop trigger if exists contacts_updated_at on public.contacts;
 create trigger contacts_updated_at before update on public.contacts
   for each row execute function public.set_updated_at();
 
+-- ── Zoom live + session tracking ───────────────────────────────
+create table if not exists public.zoom_live_config (
+  key                 text primary key default 'default',
+  feature_enabled     boolean not null default true,
+  watch_meeting_id    text,
+  join_url            text not null default '',
+  label_bg            text not null default 'Присъедини се на живо',
+  label_en            text not null default 'Join live',
+  manual_is_live      boolean not null default false,
+  is_live             boolean not null default false,
+  active_meeting_id   text,
+  active_topic        text,
+  live_started_at     timestamptz,
+  updated_at          timestamptz not null default now()
+);
+
+insert into public.zoom_live_config (key)
+values ('default')
+on conflict (key) do nothing;
+
+drop trigger if exists zoom_live_config_updated_at on public.zoom_live_config;
+create trigger zoom_live_config_updated_at
+  before update on public.zoom_live_config
+  for each row execute function public.set_updated_at();
+
+create table if not exists public.zoom_session_events (
+  id                uuid primary key default gen_random_uuid(),
+  contact_id        uuid references public.contacts(id) on delete set null,
+  meeting_id        text not null,
+  email             text,
+  participant_name  text,
+  join_time         timestamptz,
+  leave_time        timestamptz not null default now(),
+  duration_minutes  int not null default 0,
+  zoom_event        text,
+  created_at        timestamptz not null default now()
+);
+
+create index if not exists zoom_session_events_meeting_idx
+  on public.zoom_session_events (meeting_id, leave_time desc);
+
+create index if not exists zoom_session_events_email_idx
+  on public.zoom_session_events (email, leave_time desc)
+  where email is not null;
+
+create table if not exists public.zoom_webhook_log (
+  id          uuid primary key default gen_random_uuid(),
+  zoom_event  text not null,
+  meeting_id  text,
+  email       text,
+  status      text not null,
+  detail      text,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists zoom_webhook_log_created_idx
+  on public.zoom_webhook_log (created_at desc);
+
 -- ── Email footer ───────────────────────────────────────────────
 create table if not exists public.email_footer_config (
   id                  uuid primary key default gen_random_uuid(),
@@ -763,7 +827,7 @@ alter table public.subscribers
   add column if not exists last_name text,
   add column if not exists facebook_url text;
 
--- automations: attachments + purchase filter
+-- automations: attachments + purchase filter + origins + hero (041–043)
 alter table public.automations
   add column if not exists delay_days int not null default 0,
   add column if not exists delay_minutes int not null default 0,
@@ -781,7 +845,20 @@ alter table public.automations
   add column if not exists attachment_filename_bg text,
   add column if not exists attachment_path_en text,
   add column if not exists attachment_filename_en text,
-  add column if not exists purchase_product_ids uuid[] not null default '{}';
+  add column if not exists purchase_product_ids uuid[] not null default '{}',
+  add column if not exists signup_sources text[] not null default '{}',
+  add column if not exists subscriber_origins text[] not null default '{}',
+  add column if not exists hero_image_url_bg text,
+  add column if not exists hero_image_url_en text;
+
+update public.automations
+set subscriber_origins = case
+  when new_subscribers_only = false then
+    array['new', 'existing_registered', 'manual', 'import']::text[]
+  else
+    array['new', 'existing_registered']::text[]
+end
+where coalesce(array_length(subscriber_origins, 1), 0) = 0;
 
 -- site products
 alter table public.site_products
@@ -798,6 +875,30 @@ alter table public.site_products
 alter table public.site_guides
   add column if not exists purchase_tags text[] not null default '{}';
 
+-- CTA button labels/URLs (044)
+alter table public.site_cta_placements
+  add column if not exists button_label_bg text not null default '',
+  add column if not exists button_label_en text not null default '',
+  add column if not exists button_url text not null default '';
+
+insert into public.site_cta_placements (key, label_bg, label_en) values
+  ('programs_0_secondary', 'Гарнитури — втори бутон (ако има)', 'Side dishes — secondary button'),
+  ('programs_0_pricing_0', 'Гарнитури — бутон за плащане', 'Side dishes — checkout button'),
+  ('programs_1_secondary', 'Живей без резистентност — „Виж какво включва“', 'Live Without Resistance — “See what''s included”'),
+  ('programs_1_pricing_0', 'Живей без резистентност — месечни вноски', 'Live Without Resistance — monthly plan button'),
+  ('programs_1_pricing_1', 'Живей без резистентност — еднократно плащане', 'Live Without Resistance — one-time payment button'),
+  ('programs_2_secondary', 'Препрограмирай апетита — втори бутон', 'Reprogram appetite — secondary button'),
+  ('programs_2_pricing_0', 'Препрограмирай апетита — месечен достъп', 'Reprogram appetite — monthly access button'),
+  ('programs_2_pricing_1', 'Препрограмирай апетита — вариант 1 (12 мес.)', 'Reprogram appetite — plan 1 button'),
+  ('programs_2_pricing_2', 'Препрограмирай апетита — вариант 2 (3 мес.)', 'Reprogram appetite — plan 2 button')
+on conflict (key) do nothing;
+
+update public.site_cta_placements
+set
+  label_bg = 'Живей без резистентност — „Включи се днес“ (горен бутон)',
+  label_en = 'Live Without Resistance — “Join today” (hero primary)'
+where key = 'programs_1';
+
 -- email campaigns
 alter table public.email_campaigns
   add column if not exists cta_label text not null default '',
@@ -809,7 +910,8 @@ alter table public.email_campaigns
   add column if not exists target_tags text[],
   add column if not exists machine_opened_count int not null default 0,
   add column if not exists not_opened_count int not null default 0,
-  add column if not exists parent_campaign_id uuid references public.email_campaigns(id) on delete set null;
+  add column if not exists parent_campaign_id uuid references public.email_campaigns(id) on delete set null,
+  add column if not exists hero_image_url text;
 
 -- engagement clicks
 alter table public.email_link_clicks
@@ -826,7 +928,8 @@ alter table public.automation_deliveries
 
 alter table public.form_templates
   add column if not exists attachment_path text,
-  add column if not exists attachment_filename text;
+  add column if not exists attachment_filename text,
+  add column if not exists hero_image_url text;
 
 -- purchase history
 create table if not exists public.subscriber_purchases (
@@ -958,9 +1061,67 @@ drop trigger if exists contacts_updated_at on public.contacts;
 create trigger contacts_updated_at before update on public.contacts
   for each row execute function public.set_updated_at();
 
+-- Zoom (039–040) for existing DBs
+create table if not exists public.zoom_live_config (
+  key                 text primary key default 'default',
+  feature_enabled     boolean not null default true,
+  watch_meeting_id    text,
+  join_url            text not null default '',
+  label_bg            text not null default 'Присъедини се на живо',
+  label_en            text not null default 'Join live',
+  manual_is_live      boolean not null default false,
+  is_live             boolean not null default false,
+  active_meeting_id   text,
+  active_topic        text,
+  live_started_at     timestamptz,
+  updated_at          timestamptz not null default now()
+);
+
+insert into public.zoom_live_config (key)
+values ('default')
+on conflict (key) do nothing;
+
+drop trigger if exists zoom_live_config_updated_at on public.zoom_live_config;
+create trigger zoom_live_config_updated_at
+  before update on public.zoom_live_config
+  for each row execute function public.set_updated_at();
+
+create table if not exists public.zoom_session_events (
+  id                uuid primary key default gen_random_uuid(),
+  contact_id        uuid references public.contacts(id) on delete set null,
+  meeting_id        text not null,
+  email             text,
+  participant_name  text,
+  join_time         timestamptz,
+  leave_time        timestamptz not null default now(),
+  duration_minutes  int not null default 0,
+  zoom_event        text,
+  created_at        timestamptz not null default now()
+);
+
+create index if not exists zoom_session_events_meeting_idx
+  on public.zoom_session_events (meeting_id, leave_time desc);
+
+create index if not exists zoom_session_events_email_idx
+  on public.zoom_session_events (email, leave_time desc)
+  where email is not null;
+
+create table if not exists public.zoom_webhook_log (
+  id          uuid primary key default gen_random_uuid(),
+  zoom_event  text not null,
+  meeting_id  text,
+  email       text,
+  status      text not null,
+  detail      text,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists zoom_webhook_log_created_idx
+  on public.zoom_webhook_log (created_at desc);
+
 notify pgrst, 'reload schema';
 
-select 'Setup complete — schema up to date (incl. purchase_product_ids)' as result;
+select 'Setup complete — schema up to date through 045 (CTA buttons, guide purchase_tags, zoom, origins, hero images)' as result;
 
 
 
