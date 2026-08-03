@@ -2,11 +2,10 @@ import "server-only";
 
 import { runAutomations } from "@/lib/automation/run";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
 import { syncContactAfterPurchase } from "@/lib/contacts/payment";
 import type { ResolvedLineItem } from "@/lib/stripe/resolve-products";
 import type { PurchasePaymentStatus } from "@/lib/purchase/status";
-import type { Locale, SiteProduct } from "@/lib/supabase/types";
+import type { Locale, SiteGuide, SiteProduct } from "@/lib/supabase/types";
 
 export type FulfillPurchaseInput = {
   email: string;
@@ -66,10 +65,11 @@ async function upsertPurchaseRow(input: {
   }
 }
 
-/** Record purchase, tag subscriber, run purchase automations. */
+/** Record purchase, apply purchase segments, run purchase automations. */
 export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
   ok: boolean;
   productIds: string[];
+  guideIds: string[];
   tags: string[];
 }> {
   const email = input.email.trim().toLowerCase();
@@ -81,9 +81,16 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
         .filter((id): id is string => Boolean(id)),
     ),
   );
+  const guideIds = Array.from(
+    new Set(
+      lineItems
+        .map((i) => i.internalGuideId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
 
   if (!email || lineItems.length === 0) {
-    return { ok: false, productIds: [], tags: [] };
+    return { ok: false, productIds: [], guideIds: [], tags: [] };
   }
 
   const paymentStatus = input.paymentStatus ?? "paid";
@@ -97,21 +104,28 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
         paymentStatus,
       });
     }
-    return { ok: true, productIds, tags: [] };
+    return { ok: true, productIds, guideIds, tags: [] };
   }
 
   const supabase = getAdminClient();
   const locale: Locale = input.locale === "en" ? "en" : "bg";
 
-  const { data: productRows } = await supabase
-    .from("site_products")
-    .select("*")
-    .in("id", productIds);
+  const [{ data: productRows }, { data: guideRows }] = await Promise.all([
+    productIds.length > 0
+      ? supabase.from("site_products").select("*").in("id", productIds)
+      : Promise.resolve({ data: [] as SiteProduct[] }),
+    guideIds.length > 0
+      ? supabase.from("site_guides").select("*").in("id", guideIds)
+      : Promise.resolve({ data: [] as SiteGuide[] }),
+  ]);
 
   const products = (productRows as SiteProduct[]) ?? [];
+  const guides = (guideRows as SiteGuide[]) ?? [];
   const purchaseTags = mergeTags(
     ...products.map((p) => p.purchase_tags ?? []),
+    ...guides.map((g) => g.purchase_tags ?? []),
     productIds.map((id) => `product:${id}`),
+    guideIds.map((id) => `guide:${id}`),
   );
 
   const { data: existing } = await supabase
@@ -199,5 +213,5 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     });
   }
 
-  return { ok: true, productIds, tags: finalTags };
+  return { ok: true, productIds, guideIds, tags: finalTags };
 }

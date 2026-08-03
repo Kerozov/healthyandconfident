@@ -301,6 +301,7 @@ create table if not exists public.site_guides (
   price_label_bg  text not null default '',
   price_label_en  text not null default '',
   image_url       text,
+  purchase_tags   text[] not null default '{}',
   enabled         boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),
@@ -794,6 +795,9 @@ alter table public.site_products
   add column if not exists audience_tags text[] not null default '{}',
   add column if not exists purchase_tags text[] not null default '{}';
 
+alter table public.site_guides
+  add column if not exists purchase_tags text[] not null default '{}';
+
 -- email campaigns
 alter table public.email_campaigns
   add column if not exists cta_label text not null default '',
@@ -874,6 +878,7 @@ create table if not exists public.site_guides (
   price_label_bg  text not null default '',
   price_label_en  text not null default '',
   image_url       text,
+  purchase_tags   text[] not null default '{}',
   enabled         boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),

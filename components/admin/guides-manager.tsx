@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Save, X } from "lucide-react";
-import type { SiteGuide, SiteSection } from "@/lib/supabase/types";
+import type { Segment, SegmentGroup, SiteGuide, SiteSection } from "@/lib/supabase/types";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { saveSiteGuide, deleteSiteGuide } from "@/app/(admin)/admin/actions";
 import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { GuideAdminGrid } from "@/components/admin/guide-admin-grid";
+import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 
@@ -21,6 +22,7 @@ const EMPTY_GUIDE = {
   price_label_bg: "",
   price_label_en: "",
   image_url: "",
+  purchase_tags: [] as string[],
   enabled: true,
   sort_order: 0,
 };
@@ -84,9 +86,13 @@ function SectionToggle({
 export function GuidesManagerPanel({
   guides,
   section,
+  segments,
+  groups,
 }: {
   guides: SiteGuide[];
   section: SiteSection;
+  segments: Segment[];
+  groups: SegmentGroup[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -117,6 +123,7 @@ export function GuidesManagerPanel({
       price_label_bg: guide.price_label_bg,
       price_label_en: guide.price_label_en,
       image_url: guide.image_url ?? "",
+      purchase_tags: guide.purchase_tags ?? [],
       enabled: guide.enabled,
       sort_order: guide.sort_order,
     });
@@ -245,6 +252,20 @@ export function GuidesManagerPanel({
                 onChange={(e) => setForm({ ...form, price_label_en: e.target.value })}
               />
             </Field>
+          </div>
+          <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
+            <p className="text-sm font-semibold text-forest-800">Сегменти след покупка</p>
+            <p className="text-xs text-ink-soft">
+              След успешно плащане абонатът влиза в избраните сегменти. Използвай ги в
+              автоматизации (вкл. „изключи сегмент“), за да спреш кампании след покупка.
+            </p>
+            <SegmentAssignChecklist
+              segments={segments}
+              groups={groups}
+              selected={form.purchase_tags}
+              onChange={(purchase_tags) => setForm({ ...form, purchase_tags })}
+              disabled={pending}
+            />
           </div>
           <label className="flex items-center gap-2 text-sm font-medium">
             <input

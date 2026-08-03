@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import "@/app/globals.css";
@@ -9,6 +10,7 @@ import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { SiteHeader } from "@/components/site/site-header";
 import { Footer } from "@/components/site/footer";
 import { Popup } from "@/components/site/popup";
+import { CheckoutNotice } from "@/components/site/checkout-notice";
 import { MenuPopupProvider } from "@/components/site/menu-popup";
 import { OfferPopupProvider } from "@/components/site/offer-popup";
 
@@ -100,6 +102,9 @@ export default async function SiteLayout({
             <main>{children}</main>
             <Footer locale={l} dict={dict} />
             <Popup locale={l} />
+            <Suspense fallback={null}>
+              <CheckoutNotice locale={l} />
+            </Suspense>
           </MenuPopupProvider>
         </OfferPopupProvider>
       </body>

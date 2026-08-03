@@ -2,12 +2,14 @@ import "server-only";
 
 import type Stripe from "stripe";
 import { getAdminClient } from "@/lib/supabase/admin";
-import type { SiteProduct } from "@/lib/supabase/types";
+import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import { getStripe } from "@/lib/stripe/server";
 
 export type ResolvedLineItem = {
-  /** Internal site_products.id — null if only Stripe product is known */
+  /** Internal site_products.id — null if only Stripe product / guide is known */
   internalProductId: string | null;
+  /** Internal site_guides.id when this line is a guide purchase */
+  internalGuideId: string | null;
   stripeProductId: string;
   stripePriceId: string;
   amountCents: number | null;
@@ -21,40 +23,34 @@ function stripeProductIdFromPrice(price: Stripe.Price | string | null | undefine
   return typeof product === "string" ? product : product.id;
 }
 
-async function loadProductMaps() {
+async function loadCatalogMaps() {
   const supabase = getAdminClient();
-  const { data } = await supabase.from("site_products").select("*");
-  const products = (data as SiteProduct[]) ?? [];
+  const [{ data: productData }, { data: guideData }] = await Promise.all([
+    supabase.from("site_products").select("*"),
+    supabase.from("site_guides").select("*"),
+  ]);
+  const products = (productData as SiteProduct[]) ?? [];
+  const guides = (guideData as SiteGuide[]) ?? [];
 
-  const byPrice = new Map<string, SiteProduct>();
-  const byProduct = new Map<string, SiteProduct>();
-
+  const productByPrice = new Map<string, SiteProduct>();
+  const productByStripeProduct = new Map<string, SiteProduct>();
   for (const product of products) {
     const priceId = product.stripe_price_id?.trim();
-    if (priceId) byPrice.set(priceId, product);
+    if (priceId) productByPrice.set(priceId, product);
     const prodId = product.stripe_product_id?.trim();
-    if (prodId) byProduct.set(prodId, product);
+    if (prodId) productByStripeProduct.set(prodId, product);
   }
 
-  return { byPrice, byProduct, products };
-}
-
-function resolveInternalProduct(
-  stripePriceId: string,
-  stripeProductId: string | null,
-  byPrice: Map<string, SiteProduct>,
-  byProduct: Map<string, SiteProduct>,
-): SiteProduct | null {
-  const byPriceHit = byPrice.get(stripePriceId);
-  if (byPriceHit) return byPriceHit;
-  if (stripeProductId) {
-    const byProdHit = byProduct.get(stripeProductId);
-    if (byProdHit) return byProdHit;
+  const guideByPrice = new Map<string, SiteGuide>();
+  for (const guide of guides) {
+    const priceId = guide.stripe_price_id?.trim();
+    if (priceId) guideByPrice.set(priceId, guide);
   }
-  return null;
+
+  return { products, guides, productByPrice, productByStripeProduct, guideByPrice };
 }
 
-function lineFromInternalIds(
+function lineFromProducts(
   productIds: string[],
   products: SiteProduct[],
   amountCents: number | null,
@@ -71,8 +67,36 @@ function lineFromInternalIds(
     if (!stripeProductId && !stripePriceId) continue;
     items.push({
       internalProductId: product.id,
+      internalGuideId: null,
       stripeProductId: stripeProductId || `internal:${product.id}`,
       stripePriceId: stripePriceId || "",
+      amountCents,
+      currency,
+    });
+  }
+
+  return items;
+}
+
+function lineFromGuides(
+  guideIds: string[],
+  guides: SiteGuide[],
+  amountCents: number | null,
+  currency: string | null,
+): ResolvedLineItem[] {
+  const byId = new Map(guides.map((g) => [g.id, g]));
+  const items: ResolvedLineItem[] = [];
+
+  for (const id of guideIds) {
+    const guide = byId.get(id);
+    if (!guide) continue;
+    const stripePriceId = guide.stripe_price_id?.trim();
+    if (!stripePriceId) continue;
+    items.push({
+      internalProductId: null,
+      internalGuideId: guide.id,
+      stripeProductId: `guide:${guide.id}`,
+      stripePriceId,
       amountCents,
       currency,
     });
@@ -85,20 +109,38 @@ function lineFromInternalIds(
 export async function resolveLineItemsFromCheckoutSession(
   session: Stripe.Checkout.Session,
 ): Promise<ResolvedLineItem[]> {
-  const { byPrice, byProduct, products } = await loadProductMaps();
+  const {
+    products,
+    guides,
+    productByPrice,
+    productByStripeProduct,
+    guideByPrice,
+  } = await loadCatalogMaps();
 
-  const fromMeta = (session.metadata?.product_ids ?? "")
+  const productIdsFromMeta = (session.metadata?.product_ids ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const guideIdsFromMeta = (session.metadata?.guide_ids ?? "")
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
 
-  if (fromMeta.length > 0) {
-    return lineFromInternalIds(
-      fromMeta,
-      products,
-      session.amount_total ?? null,
-      session.currency ?? null,
-    );
+  if (productIdsFromMeta.length > 0 || guideIdsFromMeta.length > 0) {
+    return [
+      ...lineFromProducts(
+        productIdsFromMeta,
+        products,
+        session.amount_total ?? null,
+        session.currency ?? null,
+      ),
+      ...lineFromGuides(
+        guideIdsFromMeta,
+        guides,
+        session.amount_total ?? null,
+        session.currency ?? null,
+      ),
+    ];
   }
 
   const stripe = getStripe();
@@ -123,16 +165,18 @@ export async function resolveLineItemsFromCheckoutSession(
       stripeProductId = stripeProductIdFromPrice(fullPrice);
     }
 
-    const internal = resolveInternalProduct(
-      stripePriceId,
-      stripeProductId,
-      byPrice,
-      byProduct,
-    );
+    const product =
+      productByPrice.get(stripePriceId) ??
+      (stripeProductId ? productByStripeProduct.get(stripeProductId) : undefined) ??
+      null;
+    const guide = !product ? guideByPrice.get(stripePriceId) ?? null : null;
 
     resolved.push({
-      internalProductId: internal?.id ?? null,
-      stripeProductId: stripeProductId || `price:${stripePriceId}`,
+      internalProductId: product?.id ?? null,
+      internalGuideId: guide?.id ?? null,
+      stripeProductId:
+        stripeProductId ||
+        (guide ? `guide:${guide.id}` : `price:${stripePriceId}`),
       stripePriceId,
       amountCents: item.amount_total ?? null,
       currency: item.currency ?? session.currency ?? null,

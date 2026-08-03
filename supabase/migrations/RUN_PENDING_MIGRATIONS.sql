@@ -930,4 +930,8 @@ set
   label_en = 'Live Without Resistance — “Join today” (hero primary)'
 where key = 'programs_1';
 
-select 'Upgrade complete (012–044 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 045: segments after guide purchase
+alter table public.site_guides
+  add column if not exists purchase_tags text[] not null default '{}';
+
+select 'Upgrade complete (012–045 applied). Also run 007_automations.sql if not yet applied.' as result;

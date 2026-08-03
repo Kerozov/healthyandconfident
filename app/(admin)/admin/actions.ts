@@ -2429,6 +2429,7 @@ export async function saveSiteGuide(input: {
   price_label_bg?: string;
   price_label_en?: string;
   image_url?: string;
+  purchase_tags?: string[];
   enabled?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
@@ -2470,6 +2471,7 @@ export async function saveSiteGuide(input: {
     price_label_bg: input.price_label_bg?.trim() ?? "",
     price_label_en: input.price_label_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
+    purchase_tags: (input.purchase_tags ?? []).filter(Boolean),
     enabled: input.enabled ?? true,
     sort_order: input.sort_order ?? 0,
     updated_at: new Date().toISOString(),

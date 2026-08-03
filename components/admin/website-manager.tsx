@@ -607,9 +607,11 @@ export function WebsiteManager({
                 </div>
               </div>
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
-                <p className="text-sm font-semibold text-forest-800">Тагове при покупка</p>
+                <p className="text-sm font-semibold text-forest-800">Сегменти след покупка</p>
                 <p className="text-xs text-ink-soft">
-                  Добавят се към абоната след успешно плащане. Полезни за сегменти и кампании.
+                  След успешно плащане абонатът влиза в избраните сегменти. В автоматизации
+                  можеш да ги ползваш за включване или изключване (напр. да спреш напомняния
+                  след покупка).
                 </p>
                 <SegmentAssignChecklist
                   segments={segments}
@@ -668,6 +670,8 @@ export function WebsiteManager({
         <GuidesManagerPanel
           guides={guides}
           section={sections.guides ?? DEFAULT_SITE_SECTIONS.guides}
+          segments={segments}
+          groups={groups}
         />
       )}
 

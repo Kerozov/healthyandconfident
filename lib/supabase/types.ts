@@ -407,6 +407,8 @@ export type SiteGuide = {
   price_label_bg: string;
   price_label_en: string;
   image_url: string | null;
+  /** Segment keys applied to subscriber after successful payment */
+  purchase_tags: string[];
   enabled: boolean;
   sort_order: number;
   created_at: string;
