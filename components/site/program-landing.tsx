@@ -227,6 +227,21 @@ export function ProgramLanding({
           { label: hero.secondaryCta, href: hero.secondaryHref },
         )
       : null;
+  const videoButton = content.video
+    ? {
+        // Keep page copy; only inherit admin checkout URL from the program placement when set.
+        label: content.video.cta,
+        href:
+          ctaPlacements[placementKey]?.button_url?.trim() || content.video.href,
+      }
+    : null;
+  const finalButton = content.finalCta
+    ? {
+        label: content.finalCta.cta,
+        href:
+          ctaPlacements[placementKey]?.button_url?.trim() || content.finalCta.href,
+      }
+    : null;
 
   return (
     <div className="max-w-[100vw] overflow-x-clip">
@@ -1121,15 +1136,15 @@ export function ProgramLanding({
                 </h2>
                 <CtaLink
                   placementKey={placementKey}
-                  href={content.video.href}
+                  href={videoButton!.href}
                   variant="forest"
                   size="lg"
                   className="mt-8 gap-3 px-10"
-                  target={content.video.href.startsWith("http") ? "_blank" : undefined}
-                  rel={content.video.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  target={videoButton!.href.startsWith("http") ? "_blank" : undefined}
+                  rel={videoButton!.href.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
                   <Play className="h-5 w-5 fill-current" />
-                  {content.video.cta}
+                  {videoButton!.label}
                 </CtaLink>
               </div>
             )}
@@ -1176,14 +1191,14 @@ export function ProgramLanding({
             </h2>
             <CtaLink
               placementKey={placementKey}
-              href={content.finalCta.href}
+              href={finalButton!.href}
               variant="onDark"
               size="lg"
               className="mt-8"
-              target={content.finalCta.href.startsWith("http") ? "_blank" : undefined}
-              rel={content.finalCta.href.startsWith("http") ? "noopener noreferrer" : undefined}
+              target={finalButton!.href.startsWith("http") ? "_blank" : undefined}
+              rel={finalButton!.href.startsWith("http") ? "noopener noreferrer" : undefined}
             >
-              {content.finalCta.cta}
+              {finalButton!.label}
             </CtaLink>
           </Container>
         </section>

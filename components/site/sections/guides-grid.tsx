@@ -46,12 +46,15 @@ export function GuidesGrid({
             key={guide.id}
             type="button"
             onClick={() => {
-              if (checkoutUrl) {
-                window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+              // Prefer site Checkout when price_id exists — purchase segments + automations.
+              if (hasSiteCheckout) {
+                void startGuideCheckout(guide.id, locale).catch((err) => {
+                  console.error("[guides] checkout failed", err);
+                });
                 return;
               }
-              if (hasSiteCheckout) {
-                void startGuideCheckout(guide.id, locale).catch(() => {});
+              if (checkoutUrl) {
+                window.open(checkoutUrl, "_blank", "noopener,noreferrer");
               }
             }}
             disabled={!canCheckout}

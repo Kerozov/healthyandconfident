@@ -165,5 +165,6 @@ export async function cancelSmsJob(jobId: string): Promise<boolean> {
     headers: { Authorization: `Bearer ${key}` },
     cache: "no-store",
   });
-  return res.ok;
+  if (res.ok || res.status === 404 || res.status === 410) return true;
+  return false;
 }

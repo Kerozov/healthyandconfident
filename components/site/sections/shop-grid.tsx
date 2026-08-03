@@ -27,19 +27,26 @@ export function ShopProductGrid({
     const hasSiteCheckout = Boolean(product.stripe_price_id?.trim());
 
     async function goCheckout() {
+      // Prefer site Checkout when price_id exists — needed for purchase segments + automations.
+      if (hasSiteCheckout) {
+        const placementKey = productPlacementKey(product.id);
+        const siteCheckoutHref = `site-checkout:${product.id}`;
+        if (!tryOpenPlacement(placementKey, siteCheckoutHref, product)) {
+          await startStripeCheckout([product.id], locale);
+        }
+        return;
+      }
       if (checkoutUrl) {
         const placementKey = productPlacementKey(product.id);
         if (!tryOpenPlacement(placementKey, checkoutUrl, product)) {
           window.open(checkoutUrl, "_blank", "noopener,noreferrer");
         }
-        return;
-      }
-      if (hasSiteCheckout) {
-        await startStripeCheckout([product.id], locale);
       }
     }
 
-    void goCheckout().catch(() => {});
+    void goCheckout().catch((err) => {
+      console.error("[shop] checkout failed", err);
+    });
   }
 
   return (

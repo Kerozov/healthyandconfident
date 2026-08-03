@@ -55,14 +55,29 @@ async function upsertPurchaseRow(input: {
       .from("subscriber_purchases")
       .update(row)
       .eq("id", (existing as { id: string }).id);
-    if (error) console.error("[purchase] update failed:", error.message);
+    if (error) {
+      throw new Error(`[purchase] update failed: ${error.message}`);
+    }
     return;
   }
 
   const { error } = await supabase.from("subscriber_purchases").insert(row);
-  if (error && error.code !== "23505") {
-    console.error("[purchase] insert failed:", error.message);
+  if (!error) return;
+
+  if (error.code === "23505") {
+    // Concurrent webhook — update the row that won the insert race.
+    const { error: raceError } = await supabase
+      .from("subscriber_purchases")
+      .update(row)
+      .eq("stripe_session_id", input.stripeSessionId)
+      .eq("stripe_product_id", input.item.stripeProductId);
+    if (raceError) {
+      throw new Error(`[purchase] race update failed: ${raceError.message}`);
+    }
+    return;
   }
+
+  throw new Error(`[purchase] insert failed: ${error.message}`);
 }
 
 /** Record purchase, apply purchase segments, run purchase automations. */
@@ -95,14 +110,19 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
 
   const paymentStatus = input.paymentStatus ?? "paid";
   if (paymentStatus !== "paid") {
-    for (const item of lineItems) {
-      await upsertPurchaseRow({
-        subscriberId: null,
-        email,
-        item,
-        stripeSessionId: input.stripeSessionId,
-        paymentStatus,
-      });
+    try {
+      for (const item of lineItems) {
+        await upsertPurchaseRow({
+          subscriberId: null,
+          email,
+          item,
+          stripeSessionId: input.stripeSessionId,
+          paymentStatus,
+        });
+      }
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : err);
+      return { ok: false, productIds, guideIds, tags: [] };
     }
     return { ok: true, productIds, guideIds, tags: [] };
   }
@@ -128,19 +148,19 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     guideIds.map((id) => `guide:${id}`),
   );
 
-  const { data: existing } = await supabase
+  let { data: existing } = await supabase
     .from("subscribers")
     .select("id, tags, name, phone, locale")
     .eq("email", email)
     .maybeSingle();
 
-  const isNew = !existing;
+  let isNew = !existing;
   let subscriberId = existing?.id as string | undefined;
-  const priorTags = (existing?.tags as string[]) ?? [];
-  const finalTags = mergeTags(priorTags, purchaseTags);
+  let priorTags = (existing?.tags as string[]) ?? [];
+  let finalTags = mergeTags(priorTags, purchaseTags);
 
   if (existing) {
-    await supabase
+    const { error: updateError } = await supabase
       .from("subscribers")
       .update({
         tags: finalTags,
@@ -148,8 +168,12 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
         ...(input.name?.trim() ? { name: input.name.trim() } : {}),
       })
       .eq("id", existing.id as string);
+    if (updateError) {
+      console.error("[purchase] subscriber update failed:", updateError.message);
+      return { ok: false, productIds, guideIds, tags: [] };
+    }
   } else {
-    const { data: inserted } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from("subscribers")
       .insert({
         email,
@@ -161,29 +185,72 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
       })
       .select("id")
       .single();
-    subscriberId = (inserted as { id: string } | null)?.id;
+
+    if (insertError?.code === "23505") {
+      // Concurrent webhook/signup — load winner and merge purchase tags.
+      const { data: raced } = await supabase
+        .from("subscribers")
+        .select("id, tags, name, phone, locale")
+        .eq("email", email)
+        .maybeSingle();
+      if (!raced) {
+        console.error("[purchase] subscriber race: duplicate but row missing");
+        return { ok: false, productIds, guideIds, tags: [] };
+      }
+      existing = raced;
+      isNew = false;
+      subscriberId = raced.id as string;
+      priorTags = (raced.tags as string[]) ?? [];
+      finalTags = mergeTags(priorTags, purchaseTags);
+      const { error: raceUpdateError } = await supabase
+        .from("subscribers")
+        .update({
+          tags: finalTags,
+          status: "subscribed",
+          ...(input.name?.trim() ? { name: input.name.trim() } : {}),
+        })
+        .eq("id", subscriberId);
+      if (raceUpdateError) {
+        console.error("[purchase] subscriber race update failed:", raceUpdateError.message);
+        return { ok: false, productIds, guideIds, tags: [] };
+      }
+    } else if (insertError || !inserted) {
+      console.error(
+        "[purchase] subscriber insert failed:",
+        insertError?.message ?? "no row",
+      );
+      return { ok: false, productIds, guideIds, tags: [] };
+    } else {
+      subscriberId = (inserted as { id: string }).id;
+    }
   }
 
-  for (const item of lineItems) {
-    await upsertPurchaseRow({
-      subscriberId,
-      email,
-      item,
-      stripeSessionId: input.stripeSessionId,
-      paymentStatus: "paid",
-    });
+  try {
+    for (const item of lineItems) {
+      await upsertPurchaseRow({
+        subscriberId,
+        email,
+        item,
+        stripeSessionId: input.stripeSessionId,
+        paymentStatus: "paid",
+      });
+    }
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    return { ok: false, productIds, guideIds, tags: [] };
   }
 
   const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
     "@/lib/automation/cancel"
   );
-  const { canceled } = await cancelIneligibleAutomationDeliveriesForSubscriber(
+  const { canceled, failed } = await cancelIneligibleAutomationDeliveriesForSubscriber(
     email,
     finalTags,
   );
-  if (canceled > 0) {
+  if (canceled > 0 || failed > 0) {
     console.info(
-      `[purchase] canceled ${canceled} scheduled automation(s) for ${email}`,
+      `[purchase] canceled ${canceled} scheduled automation(s) for ${email}` +
+        (failed > 0 ? ` (${failed} cancel failed)` : ""),
     );
   }
 

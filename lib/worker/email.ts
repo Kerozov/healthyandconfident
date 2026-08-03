@@ -341,5 +341,7 @@ export async function cancelEmailJob(jobId: string): Promise<boolean> {
     headers: { Authorization: `Bearer ${key}` },
     cache: "no-store",
   });
-  return res.ok;
+  // Already gone / already canceled — treat as success
+  if (res.ok || res.status === 404 || res.status === 410) return true;
+  return false;
 }

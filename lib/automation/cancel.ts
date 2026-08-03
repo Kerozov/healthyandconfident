@@ -12,12 +12,28 @@ async function cancelDeliveryRow(row: {
   worker_job_id: string | null;
   channel: string;
 }): Promise<boolean> {
+  let workerCanceled = true;
+
   if (row.worker_job_id && isNotificationWorkerConfigured()) {
-    const ok =
+    workerCanceled =
       row.channel === "sms"
         ? await cancelSmsJob(row.worker_job_id)
         : await cancelEmailJob(row.worker_job_id);
-    if (!ok) return false;
+
+    if (!workerCanceled) {
+      // One retry — network blips shouldn't leave nurture emails scheduled after purchase.
+      workerCanceled =
+        row.channel === "sms"
+          ? await cancelSmsJob(row.worker_job_id)
+          : await cancelEmailJob(row.worker_job_id);
+    }
+
+    if (!workerCanceled) {
+      console.error(
+        `[automation] failed to cancel worker job ${row.worker_job_id} for delivery ${row.id}`,
+      );
+      return false;
+    }
   }
 
   const supabase = getAdminClient();
@@ -35,9 +51,9 @@ async function cancelDeliveryRow(row: {
 export async function cancelIneligibleAutomationDeliveriesForSubscriber(
   email: string,
   tags: string[],
-): Promise<{ canceled: number; checked: number }> {
+): Promise<{ canceled: number; checked: number; failed: number }> {
   const normalized = email.trim().toLowerCase();
-  if (!normalized) return { canceled: 0, checked: 0 };
+  if (!normalized) return { canceled: 0, checked: 0, failed: 0 };
 
   const supabase = getAdminClient();
   const [{ data: deliveries }, { data: segmentRows }, { data: groupRows }] =
@@ -52,7 +68,7 @@ export async function cancelIneligibleAutomationDeliveriesForSubscriber(
     ]);
 
   const rows = deliveries ?? [];
-  if (rows.length === 0) return { canceled: 0, checked: 0 };
+  if (rows.length === 0) return { canceled: 0, checked: 0, failed: 0 };
 
   const automationIds = Array.from(new Set(rows.map((r) => r.automation_id as string)));
   const { data: automationRows } = await supabase
@@ -67,6 +83,7 @@ export async function cancelIneligibleAutomationDeliveriesForSubscriber(
   const groups = (groupRows as SegmentGroup[]) ?? [];
 
   let canceled = 0;
+  let failed = 0;
   for (const row of rows) {
     const automation = automationsById.get(row.automation_id as string);
     if (!automation) continue;
@@ -81,9 +98,10 @@ export async function cancelIneligibleAutomationDeliveriesForSubscriber(
       channel: row.channel as string,
     });
     if (ok) canceled += 1;
+    else failed += 1;
   }
 
-  return { canceled, checked: rows.length };
+  return { canceled, checked: rows.length, failed };
 }
 
 /** Cancel all pending worker jobs for an automation and mark deliveries canceled. */

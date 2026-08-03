@@ -11,6 +11,7 @@ export type ContactEventType =
   | "page_view"
   | "checkout_started"
   | "payment_completed"
+  | "payment_refunded"
   | "zoom_joined"
   | "zoom_left"
   | "reminders_canceled";

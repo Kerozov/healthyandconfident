@@ -18,6 +18,7 @@ const EVENT_LABELS: Record<string, string> = {
   page_view: "Преглед на страница",
   checkout_started: "Започнал checkout",
   payment_completed: "Платил",
+  payment_refunded: "Възстановено плащане",
   zoom_joined: "Zoom — влязъл",
   zoom_left: "Zoom — излязъл",
   reminders_canceled: "Reminders отменени",
@@ -35,6 +36,15 @@ function eventDetails(event: ContactEvent): string {
         m.stripe_session_id,
         m.amount_cents != null ? `${Number(m.amount_cents) / 100}` : null,
         m.currency,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    case "payment_refunded":
+      return [
+        m.stripe_session_id,
+        m.amount_cents != null ? `${Number(m.amount_cents) / 100}` : null,
+        m.currency,
+        m.still_has_paid_purchase ? "още има платена покупка" : null,
       ]
         .filter(Boolean)
         .join(" · ");

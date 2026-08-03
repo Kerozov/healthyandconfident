@@ -8,17 +8,17 @@ import { cn } from "@/lib/utils";
 
 const COPY = {
   bg: {
-    successTitle: "Плащането е успешно!",
+    successTitle: "Благодарим ти!",
     successBody:
-      "Благодарим ти! Получихме плащането. Ще получиш потвърждение на имейла си.",
+      "Поръчката е приета. При успешно плащане ще получиш потвърждение на имейла си. Ако ползваш банков превод, потвърждението идва след като банката обработи плащането.",
     cancelTitle: "Плащането е прекъснато",
     cancelBody: "Нямаше зареждане. Можеш да опиташ отново когато си готова.",
     close: "Затвори",
   },
   en: {
-    successTitle: "Payment successful!",
+    successTitle: "Thank you!",
     successBody:
-      "Thank you! We’ve received your payment. You’ll get a confirmation email shortly.",
+      "Your order was received. You’ll get an email confirmation once payment clears. If you used a bank transfer, confirmation arrives after the bank processes it.",
     cancelTitle: "Payment cancelled",
     cancelBody: "Nothing was charged. You can try again whenever you’re ready.",
     close: "Close",
@@ -36,6 +36,8 @@ export function CheckoutNotice({ locale }: { locale: Locale }) {
     const checkout = searchParams.get("checkout");
     if (checkout === "success" || checkout === "cancelled") {
       setStatus(checkout);
+    } else {
+      setStatus(null);
     }
   }, [searchParams]);
 

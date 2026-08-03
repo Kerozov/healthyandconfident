@@ -7,7 +7,16 @@ import { getStripe } from "@/lib/stripe/server";
 
 export const dynamic = "force-dynamic";
 
+function isSessionPaid(session: Stripe.Checkout.Session): boolean {
+  return session.payment_status === "paid";
+}
+
 async function handlePaidSession(session: Stripe.Checkout.Session) {
+  if (!isSessionPaid(session)) {
+    console.info("[stripe] skip fulfill — not paid yet", session.id, session.payment_status);
+    return { ok: true, skipped: "not_paid" };
+  }
+
   const email =
     session.customer_details?.email?.trim().toLowerCase() ||
     session.customer_email?.trim().toLowerCase() ||
@@ -27,7 +36,7 @@ async function handlePaidSession(session: Stripe.Checkout.Session) {
   const locale = session.metadata?.locale === "en" ? "en" : "bg";
   const name = session.customer_details?.name ?? null;
 
-  await fulfillPurchase({
+  const result = await fulfillPurchase({
     email,
     name,
     locale,
@@ -37,6 +46,11 @@ async function handlePaidSession(session: Stripe.Checkout.Session) {
     amountCents: session.amount_total ?? null,
     currency: session.currency ?? null,
   });
+
+  if (!result.ok) {
+    console.error("[stripe] fulfillPurchase failed for session", session.id);
+    return { ok: false, error: "fulfill_failed" };
+  }
 
   return { ok: true };
 }
@@ -52,8 +66,13 @@ async function handleFailedSession(session: Stripe.Checkout.Session) {
     return { ok: true, skipped: "no_products" };
   }
 
-  await fulfillPurchase({
-    email: email || "unknown@stripe.local",
+  if (!email) {
+    console.warn("[stripe] failed session without email", session.id);
+    return { ok: true, skipped: "no_email" };
+  }
+
+  const result = await fulfillPurchase({
+    email,
     locale: session.metadata?.locale === "en" ? "en" : "bg",
     lineItems,
     stripeSessionId: session.id,
@@ -61,6 +80,11 @@ async function handleFailedSession(session: Stripe.Checkout.Session) {
     amountCents: session.amount_total ?? null,
     currency: session.currency ?? null,
   });
+
+  if (!result.ok) {
+    console.error("[stripe] failed-session record failed", session.id);
+    return { ok: false, error: "fulfill_failed" };
+  }
 
   return { ok: true };
 }
@@ -101,21 +125,47 @@ export async function POST(req: Request) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    if (session.payment_status !== "paid" && session.status !== "complete") {
-      return NextResponse.json({ ok: true, skipped: "not_paid" });
+    // Only fulfill when Stripe confirms payment. Async methods stay unpaid until
+    // checkout.session.async_payment_succeeded.
+    if (!isSessionPaid(session)) {
+      return NextResponse.json({ ok: true, skipped: "awaiting_payment" });
     }
     const result = await handlePaidSession(session);
+    if (!result.ok) {
+      return NextResponse.json(result, { status: 500 });
+    }
+    return NextResponse.json(result);
+  }
+
+  if (event.type === "checkout.session.async_payment_succeeded") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const result = await handlePaidSession(session);
+    if (!result.ok) {
+      return NextResponse.json(result, { status: 500 });
+    }
     return NextResponse.json(result);
   }
 
   if (event.type === "checkout.session.async_payment_failed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const result = await handleFailedSession(session);
+    if (!result.ok) {
+      return NextResponse.json(result, { status: 500 });
+    }
     return NextResponse.json(result);
   }
 
   if (event.type === "charge.refunded") {
     const charge = event.data.object as Stripe.Charge;
+    const isFullRefund =
+      typeof charge.amount === "number" &&
+      typeof charge.amount_refunded === "number" &&
+      charge.amount_refunded >= charge.amount;
+
+    if (!isFullRefund) {
+      return NextResponse.json({ ok: true, skipped: "partial_refund" });
+    }
+
     const piId =
       typeof charge.payment_intent === "string"
         ? charge.payment_intent
@@ -126,6 +176,22 @@ export async function POST(req: Request) {
       if (session) {
         const lineItems = await resolveLineItemsFromCheckoutSession(session);
         await updatePurchaseStatusBySession(session.id, "refunded", lineItems);
+
+        const email =
+          session.customer_details?.email?.trim().toLowerCase() ||
+          session.customer_email?.trim().toLowerCase() ||
+          charge.billing_details?.email?.trim().toLowerCase() ||
+          charge.receipt_email?.trim().toLowerCase() ||
+          "";
+        if (email) {
+          const { markContactUnpaidByEmail } = await import("@/lib/contacts/payment");
+          await markContactUnpaidByEmail({
+            email,
+            stripeSessionId: session.id,
+            amountCents: charge.amount_refunded ?? null,
+            currency: charge.currency ?? null,
+          });
+        }
       }
     }
     return NextResponse.json({ ok: true });
@@ -140,8 +206,11 @@ export async function POST(req: Request) {
     if (sessionId) {
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.retrieve(sessionId);
-      if (session.payment_status === "paid") {
+      if (isSessionPaid(session)) {
         const result = await handlePaidSession(session);
+        if (!result.ok) {
+          return NextResponse.json(result, { status: 500 });
+        }
         return NextResponse.json(result);
       }
     }

@@ -47,8 +47,21 @@ export function useOfferPopup(): OfferPopupContextValue {
   return ctx;
 }
 
-function navigateTo(href: string, router: ReturnType<typeof useRouter>) {
+function navigateTo(
+  href: string,
+  router: ReturnType<typeof useRouter>,
+  locale: Locale,
+) {
   if (!href.trim()) return;
+  if (href.startsWith("site-checkout:")) {
+    const productId = href.slice("site-checkout:".length).trim();
+    if (productId) {
+      void startStripeCheckout([productId], locale).catch((err) => {
+        console.error("[offer-popup] site checkout failed", err);
+      });
+    }
+    return;
+  }
   if (href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:")) {
     window.open(href, href.startsWith("http") ? "_blank" : "_self", "noopener,noreferrer");
     return;
@@ -119,9 +132,9 @@ export function OfferPopupProvider({
       const href = popup?.continueHref;
       setPopup(null);
       setCheckoutError(null);
-      if (andContinue && href) navigateTo(href, router);
+      if (andContinue && href) navigateTo(href, router, locale);
     },
-    [popup?.continueHref, router],
+    [popup?.continueHref, router, locale],
   );
 
   useEffect(() => {
@@ -188,12 +201,20 @@ export function OfferPopupProvider({
   const baseUrl = baseProduct?.stripe_url?.trim() ?? "";
 
   function acceptBundle() {
-    if (!offer || !baseProduct) return;
-    if (bundleReady) {
-      checkoutProducts([baseProduct.id, offer.id]);
+    if (!offer || !baseProduct || !bundleReady) return;
+    checkoutProducts([baseProduct.id, offer.id]);
+  }
+
+  function acceptOfferOnly() {
+    if (!offer) return;
+    if (canBundleCheckout(offer)) {
+      checkoutProducts([offer.id]);
       return;
     }
-    if (offerUrl) openStripeUrl(offerUrl);
+    if (offerUrl) {
+      setPopup(null);
+      openStripeUrl(offerUrl);
+    }
   }
 
   function declineToBaseOnly() {
@@ -274,21 +295,39 @@ export function OfferPopupProvider({
               <div className="mt-6 flex flex-col gap-3">
                 {baseProduct ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={acceptBundle}
-                      disabled={pending}
-                      className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
-                    >
-                      {pending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <ArrowUpRight className="h-4 w-4" />
-                      )}
-                      {locale === "bg"
-                        ? `Да, искам и двете — към Stripe`
-                        : `Yes, both — go to Stripe`}
-                    </button>
+                    {bundleReady ? (
+                      <button
+                        type="button"
+                        onClick={acceptBundle}
+                        disabled={pending}
+                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
+                      >
+                        {pending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ArrowUpRight className="h-4 w-4" />
+                        )}
+                        {locale === "bg"
+                          ? `Да, искам и двете — към Stripe`
+                          : `Yes, both — go to Stripe`}
+                      </button>
+                    ) : (offerUrl || canBundleCheckout(offer)) ? (
+                      <button
+                        type="button"
+                        onClick={acceptOfferOnly}
+                        disabled={pending}
+                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
+                      >
+                        {pending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ArrowUpRight className="h-4 w-4" />
+                        )}
+                        {locale === "bg"
+                          ? `Да, искам офертата — ${offerCta || title}`
+                          : `Yes, take the offer — ${offerCta || title}`}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={declineToBaseOnly}
@@ -302,17 +341,21 @@ export function OfferPopupProvider({
                   </>
                 ) : (
                   <div className="flex flex-col gap-3 sm:flex-row">
-                    {offerUrl ? (
-                      <a
-                        href={offerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500"
+                    {(offerUrl || canBundleCheckout(offer)) && (
+                      <button
+                        type="button"
+                        onClick={acceptOfferOnly}
+                        disabled={pending}
+                        className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
                       >
+                        {pending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ArrowUpRight className="h-4 w-4" />
+                        )}
                         {offerCta}
-                        <ArrowUpRight className="h-4 w-4" />
-                      </a>
-                    ) : null}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => close(true)}

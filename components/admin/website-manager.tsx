@@ -404,8 +404,9 @@ export function WebsiteManager({
         >
           <p className="mb-4 text-sm text-ink-soft">
             Добави продукт ръчно с <strong>Stripe Price ID</strong> (<code>price_…</code>) или{" "}
-            <strong>Product ID</strong> (<code>prod_…</code> — взима default цената). По избор
-            Payment Link вместо checkout през сайта.
+            <strong>Product ID</strong> (<code>prod_…</code> — взима default цената). Payment Link е
+            резервен вариант — ако има <code>price_/prod_</code>, сайтът ползва Checkout (нужно за
+            сегменти след покупка).
           </p>
           <SectionToggle section={productsSection} onSaved={refresh} />
 
@@ -460,7 +461,7 @@ export function WebsiteManager({
                 </Field>
                 <Field
                   label="Stripe Price ID или Product ID"
-                  hint="price_… за checkout през сайта, или prod_… — default цената се взима от Stripe"
+                  hint="price_… или prod_… — задължително за сегменти след покупка и автоматизации. Ако има и Payment Link, сайтът ползва Checkout през price_…"
                 >
                   <Input
                     value={productForm.stripe_id}
@@ -472,7 +473,7 @@ export function WebsiteManager({
                 </Field>
                 <Field
                   label="Payment Link (по избор)"
-                  hint="buy.stripe.com — ако е попълнен, плащането минава през него вместо checkout през сайта"
+                  hint="buy.stripe.com — ползва се само ако няма price_/prod_. С price_ сайтът винаги ползва Checkout."
                 >
                   <Input
                     value={productForm.stripe_url}

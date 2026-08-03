@@ -171,8 +171,8 @@ export function GuidesManagerPanel({
       }
     >
       <p className="mb-4 text-sm text-ink-soft">
-        PDF ръководства — добави с <strong>Stripe Price ID</strong> или <strong>Product ID</strong>.
-        По избор Payment Link. Безплатните материали не изискват Stripe.
+        PDF ръководства — добави с <strong>Stripe Price ID</strong> или <strong>Product ID</strong>{" "}
+        за Checkout и сегменти след покупка. Payment Link е резервен без price_.
       </p>
       <SectionToggle section={guidesSection} onSaved={refresh} />
 
@@ -216,7 +216,7 @@ export function GuidesManagerPanel({
             </Field>
             <Field
               label="Stripe Price ID или Product ID"
-              hint="price_… или prod_… — плащане през сайта"
+              hint="price_… или prod_… — задължително за сегменти след покупка. Ако има и Payment Link, сайтът ползва Checkout."
             >
               <Input
                 value={form.stripe_id}
@@ -226,7 +226,7 @@ export function GuidesManagerPanel({
             </Field>
             <Field
               label="Payment Link (по избор)"
-              hint="buy.stripe.com — ако е попълнен, плащането минава през него"
+              hint="buy.stripe.com — ползва се само ако няма price_/prod_."
             >
               <Input
                 value={form.stripe_url}

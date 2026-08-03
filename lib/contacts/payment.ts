@@ -103,3 +103,69 @@ export async function syncContactAfterPurchase(input: {
 
   return { remindersCanceled };
 }
+
+/** After a full Stripe refund — mark contact unpaid only if no other paid purchases remain (tags left intact). */
+export async function markContactUnpaidByEmail(input: {
+  email: string;
+  stripeSessionId?: string | null;
+  amountCents?: number | null;
+  currency?: string | null;
+}): Promise<{ updated: boolean }> {
+  const email = input.email.trim().toLowerCase();
+  if (!email) return { updated: false };
+
+  const supabase = getAdminClient();
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("id, payment_status")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (!contact || (contact as Contact).payment_status !== "paid") {
+    return { updated: false };
+  }
+
+  const contactId = (contact as Contact).id;
+
+  let remainingQuery = supabase
+    .from("subscriber_purchases")
+    .select("id")
+    .eq("email", email)
+    .eq("payment_status", "paid")
+    .limit(1);
+
+  if (input.stripeSessionId) {
+    remainingQuery = remainingQuery.neq("stripe_session_id", input.stripeSessionId);
+  }
+
+  const { data: remainingRows } = await remainingQuery;
+  const stillHasPaid = (remainingRows?.length ?? 0) > 0;
+
+  await recordContactEvent({
+    contactId,
+    eventType: "payment_refunded",
+    source: "stripe",
+    metadata: {
+      stripe_session_id: input.stripeSessionId ?? null,
+      amount_cents: input.amountCents ?? null,
+      currency: input.currency ?? null,
+      still_has_paid_purchase: stillHasPaid,
+    },
+  });
+
+  if (stillHasPaid) {
+    return { updated: false };
+  }
+
+  const now = new Date().toISOString();
+  await supabase
+    .from("contacts")
+    .update({
+      payment_status: "unpaid",
+      paid_at: null,
+      updated_at: now,
+    })
+    .eq("id", contactId);
+
+  return { updated: true };
+}
