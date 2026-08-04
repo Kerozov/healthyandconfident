@@ -21,6 +21,8 @@ import {
   Menu,
   X,
   Video,
+  CreditCard,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +61,14 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/campaigns", label: "Кампании", icon: Megaphone },
       { href: "/admin/automations", label: "Автоматизации", icon: Mail },
-      { href: "/admin/engagement", label: "Статистика", icon: BarChart3 },
+      { href: "/admin/meta", label: "Meta пиксел", icon: Target },
+    ],
+  },
+  {
+    label: "Анализи",
+    items: [
+      { href: "/admin/engagement", label: "Статистика имейли", icon: BarChart3 },
+      { href: "/admin/payments", label: "Плащания", icon: CreditCard },
     ],
   },
 ];

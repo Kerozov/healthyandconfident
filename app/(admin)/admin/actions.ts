@@ -55,7 +55,6 @@ import { uploadMediaImage, uploadEmailPdf } from "@/lib/supabase/media";
 import { MEDIA_FOLDERS, type MediaFolder } from "@/lib/media/folders";
 import { parseYoutubeVideoId } from "@/lib/youtube";
 import {
-  getEngagementOverview,
   getEngagementSummaryForEmails,
   getSubscriberEngagementDetail,
 } from "@/lib/admin/engagement";
@@ -64,6 +63,9 @@ import { getFormPreset, FORM_PRESETS } from "@/lib/forms/presets";
 import { getFormSubmissions } from "@/lib/admin/forms-data";
 import { publicFormInviteUrl } from "@/lib/forms/invite-url";
 import { createFormInviteToken } from "@/lib/forms/form-invite-token";
+import { invalidateMetaPixelCache } from "@/lib/meta/config";
+import { sendMetaEvent } from "@/lib/meta/capi";
+import { publicSiteOrigin } from "@/lib/site";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string; slug?: string };
 
@@ -1840,12 +1842,6 @@ export async function getCampaignRecipientReport(
   };
 }
 
-export async function getAdminEngagementOverview() {
-  await requireAdmin();
-  const overview = await getEngagementOverview();
-  return { ok: true as const, overview };
-}
-
 export async function getSubscriberEngagementReport(email: string) {
   await requireAdmin();
   const { getPersonProfile } = await import("@/lib/admin/person-profile");
@@ -3118,3 +3114,94 @@ export async function saveZoomLiveConfig(input: {
   return { ok: true, message: "Настройките за „На живо“ са запазени." };
 }
 
+
+// ── Meta Pixel ──────────────────────────────────────────────
+export async function saveMetaPixelConfig(input: {
+  enabled: boolean;
+  pixel_id: string;
+  access_token: string;
+  test_event_code: string;
+  capi_enabled: boolean;
+  track_page_view: boolean;
+  track_view_content: boolean;
+  track_lead: boolean;
+  track_checkout: boolean;
+  track_purchase: boolean;
+  log_events: boolean;
+}): Promise<ActionResult> {
+  await requireAdmin();
+
+  const pixelId = input.pixel_id.trim();
+  if (pixelId && !/^\d{6,25}$/.test(pixelId)) {
+    return {
+      ok: false,
+      message: "Pixel ID трябва да е само цифри (виж Events Manager → Data sources).",
+    };
+  }
+
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("meta_pixel_config")
+    .update({
+      enabled: input.enabled,
+      pixel_id: pixelId,
+      access_token: input.access_token.trim(),
+      test_event_code: input.test_event_code.trim(),
+      capi_enabled: input.capi_enabled,
+      track_page_view: input.track_page_view,
+      track_view_content: input.track_view_content,
+      track_lead: input.track_lead,
+      track_checkout: input.track_checkout,
+      track_purchase: input.track_purchase,
+      log_events: input.log_events,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("key", "default");
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  invalidateMetaPixelCache();
+  revalidatePath("/admin/meta");
+  // The pixel renders from the site layout, so every prerendered page under it
+  // (home, blog, programs) has to be rebuilt — not just /bg and /en.
+  revalidatePath("/[locale]", "layout");
+  return { ok: true, message: "Настройките за Meta пиксела са запазени." };
+}
+
+/** Sends a Lead event to Meta so the admin can confirm the connection works. */
+export async function sendMetaTestEvent(): Promise<ActionResult> {
+  await requireAdmin();
+
+  const result = await sendMetaEvent({
+    eventName: "Lead",
+    eventId: `admin_test_${Date.now()}`,
+    eventSourceUrl: `${publicSiteOrigin()}/bg`,
+    source: "server",
+    user: { email: "test@healthyandconfident.co.uk", firstName: "Test" },
+    custom: { contentName: "Admin test event" },
+  });
+
+  revalidatePath("/admin/meta");
+
+  if (result.status === "skipped") {
+    return {
+      ok: false,
+      message:
+        result.error === "capi_disabled"
+          ? "Conversions API не е активен — попълни Pixel ID и Access token и включи пиксела."
+          : `Събитието беше пропуснато: ${result.error ?? "неизвестна причина"}.`,
+    };
+  }
+
+  if (!result.ok) {
+    return { ok: false, message: `Meta върна грешка: ${result.error}` };
+  }
+
+  return {
+    ok: true,
+    message:
+      "Тестовото събитие е изпратено. Провери го в Events Manager → Test events (до 1–2 минути).",
+  };
+}

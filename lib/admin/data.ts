@@ -38,6 +38,97 @@ export async function getDashboardStats() {
   };
 }
 
+export type DashboardHighlights = {
+  /** Paid revenue in the report currency over the last 30 days. */
+  revenueCents: number;
+  currency: string;
+  orders: number;
+  emailsSent: number;
+  emailsOpened: number;
+  openRate: number;
+};
+
+/**
+ * Lightweight 30-day numbers for the dashboard cards. Deliberately not the full
+ * reports — those live on /admin/engagement and /admin/payments.
+ */
+export async function getDashboardHighlights(): Promise<DashboardHighlights> {
+  const supabase = getAdminClient();
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [purchases, campaignSent, campaignOpened, autoSent, autoOpened] =
+    await Promise.all([
+      supabase
+        .from("subscriber_purchases")
+        .select("stripe_session_id, order_total_cents, amount_cents, currency")
+        .eq("payment_status", "paid")
+        .gte("purchased_at", since),
+      supabase
+        .from("campaign_deliveries")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "sent")
+        .gte("sent_at", since),
+      supabase
+        .from("campaign_deliveries")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "sent")
+        .not("opened_at", "is", null)
+        .gte("sent_at", since),
+      supabase
+        .from("automation_deliveries")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "sent")
+        .eq("channel", "email")
+        .gte("sent_at", since),
+      supabase
+        .from("automation_deliveries")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "sent")
+        .eq("channel", "email")
+        .not("opened_at", "is", null)
+        .gte("sent_at", since),
+    ]);
+
+  const rows =
+    (purchases.data as {
+      stripe_session_id: string | null;
+      order_total_cents: number | null;
+      amount_cents: number | null;
+      currency: string | null;
+    }[] | null) ?? [];
+
+  // One Stripe session = one order; the total repeats on every line.
+  const orderTotals = new Map<string, { cents: number; currency: string }>();
+  for (const row of rows) {
+    const key = row.stripe_session_id ?? crypto.randomUUID();
+    const cents = row.order_total_cents ?? row.amount_cents ?? 0;
+    const existing = orderTotals.get(key);
+    orderTotals.set(key, {
+      cents: Math.max(existing?.cents ?? 0, cents),
+      currency: (row.currency ?? existing?.currency ?? "gbp").toUpperCase(),
+    });
+  }
+
+  const currency = orderTotals.size
+    ? [...orderTotals.values()][0].currency
+    : "GBP";
+  const inCurrency = [...orderTotals.values()].filter((o) => o.currency === currency);
+
+  const emailsSent = (campaignSent.count ?? 0) + (autoSent.count ?? 0);
+  const emailsOpened = (campaignOpened.count ?? 0) + (autoOpened.count ?? 0);
+
+  return {
+    revenueCents: inCurrency.reduce((sum, o) => sum + o.cents, 0),
+    currency,
+    orders: inCurrency.length,
+    emailsSent,
+    emailsOpened,
+    openRate: emailsSent
+      ? Math.round((emailsOpened / emailsSent) * 1000) / 10
+      : 0,
+  };
+}
+
 export async function getPosts(): Promise<BlogPost[]> {
   const supabase = getAdminClient();
   const { data } = await supabase

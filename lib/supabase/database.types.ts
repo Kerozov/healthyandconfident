@@ -23,6 +23,7 @@ import type {
 } from "@/lib/supabase/types";
 import type { FormTemplateRecord, FormSubmissionRecord } from "@/lib/forms/types";
 import type { Contact, ContactWorkerJob, ContactEvent } from "@/lib/contacts/types";
+import type { MetaPixelConfig, MetaEventLogRow } from "@/lib/meta/types";
 
 type FormInvitation = {
   id: string;
@@ -54,7 +55,10 @@ type SubscriberPurchase = {
   stripe_price_id: string | null;
   stripe_product_id: string | null;
   payment_status: "paid" | "refunded" | "failed";
+  /** Amount of this line only. */
   amount_cents: number | null;
+  /** Stripe session total, repeated on every line of the order. */
+  order_total_cents: number | null;
   currency: string | null;
   purchased_at: string;
 };
@@ -98,6 +102,8 @@ export type Database = {
       zoom_live_config: TableShape<ZoomLiveConfig>;
       zoom_webhook_log: TableShape<ZoomWebhookLog>;
       zoom_session_events: TableShape<ZoomSessionEvent>;
+      meta_pixel_config: TableShape<MetaPixelConfig>;
+      meta_event_log: TableShape<MetaEventLogRow>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

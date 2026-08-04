@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { useOfferPopup } from "@/components/site/offer-popup";
+import { trackMeta } from "@/lib/meta/client";
 import { cn } from "@/lib/utils";
 import type { VariantProps } from "class-variance-authority";
+
+/** Stripe payment links leave the site, so the click is the only conversion signal. */
+function isStripeCheckoutUrl(href: string): boolean {
+  return /^https?:\/\/(buy\.stripe\.com|checkout\.stripe\.com|[a-z0-9-]+\.stripe\.com)/i.test(
+    href,
+  );
+}
 
 type CtaLinkProps = VariantProps<typeof buttonVariants> & {
   placementKey: string;
@@ -34,6 +42,14 @@ export function CtaLink({
   function handleClick(e: React.MouseEvent) {
     if (tryOpenPlacement(placementKey, href)) {
       e.preventDefault();
+      return;
+    }
+    if (isStripeCheckoutUrl(href)) {
+      trackMeta("InitiateCheckout", {
+        contentIds: [placementKey],
+        contentType: "product",
+        numItems: 1,
+      });
     }
   }
 

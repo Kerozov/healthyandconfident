@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { productPlacementKey } from "@/lib/site/product-placement";
-import { startStripeCheckout } from "@/lib/site/stripe-checkout";
+import { openStripeUrl, startStripeCheckout } from "@/lib/site/stripe-checkout";
 import { useOfferPopup } from "@/components/site/offer-popup";
 
 export function ShopProductGrid({
@@ -39,7 +39,7 @@ export function ShopProductGrid({
       if (checkoutUrl) {
         const placementKey = productPlacementKey(product.id);
         if (!tryOpenPlacement(placementKey, checkoutUrl, product)) {
-          window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+          openStripeUrl(checkoutUrl, [product.id]);
         }
       }
     }

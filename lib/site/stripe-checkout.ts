@@ -1,15 +1,34 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
+import { metaEventId, trackMeta } from "@/lib/meta/client";
 
 export function canBundleCheckout(...products: (SiteProduct | null | undefined)[]): boolean {
   return products.every((p) => Boolean(p?.stripe_price_id?.trim()));
 }
 
+/**
+ * Fires the browser half of `InitiateCheckout`. The matching Conversions API
+ * event is sent by `/api/checkout`, which knows the exact Stripe prices — both
+ * halves share this id so Meta counts one conversion.
+ */
+function beginCheckoutTracking(contentIds: string[]): string {
+  const eventId = metaEventId();
+  trackMeta(
+    "InitiateCheckout",
+    { contentIds, contentType: "product", numItems: contentIds.length },
+    undefined,
+    { mirror: false, eventId },
+  );
+  return eventId;
+}
+
 export async function startGuideCheckout(guideId: string, locale: Locale): Promise<void> {
+  const metaEvent = beginCheckoutTracking([guideId]);
+
   const res = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ guideIds: [guideId], locale }),
+    body: JSON.stringify({ guideIds: [guideId], locale, metaEventId: metaEvent }),
   });
 
   const data = (await res.json()) as { url?: string; message?: string };
@@ -24,10 +43,12 @@ export async function startStripeCheckout(
   productIds: string[],
   locale: Locale,
 ): Promise<void> {
+  const metaEvent = beginCheckoutTracking(productIds);
+
   const res = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ productIds, locale }),
+    body: JSON.stringify({ productIds, locale, metaEventId: metaEvent }),
   });
 
   const data = (await res.json()) as { url?: string; message?: string };
@@ -38,6 +59,15 @@ export async function startStripeCheckout(
   window.location.href = data.url;
 }
 
-export function openStripeUrl(url: string) {
+/**
+ * Opens a Stripe payment link that bypasses our API. Nothing server-side sees
+ * this click, so the event is mirrored to the Conversions API from here.
+ */
+export function openStripeUrl(url: string, contentIds: string[] = []) {
+  trackMeta("InitiateCheckout", {
+    contentIds: contentIds.length > 0 ? contentIds : [url],
+    contentType: "product",
+    numItems: Math.max(1, contentIds.length),
+  });
   window.open(url, "_blank", "noopener,noreferrer");
 }

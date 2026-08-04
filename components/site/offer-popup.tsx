@@ -213,7 +213,7 @@ export function OfferPopupProvider({
     }
     if (offerUrl) {
       setPopup(null);
-      openStripeUrl(offerUrl);
+      openStripeUrl(offerUrl, [offer.id]);
     }
   }
 
@@ -228,7 +228,7 @@ export function OfferPopupProvider({
     }
     if (baseUrl) {
       setPopup(null);
-      openStripeUrl(baseUrl);
+      openStripeUrl(baseUrl, [baseProduct.id]);
       return;
     }
     close(true);

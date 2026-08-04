@@ -3,7 +3,7 @@
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteGuide } from "@/lib/supabase/types";
-import { startGuideCheckout } from "@/lib/site/stripe-checkout";
+import { openStripeUrl, startGuideCheckout } from "@/lib/site/stripe-checkout";
 
 function GuideCardImage({ src, alt }: { src: string; alt: string }) {
   return (
@@ -54,7 +54,7 @@ export function GuidesGrid({
                 return;
               }
               if (checkoutUrl) {
-                window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+                openStripeUrl(checkoutUrl, [guide.id]);
               }
             }}
             disabled={!canCheckout}

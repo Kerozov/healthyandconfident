@@ -5,6 +5,7 @@ import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
 import { getProgramLanding } from "@/lib/programs/landings";
 import { getCtaPlacements } from "@/lib/site/content";
 import { ProgramLanding } from "@/components/site/program-landing";
+import { MetaViewContent } from "@/components/site/meta-view-content";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 
 export function generateStaticParams() {
@@ -58,10 +59,17 @@ export default async function ProgramPage({
   const ctaPlacements = Object.fromEntries(placementRows.map((p) => [p.key, p]));
 
   return (
-    <ProgramLanding
-      content={content}
-      locale={locale as Locale}
-      ctaPlacements={ctaPlacements}
-    />
+    <>
+      <MetaViewContent
+        contentIds={[slug]}
+        contentName={content.meta.title}
+        contentCategory="program"
+      />
+      <ProgramLanding
+        content={content}
+        locale={locale as Locale}
+        ctaPlacements={ctaPlacements}
+      />
+    </>
   );
 }

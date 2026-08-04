@@ -50,11 +50,67 @@ async function loadCatalogMaps() {
   return { products, guides, productByPrice, productByStripeProduct, guideByPrice };
 }
 
+type LineAmount = { amountCents: number | null; currency: string | null };
+
+/**
+ * Per-price amounts for a session. Without this, every line of a multi-item
+ * order stores the session total and revenue reports double count.
+ */
+async function loadAmountsByPrice(
+  sessionId: string,
+): Promise<Map<string, LineAmount>> {
+  const byPrice = new Map<string, LineAmount>();
+  try {
+    const stripe = getStripe();
+    const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, {
+      limit: 100,
+    });
+    for (const item of lineItems.data) {
+      const priceId = typeof item.price === "string" ? item.price : item.price?.id;
+      if (!priceId) continue;
+      const existing = byPrice.get(priceId);
+      const amount = item.amount_total ?? null;
+      byPrice.set(priceId, {
+        amountCents:
+          existing?.amountCents != null && amount != null
+            ? existing.amountCents + amount
+            : (existing?.amountCents ?? amount),
+        currency: item.currency ?? existing?.currency ?? null,
+      });
+    }
+  } catch (err) {
+    console.warn(
+      "[stripe] line item amounts unavailable:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+  return byPrice;
+}
+
+/**
+ * Amount for one line. Falls back to the session total only when the order has
+ * a single line — otherwise `null`, so reports never invent revenue.
+ */
+function resolveLineAmount(
+  stripePriceId: string,
+  byPrice: Map<string, LineAmount>,
+  fallback: LineAmount,
+  singleLineOrder: boolean,
+): LineAmount {
+  const known = stripePriceId ? byPrice.get(stripePriceId) : undefined;
+  if (known?.amountCents != null) {
+    return { amountCents: known.amountCents, currency: known.currency ?? fallback.currency };
+  }
+  if (singleLineOrder) return fallback;
+  return { amountCents: null, currency: fallback.currency };
+}
+
 function lineFromProducts(
   productIds: string[],
   products: SiteProduct[],
-  amountCents: number | null,
-  currency: string | null,
+  byPrice: Map<string, LineAmount>,
+  fallback: LineAmount,
+  singleLineOrder: boolean,
 ): ResolvedLineItem[] {
   const byId = new Map(products.map((p) => [p.id, p]));
   const items: ResolvedLineItem[] = [];
@@ -63,15 +119,16 @@ function lineFromProducts(
     const product = byId.get(id);
     if (!product) continue;
     const stripeProductId = product.stripe_product_id?.trim();
-    const stripePriceId = product.stripe_price_id?.trim();
+    const stripePriceId = product.stripe_price_id?.trim() || "";
     if (!stripeProductId && !stripePriceId) continue;
+    const amount = resolveLineAmount(stripePriceId, byPrice, fallback, singleLineOrder);
     items.push({
       internalProductId: product.id,
       internalGuideId: null,
       stripeProductId: stripeProductId || `internal:${product.id}`,
-      stripePriceId: stripePriceId || "",
-      amountCents,
-      currency,
+      stripePriceId,
+      amountCents: amount.amountCents,
+      currency: amount.currency,
     });
   }
 
@@ -81,8 +138,9 @@ function lineFromProducts(
 function lineFromGuides(
   guideIds: string[],
   guides: SiteGuide[],
-  amountCents: number | null,
-  currency: string | null,
+  byPrice: Map<string, LineAmount>,
+  fallback: LineAmount,
+  singleLineOrder: boolean,
 ): ResolvedLineItem[] {
   const byId = new Map(guides.map((g) => [g.id, g]));
   const items: ResolvedLineItem[] = [];
@@ -92,13 +150,14 @@ function lineFromGuides(
     if (!guide) continue;
     const stripePriceId = guide.stripe_price_id?.trim();
     if (!stripePriceId) continue;
+    const amount = resolveLineAmount(stripePriceId, byPrice, fallback, singleLineOrder);
     items.push({
       internalProductId: null,
       internalGuideId: guide.id,
       stripeProductId: `guide:${guide.id}`,
       stripePriceId,
-      amountCents,
-      currency,
+      amountCents: amount.amountCents,
+      currency: amount.currency,
     });
   }
 
@@ -127,19 +186,24 @@ export async function resolveLineItemsFromCheckoutSession(
     .filter(Boolean);
 
   if (productIdsFromMeta.length > 0 || guideIdsFromMeta.length > 0) {
+    const singleLineOrder = productIdsFromMeta.length + guideIdsFromMeta.length === 1;
+    const fallback: LineAmount = {
+      amountCents: session.amount_total ?? null,
+      currency: session.currency ?? null,
+    };
+    const byPrice = singleLineOrder
+      ? new Map<string, LineAmount>()
+      : await loadAmountsByPrice(session.id);
+
     return [
       ...lineFromProducts(
         productIdsFromMeta,
         products,
-        session.amount_total ?? null,
-        session.currency ?? null,
+        byPrice,
+        fallback,
+        singleLineOrder,
       ),
-      ...lineFromGuides(
-        guideIdsFromMeta,
-        guides,
-        session.amount_total ?? null,
-        session.currency ?? null,
-      ),
+      ...lineFromGuides(guideIdsFromMeta, guides, byPrice, fallback, singleLineOrder),
     ];
   }
 

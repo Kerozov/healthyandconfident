@@ -9,6 +9,7 @@ import {
   HEALTH_SEGMENT,
 } from "@/lib/site/health-tags";
 import { mergeVisitorTags } from "@/lib/site/visitor-tags";
+import { trackMeta } from "@/lib/meta/client";
 
 const COPY = {
   bg: {
@@ -139,6 +140,18 @@ export function SubscribeForm({
       });
       if (!res.ok) throw new Error();
       mergeVisitorTags(tags);
+      trackMeta(
+        "Lead",
+        {
+          contentName: source,
+          contentCategory: interestTag ?? undefined,
+        },
+        {
+          email: payload.email,
+          firstName: payload.first_name ?? null,
+          lastName: payload.last_name ?? null,
+        },
+      );
       setState("done");
       onSuccess?.();
     } catch {

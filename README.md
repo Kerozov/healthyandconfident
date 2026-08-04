@@ -23,3 +23,24 @@ cp .env.example .env
 ```bash
 bun run verify:worker   # test worker auth
 ```
+
+Upgrading an existing database? Run `supabase/migrations/RUN_PENDING_MIGRATIONS.sql`
+instead of the setup file.
+
+## Reporting & tracking
+
+- **Admin → Статистика имейли** (`/admin/engagement`) — deliveries, opens, clicks,
+  CTOR, bounce and failure rates, per campaign and per automation, best send hour
+  and weekday, deliverability by mailbox provider, engagement tiers, sleeping
+  subscribers, top links.
+- **Admin → Плащания** (`/admin/payments`) — revenue, orders, AOV, refunds, product
+  performance, checkout funnel, repeat customers, revenue by acquisition source.
+  Money figures come from Stripe; one checkout session is one order.
+- **Admin → Meta пиксел** (`/admin/meta`) — pixel id, Conversions API token, which
+  events to track, a test-event button, and a log of everything sent to Meta.
+
+Meta events fire from the browser **and** from the server with a shared `event_id`,
+so Meta deduplicates the pair: `PageView`, `ViewContent`, `Lead`,
+`CompleteRegistration`, `InitiateCheckout` (exact Stripe amount, from
+`/api/checkout`) and `Purchase` (from the Stripe webhook). Personal data is
+SHA-256 hashed before it leaves the app.

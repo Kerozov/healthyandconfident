@@ -1,35 +1,52 @@
 import Link from "next/link";
-import { Users, FileText, Megaphone, ArrowUpRight } from "lucide-react";
-import { getDashboardStats } from "@/lib/admin/data";
+import {
+  Users,
+  FileText,
+  BarChart3,
+  CreditCard,
+  ArrowUpRight,
+} from "lucide-react";
+import { getDashboardStats, getDashboardHighlights } from "@/lib/admin/data";
+import { formatMoney, formatNumber, formatPercent } from "@/lib/money";
 import { formatDate } from "@/lib/utils";
 import { PageHeader, Badge, DataTable } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const stats = await getDashboardStats();
+  const [stats, highlights] = await Promise.all([
+    getDashboardStats(),
+    getDashboardHighlights(),
+  ]);
 
   const cards = [
     {
+      label: "Оборот (30 дни)",
+      value: formatMoney(highlights.revenueCents, highlights.currency),
+      sub: `${formatNumber(highlights.orders)} поръчки`,
+      icon: CreditCard,
+      href: "/admin/payments",
+    },
+    {
+      label: "Изпратени имейли (30 дни)",
+      value: formatNumber(highlights.emailsSent),
+      sub: `${formatPercent(highlights.openRate)} отваряемост`,
+      icon: BarChart3,
+      href: "/admin/engagement",
+    },
+    {
       label: "Активни абонати",
-      value: stats.activeSubscribers,
-      sub: `${stats.totalSubscribers} общо`,
+      value: formatNumber(stats.activeSubscribers),
+      sub: `${formatNumber(stats.totalSubscribers)} общо`,
       icon: Users,
       href: "/admin/subscribers",
     },
     {
       label: "Публикувани статии",
-      value: stats.publishedPosts,
-      sub: `${stats.totalPosts} общо`,
+      value: formatNumber(stats.publishedPosts),
+      sub: `${formatNumber(stats.totalPosts)} общо`,
       icon: FileText,
       href: "/admin/blog",
-    },
-    {
-      label: "Изпратени кампании",
-      value: stats.recentCampaigns.filter((c) => c.status === "sent").length,
-      sub: "скорошни",
-      icon: Megaphone,
-      href: "/admin/campaigns",
     },
   ];
 
@@ -40,7 +57,7 @@ export default async function AdminDashboard() {
         description="Бърз преглед на абонати, съдържание и кампании."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((c) => (
           <Link
             key={c.label}

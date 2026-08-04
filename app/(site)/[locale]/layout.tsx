@@ -6,7 +6,9 @@ import { geistSans, fraunces } from "@/app/fonts";
 import { locales, isLocale, localeHtmlLang, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { getPublicSiteContent } from "@/lib/site/content";
+import { getMetaPixelPublicConfig } from "@/lib/meta/config";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
+import { MetaPixel } from "@/components/site/meta-pixel";
 import { SiteHeader } from "@/components/site/site-header";
 import { Footer } from "@/components/site/footer";
 import { Popup } from "@/components/site/popup";
@@ -75,7 +77,11 @@ export default async function SiteLayout({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
-  const [dict, site] = await Promise.all([getDictionary(l), getPublicSiteContent()]);
+  const [dict, site, metaPixel] = await Promise.all([
+    getDictionary(l),
+    getPublicSiteContent(),
+    getMetaPixelPublicConfig(),
+  ]);
 
   return (
     <html
@@ -105,6 +111,7 @@ export default async function SiteLayout({
             <Suspense fallback={null}>
               <CheckoutNotice locale={l} />
             </Suspense>
+            <MetaPixel config={metaPixel} />
           </MenuPopupProvider>
         </OfferPopupProvider>
       </body>

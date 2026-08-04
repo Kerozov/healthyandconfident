@@ -1,32 +1,32 @@
 import { Suspense } from "react";
-import { getEmailStats } from "@/lib/admin/email-stats";
+import { getPaymentStats } from "@/lib/admin/payment-stats";
 import { parseStatsPeriod } from "@/lib/admin/stats-periods";
-import { EmailStatsDashboard } from "@/components/admin/email-stats-dashboard";
+import { PaymentStatsDashboard } from "@/components/admin/payment-stats-dashboard";
 import { PeriodFilter } from "@/components/admin/period-filter";
 import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminEngagementPage({
+export default async function AdminPaymentsPage({
   searchParams,
 }: {
   searchParams: Promise<{ period?: string }>;
 }) {
   const { period: periodParam } = await searchParams;
   const period = parseStatsPeriod(periodParam);
-  const stats = await getEmailStats(period);
+  const stats = await getPaymentStats(period);
 
   return (
     <div>
       <PageHeader
-        title="Статистика — имейли"
-        description="Доставки, отваряния, кликове и ангажираност. За профил на конкретен човек — Абонати → иконата за статистика."
+        title="Плащания"
+        description="Оборот, поръчки, продукти и клиенти — от реалните Stripe плащания."
       >
         <Suspense fallback={null}>
           <PeriodFilter active={period} />
         </Suspense>
       </PageHeader>
-      <EmailStatsDashboard stats={stats} />
+      <PaymentStatsDashboard stats={stats} />
     </div>
   );
 }

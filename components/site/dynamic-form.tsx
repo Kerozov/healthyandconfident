@@ -3,6 +3,7 @@
 import type { Locale } from "@/i18n/config";
 import type { FormField, FormSettings, FormTheme } from "@/lib/forms/types";
 import { normalizeFormFields } from "@/lib/forms/answer-tags";
+import { trackMeta } from "@/lib/meta/client";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -80,6 +81,16 @@ export function DynamicForm({
     return locale === "en" ? opt.label_en : opt.label_bg;
   }
 
+  /** Email the visitor typed (or the one the invite link carried) — for ad matching. */
+  function submittedEmail(): string | null {
+    for (const field of renderFields) {
+      if (field.type !== "email") continue;
+      const value = values[field.id];
+      if (typeof value === "string" && value.includes("@")) return value.trim();
+    }
+    return prefilledEmail?.trim() || null;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setState("loading");
@@ -92,6 +103,11 @@ export function DynamicForm({
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error || "Submit failed");
+      trackMeta(
+        "CompleteRegistration",
+        { contentName: title, contentCategory: `form:${slug}` },
+        { email: submittedEmail() },
+      );
       setState("done");
     } catch (err) {
       setState("error");

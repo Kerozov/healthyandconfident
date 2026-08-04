@@ -4,11 +4,57 @@ import { fulfillPurchase } from "@/lib/purchase/fulfill";
 import { updatePurchaseStatusBySession } from "@/lib/purchase/status";
 import { resolveLineItemsFromCheckoutSession } from "@/lib/stripe/resolve-products";
 import { getStripe } from "@/lib/stripe/server";
+import { sendMetaEvent } from "@/lib/meta/capi";
+import { publicSiteOrigin } from "@/lib/site";
+import type { ResolvedLineItem } from "@/lib/stripe/resolve-products";
 
 export const dynamic = "force-dynamic";
 
 function isSessionPaid(session: Stripe.Checkout.Session): boolean {
   return session.payment_status === "paid";
+}
+
+/**
+ * Meta `Purchase` from the server — the only place the real amount is known and
+ * the one event that survives ad blockers. The event id is derived from the
+ * Stripe session so webhook retries collapse into a single conversion.
+ */
+async function sendMetaPurchase(
+  session: Stripe.Checkout.Session,
+  email: string,
+  lineItems: ResolvedLineItem[],
+): Promise<void> {
+  const details = session.customer_details;
+  const [firstName, ...restName] = (details?.name ?? "").trim().split(/\s+/);
+  const locale = session.metadata?.locale === "en" ? "en" : "bg";
+
+  await sendMetaEvent({
+    eventName: "Purchase",
+    eventId: `purchase_${session.id}`,
+    eventSourceUrl: `${publicSiteOrigin()}/${locale}?checkout=success`,
+    actionSource: "website",
+    source: "server",
+    user: {
+      email,
+      phone: details?.phone ?? null,
+      firstName: firstName || null,
+      lastName: restName.length > 0 ? restName[restName.length - 1] : null,
+      country: details?.address?.country ?? null,
+      externalId: session.metadata?.contact_id ?? null,
+      fbp: session.metadata?.fbp ?? null,
+      fbc: session.metadata?.fbc ?? null,
+    },
+    custom: {
+      value: session.amount_total != null ? session.amount_total / 100 : null,
+      currency: session.currency,
+      contentIds: lineItems.map(
+        (item) => item.internalProductId ?? item.internalGuideId ?? item.stripeProductId,
+      ),
+      contentType: "product",
+      numItems: lineItems.length,
+      orderId: session.id,
+    },
+  });
 }
 
 async function handlePaidSession(session: Stripe.Checkout.Session) {
@@ -51,6 +97,11 @@ async function handlePaidSession(session: Stripe.Checkout.Session) {
     console.error("[stripe] fulfillPurchase failed for session", session.id);
     return { ok: false, error: "fulfill_failed" };
   }
+
+  await sendMetaPurchase(session, email, lineItems).catch((err) => {
+    // Ad reporting must never fail a paid order.
+    console.warn("[stripe] meta purchase event failed:", err instanceof Error ? err.message : err);
+  });
 
   return { ok: true };
 }

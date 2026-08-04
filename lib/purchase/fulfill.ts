@@ -28,6 +28,8 @@ async function upsertPurchaseRow(input: {
   item: ResolvedLineItem;
   stripeSessionId: string;
   paymentStatus: PurchasePaymentStatus;
+  /** Stripe session total — same on every line, so orders sum without double counting. */
+  orderTotalCents: number | null;
 }): Promise<void> {
   const supabase = getAdminClient();
   const row = {
@@ -39,6 +41,7 @@ async function upsertPurchaseRow(input: {
     stripe_product_id: input.item.stripeProductId,
     payment_status: input.paymentStatus,
     amount_cents: input.item.amountCents,
+    order_total_cents: input.orderTotalCents,
     currency: input.item.currency,
     purchased_at: new Date().toISOString(),
   };
@@ -109,6 +112,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
   }
 
   const paymentStatus = input.paymentStatus ?? "paid";
+  const orderTotalCents = input.amountCents ?? null;
   if (paymentStatus !== "paid") {
     try {
       for (const item of lineItems) {
@@ -118,6 +122,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
           item,
           stripeSessionId: input.stripeSessionId,
           paymentStatus,
+          orderTotalCents,
         });
       }
     } catch (err) {
@@ -233,6 +238,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
         item,
         stripeSessionId: input.stripeSessionId,
         paymentStatus: "paid",
+        orderTotalCents,
       });
     }
   } catch (err) {

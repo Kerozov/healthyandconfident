@@ -5,6 +5,7 @@ import {
   getPersonEmailHistory,
   type PersonEmailItem,
 } from "@/lib/admin/email-history";
+import { fetchAllRows } from "@/lib/admin/stats-shared";
 
 export type EngagementTier = "hot" | "warm" | "cold" | "none";
 
@@ -18,12 +19,6 @@ export type EmailEngagementSummary = {
   openRate: number;
   clickRate: number;
   tier: EngagementTier;
-};
-
-export type SubscriberEngagementRow = EmailEngagementSummary & {
-  email: string;
-  subscriberId: string | null;
-  name: string | null;
 };
 
 export type EngagementActivityItem = {
@@ -41,28 +36,6 @@ export type ClickEventItem = {
   linkLabel: string | null;
   targetUrl: string | null;
   clickedAt: string;
-};
-
-export type TopLinkRow = {
-  linkLabel: string;
-  targetUrl: string;
-  clicks: number;
-  uniqueEmails: number;
-};
-
-export type EngagementOverview = {
-  totals: EmailEngagementSummary;
-  topByOpens: SubscriberEngagementRow[];
-  topByClicks: SubscriberEngagementRow[];
-  topLinks: TopLinkRow[];
-  recentClicks: {
-    email: string;
-    sourceType: "campaign" | "automation";
-    sourceTitle: string;
-    linkLabel: string | null;
-    targetUrl: string | null;
-    clickedAt: string;
-  }[];
 };
 
 function rate(part: number, whole: number): number {
@@ -129,17 +102,21 @@ function isOpenedRow(row: {
   return Boolean(row.opened_at) || row.recipient_status === "opened";
 }
 
-function rowToSubscriber(
-  email: string,
-  acc: Acc,
-  subMap: Map<string, { id: string; name: string | null }>,
-): SubscriberEngagementRow {
-  return {
-    email,
-    subscriberId: subMap.get(email)?.id ?? null,
-    name: subMap.get(email)?.name ?? null,
-    ...accToSummary(acc),
-  };
+type DeliveryStatRow = {
+  email: string;
+  status: string;
+  opened_at: string | null;
+  click_count: number;
+  recipient_status: string | null;
+};
+
+/** Keeps the `in()` filter inside PostgREST's URL limit. */
+const EMAIL_CHUNK = 150;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }
 
 export async function getEngagementSummaryForEmails(
@@ -148,7 +125,7 @@ export async function getEngagementSummaryForEmails(
   const map = new Map<string, EmailEngagementSummary>();
   if (emails.length === 0) return map;
 
-  const normalized = emails.map((e) => e.trim().toLowerCase());
+  const normalized = [...new Set(emails.map((e) => e.trim().toLowerCase()))];
   const byEmail = new Map<string, Acc>();
   for (const email of normalized) {
     byEmail.set(email, {
@@ -163,51 +140,43 @@ export async function getEngagementSummaryForEmails(
 
   const supabase = getAdminClient();
 
-  const { data: autoRows } = await supabase
-    .from("automation_deliveries")
-    .select("email, status, opened_at, click_count, recipient_status")
-    .eq("channel", "email")
-    .in("email", normalized);
-
-  for (const row of (autoRows as {
-    email: string;
-    status: string;
-    opened_at: string | null;
-    click_count: number;
-    recipient_status: string | null;
-  }[] | null) ?? []) {
-    const acc = byEmail.get(row.email.toLowerCase());
-    if (!acc) continue;
-    if (row.status === "sent") {
-      bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
-    } else if (row.status === "scheduled") {
-      acc.scheduled += 1;
-    } else if (row.status === "failed") {
-      acc.failed += 1;
+  function apply(rows: DeliveryStatRow[]) {
+    for (const row of rows) {
+      const acc = byEmail.get(row.email.toLowerCase());
+      if (!acc) continue;
+      if (row.status === "sent") {
+        bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
+      } else if (row.status === "scheduled") {
+        acc.scheduled += 1;
+      } else if (row.status === "failed") {
+        acc.failed += 1;
+      }
     }
   }
 
-  const { data: campRows } = await supabase
-    .from("campaign_deliveries")
-    .select("email, status, opened_at, click_count, recipient_status")
-    .in("email", normalized);
+  for (const batch of chunk(normalized, EMAIL_CHUNK)) {
+    // Paginated: PostgREST caps a response at 1000 rows and a busy list of
+    // subscribers has far more deliveries than that.
+    const [autoRows, campRows] = await Promise.all([
+      fetchAllRows<DeliveryStatRow>((from, to) =>
+        supabase
+          .from("automation_deliveries")
+          .select("email, status, opened_at, click_count, recipient_status")
+          .eq("channel", "email")
+          .in("email", batch)
+          .range(from, to),
+      ),
+      fetchAllRows<DeliveryStatRow>((from, to) =>
+        supabase
+          .from("campaign_deliveries")
+          .select("email, status, opened_at, click_count, recipient_status")
+          .in("email", batch)
+          .range(from, to),
+      ),
+    ]);
 
-  for (const row of (campRows as {
-    email: string;
-    status: string;
-    opened_at: string | null;
-    click_count: number;
-    recipient_status: string | null;
-  }[] | null) ?? []) {
-    const acc = byEmail.get(row.email.toLowerCase());
-    if (!acc) continue;
-    if (row.status === "sent") {
-      bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
-    } else if (row.status === "scheduled") {
-      acc.scheduled += 1;
-    } else if (row.status === "failed") {
-      acc.failed += 1;
-    }
+    apply(autoRows);
+    apply(campRows);
   }
 
   for (const [email, acc] of byEmail) {
@@ -303,183 +272,4 @@ export async function getSubscriberEngagementDetail(email: string): Promise<{
     }));
 
   return { summary, emails, activity, clickEvents };
-}
-
-async function aggregateTopLinks(): Promise<TopLinkRow[]> {
-  const supabase = getAdminClient();
-  const { data } = await supabase
-    .from("email_link_clicks")
-    .select("link_label, target_url, email");
-
-  const map = new Map<
-    string,
-    { linkLabel: string; targetUrl: string; clicks: number; emails: Set<string> }
-  >();
-
-  for (const row of (data as {
-    link_label: string | null;
-    target_url: string | null;
-    email: string;
-  }[] | null) ?? []) {
-    const targetUrl = row.target_url?.trim() || "—";
-    const linkLabel = row.link_label?.trim() || targetUrl;
-    const key = `${linkLabel}::${targetUrl}`;
-    const entry = map.get(key) ?? {
-      linkLabel,
-      targetUrl,
-      clicks: 0,
-      emails: new Set<string>(),
-    };
-    entry.clicks += 1;
-    entry.emails.add(row.email.toLowerCase());
-    map.set(key, entry);
-  }
-
-  return [...map.values()]
-    .map((entry) => ({
-      linkLabel: entry.linkLabel,
-      targetUrl: entry.targetUrl,
-      clicks: entry.clicks,
-      uniqueEmails: entry.emails.size,
-    }))
-    .sort((a, b) => b.clicks - a.clicks || b.uniqueEmails - a.uniqueEmails)
-    .slice(0, 15);
-}
-
-export async function getEngagementOverview(): Promise<EngagementOverview> {
-  const supabase = getAdminClient();
-  const byEmail = new Map<string, Acc>();
-
-  const { data: autoRows } = await supabase
-    .from("automation_deliveries")
-    .select("email, opened_at, click_count, recipient_status")
-    .eq("channel", "email")
-    .eq("status", "sent");
-
-  for (const row of (autoRows as {
-    email: string;
-    opened_at: string | null;
-    click_count: number;
-    recipient_status: string | null;
-  }[] | null) ?? []) {
-    const key = row.email.toLowerCase();
-    const acc = byEmail.get(key) ?? {
-      emailsSent: 0,
-      emailsOpened: 0,
-      emailsWithClicks: 0,
-      totalClicks: 0,
-      scheduled: 0,
-      failed: 0,
-    };
-    bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
-    byEmail.set(key, acc);
-  }
-
-  const { data: campRows } = await supabase
-    .from("campaign_deliveries")
-    .select("email, opened_at, click_count, recipient_status")
-    .eq("status", "sent");
-
-  for (const row of (campRows as {
-    email: string;
-    opened_at: string | null;
-    click_count: number;
-    recipient_status: string | null;
-  }[] | null) ?? []) {
-    const key = row.email.toLowerCase();
-    const acc = byEmail.get(key) ?? {
-      emailsSent: 0,
-      emailsOpened: 0,
-      emailsWithClicks: 0,
-      totalClicks: 0,
-      scheduled: 0,
-      failed: 0,
-    };
-    bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
-    byEmail.set(key, acc);
-  }
-
-  const totalsAcc: Acc = {
-    emailsSent: 0,
-    emailsOpened: 0,
-    emailsWithClicks: 0,
-    totalClicks: 0,
-    scheduled: 0,
-    failed: 0,
-  };
-  for (const acc of byEmail.values()) {
-    totalsAcc.emailsSent += acc.emailsSent;
-    totalsAcc.emailsOpened += acc.emailsOpened;
-    totalsAcc.emailsWithClicks += acc.emailsWithClicks;
-    totalsAcc.totalClicks += acc.totalClicks;
-  }
-
-  const emails = [...byEmail.keys()];
-  const { data: subs } = await supabase
-    .from("subscribers")
-    .select("id, email, name")
-    .in("email", emails.length ? emails : ["__none__"]);
-
-  const subMap = new Map(
-    ((subs as { id: string; email: string; name: string | null }[] | null) ?? []).map(
-      (s) => [s.email.toLowerCase(), s],
-    ),
-  );
-
-  const allRows = [...byEmail.entries()].map(([email, acc]) =>
-    rowToSubscriber(email, acc, subMap),
-  );
-
-  const topByOpens = [...allRows]
-    .sort(
-      (a, b) =>
-        b.emailsOpened - a.emailsOpened ||
-        b.openRate - a.openRate ||
-        b.totalClicks - a.totalClicks,
-    )
-    .slice(0, 15);
-
-  const topByClicks = [...allRows]
-    .sort(
-      (a, b) =>
-        b.totalClicks - a.totalClicks ||
-        b.emailsOpened - a.emailsOpened ||
-        b.openRate - a.openRate,
-    )
-    .slice(0, 15);
-
-  const { data: recentClickRows } = await supabase
-    .from("email_link_clicks")
-    .select("email, source_type, source_id, link_label, target_url, clicked_at")
-    .order("clicked_at", { ascending: false })
-    .limit(25);
-
-  const recentClicks: EngagementOverview["recentClicks"] = [];
-  for (const row of (recentClickRows as {
-    email: string;
-    source_type: "campaign" | "automation";
-    source_id: string;
-    link_label: string | null;
-    target_url: string | null;
-    clicked_at: string;
-  }[] | null) ?? []) {
-    recentClicks.push({
-      email: row.email,
-      sourceType: row.source_type,
-      sourceTitle: await resolveSourceTitle(row.source_type, row.source_id),
-      linkLabel: row.link_label,
-      targetUrl: row.target_url,
-      clickedAt: row.clicked_at,
-    });
-  }
-
-  const topLinks = await aggregateTopLinks();
-
-  return {
-    totals: accToSummary(totalsAcc),
-    topByOpens,
-    topByClicks,
-    topLinks,
-    recentClicks,
-  };
 }

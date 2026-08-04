@@ -6,11 +6,47 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { getStripe } from "@/lib/stripe/server";
 
+/** Checkout URL plus the amounts needed for ad-platform conversion events. */
+export type CheckoutSessionResult = {
+  url: string;
+  amountCents: number | null;
+  currency: string | null;
+};
+
+/** Pixel cookies carried through Stripe so the webhook can attribute the sale. */
+export type CheckoutTracking = {
+  fbp?: string | null;
+  fbc?: string | null;
+};
+
+function trackingMetadata(tracking?: CheckoutTracking): Record<string, string> {
+  const meta: Record<string, string> = {};
+  if (tracking?.fbp) meta.fbp = tracking.fbp.slice(0, 200);
+  if (tracking?.fbc) meta.fbc = tracking.fbc.slice(0, 400);
+  return meta;
+}
+
+function sessionAmount(
+  session: { amount_total: number | null; currency: string | null },
+  prices: { unit_amount: number | null; currency: string }[],
+): { amountCents: number | null; currency: string | null } {
+  if (session.amount_total != null) {
+    return { amountCents: session.amount_total, currency: session.currency };
+  }
+  // Subscriptions leave amount_total empty until the first invoice.
+  const sum = prices.reduce((total, price) => total + (price.unit_amount ?? 0), 0);
+  return {
+    amountCents: sum > 0 ? sum : null,
+    currency: session.currency ?? prices[0]?.currency ?? null,
+  };
+}
+
 export async function createGuideCheckoutSession(
   guideIds: string[],
   locale: Locale,
   contactId?: string,
-): Promise<string> {
+  tracking?: CheckoutTracking,
+): Promise<CheckoutSessionResult> {
   if (guideIds.length === 0) {
     throw new Error("No guides selected");
   }
@@ -53,6 +89,7 @@ export async function createGuideCheckoutSession(
       guide_ids: guideIds.join(","),
       locale,
       ...(contactId ? { contact_id: contactId } : {}),
+      ...trackingMetadata(tracking),
     },
   });
 
@@ -60,14 +97,15 @@ export async function createGuideCheckoutSession(
     throw new Error("Stripe did not return a checkout URL");
   }
 
-  return session.url;
+  return { url: session.url, ...sessionAmount(session, prices) };
 }
 
 export async function createProductCheckoutSession(
   productIds: string[],
   locale: Locale,
   contactId?: string,
-): Promise<string> {
+  tracking?: CheckoutTracking,
+): Promise<CheckoutSessionResult> {
   if (productIds.length === 0) {
     throw new Error("No products selected");
   }
@@ -120,6 +158,7 @@ export async function createProductCheckoutSession(
       stripe_product_ids: stripeProductIds.join(","),
       locale,
       ...(contactId ? { contact_id: contactId } : {}),
+      ...trackingMetadata(tracking),
     },
   });
 
@@ -127,5 +166,5 @@ export async function createProductCheckoutSession(
     throw new Error("Stripe did not return a checkout URL");
   }
 
-  return session.url;
+  return { url: session.url, ...sessionAmount(session, prices) };
 }
