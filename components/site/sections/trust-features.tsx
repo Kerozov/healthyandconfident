@@ -1,4 +1,4 @@
-import { Heart, Leaf, Sparkles, UserRound } from "lucide-react";
+import { ClipboardCheck, Heart, Leaf, Sparkles } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 
@@ -10,9 +10,9 @@ const FEATURES = {
       text: "Тяло, хранене, начин на мислене и начин на живот — не само калории.",
     },
     {
-      icon: UserRound,
-      title: "Индивидуални планове",
-      text: "Меню и стратегия според твоите цели, график и семейство.",
+      icon: ClipboardCheck,
+      title: "Лесни планове",
+      text: "Ясно меню и стратегия, които се вписват в графика ти и в семейството.",
     },
     {
       icon: Sparkles,
@@ -32,9 +32,9 @@ const FEATURES = {
       text: "Body, food, mindset and lifestyle — not calories alone.",
     },
     {
-      icon: UserRound,
-      title: "Individual plans",
-      text: "Menus and strategy tailored to your goals and schedule.",
+      icon: ClipboardCheck,
+      title: "Easy plans",
+      text: "Clear menus and a strategy that fits your goals and schedule.",
     },
     {
       icon: Sparkles,

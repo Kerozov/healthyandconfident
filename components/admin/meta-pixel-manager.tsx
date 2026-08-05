@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ExternalLink, Megaphone } from "lucide-react";
 import type { MetaPixelAdminData } from "@/lib/admin/meta-data";
 import { saveMetaPixelConfig, sendMetaTestEvent } from "@/app/(admin)/admin/actions";
 import { formatMoney, formatNumber } from "@/lib/money";
 import { formatScheduledAt } from "@/lib/datetime";
-import { Card, Field, Input } from "@/components/admin/fields";
+import { Card, Field, Input, Textarea } from "@/components/admin/fields";
 import { AdminButton, Alert, Badge, DataTable } from "@/components/admin/ui";
 
 const EVENT_NOTES: Record<string, string> = {
@@ -64,6 +64,11 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
     track_checkout: data.config.track_checkout,
     track_purchase: data.config.track_purchase,
     log_events: data.config.log_events,
+    domain_verification: data.config.domain_verification ?? "",
+    additional_pixel_ids: data.config.additional_pixel_ids ?? "",
+    ad_account_id: data.config.ad_account_id ?? "",
+    catalog_id: data.config.catalog_id ?? "",
+    notes: data.config.notes ?? "",
   });
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -268,6 +273,122 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
           </p>
         </Card>
       </div>
+
+      <Card
+        title="Мета реклами — тракинг данни"
+        action={
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+            <Megaphone className="h-4 w-4" aria-hidden />
+            Всичко от Business Manager се слага тук
+          </span>
+        }
+      >
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="space-y-5">
+            <Field
+              label="Код за верификация на домейна"
+              hint="Business Manager → Brand safety → Domains → Meta-tag verification. Копирай само стойността на content=„…“ — сайтът сам слага мета тага във всяка страница."
+              htmlFor="meta-domain-verification"
+            >
+              <Input
+                id="meta-domain-verification"
+                value={form.domain_verification}
+                onChange={(e) => set("domain_verification", e.target.value)}
+                placeholder="abc123def456…"
+                autoComplete="off"
+              />
+            </Field>
+
+            <Field
+              label="Допълнителни Pixel ID-та"
+              hint="За втори акаунт или агенция. Разделяй със запетая — всички събития отиват и до тях."
+              htmlFor="meta-extra-pixels"
+            >
+              <Input
+                id="meta-extra-pixels"
+                value={form.additional_pixel_ids}
+                onChange={(e) => set("additional_pixel_ids", e.target.value)}
+                placeholder="1234567890123456, 6543210987654321"
+                autoComplete="off"
+              />
+            </Field>
+          </div>
+
+          <div className="space-y-5">
+            <Field
+              label="Рекламен акаунт (Ad account ID)"
+              hint="Само за справка и за бутона към Ads Manager. Формат act_1234567890."
+              htmlFor="meta-ad-account"
+            >
+              <Input
+                id="meta-ad-account"
+                value={form.ad_account_id}
+                onChange={(e) => set("ad_account_id", e.target.value)}
+                placeholder="act_1234567890"
+                autoComplete="off"
+              />
+            </Field>
+
+            <Field
+              label="Каталог (Catalog ID)"
+              hint="Ако пускаш реклами с продуктов каталог. Само за справка."
+              htmlFor="meta-catalog"
+            >
+              <Input
+                id="meta-catalog"
+                value={form.catalog_id}
+                onChange={(e) => set("catalog_id", e.target.value)}
+                placeholder="1234567890"
+                autoComplete="off"
+              />
+            </Field>
+          </div>
+
+          <div className="lg:col-span-2">
+            <Field
+              label="Бележки"
+              hint="Място за всичко останало — кампании, UTM-и, кой какво е сменил и кога."
+              htmlFor="meta-notes"
+            >
+              <Textarea
+                id="meta-notes"
+                rows={3}
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                placeholder="Напр. пиксел на агенцията добавен на 12.03; кампания „Лятна програма“ води към /bg/programs/summer-programme"
+              />
+            </Field>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <AdminButton onClick={save} disabled={pending}>
+            {pending ? "Запазване…" : "Запази"}
+          </AdminButton>
+          {form.ad_account_id.trim() && (
+            <a
+              href={`https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${encodeURIComponent(
+                form.ad_account_id.trim().replace(/^act_/, ""),
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-coral-600 hover:underline"
+            >
+              Ads Manager
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            </a>
+          )}
+          <a
+            href="https://business.facebook.com/settings/owned-domains"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-coral-600 hover:underline"
+          >
+            Верификация на домейн
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+        </div>
+      </Card>
 
       <Card title="Събития за последните 30 дни">
         {data.summary.length === 0 ? (

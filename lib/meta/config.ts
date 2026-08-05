@@ -1,7 +1,11 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import type { MetaPixelConfig, MetaPixelPublicConfig } from "@/lib/meta/types";
+import {
+  parsePixelIdList,
+  type MetaPixelConfig,
+  type MetaPixelPublicConfig,
+} from "@/lib/meta/types";
 
 const CACHE_MS = 60_000;
 
@@ -23,6 +27,10 @@ function envTestEventCode(): string {
   return process.env.META_TEST_EVENT_CODE?.trim() || "";
 }
 
+function envDomainVerification(): string {
+  return process.env.META_DOMAIN_VERIFICATION?.trim() || "";
+}
+
 function fallbackConfig(): MetaPixelConfig {
   return {
     key: "default",
@@ -37,6 +45,11 @@ function fallbackConfig(): MetaPixelConfig {
     track_checkout: true,
     track_purchase: true,
     log_events: true,
+    domain_verification: envDomainVerification(),
+    additional_pixel_ids: "",
+    ad_account_id: "",
+    catalog_id: "",
+    notes: "",
     updated_at: new Date(0).toISOString(),
   };
 }
@@ -51,6 +64,11 @@ function mergeWithEnv(row: MetaPixelConfig): MetaPixelConfig {
     pixel_id: row.pixel_id?.trim() || envPixelId(),
     access_token: row.access_token?.trim() || envAccessToken(),
     test_event_code: row.test_event_code?.trim() || envTestEventCode(),
+    domain_verification: row.domain_verification?.trim() || envDomainVerification(),
+    additional_pixel_ids: row.additional_pixel_ids ?? "",
+    ad_account_id: row.ad_account_id ?? "",
+    catalog_id: row.catalog_id ?? "",
+    notes: row.notes ?? "",
   };
 }
 
@@ -97,12 +115,22 @@ export function isCapiActive(config: MetaPixelConfig): boolean {
   );
 }
 
+/** The verification token belongs in <head> — empty means nothing is rendered. */
+export function metaDomainVerification(config: MetaPixelConfig): string {
+  return config.domain_verification?.trim() ?? "";
+}
+
 /** Strips the access token — safe to pass into client components. */
 export function toPublicConfig(config: MetaPixelConfig): MetaPixelPublicConfig {
   const active = isPixelActive(config);
   return {
     enabled: active,
     pixelId: active ? config.pixel_id.trim() : "",
+    extraPixelIds: active
+      ? parsePixelIdList(config.additional_pixel_ids ?? "").filter(
+          (id) => id !== config.pixel_id.trim(),
+        )
+      : [],
     trackPageView: config.track_page_view,
     trackViewContent: config.track_view_content,
     trackLead: config.track_lead,

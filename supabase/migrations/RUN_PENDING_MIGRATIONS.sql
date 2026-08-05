@@ -1031,6 +1031,15 @@ create unique index if not exists meta_event_log_event_uidx
   on public.meta_event_log (event_id, source)
   where event_id is not null;
 
+
+-- 047: Meta ads settings
+alter table public.meta_pixel_config
+  add column if not exists domain_verification   text not null default '',
+  add column if not exists additional_pixel_ids  text not null default '',
+  add column if not exists ad_account_id         text not null default '',
+  add column if not exists catalog_id            text not null default '',
+  add column if not exists notes                 text not null default '';
+
 -- The access token and the customer emails in the log must never be readable
 -- through the public anon key. Service-role writes bypass RLS.
 alter table public.meta_pixel_config enable row level security;
@@ -1041,4 +1050,4 @@ revoke all on public.meta_event_log from anon, authenticated;
 
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–046 applied). Also run 007_automations.sql if not yet applied.' as result;
+select 'Upgrade complete (012–047 applied). Also run 007_automations.sql if not yet applied.' as result;

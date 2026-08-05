@@ -1182,6 +1182,11 @@ create table if not exists public.meta_pixel_config (
   track_checkout      boolean not null default true,
   track_purchase      boolean not null default true,
   log_events          boolean not null default true,
+  domain_verification  text not null default '',
+  additional_pixel_ids text not null default '',
+  ad_account_id        text not null default '',
+  catalog_id           text not null default '',
+  notes                text not null default '',
   updated_at          timestamptz not null default now()
 );
 

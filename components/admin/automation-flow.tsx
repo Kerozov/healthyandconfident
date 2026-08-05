@@ -16,6 +16,8 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Copy,
+  ClipboardPaste,
 } from "lucide-react";
 import type {
   Automation,
@@ -128,13 +130,13 @@ function audienceSummary(
 ): string {
   const logic = automation.audience_logic === "all" ? " И " : " ИЛИ ";
   const include: string[] = [];
-  audience.groups.forEach((g) => include.push(`група „${g.name}"`));
-  audience.segments.forEach((s) => include.push(`сегмент „${s.name}"`));
+  audience.groups.forEach((g) => include.push(`група „${g.name}“`));
+  audience.segments.forEach((s) => include.push(`сегмент „${s.name}“`));
   const inc =
     include.length > 0 ? include.join(logic) : "всички абонати (без филтър)";
   const exc =
     audience.excludes.length > 0
-      ? ` · без: ${audience.excludes.map((e) => `„${e.name}"`).join(", ")}`
+      ? ` · без: ${audience.excludes.map((e) => `„${e.name}“`).join(", ")}`
       : "";
   return `${inc}${exc}`;
 }
@@ -329,7 +331,7 @@ function FlowCard({
 
       {parentName && (
         <p className="mt-2 text-[10px] text-ink-soft">
-          ↳ след „<span className="font-medium text-slate-700">{parentName}</span>"
+          ↳ след „<span className="font-medium text-slate-700">{parentName}</span>“
         </p>
       )}
 
@@ -438,6 +440,16 @@ function ExcludeExit({ item }: { item: ResolvedAudience["excludes"][number] }) {
   );
 }
 
+type FlowActions = {
+  onSelect?: (automation: AutomationRow) => void;
+  onAddAfter?: (automation: AutomationRow) => void;
+  onDelete?: (automation: AutomationRow) => void;
+  onCopy?: (automation: AutomationRow) => void;
+  onPasteAfter?: (automation: AutomationRow) => void;
+  copiedId?: string | null;
+  copiedName?: string | null;
+};
+
 function TreeBranch({
   node,
   groups,
@@ -449,6 +461,10 @@ function TreeBranch({
   onSelect,
   onAddAfter,
   onDelete,
+  onCopy,
+  onPasteAfter,
+  copiedId,
+  copiedName,
 }: {
   node: TreeNode;
   groups: SegmentGroup[];
@@ -457,11 +473,9 @@ function TreeBranch({
   parentName?: string;
   depth: number;
   selectedId?: string | null;
-  onSelect?: (automation: AutomationRow) => void;
-  onAddAfter?: (automation: AutomationRow) => void;
-  onDelete?: (automation: AutomationRow) => void;
-}) {
+} & FlowActions) {
   const audience = resolveAudience(node.automation, groups, segments);
+  const isCopied = copiedId === node.automation.id;
 
   return (
     <div className="flex flex-col items-center">
@@ -475,8 +489,41 @@ function TreeBranch({
             selected={selectedId === node.automation.id}
             onSelect={onSelect}
           />
-          {(onAddAfter || onDelete) && (
+          {(onAddAfter || onDelete || onCopy || onPasteAfter) && (
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              {onCopy && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCopy(node.automation);
+                  }}
+                  title="Копирай тази стъпка, за да я поставиш другаде"
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border border-dashed bg-white px-3 py-1.5 text-xs font-semibold shadow-sm",
+                    isCopied
+                      ? "border-forest-500 text-forest-800"
+                      : "border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-50",
+                  )}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  {isCopied ? "Копирана" : "Копирай"}
+                </button>
+              )}
+              {onPasteAfter && copiedId && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPasteAfter(node.automation);
+                  }}
+                  title={`Постави копие на „${copiedName}“ след тази стъпка`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-forest-600 px-3 py-1.5 text-xs font-semibold text-cream shadow-sm hover:bg-forest-700"
+                >
+                  <ClipboardPaste className="h-3.5 w-3.5" />
+                  Постави тук
+                </button>
+              )}
               {onAddAfter && (
                 <button
                   type="button"
@@ -532,6 +579,10 @@ function TreeBranch({
             onSelect={onSelect}
             onAddAfter={onAddAfter}
             onDelete={onDelete}
+            onCopy={onCopy}
+            onPasteAfter={onPasteAfter}
+            copiedId={copiedId}
+            copiedName={copiedName}
           />
         </>
       )}
@@ -559,6 +610,10 @@ function TreeBranch({
                   onSelect={onSelect}
                   onAddAfter={onAddAfter}
                   onDelete={onDelete}
+                  onCopy={onCopy}
+                  onPasteAfter={onPasteAfter}
+                  copiedId={copiedId}
+                  copiedName={copiedName}
                 />
               </div>
             ))}
@@ -578,16 +633,17 @@ function TriggerSection({
   onSelect,
   onAddAfter,
   onDelete,
+  onCopy,
+  onPasteAfter,
+  copiedId,
+  copiedName,
 }: {
   trigger: AutomationTrigger;
   trees: TreeNode[];
   groups: SegmentGroup[];
   segments: Segment[];
   selectedId?: string | null;
-  onSelect?: (automation: AutomationRow) => void;
-  onAddAfter?: (automation: AutomationRow) => void;
-  onDelete?: (automation: AutomationRow) => void;
-}) {
+} & FlowActions) {
   if (trees.length === 0) return null;
   const meta = TRIGGER_META[trigger];
   const Icon = meta.icon;
@@ -631,6 +687,10 @@ function TriggerSection({
               onSelect={onSelect}
               onAddAfter={onAddAfter}
               onDelete={onDelete}
+              onCopy={onCopy}
+              onPasteAfter={onPasteAfter}
+              copiedId={copiedId}
+              copiedName={copiedName}
             />
           </div>
         ))}
@@ -647,6 +707,10 @@ export function AutomationFlowView({
   onSelectAutomation,
   onAddAfterAutomation,
   onDeleteAutomation,
+  onCopyAutomation,
+  onPasteAfterAutomation,
+  copiedId,
+  copiedName,
 }: {
   automations: AutomationRow[];
   groups: SegmentGroup[];
@@ -655,6 +719,10 @@ export function AutomationFlowView({
   onSelectAutomation?: (automation: AutomationRow) => void;
   onAddAfterAutomation?: (automation: AutomationRow) => void;
   onDeleteAutomation?: (automation: AutomationRow) => void;
+  onCopyAutomation?: (automation: AutomationRow) => void;
+  onPasteAfterAutomation?: (automation: AutomationRow) => void;
+  copiedId?: string | null;
+  copiedName?: string | null;
 }) {
   const forest = buildForestByTrigger(automations);
   const hasAny = automations.length > 0;
@@ -674,6 +742,9 @@ export function AutomationFlowView({
           Кликни стъпка за редакция.{" "}
           <strong className="text-forest-700">Следваща стъпка</strong> — добавя
           нова под нея със същия тригър и аудитория.{" "}
+          <strong className="text-slate-700">Копирай</strong> — запомня стъпката,
+          после натисни <strong className="text-forest-700">Постави тук</strong> под
+          друга стъпка, за да я дублираш там (копието е изключено).{" "}
           <strong className="text-coral-700">Изтрий</strong> — премахва стъпката.{" "}
           <span className="text-amber-800">Разклонения</span> = различни пътища.{" "}
           <span className="text-coral-700">Изключения</span> = спират веригата.
@@ -706,6 +777,10 @@ export function AutomationFlowView({
             onSelect={onSelectAutomation}
             onAddAfter={onAddAfterAutomation}
             onDelete={onDeleteAutomation}
+            onCopy={onCopyAutomation}
+            onPasteAfter={onPasteAfterAutomation}
+            copiedId={copiedId}
+            copiedName={copiedName}
           />
         ))}
       </div>

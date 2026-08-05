@@ -23,6 +23,7 @@ import {
   Video,
   CreditCard,
   Target,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,10 @@ type NavItem = {
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Преглед",
-    items: [{ href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true }],
+    items: [
+      { href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true },
+      { href: "/admin/guide", label: "Ръководство", icon: BookOpen },
+    ],
   },
   {
     label: "Съдържание",

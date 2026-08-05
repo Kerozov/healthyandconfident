@@ -6,7 +6,11 @@ import { geistSans, fraunces } from "@/app/fonts";
 import { locales, isLocale, localeHtmlLang, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { getPublicSiteContent } from "@/lib/site/content";
-import { getMetaPixelPublicConfig } from "@/lib/meta/config";
+import {
+  getMetaPixelConfig,
+  getMetaPixelPublicConfig,
+  metaDomainVerification,
+} from "@/lib/meta/config";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { MetaPixel } from "@/components/site/meta-pixel";
 import { SiteHeader } from "@/components/site/site-header";
@@ -14,6 +18,7 @@ import { Footer } from "@/components/site/footer";
 import { Popup } from "@/components/site/popup";
 import { CheckoutNotice } from "@/components/site/checkout-notice";
 import { MenuPopupProvider } from "@/components/site/menu-popup";
+import { HashScroll } from "@/components/site/hash-scroll";
 import { OfferPopupProvider } from "@/components/site/offer-popup";
 
 export function generateStaticParams() {
@@ -30,6 +35,8 @@ export async function generateMetadata({
   const dict = getDictionary(locale);
 
   const origin = publicSiteOrigin();
+  // Meta refuses to run ads to a domain it cannot verify.
+  const domainVerification = metaDomainVerification(await getMetaPixelConfig());
 
   return {
     metadataBase: new URL(origin),
@@ -64,6 +71,9 @@ export async function generateMetadata({
       images: [siteConfig.ogImage],
     },
     robots: { index: true, follow: true },
+    ...(domainVerification
+      ? { verification: { other: { "facebook-domain-verification": domainVerification } } }
+      : {}),
   };
 }
 
@@ -104,6 +114,7 @@ export default async function SiteLayout({
               success: dict.leadMagnet.success,
             }}
           >
+            <HashScroll />
             <SiteHeader locale={l} items={dict.nav.items} cta={dict.nav.cta} />
             <main>{children}</main>
             <Footer locale={l} dict={dict} />

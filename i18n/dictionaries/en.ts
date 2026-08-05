@@ -54,9 +54,9 @@ export const en: Dictionary = {
       subtitle: "Tasty, balanced and easy — drop your email below.",
     },
     stats: [
-      { value: "20+", label: "years in medicine & nutrition" },
+      { value: "10+", label: "years in medicine & nutrition" },
       { value: "100s", label: "clients transformed" },
-      { value: "13", label: "countries served online" },
+      { value: "15", label: "countries served online" },
     ],
     imageAlt: "Vessie Nay, Holistic Nutritionist",
   },
@@ -129,20 +129,20 @@ export const en: Dictionary = {
     subtitle: "Three options — programs and a special product.",
     items: [
       {
-        badge: "Low carb",
-        title: "Side dishes for your waistline",
-        duration: "guide",
-        price: "€3",
+        badge: "New for summer",
+        title: "Summer programme",
+        duration: "starts every Monday",
+        price: "small group",
         description:
-          "Easy, filling low-carb ideas — when rice, pasta or potatoes are not the best choice.",
+          "A light summer menu, a flatter tummy and steady energy — a plan that survives holidays and eating out.",
         features: [
-          "Good for insulin resistance and Type 2 Diabetes",
-          "Aromatic recipes instead of classic sides",
-          "Digital access right after purchase",
+          "Hot-weather menu that fills without weighing you down",
+          "A plan for holidays, barbecues and restaurants",
+          "Support for the whole length of the programme",
         ],
-        cta: "Buy here – €3",
-        href: "/programs/garnituri",
-        image: "/images/9.jpg",
+        cta: "Join the summer programme",
+        href: "/programs/summer-programme",
+        image: "/images/11.jpg",
       },
       {
         badge: "Most popular",
@@ -206,7 +206,7 @@ export const en: Dictionary = {
     stats: [
       { value: "94%", label: "client success rate" },
       { value: "5–15", label: "kg lost sustainably in 3 months" },
-      { value: "20+", label: "years of experience" },
+      { value: "10+", label: "years of experience" },
     ],
     bullets: [
       "Lasting weight loss without hunger or yo-yo dieting",
@@ -426,7 +426,7 @@ export const en: Dictionary = {
       {
         title: "Programs",
         links: [
-          { label: "Side dishes guide", href: "/en/programs/garnituri" },
+          { label: "Summer programme", href: "/en/programs/summer-programme" },
           { label: "Balanced Nutrition 21 Days", href: "/en#challenge-21" },
           { label: "Live Without Resistance", href: "/en/programs/zhivey-bez-rezistentnost" },
           { label: "Reprogram Your Appetite", href: "/en/programs/preprogramirai-apetita" },
