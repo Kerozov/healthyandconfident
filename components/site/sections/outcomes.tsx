@@ -66,18 +66,19 @@ export function Outcomes({ dict, locale }: { dict: Dictionary; locale: Locale })
                 {copy.badge}
               </span>
             </div>
-            <figcaption className="border-t border-forest-100 px-5 py-4 text-center text-sm text-slate-700">
-              {copy.photoCaption}
+            <figcaption className="flex items-center justify-between gap-4 border-t border-forest-100 px-5 py-4">
+              <span className="min-w-0 text-sm leading-snug text-slate-700">
+                {copy.photoCaption}
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="block font-display text-2xl font-semibold text-forest-600">
+                  {copy.statValue}
+                </span>
+                <span className="block text-[11px] leading-snug text-ink-soft">
+                  {copy.statLabel}
+                </span>
+              </span>
             </figcaption>
-          </div>
-
-          <div className="absolute -bottom-6 -right-3 rounded-2xl bg-white px-5 py-4 text-center shadow-card ring-1 ring-forest-100 sm:-right-6">
-            <p className="font-display text-3xl font-semibold text-forest-600">
-              {copy.statValue}
-            </p>
-            <p className="mt-0.5 max-w-[7rem] text-[11px] leading-snug text-ink-soft">
-              {copy.statLabel}
-            </p>
           </div>
         </figure>
 

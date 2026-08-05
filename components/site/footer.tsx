@@ -24,7 +24,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
               <p className="mt-2 text-sm text-slate-300">
                 <strong className="text-white">Веси Ней</strong> (Vessie Nay) е холистичен
                 диетолог в Англия и България, специалист по инсулинова резистентност и
-                Диабет тип 2. Работи онлайн с клиенти от 13 държави.
+                Диабет тип 2. Работи онлайн с клиенти от 15 държави.
               </p>
             )}
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-slate-300">

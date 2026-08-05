@@ -992,7 +992,7 @@ export async function createSegmentGroup(input: {
   const name = input.name.trim();
   if (!name) return { ok: false, message: "Group name is required." };
 
-  let parentId: string | null = input.parent_id?.trim() || null;
+  const parentId: string | null = input.parent_id?.trim() || null;
   if (parentId) {
     const { data: parent } = await supabase
       .from("segment_groups")
@@ -1092,7 +1092,7 @@ export async function createSegment(input: {
     return { ok: false, message: "Invalid segment key." };
   }
 
-  let groupId: string | null = input.group_id?.trim() || null;
+  const groupId: string | null = input.group_id?.trim() || null;
   if (groupId) {
     const { data: group } = await supabase
       .from("segment_groups")

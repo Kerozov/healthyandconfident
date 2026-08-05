@@ -40,19 +40,23 @@ export function AudiencePicker({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    previewAudience(value)
-      .then((res) => {
+
+    async function load() {
+      setLoading(true);
+      try {
+        const res = await previewAudience(value);
         if (cancelled) return;
         if (res.ok) {
           setPreview({ emails: res.emails, phones: res.phones, label: res.label });
         } else {
           setPreview(null);
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    }
+
+    void load();
     return () => {
       cancelled = true;
     };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * Every in-page jump goes through here, so a second click on the same link
@@ -13,17 +14,67 @@ import { useEffect } from "react";
 /** Fallback when the section carries no `scroll-mt-*` — roughly the header height. */
 const HEADER_OFFSET = 88;
 
+/** Photos further up finish loading mid-scroll and shift everything; re-aim. */
+const SETTLE_TIMEOUT_MS = 1600;
+const DRIFT_TOLERANCE_PX = 4;
+
+function targetOffset(target: HTMLElement): number {
+  // Sections declare their own clearance with `scroll-mt-24`; honour it.
+  const declared = parseFloat(getComputedStyle(target).scrollMarginTop);
+  return Number.isFinite(declared) && declared > 0 ? declared : HEADER_OFFSET;
+}
+
+function scrollToElement(target: HTMLElement, smooth: boolean) {
+  const top = target.getBoundingClientRect().top + window.scrollY - targetOffset(target);
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({
+    top: Math.max(top, 0),
+    behavior: smooth && !reduceMotion ? "smooth" : "auto",
+  });
+}
+
+/**
+ * Scrolls to the section, then keeps an eye on it: once the page stops moving,
+ * any drift caused by images loading above is corrected. A manual scroll cancels
+ * the watcher, so the visitor is never yanked around.
+ */
 function scrollToId(id: string): boolean {
   const target = document.getElementById(id);
   if (!target) return false;
 
-  // Sections declare their own clearance with `scroll-mt-24`; honour it.
-  const declared = parseFloat(getComputedStyle(target).scrollMarginTop);
-  const offset = Number.isFinite(declared) && declared > 0 ? declared : HEADER_OFFSET;
+  scrollToElement(target, true);
 
-  const top = target.getBoundingClientRect().top + window.scrollY - offset;
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.scrollTo({ top: Math.max(top, 0), behavior: reduceMotion ? "auto" : "smooth" });
+  const deadline = Date.now() + SETTLE_TIMEOUT_MS;
+  let lastY = window.scrollY;
+  let stableTicks = 0;
+  let timer = 0;
+
+  const stop = () => {
+    window.clearInterval(timer);
+    window.removeEventListener("wheel", stop);
+    window.removeEventListener("touchstart", stop);
+    window.removeEventListener("keydown", stop);
+  };
+
+  timer = window.setInterval(() => {
+    if (Date.now() > deadline) {
+      stop();
+      return;
+    }
+    const y = window.scrollY;
+    stableTicks = y === lastY ? stableTicks + 1 : 0;
+    lastY = y;
+    if (stableTicks < 2) return;
+
+    stop();
+    const drift = target.getBoundingClientRect().top - targetOffset(target);
+    if (Math.abs(drift) > DRIFT_TOLERANCE_PX) scrollToElement(target, false);
+  }, 100);
+
+  window.addEventListener("wheel", stop, { passive: true });
+  window.addEventListener("touchstart", stop, { passive: true });
+  window.addEventListener("keydown", stop);
+
   return true;
 }
 
@@ -49,22 +100,29 @@ function scrollSoon(id: string) {
 }
 
 export function HashScroll() {
-  useEffect(() => {
-    // Landing on /bg#contact from another page still has to scroll once.
-    const initial = decodeURIComponent(window.location.hash.slice(1));
-    if (initial) {
-      let attempts = 0;
-      const tryScroll = () => {
-        if (scrollToId(initial) || attempts > 20) {
-          stripHash();
-          return;
-        }
-        attempts += 1;
-        requestAnimationFrame(tryScroll);
-      };
-      requestAnimationFrame(tryScroll);
-    }
+  const pathname = usePathname();
 
+  // Arriving at /bg#contact — first load or a link from another page — still has
+  // to scroll once, and the section may not be painted yet, hence the retries.
+  useEffect(() => {
+    const target = decodeURIComponent(window.location.hash.slice(1));
+    if (!target) return;
+
+    let attempts = 0;
+    let frame = 0;
+    const tryScroll = () => {
+      if (scrollToId(target) || attempts > 20) {
+        stripHash();
+        return;
+      }
+      attempts += 1;
+      frame = requestAnimationFrame(tryScroll);
+    };
+    frame = requestAnimationFrame(tryScroll);
+    return () => cancelAnimationFrame(frame);
+  }, [pathname]);
+
+  useEffect(() => {
     function onClick(event: MouseEvent) {
       if (event.defaultPrevented) return;
       if (
@@ -95,8 +153,10 @@ export function HashScroll() {
       scrollSoon(id);
     }
 
-    document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    // Capture phase: the router's own click handler would otherwise navigate
+    // first, leaving the hash in the URL and killing the next click.
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
   }, []);
 
   return null;

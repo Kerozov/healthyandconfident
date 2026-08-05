@@ -1,7 +1,6 @@
 import "server-only";
 
 import {
-  cancelEmailJob,
   getJobStatus,
   scheduleEmail,
   type WorkerSendResult,
