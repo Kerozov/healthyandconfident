@@ -23,6 +23,7 @@ import {
   Video,
   CreditCard,
   Target,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,10 @@ type NavItem = {
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Преглед",
-    items: [{ href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true }],
+    items: [
+      { href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true },
+      { href: "/admin/guide", label: "Ръководство", icon: BookOpen },
+    ],
   },
   {
     label: "Съдържание",
@@ -61,7 +65,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/campaigns", label: "Кампании", icon: Megaphone },
       { href: "/admin/automations", label: "Автоматизации", icon: Mail },
-      { href: "/admin/meta", label: "Meta пиксел", icon: Target },
+      { href: "/admin/meta", label: "Meta реклами", icon: Target },
     ],
   },
   {
@@ -129,10 +133,6 @@ export function Sidebar() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -153,6 +153,7 @@ export function Sidebar() {
         href="/bg"
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => setOpen(false)}
         className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35"
       >
         <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />

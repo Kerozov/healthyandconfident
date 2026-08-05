@@ -26,6 +26,11 @@ const zoomOwaspHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    // Next 16 only optimises qualities listed here — 82 is what the site asks
+    // for, and without it every photo falls back to an unoptimised response.
+    qualities: [75, 82],
+  },
   async headers() {
     return [
       {

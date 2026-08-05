@@ -49,8 +49,9 @@ export default async function ProgramPage({
 }) {
   const { locale, slug } = await params;
   if (!isLocale(locale)) notFound();
-  if (slug === "balansirano-hranene-21") {
-    redirect(`/${locale}/programs/garnituri`);
+  // Retired slugs — keep old links, ads and emails working.
+  if (slug === "balansirano-hranene-21" || slug === "garnituri") {
+    redirect(`/${locale}/programs/summer-programme`);
   }
   const content = getProgramLanding(locale as Locale, slug);
   if (!content) notFound();

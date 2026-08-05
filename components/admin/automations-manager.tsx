@@ -7,7 +7,6 @@ import {
   Pencil,
   Trash2,
   Save,
-  X,
   Check,
   RefreshCw,
   Send,
@@ -19,6 +18,8 @@ import {
   List,
   UserPlus,
   UserMinus,
+  Copy,
+  ClipboardPaste,
 } from "lucide-react";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import type {
@@ -35,6 +36,7 @@ import {
   createAutomation,
   updateAutomation,
   deleteAutomation,
+  duplicateAutomation,
   toggleAutomationEnabled,
   syncAllAutomations,
   syncAutomation,
@@ -45,6 +47,7 @@ import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
 import { AutomationFlowView, flattenAutomationsForDisplay, TRIGGER_SECTION_LABELS } from "@/components/admin/automation-flow";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { TabList } from "@/components/admin/ui";
+import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
 import { EmailBodyEditor } from "@/components/admin/email-body-editor";
@@ -108,9 +111,9 @@ function buildSchedulePreview(
   }
 
   if (afterName) {
-    return `След „${afterName}" → ${when}. ${audience}.`;
+    return `След „${afterName}“ → ${when}. ${audience}.`;
   }
-  return `При „${triggerLabel}" → ${when}. ${audience}.`;
+  return `При „${triggerLabel}“ → ${when}. ${audience}.`;
 }
 
 function scheduleSummary(a: Automation, automations: AutomationRow[]): string {
@@ -130,7 +133,7 @@ function scheduleSummary(a: Automation, automations: AutomationRow[]): string {
     when = after ? "веднага след" : "веднага";
   }
 
-  if (after) return `След „${after}" → ${when}`;
+  if (after) return `След „${after}“ → ${when}`;
   return when;
 }
 
@@ -426,14 +429,16 @@ export function AutomationsManager({
   const [saved, setSaved] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [autoSynced, setAutoSynced] = useState(false);
+  /** Ref, not state: the one-shot sync must not trigger an extra render. */
+  const autoSyncedRef = useRef(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deliveries, setDeliveries] = useState<AutomationDelivery[] | null>(null);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>("all");
   const [viewTab, setViewTab] = useState<"list" | "flow">("flow");
   const [contentLocale, setContentLocale] = useState<"bg" | "en">("bg");
-  const editorRef = useRef<HTMLDivElement>(null);
+  /** Copied automation, waiting to be pasted somewhere in the flow. */
+  const [clipboard, setClipboard] = useState<{ id: string; name: string } | null>(null);
 
   const hasTrackable = automations.some(
     (a) => a.sent_count > 0 || a.scheduled_count > 0,
@@ -449,10 +454,10 @@ export function AutomationsManager({
   }, [router]);
 
   useEffect(() => {
-    if (autoSynced || !hasTrackable) return;
-    setAutoSynced(true);
+    if (autoSyncedRef.current || !hasTrackable) return;
+    autoSyncedRef.current = true;
     refreshAll();
-  }, [autoSynced, hasTrackable, refreshAll]);
+  }, [hasTrackable, refreshAll]);
 
   const otherAutomations = automations
     .filter((a) => (editingId === "new" ? true : a.id !== editingId))
@@ -507,9 +512,6 @@ export function AutomationsManager({
     });
     setError(null);
     setSaved(false);
-    requestAnimationFrame(() => {
-      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
   }
 
   function openEdit(a: AutomationRow) {
@@ -522,9 +524,6 @@ export function AutomationsManager({
   function openEditFromFlow(a: AutomationRow) {
     setViewTab("flow");
     openEdit(a);
-    requestAnimationFrame(() => {
-      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
   }
 
   function closeEditor() {
@@ -568,7 +567,7 @@ export function AutomationsManager({
       childCount > 0
         ? `\n\nИма ${childCount} следващ${childCount === 1 ? "а стъпка" : "и стъпки"} — те ще останат, но без връзка към тази.`
         : "";
-    if (!confirm(`Изтриване на „${name}"?${childNote}`)) return;
+    if (!confirm(`Изтриване на „${name}“?${childNote}`)) return;
     setError(null);
     startTransition(async () => {
       const res = await deleteAutomation(id);
@@ -578,6 +577,54 @@ export function AutomationsManager({
       }
       if (editingId === id) closeEditor();
       setNote(`Изтрита: ${name}`);
+      router.refresh();
+    });
+  }
+
+  /** Remembers a step so it can be pasted as a copy elsewhere in the flow. */
+  function copyAutomation(a: AutomationRow) {
+    setClipboard({ id: a.id, name: a.name });
+    setError(null);
+    setNote(`Копирано: „${a.name}“. Избери къде да го поставиш.`);
+  }
+
+  /**
+   * `after` = paste as the next step of that automation; `null` = paste as a new
+   * chain start. The copy is always created disabled.
+   */
+  function pasteAutomation(after: AutomationRow | null) {
+    if (!clipboard) return;
+    const source = clipboard;
+    setError(null);
+    setNote(null);
+    startTransition(async () => {
+      const res = await duplicateAutomation(source.id, {
+        after_automation_id: after ? after.id : null,
+      });
+      if (!res.ok) {
+        setError(res.message || "Неуспешно копиране");
+        return;
+      }
+      setNote(
+        after
+          ? `Създадено копие „${res.name}“ след „${after.name}“ — изключено, отвори го за редакция.`
+          : `Създадено копие „${res.name}“ като нова верига — изключено, отвори го за редакция.`,
+      );
+      router.refresh();
+    });
+  }
+
+  /** Straight duplicate that stays exactly where the original sits. */
+  function duplicateInPlace(a: AutomationRow) {
+    setError(null);
+    setNote(null);
+    startTransition(async () => {
+      const res = await duplicateAutomation(a.id);
+      if (!res.ok) {
+        setError(res.message || "Неуспешно копиране");
+        return;
+      }
+      setNote(`Създадено копие „${res.name}“ — изключено, отвори го за редакция.`);
       router.refresh();
     });
   }
@@ -702,6 +749,32 @@ export function AutomationsManager({
         </div>
       </div>
 
+      {clipboard && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-forest-400/60 bg-forest-50/60 px-4 py-3">
+          <Copy className="h-4 w-4 shrink-0 text-forest-700" aria-hidden />
+          <p className="min-w-0 flex-1 text-sm text-forest-900">
+            Копирано: <strong>{clipboard.name}</strong> — избери „Постави тук“ под
+            стъпката, след която да застане, или го постави като нова верига.
+          </p>
+          <button
+            type="button"
+            onClick={() => pasteAutomation(null)}
+            disabled={pending}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-forest-600 px-4 text-xs font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            Постави като нова верига
+          </button>
+          <button
+            type="button"
+            onClick={() => setClipboard(null)}
+            className="inline-flex h-9 items-center rounded-full border border-ink/15 bg-white px-3 text-xs font-medium text-ink-soft hover:bg-ink/5"
+          >
+            Откажи
+          </button>
+        </div>
+      )}
+
       <TabList
         aria-label="Изглед на автоматизациите"
         active={viewTab}
@@ -720,34 +793,79 @@ export function AutomationsManager({
         ]}
       />
 
-      <div
-        className={cn(
-          "grid min-w-0 gap-5",
-          editingId &&
-            viewTab === "flow" &&
-            "2xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] 2xl:items-start",
-        )}
-      >
       {editingId && (
-        <div
-          ref={editorRef}
-          className="min-w-0 scroll-mt-4 2xl:sticky 2xl:top-4 2xl:max-h-[calc(100vh-1.5rem)] 2xl:overflow-y-auto"
-        >
-        <Card
-          className="overflow-hidden !p-4 sm:!p-5"
-          title={editingId === "new" ? "Нова автоматизация" : `Редакция: ${form.name || "…"}`}
-          action={
-            <button
-              type="button"
-              onClick={closeEditor}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 text-ink-soft hover:bg-ink/5"
-              aria-label="Затвори"
+        <WorkspaceEditor
+          title={
+            editingId === "new" ? "Нова автоматизация" : `Редакция: ${form.name || "…"}`
+          }
+          subtitle={buildSchedulePreview(
+            form,
+            triggerMeta?.label ?? form.trigger_event,
+            afterAutomationName,
+          )}
+          badge={
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase",
+                form.channel === "sms"
+                  ? "bg-sky-100 text-sky-800"
+                  : "bg-forest-500/15 text-forest-700",
+              )}
             >
-              <X className="h-4 w-4" />
-            </button>
+              {form.channel}
+            </span>
+          }
+          onClose={closeEditor}
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={save}
+                disabled={pending || !form.name.trim()}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-forest-600 px-6 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
+              >
+                {saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                Запази
+              </button>
+              <button
+                type="button"
+                onClick={closeEditor}
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5"
+              >
+                Отказ
+              </button>
+              {editingId !== "new" && (
+                <button
+                  type="button"
+                  onClick={() => duplicateInPlace(automations.find((a) => a.id === editingId)!)}
+                  disabled={pending || !automations.some((a) => a.id === editingId)}
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
+                >
+                  <Copy className="h-4 w-4" />
+                  Дублирай
+                </button>
+              )}
+              {error && (
+                <p className="w-full text-sm text-coral-600 sm:w-auto sm:flex-1">{error}</p>
+              )}
+              {editingId !== "new" && (
+                <button
+                  type="button"
+                  onClick={() => remove(editingId, form.name || "автоматизация")}
+                  disabled={pending}
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-coral-200 px-4 text-sm font-medium text-coral-700 hover:bg-coral-50 disabled:opacity-60 sm:ml-auto"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Изтрий
+                </button>
+              )}
+            </>
           }
         >
-          <div className="space-y-4">
+          <div className="grid min-w-0 gap-5 xl:grid-cols-12">
+            <div className="min-w-0 space-y-5 xl:col-span-4 2xl:col-span-3">
+            <WorkspacePanel title="Основни настройки">
+            <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Име">
                 <Input
@@ -805,9 +923,22 @@ export function AutomationsManager({
               </Field>
             </div>
 
+            <TogglePair
+              label="Статус"
+              value={form.enabled}
+              onChange={(enabled) => setForm({ ...form, enabled })}
+              options={{ trueLabel: "Включена", falseLabel: "Изкл." }}
+              disabled={pending}
+            />
+            </div>
+            </WorkspacePanel>
+
             {form.trigger_event === "purchase" && (
-              <div className="rounded-2xl border border-gold-500/30 bg-gold-50/40 p-5 space-y-3">
-                <p className="text-sm font-semibold text-ink">При покупка на</p>
+              <WorkspacePanel
+                tone="gold"
+                title="При покупка на"
+                description="Автоматизацията тръгва само след плащане на избраните продукти."
+              >
                 <PurchaseProductPicker
                   products={products}
                   selectedIds={form.purchase_product_ids}
@@ -816,22 +947,11 @@ export function AutomationsManager({
                   }
                   disabled={pending}
                 />
-              </div>
+              </WorkspacePanel>
             )}
 
-            <TogglePair
-              label="Статус"
-              value={form.enabled}
-              onChange={(enabled) => setForm({ ...form, enabled })}
-              options={{ trueLabel: "Включена", falseLabel: "Изкл." }}
-              disabled={pending}
-            />
-
             {form.trigger_event !== "purchase" && (
-              <div className="rounded-xl border border-violet-500/25 bg-violet-50/30 p-4 space-y-3">
-                <p className="text-sm font-semibold text-violet-900">
-                  Тип на записа
-                </p>
+              <WorkspacePanel tone="violet" title="Тип на записа">
                 <SubscriberOriginPicker
                   selected={form.subscriber_origins}
                   onChange={(subscriber_origins) =>
@@ -839,12 +959,12 @@ export function AutomationsManager({
                   }
                   disabled={pending}
                 />
-              </div>
+              </WorkspacePanel>
             )}
+            </div>
 
-            <div className="rounded-xl border border-ink/10 bg-white p-3 space-y-3 sm:p-4">
-              <p className="text-sm font-semibold text-ink">Аудитория</p>
-
+            <div className="min-w-0 space-y-5 xl:col-span-8 2xl:col-span-4">
+            <WorkspacePanel title="Аудитория">
               <div className="grid gap-3">
                 <div className="rounded-xl border border-forest-500/25 bg-forest-50/30 p-3 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -914,23 +1034,21 @@ export function AutomationsManager({
                   />
                 </div>
               </div>
-            </div>
+            </WorkspacePanel>
 
             {form.trigger_event !== "purchase" && (
-              <div className="rounded-xl border border-sky-500/25 bg-sky-50/30 p-4 space-y-3">
-                <p className="text-sm font-semibold text-sky-900">
-                  Само при запис от избран източник
-                </p>
+              <WorkspacePanel tone="sky" title="Само при запис от избран източник">
                 <SignupSourcePicker
                   forms={forms}
                   selected={form.signup_sources}
                   onChange={(signup_sources) => setForm({ ...form, signup_sources })}
                   disabled={pending}
                 />
-              </div>
+              </WorkspacePanel>
             )}
 
-            <div className="rounded-2xl border border-forest-500/20 bg-forest-50/40 p-4 space-y-4">
+            <WorkspacePanel tone="forest" title="Кога тръгва">
+            <div className="space-y-4">
               <Field
                 label="След коя стъпка"
                 hint="Празно = стартира от събитието. С избор = чака предишната."
@@ -1066,9 +1184,13 @@ export function AutomationsManager({
                 )}
               </p>
             </div>
+            </WorkspacePanel>
+            </div>
 
+            <div className="min-w-0 space-y-5 xl:col-span-12 2xl:col-span-5">
             {form.channel === "email" ? (
-              <div className="space-y-3 rounded-xl border border-ink/10 p-3 sm:p-4">
+              <WorkspacePanel title="Съдържание на имейла">
+              <div className="space-y-3">
                 <div className="inline-flex w-full gap-1 rounded-xl border border-ink/15 bg-cream-2/40 p-1 sm:w-auto">
                   {(
                     [
@@ -1093,6 +1215,7 @@ export function AutomationsManager({
                 </div>
 
                 {contentLocale === "bg" ? (
+                  <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-1">
                   <div className="space-y-3">
                     <Field label="Тема">
                       <Input
@@ -1146,6 +1269,8 @@ export function AutomationsManager({
                         placeholder="/bg#events"
                       />
                     </Field>
+                  </div>
+                  <div className="min-w-0">
                     <EmailTemplatePreview
                       bodyHtml={form.html_bg}
                       ctaLabel={form.cta_label_bg}
@@ -1156,7 +1281,9 @@ export function AutomationsManager({
                       heroImageUrl={form.hero_image_url_bg}
                     />
                   </div>
+                  </div>
                 ) : (
+                  <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-1">
                   <div className="space-y-3">
                     <Field label="Subject">
                       <Input
@@ -1211,6 +1338,8 @@ export function AutomationsManager({
                         placeholder="/en#events"
                       />
                     </Field>
+                  </div>
+                  <div className="min-w-0">
                     <EmailTemplatePreview
                       bodyHtml={form.html_en}
                       ctaLabel={form.cta_label_en}
@@ -1221,9 +1350,12 @@ export function AutomationsManager({
                       heroImageUrl={form.hero_image_url_en}
                     />
                   </div>
+                  </div>
                 )}
               </div>
+              </WorkspacePanel>
             ) : (
+              <WorkspacePanel title="Съдържание на SMS-а">
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="SMS — BG" hint="{{name}}, {{email}}">
                   <Textarea
@@ -1240,45 +1372,14 @@ export function AutomationsManager({
                   />
                 </Field>
               </div>
+              </WorkspacePanel>
             )}
-
-            {error && <p className="text-sm text-coral-600">{error}</p>}
-
-            <div className="sticky bottom-0 -mx-4 flex flex-wrap gap-2 border-t border-ink/10 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
-              <button
-                type="button"
-                onClick={save}
-                disabled={pending || !form.name.trim()}
-                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60 sm:flex-none"
-              >
-                {saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                Запази
-              </button>
-              <button
-                type="button"
-                onClick={closeEditor}
-                className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5"
-              >
-                Отказ
-              </button>
-              {editingId && editingId !== "new" && (
-                <button
-                  type="button"
-                  onClick={() => remove(editingId, form.name || "автоматизация")}
-                  disabled={pending}
-                  className="inline-flex h-11 items-center gap-2 rounded-full border border-coral-200 px-4 text-sm font-medium text-coral-700 hover:bg-coral-50 disabled:opacity-60 sm:ml-auto"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Изтрий
-                </button>
-              )}
             </div>
           </div>
-        </Card>
-        </div>
+        </WorkspaceEditor>
       )}
 
-      <div className={cn("min-w-0 overflow-x-auto", editingId && viewTab === "flow" && "2xl:overflow-visible")}>
+      <div className="min-w-0 overflow-x-auto">
       {viewTab === "flow" ? (
         <Card title="Схема" className="min-w-0">
           <AutomationFlowView
@@ -1289,6 +1390,10 @@ export function AutomationsManager({
             onSelectAutomation={openEditFromFlow}
             onAddAfterAutomation={openNewAfter}
             onDeleteAutomation={(a) => remove(a.id, a.name)}
+            onCopyAutomation={copyAutomation}
+            onPasteAfterAutomation={pasteAutomation}
+            copiedId={clipboard?.id ?? null}
+            copiedName={clipboard?.name ?? null}
           />
         </Card>
       ) : (
@@ -1377,7 +1482,7 @@ export function AutomationsManager({
                   </div>
                   {parentName && (
                     <p className="mt-1 text-xs text-ink-soft">
-                      ↳ след „<span className="font-medium text-slate-700">{parentName}</span>"
+                      ↳ след „<span className="font-medium text-slate-700">{parentName}</span>“
                     </p>
                   )}
                   <p className="mt-1 text-sm text-ink-soft">
@@ -1422,6 +1527,27 @@ export function AutomationsManager({
                     )}
                   >
                     {a.enabled ? "Enabled" : "Disabled"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => duplicateInPlace(a)}
+                    disabled={pending}
+                    title="Дублирай автоматизацията"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 disabled:opacity-40"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyAutomation(a)}
+                    disabled={pending}
+                    title="Копирай, за да го поставиш на друго място"
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-ink/5 disabled:opacity-40",
+                      clipboard?.id === a.id ? "text-forest-700" : "text-ink-soft",
+                    )}
+                  >
+                    <ClipboardPaste className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => openEdit(a)}
@@ -1622,7 +1748,6 @@ export function AutomationsManager({
         )}
       </div>
       )}
-      </div>
       </div>
     </div>
   );

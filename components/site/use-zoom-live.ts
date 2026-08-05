@@ -23,11 +23,12 @@ export function useZoomLive(locale: Locale) {
   }, [locale]);
 
   useEffect(() => {
-    void refresh();
+    const first = window.setTimeout(() => void refresh(), 0);
     const id = window.setInterval(() => void refresh(), POLL_MS);
     const onFocus = () => void refresh();
     window.addEventListener("focus", onFocus);
     return () => {
+      window.clearTimeout(first);
       window.clearInterval(id);
       window.removeEventListener("focus", onFocus);
     };

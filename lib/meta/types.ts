@@ -30,6 +30,13 @@ export type MetaPixelConfig = {
   track_checkout: boolean;
   track_purchase: boolean;
   log_events: boolean;
+  /** Token for <meta name="facebook-domain-verification">, from Business Manager. */
+  domain_verification: string;
+  /** Comma separated extra pixel ids — every browser event fires to these too. */
+  additional_pixel_ids: string;
+  ad_account_id: string;
+  catalog_id: string;
+  notes: string;
   updated_at: string;
 };
 
@@ -72,10 +79,20 @@ export type MetaTrackRequest = {
 export type MetaPixelPublicConfig = {
   enabled: boolean;
   pixelId: string;
+  /** Extra pixels that receive the exact same events. */
+  extraPixelIds: string[];
   trackPageView: boolean;
   trackViewContent: boolean;
   trackLead: boolean;
   trackCheckout: boolean;
 };
+
+/** Splits the stored "123, 456" list into clean numeric pixel ids. */
+export function parsePixelIdList(value: string): string[] {
+  return value
+    .split(/[\s,;]+/)
+    .map((id) => id.trim())
+    .filter((id) => /^\d{6,25}$/.test(id));
+}
 
 export const META_GRAPH_VERSION = "v21.0";

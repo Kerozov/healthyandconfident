@@ -1,9 +1,6 @@
 import "server-only";
 
-import {
-  getNotificationWorkerConfig,
-  requireNotificationWorkerConfig,
-} from "@/lib/worker/config";
+import { requireNotificationWorkerConfig } from "@/lib/worker/config";
 
 /**
  * SMS adapter for notification-worker (Notifier.bg under the hood).

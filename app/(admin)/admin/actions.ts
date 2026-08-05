@@ -414,6 +414,78 @@ export async function updateAutomation(
   return { ok: true };
 }
 
+/**
+ * Copies an automation with all of its content, audience and timing. The copy is
+ * always created disabled so nothing goes out before it has been reviewed, and
+ * `after_automation_id` decides where in a chain it lands — that is what makes
+ * "copy here, paste there" possible without rebuilding the step by hand.
+ */
+export async function duplicateAutomation(
+  id: string,
+  options?: { after_automation_id?: string | null; name?: string },
+): Promise<ActionResult & { id?: string; name?: string }> {
+  await requireAdmin();
+  const supabase = getAdminClient();
+
+  const { data: source, error: readError } = await supabase
+    .from("automations")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (readError || !source) {
+    return { ok: false, message: readError?.message || "Автоматизацията не е намерена." };
+  }
+
+  const original = source as Automation;
+
+  // Pasting under itself (or under one of its own descendants) would build a cycle.
+  let cursor = options?.after_automation_id ?? undefined;
+  const seen = new Set<string>();
+  while (cursor) {
+    if (cursor === id) {
+      return { ok: false, message: "Не може да поставиш копие под самата верига на оригинала." };
+    }
+    if (seen.has(cursor)) break;
+    seen.add(cursor);
+    const { data: parent } = await supabase
+      .from("automations")
+      .select("after_automation_id")
+      .eq("id", cursor)
+      .single();
+    cursor = (parent as { after_automation_id: string | null } | null)?.after_automation_id ?? undefined;
+  }
+
+  const after_automation_id =
+    options?.after_automation_id === undefined
+      ? original.after_automation_id
+      : options.after_automation_id || null;
+
+  const {
+    id: _id,
+    created_at: _createdAt,
+    updated_at: _updatedAt,
+    ...copyable
+  } = original;
+
+  const { data, error } = await supabase
+    .from("automations")
+    .insert({
+      ...copyable,
+      name: options?.name?.trim() || `${original.name} (копие)`,
+      enabled: false,
+      after_automation_id,
+      sort_order: (original.sort_order ?? 0) + 5,
+    })
+    .select("id, name")
+    .single();
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/automations");
+  const created = data as { id: string; name: string };
+  return { ok: true, id: created.id, name: created.name };
+}
+
 export async function deleteAutomation(id: string): Promise<ActionResult> {
   await requireAdmin();
   try {
@@ -920,7 +992,7 @@ export async function createSegmentGroup(input: {
   const name = input.name.trim();
   if (!name) return { ok: false, message: "Group name is required." };
 
-  let parentId: string | null = input.parent_id?.trim() || null;
+  const parentId: string | null = input.parent_id?.trim() || null;
   if (parentId) {
     const { data: parent } = await supabase
       .from("segment_groups")
@@ -1020,7 +1092,7 @@ export async function createSegment(input: {
     return { ok: false, message: "Invalid segment key." };
   }
 
-  let groupId: string | null = input.group_id?.trim() || null;
+  const groupId: string | null = input.group_id?.trim() || null;
   if (groupId) {
     const { data: group } = await supabase
       .from("segment_groups")
@@ -3128,6 +3200,11 @@ export async function saveMetaPixelConfig(input: {
   track_checkout: boolean;
   track_purchase: boolean;
   log_events: boolean;
+  domain_verification?: string;
+  additional_pixel_ids?: string;
+  ad_account_id?: string;
+  catalog_id?: string;
+  notes?: string;
 }): Promise<ActionResult> {
   await requireAdmin();
 
@@ -3136,6 +3213,16 @@ export async function saveMetaPixelConfig(input: {
     return {
       ok: false,
       message: "Pixel ID трябва да е само цифри (виж Events Manager → Data sources).",
+    };
+  }
+
+  const extraRaw = (input.additional_pixel_ids ?? "").trim();
+  const extraIds = extraRaw ? extraRaw.split(/[\s,;]+/).filter(Boolean) : [];
+  const badExtra = extraIds.find((id) => !/^\d{6,25}$/.test(id));
+  if (badExtra) {
+    return {
+      ok: false,
+      message: `Допълнителен Pixel ID „${badExtra}“ не е валиден — само цифри, разделени със запетая.`,
     };
   }
 
@@ -3154,6 +3241,11 @@ export async function saveMetaPixelConfig(input: {
       track_checkout: input.track_checkout,
       track_purchase: input.track_purchase,
       log_events: input.log_events,
+      domain_verification: (input.domain_verification ?? "").trim(),
+      additional_pixel_ids: extraIds.join(", "),
+      ad_account_id: (input.ad_account_id ?? "").trim(),
+      catalog_id: (input.catalog_id ?? "").trim(),
+      notes: (input.notes ?? "").trim(),
       updated_at: new Date().toISOString(),
     })
     .eq("key", "default");

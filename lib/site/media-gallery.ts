@@ -52,8 +52,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "vesi",
     aspect: "portrait",
     alt: {
-      bg: "Веси Ней — мотивиращ диетолог с над 20 години опит",
-      en: "Vessie Nay — motivating nutritionist with 20+ years of experience",
+      bg: "Веси Ней — мотивиращ диетолог с над 10 години опит",
+      en: "Vessie Nay — motivating nutritionist with 10+ years of experience",
     },
   },
   {

@@ -10,8 +10,8 @@ export default async function AdminMetaPage() {
   return (
     <div>
       <PageHeader
-        title="Meta пиксел"
-        description="Проследяване за Facebook и Instagram реклами — от браузъра и от сървъра, с точните суми от Stripe."
+        title="Meta пиксел и реклами"
+        description="Проследяване за Facebook и Instagram реклами — от браузъра и от сървъра, с точните суми от Stripe. В „Мета реклами“ по-долу се слагат верификацията на домейна, допълнителните пиксели и данните на рекламния акаунт."
       />
       <MetaPixelManager data={data} />
     </div>

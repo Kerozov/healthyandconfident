@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, useCallback } from "react";
+import { useEffect, useState, useTransition, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   RefreshCw,
@@ -126,7 +126,8 @@ export function CampaignsTable({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [autoSynced, setAutoSynced] = useState(false);
+  /** Ref, not state: the one-shot sync must not trigger an extra render. */
+  const autoSyncedRef = useRef(false);
   const [note, setNote] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [recipients, setRecipients] = useState<RecipientRow[] | null>(null);
@@ -144,10 +145,10 @@ export function CampaignsTable({
   }, [router]);
 
   useEffect(() => {
-    if (autoSynced || !hasWorkerJobs) return;
-    setAutoSynced(true);
+    if (autoSyncedRef.current || !hasWorkerJobs) return;
+    autoSyncedRef.current = true;
     refreshAll();
-  }, [autoSynced, hasWorkerJobs, refreshAll]);
+  }, [hasWorkerJobs, refreshAll]);
 
   function syncOne(id: string) {
     setBusyId(id);

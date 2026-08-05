@@ -6,6 +6,7 @@ type SiteImageProps = {
   alt: string;
   className?: string;
   imageClassName?: string;
+  /** Above-the-fold images — preloads and loads eagerly (Next 16 replaced `priority`). */
   priority?: boolean;
   sizes?: string;
   quality?: number;
@@ -36,7 +37,8 @@ export function SiteImage({
         src={src}
         alt={alt}
         fill
-        priority={priority}
+        preload={priority}
+        loading={priority ? "eager" : "lazy"}
         quality={quality}
         sizes={sizes ?? "(max-width: 768px) 100vw, 50vw"}
         className={cn("object-cover", imageClassName, className)}
@@ -50,7 +52,8 @@ export function SiteImage({
       alt={alt}
       width={width}
       height={height}
-      priority={priority}
+      preload={priority}
+      loading={priority ? "eager" : "lazy"}
       quality={quality}
       sizes={sizes}
       className={cn("h-auto w-full", className, imageClassName)}

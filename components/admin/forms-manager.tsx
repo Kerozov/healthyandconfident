@@ -37,6 +37,7 @@ import { EmailAttachmentPicker } from "@/components/admin/email-attachment-picke
 import { EmailBodyEditor } from "@/components/admin/email-body-editor";
 import { normalizeFormFields } from "@/lib/forms/answer-tags";
 import {
+  BUILTIN_FIELD_DEFAULTS,
   deleteCustomFieldDefault,
   listFieldDefaults,
   saveFieldAsDefault,
@@ -118,9 +119,14 @@ export function FormsManager({
   >(null);
   const [sendAudience, setSendAudience] = useState({ ...EMPTY_AUDIENCE });
   const [sendNote, setSendNote] = useState<string | null>(null);
-  const [fieldDefaults, setFieldDefaults] = useState<FormFieldDefault[]>([]);
+  const [fieldDefaults, setFieldDefaults] = useState<FormFieldDefault[]>(
+    BUILTIN_FIELD_DEFAULTS,
+  );
 
+  // Custom templates live in localStorage, so they can only be read after
+  // hydration — starting from the built-ins keeps server and client markup equal.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFieldDefaults(listFieldDefaults());
   }, []);
 

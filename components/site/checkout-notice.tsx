@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle, X } from "lucide-react";
 import type { Locale } from "@/i18n/config";
@@ -29,20 +28,14 @@ export function CheckoutNotice({ locale }: { locale: Locale }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const [status, setStatus] = useState<"success" | "cancelled" | null>(null);
   const copy = COPY[locale] ?? COPY.bg;
 
-  useEffect(() => {
-    const checkout = searchParams.get("checkout");
-    if (checkout === "success" || checkout === "cancelled") {
-      setStatus(checkout);
-    } else {
-      setStatus(null);
-    }
-  }, [searchParams]);
+  // Derived from the URL — dismissing drops the param, which hides the banner.
+  const checkout = searchParams.get("checkout");
+  const status =
+    checkout === "success" || checkout === "cancelled" ? checkout : null;
 
   function dismiss() {
-    setStatus(null);
     const params = new URLSearchParams(searchParams.toString());
     params.delete("checkout");
     const qs = params.toString();

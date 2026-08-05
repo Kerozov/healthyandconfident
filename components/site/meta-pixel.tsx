@@ -33,6 +33,13 @@ export function MetaPixel({ config }: { config: MetaPixelPublicConfig }) {
 
   if (!config.enabled || !config.pixelId) return null;
 
+  // `fbq('track', …)` reaches every initialised pixel, so an extra `init` is all
+  // a second ad account needs to receive the exact same events.
+  const allPixelIds = [config.pixelId, ...(config.extraPixelIds ?? [])];
+  const initCalls = allPixelIds
+    .map((id) => `fbq('init', ${JSON.stringify(id)});`)
+    .join("\n");
+
   return (
     <>
       <Script id="meta-pixel" strategy="afterInteractive">
@@ -45,19 +52,22 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window,document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', ${JSON.stringify(config.pixelId)});
+${initCalls}
 window.__metaPixelReady = true;
         `}
       </Script>
       <noscript>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          height="1"
-          width="1"
-          style={{ display: "none" }}
-          alt=""
-          src={`https://www.facebook.com/tr?id=${encodeURIComponent(config.pixelId)}&ev=PageView&noscript=1`}
-        />
+        {allPixelIds.map((id) => (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            key={id}
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            alt=""
+            src={`https://www.facebook.com/tr?id=${encodeURIComponent(id)}&ev=PageView&noscript=1`}
+          />
+        ))}
       </noscript>
     </>
   );

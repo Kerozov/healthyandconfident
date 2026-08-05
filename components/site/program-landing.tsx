@@ -521,6 +521,11 @@ export function ProgramLanding({
                 </blockquote>
               ))}
             </div>
+            {content.testimonialsNote && (
+              <p className="mx-auto mt-8 max-w-3xl text-center text-sm text-forest-700">
+                {content.testimonialsNote}
+              </p>
+            )}
           </Container>
         </section>
       )}
