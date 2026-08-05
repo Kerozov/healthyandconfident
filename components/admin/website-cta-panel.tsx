@@ -34,7 +34,7 @@ const PROGRAM_PLACEMENT_GROUPS = [
   },
   {
     id: "programs_0",
-    title: "Лятна програма",
+    title: "Лято – стройна и спокойна",
     keys: ["programs_0", "programs_0_secondary", "programs_0_pricing_0"],
   },
 ] as const;

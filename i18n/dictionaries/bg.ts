@@ -131,18 +131,18 @@ export const bg: Dictionary = {
     subtitle: "Три варианта — програми и специален продукт.",
     items: [
       {
-        badge: "Ново за лятото",
-        title: "Лятна програма",
-        duration: "старт всеки понеделник",
-        price: "малка група",
+        badge: "Летен пакет",
+        title: "Лято – стройна и спокойна",
+        duration: "60 дни достъп",
+        price: "€36",
         description:
-          "Леко меню за жегите, плосък корем и енергия — програма, която издържа и в отпуска, и на ресторант.",
+          "Наслади се на морето, сладоледа и вечерите с приятели – без чувство за вина и без през септември да започваш отначало.",
         features: [
-          "Меню за жеги — засища, без да тежи",
-          "План за отпуска, барбекю и ресторант",
-          "Подкрепа през цялото време на програмата",
+          "Ръководства за ресторант, хотел, all inclusive и барбекю",
+          "12 лесни летни рецепти + snack guide и mocktails",
+          "SOS аудио практики за моментите извън ритъм",
         ],
-        cta: "Запиши се за лятната програма",
+        cta: "Искам моето спокойно лято",
         href: "/programs/summer-programme",
         image: "/images/11.jpg",
       },
@@ -425,7 +425,7 @@ export const bg: Dictionary = {
       {
         title: "Програми",
         links: [
-          { label: "Лятна програма", href: "/bg/programs/summer-programme" },
+          { label: "Лято – стройна и спокойна", href: "/bg/programs/summer-programme" },
           { label: "Балансирано хранене 21 дни", href: "/bg#challenge-21" },
           { label: "Живей без резистентност", href: "/bg/programs/zhivey-bez-rezistentnost" },
           { label: "Препрограмирай апетита", href: "/bg/programs/preprogramirai-apetita" },

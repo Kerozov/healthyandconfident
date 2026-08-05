@@ -129,18 +129,18 @@ export const en: Dictionary = {
     subtitle: "Three options — programs and a special product.",
     items: [
       {
-        badge: "New for summer",
-        title: "Summer programme",
-        duration: "starts every Monday",
-        price: "small group",
+        badge: "Summer package",
+        title: "Summer — slim and calm",
+        duration: "60 days of access",
+        price: "€36",
         description:
-          "A light summer menu, a flatter tummy and steady energy — a plan that survives holidays and eating out.",
+          "Enjoy the sea, the ice cream and the evenings with friends — without guilt, and without starting over in September.",
         features: [
-          "Hot-weather menu that fills without weighing you down",
-          "A plan for holidays, barbecues and restaurants",
-          "Support for the whole length of the programme",
+          "Guides for restaurants, hotels, all inclusive and barbecues",
+          "12 easy summer recipes plus a snack guide and mocktails",
+          "SOS audio practices for the moments you slip",
         ],
-        cta: "Join the summer programme",
+        cta: "I want my calm summer",
         href: "/programs/summer-programme",
         image: "/images/11.jpg",
       },
@@ -426,7 +426,7 @@ export const en: Dictionary = {
       {
         title: "Programs",
         links: [
-          { label: "Summer programme", href: "/en/programs/summer-programme" },
+          { label: "Summer — slim and calm", href: "/en/programs/summer-programme" },
           { label: "Balanced Nutrition 21 Days", href: "/en#challenge-21" },
           { label: "Live Without Resistance", href: "/en/programs/zhivey-bez-rezistentnost" },
           { label: "Reprogram Your Appetite", href: "/en/programs/preprogramirai-apetita" },

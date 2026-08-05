@@ -83,6 +83,8 @@ export type ProgramLandingContent = {
   pillars?: { title: string; items: { title: string; text: string }[] };
   includes?: { title: string; items: { title: string; text: string }[] };
   testimonials?: { headline?: string; quote: string; name: string }[];
+  /** Shown under the results — e.g. that outcomes vary per person. */
+  testimonialsNote?: string;
   faq?: { q: string; a: string }[];
   pricing?: {
     title: string;
