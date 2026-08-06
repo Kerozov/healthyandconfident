@@ -72,6 +72,7 @@ export default async function HomePage({
           locale={l}
           section={eventsSection}
           events={site.events}
+          offersById={site.offersById}
         />
       )}
       {productsSection && site.products.length > 0 && (

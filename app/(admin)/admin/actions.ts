@@ -2327,32 +2327,73 @@ function revalidateSitePaths() {
   revalidatePath("/en");
 }
 
+export type ProductOfferInput = {
+  offer_id?: string | null;
+  offer_enabled?: boolean;
+  offer_headline_bg?: string;
+  offer_headline_en?: string;
+  downsell_offer_id?: string | null;
+  downsell_enabled?: boolean;
+  downsell_headline_bg?: string;
+  downsell_headline_en?: string;
+};
+
+/** Postgres error for a column the pending migration has not created yet. */
+function isMissingColumn(message: string | undefined): boolean {
+  return Boolean(message && /column .* does not exist/i.test(message));
+}
+
 async function syncProductPlacement(
   supabase: ReturnType<typeof getAdminClient>,
   productId: string,
   title_bg: string,
   title_en: string,
-  upsell?: {
-    offer_id?: string | null;
-    offer_enabled?: boolean;
-    offer_headline_bg?: string;
-    offer_headline_en?: string;
-  },
+  offers?: ProductOfferInput,
 ): Promise<ActionResult> {
-  const { error } = await supabase.from("site_cta_placements").upsert(
-    {
-      key: productPlacementKey(productId),
-      ...productPlacementLabel(title_bg, title_en),
-      offer_id: upsell?.offer_id || null,
-      offer_enabled: upsell?.offer_enabled ?? false,
-      offer_headline_bg: upsell?.offer_headline_bg?.trim() ?? "",
-      offer_headline_en: upsell?.offer_headline_en?.trim() ?? "",
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "key" },
-  );
-  if (error) return { ok: false, message: error.message };
-  return { ok: true };
+  // A product offering itself would duplicate the line item in Stripe and show
+  // the buyer what they are already buying.
+  const upsellId = offers?.offer_id && offers.offer_id !== productId ? offers.offer_id : null;
+  const downsellId =
+    offers?.downsell_offer_id && offers.downsell_offer_id !== productId
+      ? offers.downsell_offer_id
+      : null;
+
+  const base = {
+    key: productPlacementKey(productId),
+    ...productPlacementLabel(title_bg, title_en),
+    offer_id: upsellId,
+    offer_enabled: Boolean(upsellId) && (offers?.offer_enabled ?? false),
+    offer_headline_bg: offers?.offer_headline_bg?.trim() ?? "",
+    offer_headline_en: offers?.offer_headline_en?.trim() ?? "",
+    updated_at: new Date().toISOString(),
+  };
+  const withDownsell = {
+    ...base,
+    downsell_offer_id: downsellId,
+    downsell_enabled: Boolean(downsellId) && (offers?.downsell_enabled ?? false),
+    downsell_headline_bg: offers?.downsell_headline_bg?.trim() ?? "",
+    downsell_headline_en: offers?.downsell_headline_en?.trim() ?? "",
+  };
+
+  const { error } = await supabase
+    .from("site_cta_placements")
+    .upsert(withDownsell, { onConflict: "key" });
+  if (!error) return { ok: true };
+
+  // Migration 048 not applied yet — keep the upsell working and say why the
+  // downsell did not stick instead of failing the whole save.
+  if (isMissingColumn(error.message)) {
+    const retry = await supabase
+      .from("site_cta_placements")
+      .upsert(base, { onConflict: "key" });
+    if (retry.error) return { ok: false, message: retry.error.message };
+    return {
+      ok: true,
+      message:
+        "Записано, но downsell-ът не е запазен: пусни supabase/migrations/048_downsell_offer.sql в Supabase.",
+    };
+  }
+  return { ok: false, message: error.message };
 }
 
 export async function saveSiteSection(input: {
@@ -2510,9 +2551,19 @@ export async function saveSiteGuide(input: {
   }
 
   const stripeUrl = input.stripe_url?.trim() ?? "";
-  const parsed = parseStripeIdInput(
-    input.stripe_id?.trim() || input.stripe_price_id?.trim() || "",
-  );
+  const guideStripeIdInput =
+    input.stripe_id?.trim() || input.stripe_price_id?.trim() || "";
+  const parsed = parseStripeIdInput(guideStripeIdInput);
+  if (
+    guideStripeIdInput &&
+    !parsed.stripe_price_id &&
+    !parsed.stripe_product_id
+  ) {
+    return {
+      ok: false,
+      message: `„${guideStripeIdInput}“ не е Stripe ID. Трябва да започва с price_ или prod_.`,
+    };
+  }
   let stripePriceId = parsed.stripe_price_id;
   try {
     const enriched = await enrichStripePriceFromProduct(parsed);
@@ -2606,6 +2657,10 @@ export async function saveSiteProduct(input: {
   upsell_offer_enabled?: boolean;
   upsell_offer_headline_bg?: string;
   upsell_offer_headline_en?: string;
+  downsell_offer_id?: string | null;
+  downsell_enabled?: boolean;
+  downsell_headline_bg?: string;
+  downsell_headline_en?: string;
 }): Promise<ActionResult & { id?: string }> {
   await requireAdmin();
   const supabase = getAdminClient();
@@ -2615,12 +2670,18 @@ export async function saveSiteProduct(input: {
     return { ok: false, message: "Попълни име на продукта (BG)." };
   }
 
-  const parsed = parseStripeIdInput(
+  const stripeIdInput =
     input.stripe_id?.trim() ||
-      input.stripe_price_id?.trim() ||
-      input.stripe_product_id?.trim() ||
-      "",
-  );
+    input.stripe_price_id?.trim() ||
+    input.stripe_product_id?.trim() ||
+    "";
+  const parsed = parseStripeIdInput(stripeIdInput);
+  if (stripeIdInput && !parsed.stripe_price_id && !parsed.stripe_product_id) {
+    return {
+      ok: false,
+      message: `„${stripeIdInput}“ не е Stripe ID. Трябва да започва с price_ или prod_ — копирай го от Stripe → Products.`,
+    };
+  }
   let stripeIds = {
     stripe_product_id: parsed.stripe_product_id,
     stripe_price_id: parsed.stripe_price_id,
@@ -2640,11 +2701,37 @@ export async function saveSiteProduct(input: {
     };
   }
 
-  const upsell = {
+  if (input.id && input.upsell_offer_id === input.id) {
+    return {
+      ok: false,
+      message: "Продуктът не може да предлага сам себе си като допълнителна оферта.",
+    };
+  }
+  if (input.id && input.downsell_offer_id === input.id) {
+    return {
+      ok: false,
+      message: "Продуктът не може да е свой собствен downsell.",
+    };
+  }
+  if (
+    input.upsell_offer_id &&
+    input.upsell_offer_id === input.downsell_offer_id
+  ) {
+    return {
+      ok: false,
+      message: "Изберѝ различен продукт за downsell — иначе предлагаш едно и също два пъти.",
+    };
+  }
+
+  const offers: ProductOfferInput = {
     offer_id: input.upsell_offer_id || null,
     offer_enabled: input.upsell_offer_enabled ?? false,
     offer_headline_bg: input.upsell_offer_headline_bg?.trim() ?? "",
     offer_headline_en: input.upsell_offer_headline_en?.trim() ?? "",
+    downsell_offer_id: input.downsell_offer_id || null,
+    downsell_enabled: input.downsell_enabled ?? false,
+    downsell_headline_bg: input.downsell_headline_bg?.trim() ?? "",
+    downsell_headline_en: input.downsell_headline_en?.trim() ?? "",
   };
 
   const row = {
@@ -2678,11 +2765,11 @@ export async function saveSiteProduct(input: {
       input.id,
       row.title_bg,
       row.title_en,
-      upsell,
+      offers,
     );
     if (!sync.ok) return sync;
     revalidateSitePaths();
-    return { ok: true, id: input.id };
+    return { ...sync, id: input.id };
   }
 
   const { data, error } = await supabase
@@ -2697,11 +2784,11 @@ export async function saveSiteProduct(input: {
     productId,
     row.title_bg,
     row.title_en,
-    upsell,
+    offers,
   );
   if (!sync.ok) return sync;
   revalidateSitePaths();
-  return { ok: true, id: productId };
+  return { ...sync, id: productId };
 }
 
 export async function deleteSiteProduct(id: string): Promise<ActionResult> {

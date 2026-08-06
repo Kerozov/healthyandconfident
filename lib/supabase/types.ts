@@ -423,6 +423,15 @@ export type SiteCtaPlacement = {
   offer_headline_bg: string;
   offer_headline_en: string;
   offer_enabled: boolean;
+  /**
+   * Second chance offered when the visitor declines the upsell above.
+   * Optional on the type: the columns arrive with migration 048, so rows read
+   * before it runs simply have them undefined.
+   */
+  downsell_offer_id?: string | null;
+  downsell_headline_bg?: string;
+  downsell_headline_en?: string;
+  downsell_enabled?: boolean;
   /** Override visible button text (empty = default from page content). */
   button_label_bg: string;
   button_label_en: string;

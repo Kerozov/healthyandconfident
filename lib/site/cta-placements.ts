@@ -104,6 +104,56 @@ export function getPlacementOffer(
   };
 }
 
+export type ResolvedOffer = { offer: SiteProduct; headline: string };
+
+/**
+ * The upsell shown before checkout and the downsell shown if it is declined.
+ *
+ * An offer is dropped when it *is* the product being bought — that would put
+ * the same line item in the Stripe session twice and show the buyer what they
+ * already have in hand. The guard lives here rather than only in the admin so
+ * older, misconfigured rows cannot reach a customer.
+ */
+export function resolvePlacementOffers(
+  placement: SiteCtaPlacement | undefined,
+  offersById: Record<string, SiteProduct>,
+  locale: Locale,
+  baseProductId?: string | null,
+): { upsell: ResolvedOffer | null; downsell: ResolvedOffer | null } {
+  function pick(
+    enabled: boolean | undefined,
+    offerId: string | null | undefined,
+    headlineBg: string | undefined,
+    headlineEn: string | undefined,
+  ): ResolvedOffer | null {
+    if (!enabled) return null;
+    const offer = resolveOffer(offerId, offersById);
+    if (!offer) return null;
+    if (baseProductId && offer.id === baseProductId) return null;
+    const custom = locale === "bg" ? headlineBg : headlineEn;
+    return { offer, headline: resolveOfferHeadline(locale, offer, custom) };
+  }
+
+  const upsell = pick(
+    placement?.offer_enabled,
+    placement?.offer_id,
+    placement?.offer_headline_bg,
+    placement?.offer_headline_en,
+  );
+  const downsell = pick(
+    placement?.downsell_enabled,
+    placement?.downsell_offer_id,
+    placement?.downsell_headline_bg,
+    placement?.downsell_headline_en,
+  );
+
+  // Offering the same product twice in a row reads as a bug to the buyer.
+  if (upsell && downsell && upsell.offer.id === downsell.offer.id) {
+    return { upsell, downsell: null };
+  }
+  return { upsell, downsell };
+}
+
 export function placementLabel(placement: SiteCtaPlacement, locale: Locale): string {
   return locale === "bg" ? placement.label_bg : placement.label_en;
 }

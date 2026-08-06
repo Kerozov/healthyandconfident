@@ -30,7 +30,7 @@ const blocks: EmailBlock[] = [
   { ...createEmailBlock("list"), type: "list", items: ["едно", "две & три"], ordered: true } as EmailBlock,
   createEmailBlock("divider"),
   { ...createEmailBlock("spacer"), type: "spacer", size: 40 } as EmailBlock,
-  { ...createEmailBlock("product"), type: "product", productId: "11111111-2222-3333-4444-555555555555" } as EmailBlock,
+  { ...createEmailBlock("product"), type: "product", productId: "11111111-2222-3333-4444-555555555555", linkMode: "site" } as EmailBlock,
   { ...createEmailBlock("form"), type: "form", formId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" } as EmailBlock,
   { ...createEmailBlock("html"), type: "html", html: "<table><tr><td>raw</td></tr></table>" } as EmailBlock,
 ];
@@ -83,6 +83,10 @@ check("legacy: text first", legacyBlocks[0].type === "text" && legacyBlocks[0].t
 check("legacy: button parsed", legacyBlocks[2].type === "button" && legacyBlocks[2].label === "Виж програмата" && legacyBlocks[2].href === "https://a.co/x");
 check("legacy: inline image parsed", legacyBlocks[3].type === "image" && legacyBlocks[3].src === "https://img/legacy.png");
 check("legacy: product parsed", legacyBlocks[4].type === "product");
+check(
+  "legacy product defaults to the upsell-capable site link",
+  legacyBlocks[4].type === "product" && legacyBlocks[4].linkMode === "site",
+);
 check("legacy: form parsed", legacyBlocks[5].type === "form");
 
 const legacyOut = serializeEmailBlocks(legacyBlocks);
@@ -139,6 +143,18 @@ check("plain paragraph → text block", plainParagraph[0].type === "text" && pla
 /* 9. deep nesting does not blow up the top-level walker ----------------- */
 const deep = parseEmailBlocks("<div><div><p>вътре</p></div></div>");
 check("nested wrapper kept whole", deep.length === 1 && deep[0].type === "html");
+
+/* 9b. product link mode survives the round-trip ------------------------- */
+const stripeMode = serializeEmailBlocks([
+  { ...createEmailBlock("product"), type: "product", productId: "11111111-2222-3333-4444-555555555555", linkMode: "stripe" } as EmailBlock,
+]);
+check("stripe mode is written into the marker", stripeMode.includes(":stripe -->"), stripeMode);
+const stripeBack = parseEmailBlocks(stripeMode);
+check(
+  "stripe mode parses back",
+  stripeBack[0].type === "product" && stripeBack[0].linkMode === "stripe",
+  stripeBack[0].type,
+);
 
 /* 10. hand-authored styling is never silently dropped ------------------- */
 const styled = parseEmailBlocks('<p style="color:red">важно</p>');

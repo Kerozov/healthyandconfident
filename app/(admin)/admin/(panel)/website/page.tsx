@@ -16,7 +16,7 @@ export default async function AdminWebsitePage() {
     <div>
       <PageHeader
         title="Уебсайт"
-        description="Продукти, ръководства, събития, видеа и popup upsell при клик на бутон."
+        description="Продукти, ръководства, събития, видеа. Тук се задават и офертите (upsell / downsell), които важат навсякъде — в магазина и в имейлите."
       />
 
       <WebsiteManager

@@ -1048,6 +1048,23 @@ alter table public.meta_event_log enable row level security;
 revoke all on public.meta_pixel_config from anon, authenticated;
 revoke all on public.meta_event_log from anon, authenticated;
 
+-- 048: downsell offer (second chance when the upsell is declined)
+alter table public.site_cta_placements
+  add column if not exists downsell_offer_id uuid
+    references public.site_products(id) on delete set null,
+  add column if not exists downsell_enabled boolean not null default false,
+  add column if not exists downsell_headline_bg text not null default '',
+  add column if not exists downsell_headline_en text not null default '';
+
+-- A product must never offer itself.
+update public.site_cta_placements
+set offer_id = null, offer_enabled = false
+where key = 'product_' || offer_id::text;
+
+update public.site_cta_placements
+set downsell_offer_id = null, downsell_enabled = false
+where key = 'product_' || downsell_offer_id::text;
+
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–047 applied). Also run 007_automations.sql if not yet applied.' as result;
+select 'Upgrade complete (012–048 applied). Also run 007_automations.sql if not yet applied.' as result;

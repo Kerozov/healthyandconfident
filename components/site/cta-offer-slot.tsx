@@ -45,6 +45,7 @@ export function EventOfferSlot({
   event,
   offersById,
   locale,
+  className = "mt-4",
 }: {
   event: {
     offer_enabled: boolean;
@@ -54,6 +55,7 @@ export function EventOfferSlot({
   };
   offersById: Record<string, SiteProduct>;
   locale: Locale;
+  className?: string;
 }) {
   if (!event.offer_enabled) return null;
   const offer = resolveOffer(event.offer_id, offersById);
@@ -67,7 +69,7 @@ export function EventOfferSlot({
       offer={offer}
       locale={locale}
       headline={resolveOfferHeadline(locale, offer, headline)}
-      className="mt-4"
+      className={className}
     />
   );
 }

@@ -392,6 +392,11 @@ create table if not exists public.site_cta_placements (
   offer_headline_bg text not null default '',
   offer_headline_en text not null default '',
   offer_enabled     boolean not null default false,
+  -- Second chance shown when the visitor declines the upsell above.
+  downsell_offer_id uuid references public.site_products(id) on delete set null,
+  downsell_headline_bg text not null default '',
+  downsell_headline_en text not null default '',
+  downsell_enabled  boolean not null default false,
   button_label_bg   text not null default '',
   button_label_en   text not null default '',
   button_url        text not null default '',

@@ -3,6 +3,7 @@ import { ArrowUpRight, Sparkles } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { resolveOfferCta, resolveOfferHeadline } from "@/lib/site/cta-placements";
+import { productCheckoutPath } from "@/lib/site/product-placement";
 import { cn } from "@/lib/utils";
 
 export function OfferPitch({
@@ -23,7 +24,10 @@ export function OfferPitch({
   const price = locale === "bg" ? offer.price_label_bg : offer.price_label_en;
   const pitch = resolveOfferHeadline(locale, offer, headline);
   const cta = resolveOfferCta(locale, offer);
-  const checkoutUrl = offer.stripe_url?.trim() ?? "";
+  // Always through the product page: it works for products that only have a
+  // Stripe Price ID, and it runs that product's own offer before checkout.
+  const canBuy = Boolean(offer.stripe_price_id?.trim() || offer.stripe_url?.trim());
+  const checkoutUrl = canBuy ? productCheckoutPath(offer.id, locale) : "";
 
   return (
     <div
@@ -55,8 +59,6 @@ export function OfferPitch({
         {checkoutUrl ? (
           <Link
             href={checkoutUrl}
-            target="_blank"
-            rel="noopener noreferrer"
             className={cn(
               "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gold-400 px-4 py-2 text-sm font-semibold text-forest-900 transition-colors hover:bg-gold-500",
               compact && "text-xs",

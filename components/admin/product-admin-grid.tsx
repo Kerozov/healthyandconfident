@@ -1,10 +1,30 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { GripVertical, Pencil, Trash2, ShoppingBag } from "lucide-react";
+import { AlertTriangle, GripVertical, Pencil, Trash2, ShoppingBag } from "lucide-react";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { reorderSiteProducts } from "@/app/(admin)/admin/actions";
 import { cn } from "@/lib/utils";
+
+/**
+ * A price id that is not a real Stripe id blocks the sale outright: the site
+ * prefers its own Checkout whenever the field is filled, and Stripe rejects the
+ * session. Surfacing it on the card is the only way the admin ever finds out.
+ */
+function stripeSetupProblem(product: SiteProduct): string | null {
+  const priceId = product.stripe_price_id?.trim() ?? "";
+  const productId = product.stripe_product_id?.trim() ?? "";
+  if (priceId && !priceId.startsWith("price_")) {
+    return "Невалиден Stripe Price ID — продуктът не може да се купи";
+  }
+  if (productId && !productId.startsWith("prod_")) {
+    return "Невалиден Stripe Product ID";
+  }
+  if (!priceId && !product.stripe_url?.trim()) {
+    return "Няма Stripe цена или Payment Link — не може да се купи";
+  }
+  return null;
+}
 
 export function ProductAdminGrid({
   products,
@@ -110,6 +130,12 @@ export function ProductAdminGrid({
               </p>
             )}
             <h3 className="mt-1 font-semibold text-ink">{product.title_bg}</h3>
+            {stripeSetupProblem(product) && (
+              <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] font-medium leading-snug text-amber-900">
+                <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+                {stripeSetupProblem(product)}
+              </p>
+            )}
             {product.description_bg && (
               <p className="mt-2 line-clamp-2 flex-1 text-sm text-ink-soft">
                 {product.description_bg}

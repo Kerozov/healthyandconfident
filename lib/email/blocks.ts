@@ -16,6 +16,12 @@
  *     still substituted per recipient at send time.
  */
 
+import {
+  normalizeProductLinkMode,
+  productEmailMarker,
+  type EmailProductLinkMode,
+} from "@/lib/email/products-block";
+
 export type EmailBlockAlign = "left" | "center" | "right";
 export type EmailTextSize = "sm" | "md" | "lg";
 export type EmailButtonVariant = "gold" | "green" | "outline";
@@ -67,7 +73,13 @@ export type EmailBlock =
   | { id: string; type: "list"; items: string[]; ordered: boolean }
   | { id: string; type: "divider" }
   | { id: string; type: "spacer"; size: number }
-  | { id: string; type: "product"; productId: string }
+  | {
+      id: string;
+      type: "product";
+      productId: string;
+      /** `site` runs the upsell before Stripe; `stripe` jumps straight to it. */
+      linkMode: EmailProductLinkMode;
+    }
   | { id: string; type: "form"; formId: string }
   | { id: string; type: "html"; html: string };
 
@@ -188,7 +200,7 @@ export function createEmailBlock(type: EmailBlockType): EmailBlock {
     case "spacer":
       return { id, type, size: 24 };
     case "product":
-      return { id, type, productId: "" };
+      return { id, type, productId: "", linkMode: "site" };
     case "form":
       return { id, type, formId: "" };
     case "html":
@@ -388,7 +400,7 @@ export function serializeEmailBlock(block: EmailBlock): string {
       return serializeSpacer(block);
     case "product":
       return block.productId
-        ? `<!-- hc-email-product:${block.productId} -->`
+        ? productEmailMarker(block.productId, block.linkMode)
         : "";
     case "form":
       return block.formId ? `<!-- hc-email-form:${block.formId} -->` : "";
@@ -411,7 +423,8 @@ export function serializeEmailBlocks(blocks: EmailBlock[]): string {
 const MARKER_SPLIT_RE =
   /(<!--\s*hc-email-(?:btn|product|form):[\s\S]*?-->)/gi;
 const BTN_MARKER_RE = /^<!--\s*hc-email-btn:([^|]+)\|([^>]+?)\s*-->$/i;
-const PRODUCT_MARKER_RE = /^<!--\s*hc-email-product:([0-9a-f-]{36})\s*-->$/i;
+const PRODUCT_MARKER_RE =
+  /^<!--\s*hc-email-product:([0-9a-f-]{36})(?::(site|stripe))?\s*-->$/i;
 const FORM_MARKER_RE = /^<!--\s*hc-email-form:([0-9a-f-]{36})\s*-->$/i;
 const BLOCK_TAG_RE =
   /<(p|div|br|table|h[1-6]|ul|ol|li|img|tr|td|th|blockquote|a)\b/i;
@@ -436,7 +449,12 @@ function parseLegacyMarker(chunk: string): EmailBlock | null {
   }
   const product = PRODUCT_MARKER_RE.exec(chunk);
   if (product) {
-    return { id: newEmailBlockId(), type: "product", productId: product[1] };
+    return {
+      id: newEmailBlockId(),
+      type: "product",
+      productId: product[1],
+      linkMode: normalizeProductLinkMode(product[2]),
+    };
   }
   const form = FORM_MARKER_RE.exec(chunk);
   if (form) {

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ArrowUpRight, Calendar } from "lucide-react";
-import type { SiteEvent, SiteSection } from "@/lib/supabase/types";
+import type { SiteEvent, SiteProduct, SiteSection } from "@/lib/supabase/types";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
+import { EventOfferSlot } from "@/components/site/cta-offer-slot";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -12,11 +13,14 @@ export function EventsSection({
   locale,
   section,
   events,
+  offersById = {},
 }: {
   dict: Dictionary;
   locale: Locale;
   section: SiteSection;
   events: SiteEvent[];
+  /** Products available as the "extra offer" configured per event. */
+  offersById?: Record<string, SiteProduct>;
 }) {
   if (events.length === 0) return null;
 
@@ -103,6 +107,12 @@ export function EventsSection({
                   </span>
                 </div>
                 </Link>
+                <EventOfferSlot
+                  event={event}
+                  offersById={offersById}
+                  locale={locale}
+                  className="mx-6 mb-6"
+                />
               </div>
             );
           })}

@@ -14,7 +14,11 @@ import { ArrowUpRight, Sparkles, Loader2 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { ModalCloseButton } from "@/components/site/modal-close-button";
-import { resolveOffer, resolveOfferHeadline, resolveOfferCta } from "@/lib/site/cta-placements";
+import {
+  resolveOfferCta,
+  resolvePlacementOffers,
+  type ResolvedOffer,
+} from "@/lib/site/cta-placements";
 import { isProductPlacementKey } from "@/lib/site/product-placement";
 import {
   canBundleCheckout,
@@ -23,13 +27,16 @@ import {
 } from "@/lib/site/stripe-checkout";
 
 type PopupState = {
-  offer: SiteProduct;
-  headline: string;
+  /** Which of the two offers is on screen right now. */
+  step: "upsell" | "downsell";
+  upsell: ResolvedOffer | null;
+  downsell: ResolvedOffer | null;
   continueHref: string;
   baseProduct?: SiteProduct;
 };
 
 type OfferPopupContextValue = {
+  /** Returns false when there is nothing to show — caller continues on its own. */
   tryOpenPlacement: (
     placementKey: string,
     continueHref: string,
@@ -69,6 +76,25 @@ function navigateTo(
   router.push(href);
 }
 
+/**
+ * An offer can only be added to a purchase in progress when both sides have a
+ * Stripe Price ID — that is what lets them share one Checkout session. Without
+ * it the only way to "accept" would be to replace the product the buyer already
+ * chose, so the offer is skipped instead of costing the sale.
+ */
+function offerIsAddable(
+  offer: ResolvedOffer | null,
+  baseProduct: SiteProduct | undefined,
+): boolean {
+  if (!offer) return false;
+  if (!baseProduct) {
+    return (
+      canBundleCheckout(offer.offer) || Boolean(offer.offer.stripe_url?.trim())
+    );
+  }
+  return canBundleCheckout(baseProduct, offer.offer);
+}
+
 export function OfferPopupProvider({
   children,
   placements,
@@ -85,44 +111,35 @@ export function OfferPopupProvider({
   const [pending, startTransition] = useTransition();
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const resolveForPlacement = useCallback(
-    (
-      placementKey: string,
-      baseProduct?: SiteProduct,
-    ): Omit<PopupState, "continueHref"> | null => {
-      const placement = placements[placementKey];
-      if (!placement?.offer_enabled) return null;
-
-      const offer = resolveOffer(placement.offer_id, offersById);
-      if (!offer) return null;
-
-      const customHeadline =
-        locale === "bg" ? placement.offer_headline_bg : placement.offer_headline_en;
-
-      return {
-        offer,
-        headline: resolveOfferHeadline(locale, offer, customHeadline),
-        baseProduct,
-      };
-    },
-    [placements, offersById, locale],
-  );
-
   const tryOpenPlacement = useCallback(
     (placementKey: string, continueHref: string, baseProduct?: SiteProduct): boolean => {
       let base = baseProduct;
       if (!base && isProductPlacementKey(placementKey)) {
-        const productId = placementKey.replace(/^product_/, "");
-        base = offersById[productId];
+        base = offersById[placementKey.replace(/^product_/, "")];
       }
 
-      const resolved = resolveForPlacement(placementKey, base);
-      if (!resolved) return false;
+      const { upsell, downsell } = resolvePlacementOffers(
+        placements[placementKey],
+        offersById,
+        locale,
+        base?.id,
+      );
+
+      const showUpsell = offerIsAddable(upsell, base) ? upsell : null;
+      const showDownsell = offerIsAddable(downsell, base) ? downsell : null;
+      if (!showUpsell && !showDownsell) return false;
+
       setCheckoutError(null);
-      setPopup({ ...resolved, continueHref });
+      setPopup({
+        step: showUpsell ? "upsell" : "downsell",
+        upsell: showUpsell,
+        downsell: showDownsell,
+        continueHref,
+        baseProduct: base,
+      });
       return true;
     },
-    [resolveForPlacement, offersById],
+    [placements, offersById, locale],
   );
 
   const ctx = useMemo(() => ({ tryOpenPlacement }), [tryOpenPlacement]);
@@ -153,27 +170,25 @@ export function OfferPopupProvider({
     };
   }, [popup, pending, dismiss]);
 
-  function close(andContinue = false) {
-    dismiss(andContinue);
-  }
-
-  function checkoutProducts(productIds: string[], onFallback?: () => void) {
+  function checkoutProducts(productIds: string[]) {
     setCheckoutError(null);
     startTransition(async () => {
       try {
         await startStripeCheckout(productIds, locale);
         setPopup(null);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Checkout failed";
-        setCheckoutError(message);
-        onFallback?.();
+        setCheckoutError(err instanceof Error ? err.message : "Checkout failed");
       }
     });
   }
 
-  const offer = popup?.offer;
+  const current = popup
+    ? popup.step === "upsell"
+      ? popup.upsell
+      : popup.downsell
+    : null;
+  const offer = current?.offer;
   const baseProduct = popup?.baseProduct;
-  const bundleReady = baseProduct ? canBundleCheckout(baseProduct, offer) : false;
 
   const title = offer ? (locale === "bg" ? offer.title_bg : offer.title_en) : "";
   const baseTitle = baseProduct
@@ -197,42 +212,65 @@ export function OfferPopupProvider({
       : baseProduct.price_label_en
     : "";
   const offerCta = offer ? resolveOfferCta(locale, offer) : "";
-  const offerUrl = offer?.stripe_url?.trim() ?? "";
-  const baseUrl = baseProduct?.stripe_url?.trim() ?? "";
 
-  function acceptBundle() {
-    if (!offer || !baseProduct || !bundleReady) return;
-    checkoutProducts([baseProduct.id, offer.id]);
-  }
-
-  function acceptOfferOnly() {
+  function accept() {
     if (!offer) return;
+    if (baseProduct) {
+      // Guaranteed addable: tryOpenPlacement never shows a non-bundleable
+      // offer next to a base product.
+      checkoutProducts([baseProduct.id, offer.id]);
+      return;
+    }
     if (canBundleCheckout(offer)) {
       checkoutProducts([offer.id]);
       return;
     }
-    if (offerUrl) {
+    const url = offer.stripe_url?.trim();
+    if (url) {
       setPopup(null);
-      openStripeUrl(offerUrl, [offer.id]);
+      openStripeUrl(url, [offer.id]);
     }
   }
 
-  function declineToBaseOnly() {
-    if (!baseProduct) {
-      close(true);
+  /** Decline: try the second-chance offer, otherwise finish what they started. */
+  function decline() {
+    if (!popup) return;
+    if (popup.step === "upsell" && popup.downsell) {
+      setCheckoutError(null);
+      setPopup({ ...popup, step: "downsell" });
       return;
     }
-    if (canBundleCheckout(baseProduct)) {
-      checkoutProducts([baseProduct.id]);
-      return;
+    if (baseProduct) {
+      if (canBundleCheckout(baseProduct)) {
+        checkoutProducts([baseProduct.id]);
+        return;
+      }
+      const url = baseProduct.stripe_url?.trim();
+      if (url) {
+        setPopup(null);
+        openStripeUrl(url, [baseProduct.id]);
+        return;
+      }
     }
-    if (baseUrl) {
-      setPopup(null);
-      openStripeUrl(baseUrl, [baseProduct.id]);
-      return;
-    }
-    close(true);
+    dismiss(true);
   }
+
+  const declineLabel = (() => {
+    if (popup?.step === "upsell" && popup.downsell) {
+      return locale === "bg" ? "Не, благодаря" : "No thanks";
+    }
+    if (baseTitle) {
+      return locale === "bg" ? `Не, само „${baseTitle}“` : `No, just “${baseTitle}”`;
+    }
+    return locale === "bg" ? "Не, благодаря" : "No thanks";
+  })();
+
+  const acceptLabel = (() => {
+    if (baseProduct) {
+      return locale === "bg" ? "Да, искам и двете — към Stripe" : "Yes, both — go to Stripe";
+    }
+    return offerCta;
+  })();
 
   return (
     <OfferPopupContext.Provider value={ctx}>
@@ -259,7 +297,7 @@ export function OfferPopupProvider({
             <div className="bg-slate-800 px-7 py-6 text-white">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-300">
                 <Sparkles className="h-4 w-4" />
-                {popup.headline}
+                {current?.headline}
               </p>
               <h3
                 id="offer-popup-title"
@@ -279,7 +317,7 @@ export function OfferPopupProvider({
                 <p className="text-sm leading-relaxed text-forest-800">{description}</p>
               )}
 
-              {baseProduct && bundleReady && basePrice && price && (
+              {baseProduct && basePrice && price && (
                 <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-sm text-slate-800">
                   {locale === "bg" ? "Общо в Stripe:" : "Stripe total:"}{" "}
                   <strong>
@@ -293,78 +331,27 @@ export function OfferPopupProvider({
               )}
 
               <div className="mt-6 flex flex-col gap-3">
-                {baseProduct ? (
-                  <>
-                    {bundleReady ? (
-                      <button
-                        type="button"
-                        onClick={acceptBundle}
-                        disabled={pending}
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
-                      >
-                        {pending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ArrowUpRight className="h-4 w-4" />
-                        )}
-                        {locale === "bg"
-                          ? `Да, искам и двете — към Stripe`
-                          : `Yes, both — go to Stripe`}
-                      </button>
-                    ) : (offerUrl || canBundleCheckout(offer)) ? (
-                      <button
-                        type="button"
-                        onClick={acceptOfferOnly}
-                        disabled={pending}
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
-                      >
-                        {pending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ArrowUpRight className="h-4 w-4" />
-                        )}
-                        {locale === "bg"
-                          ? `Да, искам офертата — ${offerCta || title}`
-                          : `Yes, take the offer — ${offerCta || title}`}
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={declineToBaseOnly}
-                      disabled={pending}
-                      className="inline-flex h-12 items-center justify-center rounded-lg border border-forest-100 bg-white px-6 text-sm font-semibold text-slate-800 hover:bg-cream disabled:opacity-60"
-                    >
-                      {locale === "bg"
-                        ? `Не, само „${baseTitle}“`
-                        : `No, just “${baseTitle}”`}
-                    </button>
-                  </>
-                ) : (
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    {(offerUrl || canBundleCheckout(offer)) && (
-                      <button
-                        type="button"
-                        onClick={acceptOfferOnly}
-                        disabled={pending}
-                        className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
-                      >
-                        {pending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ArrowUpRight className="h-4 w-4" />
-                        )}
-                        {offerCta}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => close(true)}
-                      className="inline-flex h-12 flex-1 items-center justify-center rounded-lg border border-forest-100 bg-white px-6 text-sm font-semibold text-slate-800 hover:bg-cream"
-                    >
-                      {locale === "bg" ? "Не, благодаря" : "No thanks"}
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={accept}
+                  disabled={pending}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-bold text-forest-900 transition-colors hover:bg-gold-500 disabled:opacity-60"
+                >
+                  {pending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUpRight className="h-4 w-4" />
+                  )}
+                  {acceptLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={decline}
+                  disabled={pending}
+                  className="inline-flex h-12 items-center justify-center rounded-lg border border-forest-100 bg-white px-6 text-sm font-semibold text-slate-800 hover:bg-cream disabled:opacity-60"
+                >
+                  {declineLabel}
+                </button>
               </div>
             </div>
           </div>

@@ -3,9 +3,10 @@
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
-import { productPlacementKey } from "@/lib/site/product-placement";
-import { openStripeUrl, startStripeCheckout } from "@/lib/site/stripe-checkout";
-import { useOfferPopup } from "@/components/site/offer-popup";
+import {
+  canBuyProduct,
+  useProductCheckout,
+} from "@/components/site/use-product-checkout";
 
 export function ShopProductGrid({
   products,
@@ -18,33 +19,12 @@ export function ShopProductGrid({
   shopEyebrow: string;
   shopCta: string;
 }) {
-  const { tryOpenPlacement } = useOfferPopup();
+  const buyProduct = useProductCheckout(locale);
 
   if (products.length === 0) return null;
 
   function openProduct(product: SiteProduct) {
-    const checkoutUrl = product.stripe_url?.trim() ?? "";
-    const hasSiteCheckout = Boolean(product.stripe_price_id?.trim());
-
-    async function goCheckout() {
-      // Prefer site Checkout when price_id exists — needed for purchase segments + automations.
-      if (hasSiteCheckout) {
-        const placementKey = productPlacementKey(product.id);
-        const siteCheckoutHref = `site-checkout:${product.id}`;
-        if (!tryOpenPlacement(placementKey, siteCheckoutHref, product)) {
-          await startStripeCheckout([product.id], locale);
-        }
-        return;
-      }
-      if (checkoutUrl) {
-        const placementKey = productPlacementKey(product.id);
-        if (!tryOpenPlacement(placementKey, checkoutUrl, product)) {
-          openStripeUrl(checkoutUrl, [product.id]);
-        }
-      }
-    }
-
-    void goCheckout().catch((err) => {
+    void buyProduct(product).catch((err) => {
       console.error("[shop] checkout failed", err);
     });
   }
@@ -57,8 +37,7 @@ export function ShopProductGrid({
           locale === "bg" ? product.description_bg : product.description_en;
         const price =
           locale === "bg" ? product.price_label_bg : product.price_label_en;
-        const checkoutUrl = product.stripe_url?.trim() ?? "";
-        const canCheckout = Boolean(checkoutUrl || product.stripe_price_id?.trim());
+        const canCheckout = canBuyProduct(product);
 
         return (
           <button

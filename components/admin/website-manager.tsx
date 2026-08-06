@@ -39,6 +39,7 @@ import {
 } from "@/app/(admin)/admin/actions";
 import { GuidesManagerPanel } from "@/components/admin/guides-manager";
 import { ProductAdminGrid } from "@/components/admin/product-admin-grid";
+import { ProductOfferEditor } from "@/components/admin/product-offer-editor";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { cn } from "@/lib/utils";
@@ -163,6 +164,10 @@ const EMPTY_PRODUCT = {
   upsell_offer_enabled: false,
   upsell_offer_headline_bg: "",
   upsell_offer_headline_en: "",
+  downsell_offer_id: "",
+  downsell_enabled: false,
+  downsell_headline_bg: "",
+  downsell_headline_en: "",
   purchase_tags: [] as string[],
   enabled: true,
   sort_order: 0,
@@ -330,6 +335,10 @@ export function WebsiteManager({
       upsell_offer_enabled: placement?.offer_enabled ?? false,
       upsell_offer_headline_bg: placement?.offer_headline_bg ?? "",
       upsell_offer_headline_en: placement?.offer_headline_en ?? "",
+      downsell_offer_id: placement?.downsell_offer_id ?? "",
+      downsell_enabled: placement?.downsell_enabled ?? false,
+      downsell_headline_bg: placement?.downsell_headline_bg ?? "",
+      downsell_headline_en: placement?.downsell_headline_en ?? "",
       purchase_tags: product.purchase_tags ?? [],
       enabled: product.enabled,
       sort_order: product.sort_order,
@@ -351,6 +360,7 @@ export function WebsiteManager({
         ...productForm,
         purchase_tags: productForm.purchase_tags,
         upsell_offer_id: productForm.upsell_offer_id || null,
+        downsell_offer_id: productForm.downsell_offer_id || null,
       });
       if (!res.ok) {
         setError(res.message || "Failed");
@@ -402,12 +412,21 @@ export function WebsiteManager({
             ) : null
           }
         >
-          <p className="mb-4 text-sm text-ink-soft">
-            Добави продукт ръчно с <strong>Stripe Price ID</strong> (<code>price_…</code>) или{" "}
-            <strong>Product ID</strong> (<code>prod_…</code> — взима default цената). Payment Link е
-            резервен вариант — ако има <code>price_/prod_</code>, сайтът ползва Checkout (нужно за
-            сегменти след покупка).
-          </p>
+          <div className="mb-4 space-y-2 text-sm text-ink-soft">
+            <p>
+              Добави продукт ръчно с <strong>Stripe Price ID</strong> (
+              <code>price_…</code>) или <strong>Product ID</strong> (
+              <code>prod_…</code> — взима default цената). Payment Link е резервен
+              вариант — ако има <code>price_/prod_</code>, сайтът ползва Checkout
+              (нужно за сегменти след покупка <em>и</em> за да може продуктът да се
+              продава заедно с оферта).
+            </p>
+            <p>
+              Всеки продукт може да има своя оферта. Тя се показва навсякъде, откъдето
+              се купува продуктът — в магазина, на страниците на програмите и при клик
+              на продуктов блок в имейл.
+            </p>
+          </div>
           <SectionToggle section={productsSection} onSaved={refresh} />
 
           {editingProductId ? (
@@ -543,70 +562,13 @@ export function WebsiteManager({
                   />
                 </Field>
               </div>
-              <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
-                <p className="text-sm font-semibold text-forest-800">Popup преди плащане (по избор)</p>
-                <p className="text-xs text-ink-soft">
-                  Показва се при клик върху този продукт в магазина, преди Stripe checkout.
-                </p>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={productForm.upsell_offer_enabled}
-                    onChange={(e) =>
-                      setProductForm({
-                        ...productForm,
-                        upsell_offer_enabled: e.target.checked,
-                      })
-                    }
-                  />
-                  Покажи допълнителна оферта
-                </label>
-                <Field label="Продукт за popup">
-                  <Select
-                    value={productForm.upsell_offer_id}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, upsell_offer_id: e.target.value })
-                    }
-                  >
-                    <option value="">— Без popup —</option>
-                    {products
-                      .filter((p) => p.id !== editingProductId)
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title_bg}
-                          {!p.enabled ? " (скрит)" : ""}
-                        </option>
-                      ))}
-                  </Select>
-                </Field>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field
-                    label="Заглавие popup — BG"
-                    hint={`Празно = ${DEFAULT_OFFER_HEADLINE.bg}`}
-                  >
-                    <Input
-                      value={productForm.upsell_offer_headline_bg}
-                      onChange={(e) =>
-                        setProductForm({
-                          ...productForm,
-                          upsell_offer_headline_bg: e.target.value,
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field label="Заглавие popup — EN">
-                    <Input
-                      value={productForm.upsell_offer_headline_en}
-                      onChange={(e) =>
-                        setProductForm({
-                          ...productForm,
-                          upsell_offer_headline_en: e.target.value,
-                        })
-                      }
-                    />
-                  </Field>
-                </div>
-              </div>
+              <ProductOfferEditor
+                products={products}
+                editingProductId={editingProductId}
+                form={productForm}
+                onChange={(patch) => setProductForm({ ...productForm, ...patch })}
+                currentStripeId={productForm.stripe_id}
+              />
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
                 <p className="text-sm font-semibold text-forest-800">Сегменти след покупка</p>
                 <p className="text-xs text-ink-soft">
@@ -693,8 +655,8 @@ export function WebsiteManager({
           }
         >
           <p className="mb-4 text-sm text-ink-soft">
-            Събития с линк към записване. Popup upsell не се показва при събития — само при
-            бутони и продукти в магазина.
+            Събития с линк към записване. Ако включиш допълнителна оферта, тя се показва
+            като карта под събитието (не като popup — записването води към външен линк).
           </p>
           <SectionToggle section={eventsSection} onSaved={refresh} />
 

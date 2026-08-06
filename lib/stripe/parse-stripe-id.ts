@@ -1,4 +1,11 @@
-/** Parse admin input: price_… or prod_… (default price resolved on save). */
+/**
+ * Parse admin input: price_… or prod_… (default price resolved on save).
+ *
+ * Anything else yields empty ids. Storing free text as a price id used to look
+ * harmless but made the product unsellable: the site prefers its own Checkout
+ * whenever `stripe_price_id` is set, and Stripe then rejects the session.
+ * Callers must reject non-empty input that parses to nothing.
+ */
 export function parseStripeIdInput(value: string): {
   stripe_product_id: string;
   stripe_price_id: string;
@@ -10,7 +17,7 @@ export function parseStripeIdInput(value: string): {
   if (trimmed.startsWith("prod_")) {
     return { stripe_product_id: trimmed, stripe_price_id: "" };
   }
-  return { stripe_product_id: "", stripe_price_id: trimmed };
+  return { stripe_product_id: "", stripe_price_id: "" };
 }
 
 export function formatStripeIdInput(input: {
