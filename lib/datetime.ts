@@ -170,14 +170,6 @@ export function scheduledAtAfterDays(
   ).toISOString();
 }
 
-/** Client: datetime-local → UTC ISO (browser local time). */
-export function datetimeLocalToIso(value: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const ms = new Date(trimmed).getTime();
-  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
-}
-
 export function formatScheduledAt(
   date: string | Date,
   locale: string,

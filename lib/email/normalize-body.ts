@@ -2,6 +2,7 @@ import { expandEmailBodyButtons } from "@/lib/email/body-buttons";
 
 const BLOCK_TAG_RE = /<(p|div|br|table|h[1-6]|ul|ol|li|img|tr|td|th|blockquote)\b/i;
 const MARKER_RE = /<!--[\s\S]*?-->/g;
+const STARTS_WITH_BLOCK_RE = /^<(p|div|table|h[1-6]|ul|ol|blockquote)\b/i;
 
 /**
  * Turn plain-text newlines into email-safe HTML paragraphs / <br>,
@@ -28,7 +29,12 @@ export function normalizeEmailBodyHtml(raw: string): string {
         const piece = chunk.trim();
         if (!piece) return "";
         if (BLOCK_TAG_RE.test(piece) || /^\uE000\d+\uE001$/.test(piece)) {
-          return piece.replace(/\n/g, "<br>\n");
+          // A chunk that opens with a block-level tag is real markup: turning
+          // its newlines into <br> injects stray breaks between table rows.
+          // Only mixed text + inline HTML still needs the conversion.
+          return STARTS_WITH_BLOCK_RE.test(piece)
+            ? piece
+            : piece.replace(/\n/g, "<br>\n");
         }
         return `<p style="margin:0 0 16px;line-height:1.65;color:#1A2E1A">${piece.replace(/\n/g, "<br>")}</p>`;
       })

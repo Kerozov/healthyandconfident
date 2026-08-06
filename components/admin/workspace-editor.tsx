@@ -40,9 +40,18 @@ export function WorkspaceEditor({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      // Let selects, date pickers and other popups swallow their own Escape.
+      // Never throw away a half-written email: selects, date pickers and any
+      // field being typed into swallow their own Escape.
       const target = event.target as HTMLElement | null;
-      if (target?.tagName === "SELECT") return;
+      const tag = target?.tagName;
+      if (
+        tag === "SELECT" ||
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
       onClose();
     }
     document.addEventListener("keydown", onKeyDown);

@@ -11,11 +11,9 @@ import {
 } from "@/app/(admin)/admin/actions";
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
-import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
-import { EmailBodyEditor } from "@/components/admin/email-body-editor";
+import { EmailBuilder } from "@/components/admin/email-builder";
 import { Field, Input, Textarea } from "@/components/admin/fields";
 import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
-import { datetimeLocalToIso } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
 export function CampaignComposer({
@@ -68,9 +66,9 @@ export function CampaignComposer({
         cta_label: email.cta_label || undefined,
         cta_url: email.cta_url || undefined,
         audience: email.audience,
-        scheduled_at: email.scheduled_at
-          ? datetimeLocalToIso(email.scheduled_at) ?? undefined
-          : undefined,
+        // Sent as the raw datetime-local value on purpose: the server reads it
+        // as Europe/Sofia wall clock, which is what the field promises.
+        scheduled_at: email.scheduled_at || undefined,
         attachment_path: email.attachment_path || undefined,
         attachment_filename: email.attachment_filename || undefined,
         hero_image_url: email.hero_image_url || undefined,
@@ -101,9 +99,7 @@ export function CampaignComposer({
       const res = await sendSmsCampaign({
         message: sms.message,
         audience: sms.audience,
-        scheduled_at: sms.scheduled_at
-          ? datetimeLocalToIso(sms.scheduled_at) ?? undefined
-          : undefined,
+        scheduled_at: sms.scheduled_at || undefined,
       });
       setResult(res);
       if (res.ok) {
@@ -173,15 +169,10 @@ export function CampaignComposer({
                     placeholder="Новото меню за септември е тук"
                   />
                 </Field>
-                <EmailBodyEditor
+                <EmailBuilder
                   value={email.html}
                   onChange={(html) => setEmail({ ...email, html })}
-                  disabled={pending}
-                />
-                <EmailEmbedsPanel
                   locale={email.audience.locale === "en" ? "en" : "bg"}
-                  html={email.html}
-                  onHtmlChange={(html) => setEmail({ ...email, html })}
                   products={products}
                   forms={forms}
                   heroImageUrl={email.hero_image_url}

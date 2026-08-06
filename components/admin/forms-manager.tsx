@@ -34,7 +34,7 @@ import { DynamicForm } from "@/components/site/dynamic-form";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { EmailAttachmentPicker } from "@/components/admin/email-attachment-picker";
-import { EmailBodyEditor } from "@/components/admin/email-body-editor";
+import { EmailBuilder } from "@/components/admin/email-builder";
 import { normalizeFormFields } from "@/lib/forms/answer-tags";
 import {
   BUILTIN_FIELD_DEFAULTS,
@@ -657,20 +657,20 @@ export function FormsManager({
                 />
               </Field>
               <div className="md:col-span-2">
-                <EmailBodyEditor
-                  label="Текст имейл — BG"
+                <EmailBuilder
+                  title="Текст имейл — BG"
+                  locale="bg"
                   value={form.email_intro_bg}
                   onChange={(email_intro_bg) => setForm({ ...form, email_intro_bg })}
-                  rows={5}
                   disabled={pending}
                 />
               </div>
               <div className="md:col-span-2">
-                <EmailBodyEditor
-                  label="Текст имейл — EN"
+                <EmailBuilder
+                  title="Текст имейл — EN"
+                  locale="en"
                   value={form.email_intro_en}
                   onChange={(email_intro_en) => setForm({ ...form, email_intro_en })}
-                  rows={5}
                   disabled={pending}
                 />
               </div>

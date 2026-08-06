@@ -49,8 +49,7 @@ import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields"
 import { TabList } from "@/components/admin/ui";
 import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
-import { EmailEmbedsPanel } from "@/components/admin/email-embeds-panel";
-import { EmailBodyEditor } from "@/components/admin/email-body-editor";
+import { EmailBuilder } from "@/components/admin/email-builder";
 import { PurchaseProductPicker } from "@/components/admin/purchase-product-picker";
 import { SignupSourcePicker } from "@/components/admin/signup-source-picker";
 import { SubscriberOriginPicker } from "@/components/admin/subscriber-origin-picker";
@@ -1215,8 +1214,8 @@ export function AutomationsManager({
                 </div>
 
                 {contentLocale === "bg" ? (
-                  <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-1">
-                  <div className="space-y-3">
+                  <div className="grid min-w-0 gap-4 xl:grid-cols-2 2xl:grid-cols-1">
+                  <div className="min-w-0 space-y-3">
                     <Field label="Тема">
                       <Input
                         value={form.subject_bg}
@@ -1225,16 +1224,10 @@ export function AutomationsManager({
                         }
                       />
                     </Field>
-                    <EmailBodyEditor
+                    <EmailBuilder
                       value={form.html_bg}
                       onChange={(html_bg) => setForm({ ...form, html_bg })}
-                      rows={6}
-                      disabled={pending}
-                    />
-                    <EmailEmbedsPanel
                       locale="bg"
-                      html={form.html_bg}
-                      onHtmlChange={(html_bg) => setForm({ ...form, html_bg })}
                       products={products}
                       forms={forms}
                       heroImageUrl={form.hero_image_url_bg}
@@ -1283,8 +1276,8 @@ export function AutomationsManager({
                   </div>
                   </div>
                 ) : (
-                  <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-1">
-                  <div className="space-y-3">
+                  <div className="grid min-w-0 gap-4 xl:grid-cols-2 2xl:grid-cols-1">
+                  <div className="min-w-0 space-y-3">
                     <Field label="Subject">
                       <Input
                         value={form.subject_en}
@@ -1293,17 +1286,11 @@ export function AutomationsManager({
                         }
                       />
                     </Field>
-                    <EmailBodyEditor
-                      label="Content"
+                    <EmailBuilder
                       value={form.html_en}
                       onChange={(html_en) => setForm({ ...form, html_en })}
-                      rows={6}
-                      disabled={pending}
-                    />
-                    <EmailEmbedsPanel
                       locale="en"
-                      html={form.html_en}
-                      onHtmlChange={(html_en) => setForm({ ...form, html_en })}
+                      title="Email content"
                       products={products}
                       forms={forms}
                       heroImageUrl={form.hero_image_url_en}
