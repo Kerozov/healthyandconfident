@@ -135,7 +135,7 @@ export async function POST(req: Request) {
         })
         .eq("id", existing.id as string);
     } else {
-      const { data: inserted } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from("subscribers")
         .insert({
           email,
@@ -151,7 +151,24 @@ export async function POST(req: Request) {
         })
         .select("id")
         .single();
-      subscriberId = (inserted as { id: string } | null)?.id;
+
+      if (insertError) {
+        // Two signups landing at once: the loser reads back the row that won so
+        // automations still get a subscriber id (their idempotency key depends
+        // on it — without it the same person can be mailed twice).
+        const { data: raced } = await supabase
+          .from("subscribers")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        subscriberId = (raced as { id: string } | null)?.id;
+        if (!subscriberId) {
+          console.error("[subscribe] insert failed:", insertError.message);
+          return NextResponse.json({ error: insertError.message }, { status: 500 });
+        }
+      } else {
+        subscriberId = (inserted as { id: string } | null)?.id;
+      }
     }
 
     // Await automations so the worker is actually called before the serverless

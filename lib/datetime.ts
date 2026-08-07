@@ -144,25 +144,18 @@ export function scheduledAtAfterDays(
 ): string {
   const anchor = from ? new Date(from) : new Date();
   const parts = getZonedParts(anchor, timeZone);
-  const target = new Date(
-    wallClockInTimeZoneToUtc(
-      parts.year,
-      parts.month,
-      parts.day,
-      0,
-      0,
-      0,
-      timeZone,
-    ),
-  );
-  target.setUTCDate(target.getUTCDate() + days);
 
-  const onDay = getZonedParts(target, timeZone);
+  // Advance the calendar date itself. Adding days to a UTC *instant* shifts by a
+  // fixed 24h, so crossing a DST change moved the result an hour past midnight
+  // and it read back as the previous day (+3d on 24 Oct landed on 26, not 27).
+  // `Date.UTC` normalises month/year overflow for us.
+  const civil = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+
   const [h, m] = sendTime.split(":").map((x) => Number(x) || 0);
   return wallClockInTimeZoneToUtc(
-    onDay.year,
-    onDay.month,
-    onDay.day,
+    civil.getUTCFullYear(),
+    civil.getUTCMonth() + 1,
+    civil.getUTCDate(),
     h,
     m,
     0,

@@ -30,6 +30,17 @@ function extractEmail(
   return null;
 }
 
+/**
+ * A required answer counts as missing when it is absent, blank, unticked — or an
+ * empty list, which is what a multi-select ticked and then cleared sends.
+ */
+function isBlankAnswer(val: unknown): boolean {
+  if (val === undefined || val === null || val === false) return true;
+  if (typeof val === "string") return val.trim() === "";
+  if (Array.isArray(val)) return val.length === 0;
+  return false;
+}
+
 /** If the form has consent checkboxes, at least one must be checked for marketing. */
 function hasMarketingConsent(
   fields: FormField[],
@@ -67,8 +78,7 @@ export async function POST(
 
   for (const field of fields) {
     if (!field.required || field.type === "heading") continue;
-    const val = answers[field.id];
-    if (val === undefined || val === "" || val === false) {
+    if (isBlankAnswer(answers[field.id])) {
       return NextResponse.json(
         { error: "Please fill all required fields." },
         { status: 400 },

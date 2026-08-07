@@ -235,6 +235,10 @@ export async function submitEmailJobsBatch(
       recipients: job.recipients,
       sendAt: job.sendAt,
       idempotencyKey: job.idempotencyKey,
+      // Must ride along: this is the path automations actually take, so dropping
+      // it sent lead-magnet emails with no PDF while the single-job fallback
+      // attached one.
+      attachments: job.attachments?.length ? job.attachments : undefined,
     })),
   });
 }

@@ -1234,11 +1234,91 @@ alter table public.meta_event_log enable row level security;
 revoke all on public.meta_pixel_config from anon, authenticated;
 revoke all on public.meta_event_log from anon, authenticated;
 
-notify pgrst, 'reload schema';
+-- ────────────────────────────────────────────────────────────────
+-- Bring an EXISTING database up to date
+--
+-- Everything above uses `create table if not exists`, which does nothing when
+-- the table is already there — so columns added to those definitions after the
+-- first install never reached databases created earlier. This block re-states
+-- them as `alter table … add column if not exists`, which makes running this
+-- file on an existing project equivalent to running every migration.
+-- Safe to re-run: no data is touched.
+-- ────────────────────────────────────────────────────────────────
+
+-- Segments live inside groups (024)
+alter table public.segments
+  add column if not exists group_id uuid references public.segment_groups(id) on delete set null;
+
+create index if not exists segments_group_idx on public.segments (group_id);
+
+-- Campaign counters and delivery tracking (018, 021, 025, 042)
+alter table public.email_campaigns
+  add column if not exists sent_count           int not null default 0,
+  add column if not exists failed_count         int not null default 0,
+  add column if not exists delivered_count      int not null default 0,
+  add column if not exists opened_count         int not null default 0,
+  add column if not exists not_opened_count     int not null default 0,
+  add column if not exists machine_opened_count int not null default 0,
+  add column if not exists bounced_count        int not null default 0,
+  add column if not exists total_count          int not null default 0,
+  add column if not exists clicked_count        int not null default 0,
+  add column if not exists last_synced_at       timestamptz;
+
+alter table public.sms_campaigns
+  add column if not exists sent_count   int not null default 0,
+  add column if not exists failed_count int not null default 0,
+  add column if not exists scheduled_at timestamptz;
+
+-- Per-event offer (013)
+alter table public.site_events
+  add column if not exists offer_id uuid references public.site_products(id) on delete set null,
+  add column if not exists offer_headline_bg text not null default '',
+  add column if not exists offer_headline_en text not null default '',
+  add column if not exists offer_enabled boolean not null default false;
+
+-- Downsell: second chance when the upsell is declined (048)
+alter table public.site_cta_placements
+  add column if not exists downsell_offer_id uuid
+    references public.site_products(id) on delete set null,
+  add column if not exists downsell_enabled boolean not null default false,
+  add column if not exists downsell_headline_bg text not null default '',
+  add column if not exists downsell_headline_en text not null default '';
+
+-- A product must never offer itself: it would put the same line item in the
+-- Stripe session twice and show the buyer what they already have in hand.
+update public.site_cta_placements
+set offer_id = null, offer_enabled = false
+where key = 'product_' || offer_id::text;
+
+update public.site_cta_placements
+set downsell_offer_id = null, downsell_enabled = false
+where key = 'product_' || downsell_offer_id::text;
+
+-- Purchase details captured from Stripe (029, 037, 046)
+alter table public.subscriber_purchases
+  add column if not exists payment_status    text not null default 'paid',
+  add column if not exists amount_cents      int,
+  add column if not exists currency          text,
+  add column if not exists stripe_product_id text,
+  add column if not exists order_total_cents int;
+
+-- Meta ads settings (047)
+alter table public.meta_pixel_config
+  add column if not exists domain_verification   text not null default '',
+  add column if not exists additional_pixel_ids  text not null default '',
+  add column if not exists ad_account_id         text not null default '',
+  add column if not exists catalog_id            text not null default '',
+  add column if not exists notes                 text not null default '';
+
+create index if not exists form_invitations_form_idx
+  on public.form_invitations (form_id, sent_at desc);
+
+create index if not exists subscriber_purchases_stripe_product_idx
+  on public.subscriber_purchases (stripe_product_id, payment_status);
 
 notify pgrst, 'reload schema';
 
-select 'Setup complete — schema up to date through 046 (stats reporting, order totals, Meta Pixel)' as result;
+select 'Setup complete — schema up to date through 048 (offers, downsell, stats, Meta Pixel)' as result;
 
 
 

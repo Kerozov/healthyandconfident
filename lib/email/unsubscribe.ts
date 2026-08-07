@@ -44,8 +44,12 @@ export async function filterSubscribedEmails(emails: string[]): Promise<string[]
     .in("email", normalized)
     .eq("status", "subscribed");
 
+  // Normalise both sides — a row stored with different casing would otherwise
+  // never match its own lowercased address and get silently dropped from sends.
   const subscribed = new Set(
-    ((data as { email: string }[] | null) ?? []).map((row) => row.email),
+    ((data as { email: string }[] | null) ?? []).map((row) =>
+      row.email.trim().toLowerCase(),
+    ),
   );
   return normalized.filter((email) => subscribed.has(email));
 }

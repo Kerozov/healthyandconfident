@@ -39,9 +39,13 @@ export function flattenGroupTreeWithDepth(
 ): { group: SegmentGroup; depth: number }[] {
   const byParent = groupsByParent(groups);
   const out: { group: SegmentGroup; depth: number }[] = [];
+  // A row pointing at itself (or a parent loop) would otherwise recurse forever.
+  const seen = new Set<string>();
 
   function walk(parentId: string | null, depth: number) {
     for (const group of byParent.get(parentId) ?? []) {
+      if (seen.has(group.id)) continue;
+      seen.add(group.id);
       out.push({ group, depth });
       walk(group.id, depth + 1);
     }
@@ -56,8 +60,11 @@ export function getDescendantGroupIds(
   groups: SegmentGroup[],
 ): string[] {
   const ids: string[] = [];
+  const seen = new Set<string>([groupId]);
   function walk(parentId: string) {
     for (const child of groups.filter((g) => g.parent_id === parentId)) {
+      if (seen.has(child.id)) continue;
+      seen.add(child.id);
       ids.push(child.id);
       walk(child.id);
     }
@@ -115,9 +122,13 @@ export function isDescendantGroup(
   groups: SegmentGroup[],
 ): boolean {
   const byId = new Map(groups.map((group) => [group.id, group]));
+  // Without the guard a parent loop spins here forever and hangs the request.
+  const seen = new Set<string>();
   let current = byId.get(groupId);
   while (current?.parent_id) {
     if (current.parent_id === ancestorId) return true;
+    if (seen.has(current.id)) return false;
+    seen.add(current.id);
     current = byId.get(current.parent_id);
   }
   return false;
@@ -135,10 +146,14 @@ export function buildSegmentPickerRows(
   segments: Segment[],
 ): GroupedSegmentRow[] {
   const byGroup = segmentsByGroupId(segments);
+  const byParent = groupsByParent(groups);
   const out: GroupedSegmentRow[] = [];
+  const seen = new Set<string>();
 
   function walkGroups(parentGroupId: string | null, depth: number) {
-    for (const group of groupsByParent(groups).get(parentGroupId) ?? []) {
+    for (const group of byParent.get(parentGroupId) ?? []) {
+      if (seen.has(group.id)) continue;
+      seen.add(group.id);
       out.push({ type: "group", group, depth });
       for (const segment of byGroup.get(group.id) ?? []) {
         out.push({ type: "segment", segment, depth: depth + 1 });

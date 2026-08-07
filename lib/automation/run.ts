@@ -283,7 +283,14 @@ async function scheduleChainedFromParent(
     .eq("enabled", true)
     .eq("after_automation_id", parentAutomationId);
 
-  const parentAt = new Date(parentSendAt);
+  // A missing/garbled sendAt from the worker would make every downstream date
+  // Invalid, and `toISOString()` then throws inside the batch try/catch — which
+  // runs the per-job fallback and mails everyone a second time.
+  const parsedParentAt = new Date(parentSendAt);
+  const parentAt = Number.isNaN(parsedParentAt.getTime())
+    ? new Date()
+    : parsedParentAt;
+
   for (const rule of (data as Automation[]) ?? []) {
     const email = ctx.email.trim().toLowerCase();
     if (!passesSubscriberOriginGate(rule, ctx)) continue;
