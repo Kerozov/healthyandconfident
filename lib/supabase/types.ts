@@ -38,6 +38,19 @@ export type Subscriber = {
   updated_at: string;
 };
 
+/** Where a pull-based integration (e.g. FunnelBrand) stopped last time. */
+export type IntegrationSyncState = {
+  integration: string;
+  /** Newest upstream `created_at` already seen — sent back as `since`. */
+  last_cursor: string | null;
+  last_run_at: string | null;
+  last_created: number;
+  last_updated: number;
+  last_skipped: number;
+  last_error: string | null;
+  updated_at: string;
+};
+
 export type SegmentGroup = {
   id: string;
   name: string;

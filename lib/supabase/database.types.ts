@@ -3,6 +3,7 @@ import type {
   Subscriber,
   Segment,
   SegmentGroup,
+  IntegrationSyncState,
   PopupConfig,
   EmailFooterConfig,
   EmailCampaign,
@@ -104,6 +105,7 @@ export type Database = {
       zoom_session_events: TableShape<ZoomSessionEvent>;
       meta_pixel_config: TableShape<MetaPixelConfig>;
       meta_event_log: TableShape<MetaEventLogRow>;
+      integration_sync_state: TableShape<IntegrationSyncState>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

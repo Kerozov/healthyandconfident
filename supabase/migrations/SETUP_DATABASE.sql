@@ -1236,9 +1236,24 @@ revoke all on public.meta_event_log from anon, authenticated;
 
 notify pgrst, 'reload schema';
 
+-- FunnelBrand contact sync state (049)
+create table if not exists public.integration_sync_state (
+  integration text primary key,
+  last_cursor text,
+  last_run_at timestamptz,
+  last_created int not null default 0,
+  last_updated int not null default 0,
+  last_skipped int not null default 0,
+  last_error text,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.integration_sync_state enable row level security;
+revoke all on public.integration_sync_state from anon, authenticated;
+
 notify pgrst, 'reload schema';
 
-select 'Setup complete — schema up to date through 046 (stats reporting, order totals, Meta Pixel)' as result;
+select 'Setup complete — schema up to date through 049 (stats reporting, order totals, Meta Pixel, FunnelBrand sync)' as result;
 
 
 

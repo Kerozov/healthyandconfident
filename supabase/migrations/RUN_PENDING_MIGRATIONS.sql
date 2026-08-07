@@ -1065,6 +1065,21 @@ update public.site_cta_placements
 set downsell_offer_id = null, downsell_enabled = false
 where key = 'product_' || downsell_offer_id::text;
 
+-- 049: FunnelBrand contact sync — remembers where the last pull stopped
+create table if not exists public.integration_sync_state (
+  integration text primary key,
+  last_cursor text,
+  last_run_at timestamptz,
+  last_created int not null default 0,
+  last_updated int not null default 0,
+  last_skipped int not null default 0,
+  last_error text,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.integration_sync_state enable row level security;
+revoke all on public.integration_sync_state from anon, authenticated;
+
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–048 applied). Also run 007_automations.sql if not yet applied.' as result;
+select 'Upgrade complete (012–049 applied). Also run 007_automations.sql if not yet applied.' as result;
