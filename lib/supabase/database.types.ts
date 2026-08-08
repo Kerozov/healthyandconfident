@@ -20,6 +20,7 @@ import type {
   ZoomLiveConfig,
   ZoomWebhookLog,
   ZoomSessionEvent,
+  IntegrationSyncState,
 } from "@/lib/supabase/types";
 import type { FormTemplateRecord, FormSubmissionRecord } from "@/lib/forms/types";
 import type { Contact, ContactWorkerJob, ContactEvent } from "@/lib/contacts/types";
@@ -104,6 +105,7 @@ export type Database = {
       zoom_session_events: TableShape<ZoomSessionEvent>;
       meta_pixel_config: TableShape<MetaPixelConfig>;
       meta_event_log: TableShape<MetaEventLogRow>;
+      integration_sync_state: TableShape<IntegrationSyncState>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

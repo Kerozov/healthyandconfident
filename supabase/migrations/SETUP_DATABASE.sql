@@ -1318,7 +1318,24 @@ create index if not exists subscriber_purchases_stripe_product_idx
 
 notify pgrst, 'reload schema';
 
-select 'Setup complete — schema up to date through 048 (offers, downsell, stats, Meta Pixel)' as result;
+-- FunnelBrand contact sync state (049)
+create table if not exists public.integration_sync_state (
+  integration text primary key,
+  last_cursor text,
+  last_run_at timestamptz,
+  last_created int not null default 0,
+  last_updated int not null default 0,
+  last_skipped int not null default 0,
+  last_error text,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.integration_sync_state enable row level security;
+revoke all on public.integration_sync_state from anon, authenticated;
+
+notify pgrst, 'reload schema';
+
+select 'Setup complete — schema up to date through 049 (offers, downsell, stats, Meta Pixel, FunnelBrand sync)' as result;
 
 
 

@@ -31,6 +31,25 @@ idempotent, so re-run it after pulling changes.
 `RUN_PENDING_MIGRATIONS.sql` does the upgrade half on its own and stays for
 projects that were already following it.
 
+## FunnelBrand contact sync
+
+Contacts collected through FunnelBrand funnels are pulled into **Admin → Абонати**
+with the „Синхронизирай“ button. This site never signs into FunnelBrand — it holds
+an API key and reads a single export endpoint.
+
+```bash
+FUNNEL_BRAND_API_URL="https://www.funnel-brand.com"   # optional, this is the default
+FUNNEL_BRAND_API_KEY="fbk_..."                        # FunnelBrand → фунията → Контакти → Синхронизация
+```
+
+Each imported contact gets two tags: the funnel's segment (where it came from) and
+`funnel-brand` (which software collected it), so campaigns can target either.
+Only new contacts are fetched on each run; „Пълна синхронизация“ re-reads everything.
+People who unsubscribed — here or in FunnelBrand — are never re-subscribed, and
+automations do not fire on synced contacts.
+
+Requires migration `049_funnel_brand_sync.sql`.
+
 ## Reporting & tracking
 
 - **Admin → Статистика имейли** (`/admin/engagement`) — deliveries, opens, clicks,
