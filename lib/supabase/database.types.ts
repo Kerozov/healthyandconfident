@@ -17,6 +17,7 @@ import type {
   SiteGuide,
   SiteVideo,
   SiteCtaPlacement,
+  SiteVisit,
   ZoomLiveConfig,
   ZoomWebhookLog,
   ZoomSessionEvent,
@@ -106,6 +107,7 @@ export type Database = {
       meta_pixel_config: TableShape<MetaPixelConfig>;
       meta_event_log: TableShape<MetaEventLogRow>;
       integration_sync_state: TableShape<IntegrationSyncState>;
+      site_visits: TableShape<SiteVisit>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

@@ -1,6 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
-import { metaEventId, trackMeta } from "@/lib/meta/client";
+import { metaEventId, metaBrowserIds, trackMeta } from "@/lib/meta/client";
+import { trackSiteCheckout } from "@/lib/analytics/client";
 
 export function canBundleCheckout(...products: (SiteProduct | null | undefined)[]): boolean {
   return products.every((p) => Boolean(p?.stripe_price_id?.trim()));
@@ -13,6 +14,7 @@ export function canBundleCheckout(...products: (SiteProduct | null | undefined)[
  */
 function beginCheckoutTracking(contentIds: string[]): string {
   const eventId = metaEventId();
+  trackSiteCheckout();
   trackMeta(
     "InitiateCheckout",
     { contentIds, contentType: "product", numItems: contentIds.length },
@@ -24,11 +26,19 @@ function beginCheckoutTracking(contentIds: string[]): string {
 
 export async function startGuideCheckout(guideId: string, locale: Locale): Promise<void> {
   const metaEvent = beginCheckoutTracking([guideId]);
+  const ids = metaBrowserIds();
 
   const res = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ guideIds: [guideId], locale, metaEventId: metaEvent }),
+    body: JSON.stringify({
+      guideIds: [guideId],
+      locale,
+      metaEventId: metaEvent,
+      fbp: ids.fbp,
+      fbc: ids.fbc,
+      fbclid: ids.fbclid,
+    }),
   });
 
   const data = (await res.json()) as { url?: string; message?: string };
@@ -44,11 +54,19 @@ export async function startStripeCheckout(
   locale: Locale,
 ): Promise<void> {
   const metaEvent = beginCheckoutTracking(productIds);
+  const ids = metaBrowserIds();
 
   const res = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ productIds, locale, metaEventId: metaEvent }),
+    body: JSON.stringify({
+      productIds,
+      locale,
+      metaEventId: metaEvent,
+      fbp: ids.fbp,
+      fbc: ids.fbc,
+      fbclid: ids.fbclid,
+    }),
   });
 
   const data = (await res.json()) as { url?: string; message?: string };
@@ -64,6 +82,7 @@ export async function startStripeCheckout(
  * this click, so the event is mirrored to the Conversions API from here.
  */
 export function openStripeUrl(url: string, contentIds: string[] = []) {
+  trackSiteCheckout();
   trackMeta("InitiateCheckout", {
     contentIds: contentIds.length > 0 ? contentIds : [url],
     contentType: "product",

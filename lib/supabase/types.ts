@@ -452,3 +452,19 @@ export type SiteCtaPlacement = {
   button_url: string;
   updated_at: string;
 };
+
+export type SiteVisit = {
+  id: string;
+  created_at: string;
+  event: "pageview" | "lead" | "checkout";
+  visitor_id: string;
+  session_id: string;
+  path: string;
+  locale: string | null;
+  referrer_host: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  source: string;
+  device: "mobile" | "tablet" | "desktop";
+};

@@ -109,8 +109,9 @@ export async function POST(req: Request) {
 
     const isNew = !existing;
     let subscriberId = existing?.id as string | undefined;
+    const priorTags = existing ? ((existing.tags as string[] | null) ?? []) : [];
     const finalTags = buildFinalTags(
-      existing ? (existing.tags as string[] | null) : [],
+      existing ? priorTags : [],
       incomingOther,
       healthSegment,
     );
@@ -130,7 +131,6 @@ export async function POST(req: Request) {
           tags: finalTags,
           status: "subscribed",
           consent: true,
-          source,
           ...profilePatch,
         })
         .eq("id", existing.id as string);
@@ -171,6 +171,17 @@ export async function POST(req: Request) {
       }
     }
 
+    if (!isNew) {
+      try {
+        const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
+          "@/lib/automation/cancel"
+        );
+        await cancelIneligibleAutomationDeliveriesForSubscriber(email, finalTags);
+      } catch (err) {
+        console.error("[subscribe] cancel ineligible automations:", err);
+      }
+    }
+
     // Await automations so the worker is actually called before the serverless
     // function ends. `after()` alone was dropping sends on Vercel.
     let automationReport;
@@ -182,6 +193,7 @@ export async function POST(req: Request) {
         locale: mailLocale,
         subscriberId: subscriberId ?? null,
         tags: finalTags,
+        priorTags: isNew ? undefined : priorTags,
         isNew,
         source,
       });

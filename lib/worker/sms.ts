@@ -1,6 +1,9 @@
 import "server-only";
 
-import { requireNotificationWorkerConfig } from "@/lib/worker/config";
+import {
+  requireNotificationWorkerConfig,
+  workerCancelSucceeded,
+} from "@/lib/worker/config";
 
 /**
  * SMS adapter for notification-worker (Notifier.bg under the hood).
@@ -162,6 +165,5 @@ export async function cancelSmsJob(jobId: string): Promise<boolean> {
     headers: { Authorization: `Bearer ${key}` },
     cache: "no-store",
   });
-  if (res.ok || res.status === 404 || res.status === 410) return true;
-  return false;
+  return workerCancelSucceeded(res);
 }

@@ -301,7 +301,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
 
             <Field
               label="Допълнителни Pixel ID-та"
-              hint="За втори акаунт или агенция. Разделяй със запетая — всички събития отиват и до тях."
+              hint="За втори акаунт или агенция. Разделяй със запетая. Събитията отиват и до тях — и от браузъра, и от сървъра. Access token-ът трябва да има права върху всеки от тях."
               htmlFor="meta-extra-pixels"
             >
               <Input

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import type { MetaPixelPublicConfig } from "@/lib/meta/types";
-import { trackMetaPageView } from "@/lib/meta/client";
+import { persistMetaClickId, trackMetaPageView } from "@/lib/meta/client";
 
 /**
  * Meta Pixel loader. `fbq('init')` runs in the inline script; PageView is fired
@@ -13,6 +13,22 @@ import { trackMetaPageView } from "@/lib/meta/client";
 export function MetaPixel({ config }: { config: MetaPixelPublicConfig }) {
   const pathname = usePathname();
   const lastPath = useRef<string | null>(null);
+
+  useEffect(() => {
+    persistMetaClickId();
+    if (typeof window !== "undefined") {
+      window.__metaTrackFlags = {
+        viewContent: config.trackViewContent,
+        lead: config.trackLead,
+        checkout: config.trackCheckout,
+      };
+    }
+  }, [
+    pathname,
+    config.trackViewContent,
+    config.trackLead,
+    config.trackCheckout,
+  ]);
 
   useEffect(() => {
     if (!config.enabled || !config.trackPageView) return;

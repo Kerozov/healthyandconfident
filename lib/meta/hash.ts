@@ -20,10 +20,18 @@ export function hashEmail(email: string | null | undefined): string | null {
   return sha256(normalized);
 }
 
-/** Digits only, with the leading `+`/zeros stripped — Meta expects E.164 digits. */
+/** Digits only. Local BG numbers get country code 359 so Meta can match. */
 export function hashPhone(phone: string | null | undefined): string | null {
-  const digits = (phone ?? "").replace(/\D/g, "").replace(/^0+/, "");
-  if (digits.length < 7) return null;
+  let digits = (phone ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  // 08XXXXXXXX → 3598XXXXXXXX ; 8XXXXXXXX (already stripped) → same.
+  if (digits.length === 10 && digits.startsWith("0")) {
+    digits = `359${digits.slice(1)}`;
+  } else if (digits.length === 9 && /^[89]/.test(digits)) {
+    digits = `359${digits}`;
+  }
+  if (digits.length < 7 || digits.length > 15) return null;
   return sha256(digits);
 }
 

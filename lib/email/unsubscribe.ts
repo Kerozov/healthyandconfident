@@ -3,9 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { siteOrigin } from "@/lib/email/cta-redirect";
 import { createUnsubscribeToken } from "@/lib/email/unsubscribe-token";
-import { cancelEmailJob } from "@/lib/worker/email";
-import { cancelSmsJob } from "@/lib/worker/sms";
-import { isNotificationWorkerConfigured } from "@/lib/worker/config";
+import { cancelAllScheduledMailForSubscriber } from "@/lib/automation/cancel";
 
 export type UnsubscribeResult =
   | { ok: true; status: "unsubscribed" | "already" }
@@ -55,29 +53,7 @@ export async function filterSubscribedEmails(emails: string[]): Promise<string[]
 }
 
 async function cancelScheduledDeliveriesForEmail(email: string): Promise<void> {
-  const supabase = getAdminClient();
-  const { data } = await supabase
-    .from("automation_deliveries")
-    .select("id, worker_job_id, channel")
-    .eq("email", email.trim().toLowerCase())
-    .eq("status", "scheduled")
-    .not("worker_job_id", "is", null);
-
-  for (const row of data ?? []) {
-    if (isNotificationWorkerConfigured()) {
-      const jobId = row.worker_job_id as string;
-      const ok =
-        row.channel === "sms"
-          ? await cancelSmsJob(jobId)
-          : await cancelEmailJob(jobId);
-      if (!ok) continue;
-    }
-
-    await supabase
-      .from("automation_deliveries")
-      .update({ status: "canceled" })
-      .eq("id", row.id as string);
-  }
+  await cancelAllScheduledMailForSubscriber(email);
 }
 
 export async function unsubscribeEmail(email: string): Promise<UnsubscribeResult> {

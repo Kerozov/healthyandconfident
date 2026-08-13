@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getSiteProducts } from "@/lib/site/content";
 import { ProductCheckoutCard } from "@/components/site/product-checkout-card";
+import { MetaViewContent } from "@/components/site/meta-view-content";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,14 @@ export default async function ProductCheckoutPage({
 
         <div className="mt-5">
           {product.enabled ? (
-            <ProductCheckoutCard product={product} locale={l} />
+            <>
+              <MetaViewContent
+                contentIds={[product.id]}
+                contentName={locale === "en" ? product.title_en : product.title_bg}
+                contentCategory="product"
+              />
+              <ProductCheckoutCard product={product} locale={l} />
+            </>
           ) : (
             <div className="rounded-3xl border border-forest-100 bg-white p-8 text-center shadow-card">
               <h1 className="font-display text-2xl font-semibold text-slate-800">

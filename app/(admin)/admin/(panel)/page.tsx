@@ -5,6 +5,7 @@ import {
   BarChart3,
   CreditCard,
   ArrowUpRight,
+  Eye,
 } from "lucide-react";
 import { getDashboardStats, getDashboardHighlights } from "@/lib/admin/data";
 import { formatMoney, formatNumber, formatPercent } from "@/lib/money";
@@ -20,6 +21,13 @@ export default async function AdminDashboard() {
   ]);
 
   const cards = [
+    {
+      label: "Посетители (30 дни)",
+      value: formatNumber(highlights.visitors),
+      sub: `${formatNumber(highlights.pageviews)} отворени страници`,
+      icon: Eye,
+      href: "/admin/visits",
+    },
     {
       label: "Оборот (30 дни)",
       value: formatMoney(highlights.revenueCents, highlights.currency),
@@ -54,10 +62,10 @@ export default async function AdminDashboard() {
     <div>
       <PageHeader
         title="Табло"
-        description="Бърз преглед на абонати, съдържание и кампании."
+        description="Бърз преглед на посещения, абонати, съдържание и кампании."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {cards.map((c) => (
           <Link
             key={c.label}

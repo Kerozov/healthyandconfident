@@ -24,6 +24,7 @@ import {
   CreditCard,
   Target,
   BookOpen,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +72,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Анализи",
     items: [
+      { href: "/admin/visits", label: "Посещения", icon: Eye },
       { href: "/admin/engagement", label: "Статистика имейли", icon: BarChart3 },
       { href: "/admin/payments", label: "Плащания", icon: CreditCard },
     ],

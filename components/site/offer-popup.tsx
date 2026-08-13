@@ -154,22 +154,6 @@ export function OfferPopupProvider({
     [popup?.continueHref, router, locale],
   );
 
-  useEffect(() => {
-    if (!popup) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !pending) dismiss(false);
-    }
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [popup, pending, dismiss]);
-
   function checkoutProducts(productIds: string[]) {
     setCheckoutError(null);
     startTransition(async () => {
@@ -181,6 +165,41 @@ export function OfferPopupProvider({
       }
     });
   }
+
+  /** Keep the original product; skip remaining extra offers. */
+  function proceedWithOriginal() {
+    if (!popup) return;
+    const baseProduct = popup.baseProduct;
+    if (baseProduct) {
+      if (canBundleCheckout(baseProduct)) {
+        checkoutProducts([baseProduct.id]);
+        return;
+      }
+      const url = baseProduct.stripe_url?.trim();
+      if (url) {
+        setPopup(null);
+        openStripeUrl(url, [baseProduct.id]);
+        return;
+      }
+    }
+    dismiss(true);
+  }
+
+  useEffect(() => {
+    if (!popup) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !pending) proceedWithOriginal();
+    }
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [popup, pending]);
 
   const current = popup
     ? popup.step === "upsell"
@@ -240,19 +259,7 @@ export function OfferPopupProvider({
       setPopup({ ...popup, step: "downsell" });
       return;
     }
-    if (baseProduct) {
-      if (canBundleCheckout(baseProduct)) {
-        checkoutProducts([baseProduct.id]);
-        return;
-      }
-      const url = baseProduct.stripe_url?.trim();
-      if (url) {
-        setPopup(null);
-        openStripeUrl(url, [baseProduct.id]);
-        return;
-      }
-    }
-    dismiss(true);
+    proceedWithOriginal();
   }
 
   const declineLabel = (() => {
@@ -279,7 +286,7 @@ export function OfferPopupProvider({
       {popup && offer && (
         <div
           className="fixed inset-0 z-[110] flex items-end justify-center bg-forest-900/55 p-4 backdrop-blur-sm sm:items-center"
-          onClick={() => !pending && dismiss(false)}
+          onClick={() => !pending && proceedWithOriginal()}
         >
           <div
             className="animate-fade-up relative w-full max-w-lg overflow-hidden rounded-3xl bg-cream-50 shadow-2xl"
@@ -289,7 +296,7 @@ export function OfferPopupProvider({
             onClick={(e) => e.stopPropagation()}
           >
             <ModalCloseButton
-              onClick={() => dismiss(false)}
+              onClick={() => proceedWithOriginal()}
               disabled={pending}
               label={locale === "bg" ? "Затвори" : "Close"}
             />

@@ -43,6 +43,7 @@ async function sendMetaPurchase(
       externalId: session.metadata?.contact_id ?? null,
       fbp: session.metadata?.fbp ?? null,
       fbc: session.metadata?.fbc ?? null,
+      clientUserAgent: session.metadata?.client_ua ?? null,
     },
     custom: {
       value: session.amount_total != null ? session.amount_total / 100 : null,

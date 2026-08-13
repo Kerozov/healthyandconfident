@@ -11,6 +11,7 @@ import {
 } from "@/lib/meta/hash";
 import {
   META_GRAPH_VERSION,
+  parsePixelIdList,
   type MetaEventName,
   type MetaEventSource,
   type MetaEventStatus,
@@ -114,6 +115,40 @@ function buildCustomData(custom: MetaCustomData | undefined): Record<string, unk
   });
 }
 
+async function postToPixel(
+  pixelId: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; error?: string; eventsReceived?: number }> {
+  const url = `https://graph.facebook.com/${META_GRAPH_VERSION}/${pixelId}/events`;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      cache: "no-store",
+    });
+
+    const json = (await res.json().catch(() => null)) as {
+      events_received?: number;
+      error?: { message?: string };
+    } | null;
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: json?.error?.message ?? `Meta returned ${res.status} ${res.statusText}`,
+      };
+    }
+    return { ok: true, eventsReceived: json?.events_received };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Conversions API request failed",
+    };
+  }
+}
+
 async function logEvent(input: {
   event: MetaServerEvent;
   status: MetaEventStatus;
@@ -155,7 +190,12 @@ export async function sendMetaEvent(event: MetaServerEvent): Promise<MetaSendRes
   if (event.eventName === "Purchase" && !config.track_purchase) {
     return { ok: false, status: "skipped", error: "purchase_tracking_off" };
   }
-  if (event.eventName === "Lead" && !config.track_lead) {
+  if (
+    (event.eventName === "Lead" ||
+      event.eventName === "CompleteRegistration" ||
+      event.eventName === "Subscribe") &&
+    !config.track_lead
+  ) {
     return { ok: false, status: "skipped", error: "lead_tracking_off" };
   }
   if (event.eventName === "InitiateCheckout" && !config.track_checkout) {
@@ -184,43 +224,42 @@ export async function sendMetaEvent(event: MetaServerEvent): Promise<MetaSendRes
     custom_data: buildCustomData(event.custom),
   });
 
-  const url = `https://graph.facebook.com/${META_GRAPH_VERSION}/${config.pixel_id.trim()}/events`;
+  const pixelIds = [
+    config.pixel_id.trim(),
+    ...parsePixelIdList(config.additional_pixel_ids).filter(
+      (id) => id !== config.pixel_id.trim(),
+    ),
+  ];
+
+  const body = compact({
+    data: [payload],
+    test_event_code: config.test_event_code.trim() || null,
+    access_token: config.access_token.trim(),
+  });
 
   let status: MetaEventStatus = "sent";
   let errorMessage: string | undefined;
   let eventsReceived: number | undefined;
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        compact({
-          data: [payload],
-          test_event_code: config.test_event_code.trim() || null,
-          access_token: config.access_token.trim(),
-        }),
-      ),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      cache: "no-store",
-    });
+  const results = await Promise.all(
+    pixelIds.map((pixelId) => postToPixel(pixelId, body)),
+  );
+  const primary = results[0];
 
-    const json = (await res.json().catch(() => null)) as {
-      events_received?: number;
-      error?: { message?: string };
-    } | null;
-
-    if (!res.ok) {
-      status = "failed";
-      errorMessage =
-        json?.error?.message ?? `Meta returned ${res.status} ${res.statusText}`;
-    } else {
-      eventsReceived = json?.events_received;
-    }
-  } catch (err) {
+  if (primary && !primary.ok) {
     status = "failed";
-    errorMessage =
-      err instanceof Error ? err.message : "Conversions API request failed";
+    errorMessage = primary.error;
+  } else if (primary) {
+    eventsReceived = primary.eventsReceived;
+  }
+
+  for (let i = 1; i < results.length; i += 1) {
+    const extra = results[i];
+    if (extra && !extra.ok) {
+      console.warn(
+        `[meta] ${event.eventName} extra pixel ${pixelIds[i]} failed: ${extra.error}`,
+      );
+    }
   }
 
   if (config.log_events) {

@@ -52,6 +52,9 @@ Requires migration `049_funnel_brand_sync.sql`.
 
 ## Reporting & tracking
 
+- **Admin → Посещения** (`/admin/visits`) — unique visitors, sessions, pageviews,
+  bounce, traffic sources, top pages, devices, hours, and a funnel from visit →
+  lead → checkout → paid order. Requires `050_site_visits.sql`.
 - **Admin → Статистика имейли** (`/admin/engagement`) — deliveries, opens, clicks,
   CTOR, bounce and failure rates, per campaign and per automation, best send hour
   and weekday, deliverability by mailbox provider, engagement tiers, sleeping

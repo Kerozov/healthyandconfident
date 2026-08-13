@@ -964,6 +964,11 @@ export function AutomationsManager({
 
             <div className="min-w-0 space-y-5 xl:col-span-8 2xl:col-span-4">
             <WorkspacePanel title="Аудитория">
+              <p className="mb-3 text-xs leading-relaxed text-ink-soft">
+                Включване = кой да получи тази стъпка. Изключване = кой никога не
+                трябва да я получи (напр. вече платил). Смяната на сегмент отменя
+                насрочения имейл във воркера — не чака датата на изпращане.
+              </p>
               <div className="grid gap-3">
                 <div className="rounded-xl border border-forest-500/25 bg-forest-50/30 p-3 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">

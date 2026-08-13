@@ -34,3 +34,19 @@ export function requireNotificationWorkerConfig() {
   }
   return cfg;
 }
+
+/**
+ * Interpret a worker DELETE /jobs/:id response.
+ * 409 + status "canceled" means it was already cancelled — still success.
+ * 409 + processing/sent means the job is in flight and must not be marked canceled locally.
+ */
+export async function workerCancelSucceeded(res: Response): Promise<boolean> {
+  if (res.ok || res.status === 404 || res.status === 410) return true;
+  if (res.status !== 409) return false;
+  try {
+    const data = (await res.json()) as { status?: string };
+    return data.status === "canceled";
+  } catch {
+    return false;
+  }
+}

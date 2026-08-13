@@ -17,6 +17,7 @@ import { SiteHeader } from "@/components/site/site-header";
 import { Footer } from "@/components/site/footer";
 import { Popup } from "@/components/site/popup";
 import { CheckoutNotice } from "@/components/site/checkout-notice";
+import { SiteAnalytics } from "@/components/site/site-analytics";
 import { MenuPopupProvider } from "@/components/site/menu-popup";
 import { HashScroll } from "@/components/site/hash-scroll";
 import { OfferPopupProvider } from "@/components/site/offer-popup";
@@ -121,6 +122,9 @@ export default async function SiteLayout({
             <Popup locale={l} />
             <Suspense fallback={null}>
               <CheckoutNotice locale={l} />
+            </Suspense>
+            <Suspense fallback={null}>
+              <SiteAnalytics />
             </Suspense>
             <MetaPixel config={metaPixel} />
           </MenuPopupProvider>

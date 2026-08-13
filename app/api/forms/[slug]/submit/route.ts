@@ -10,6 +10,9 @@ import {
 import type { FormField } from "@/lib/forms/types";
 import { runAutomations } from "@/lib/automation/run";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 function extractEmail(
   fields: FormField[],
   answers: Record<string, unknown>,
@@ -166,7 +169,6 @@ export async function POST(
         .from("subscribers")
         .update({
           tags: nextTags,
-          source: formSource,
           locale,
           updated_at: new Date().toISOString(),
         })
@@ -198,6 +200,12 @@ export async function POST(
     }
 
     try {
+      if (sub) {
+        const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
+          "@/lib/automation/cancel"
+        );
+        await cancelIneligibleAutomationDeliveriesForSubscriber(email, nextTags);
+      }
       await runAutomations({
         email,
         locale,

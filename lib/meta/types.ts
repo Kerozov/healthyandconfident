@@ -95,4 +95,4 @@ export function parsePixelIdList(value: string): string[] {
     .filter((id) => /^\d{6,25}$/.test(id));
 }
 
-export const META_GRAPH_VERSION = "v21.0";
+export const META_GRAPH_VERSION = "v25.0";

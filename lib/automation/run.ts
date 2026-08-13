@@ -322,8 +322,8 @@ async function scheduleChainedFromParent(
           );
         }
       } else {
+        // scheduleAutomation already queues descendants from this parent.
         await scheduleAutomation(rule, ctx, sendAt);
-        await scheduleChainedFromParent(rule.id, sendAt, ctx);
       }
     } catch (err) {
       console.error(`[automation] chain ${rule.id}:`, err);

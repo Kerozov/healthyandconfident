@@ -789,16 +789,27 @@ export async function addSubscriber(input: {
     .eq("email", email)
     .maybeSingle();
 
-  void runAutomations({
-    email,
-    name: input.name ?? null,
-    phone: input.phone ?? null,
-    locale: input.locale,
-    subscriberId: (row as { id: string } | null)?.id ?? null,
-    tags: mergedTags,
-    isNew,
-    source: "manual",
-  });
+  if (!isNew) {
+    const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
+      "@/lib/automation/cancel"
+    );
+    await cancelIneligibleAutomationDeliveriesForSubscriber(email, mergedTags);
+  }
+
+  try {
+    await runAutomations({
+      email,
+      name: input.name ?? null,
+      phone: input.phone ?? null,
+      locale: input.locale,
+      subscriberId: (row as { id: string } | null)?.id ?? null,
+      tags: mergedTags,
+      isNew,
+      source: "manual",
+    });
+  } catch (err) {
+    console.error("[addSubscriber] automations:", err);
+  }
 
   revalidatePath("/admin/subscribers");
   return { ok: true };
@@ -883,6 +894,15 @@ export async function importSubscribers(input: {
           .eq("email", email)
           .maybeSingle();
 
+        if (!isNew) {
+          const { cancelIneligibleAutomationDeliveriesForSubscriber } =
+            await import("@/lib/automation/cancel");
+          await cancelIneligibleAutomationDeliveriesForSubscriber(
+            email,
+            mergedTags,
+          );
+        }
+
         void runAutomations({
           email,
           name: payload.name,
@@ -893,6 +913,10 @@ export async function importSubscribers(input: {
           isNew,
           source: "import",
         });
+      } else if (existing) {
+        const { cancelAllScheduledMailForSubscriber } =
+          await import("@/lib/automation/cancel");
+        await cancelAllScheduledMailForSubscriber(email);
       }
     } catch (err) {
       failed += 1;
@@ -951,13 +975,19 @@ export async function updateSubscriber(input: {
     .eq("id", input.id);
   if (error) return { ok: false, message: error.message };
 
-  if (input.tags !== undefined) {
-    const { data: row } = await supabase
-      .from("subscribers")
-      .select("email, tags")
-      .eq("id", input.id)
-      .maybeSingle();
-    if (row?.email) {
+  const { data: row } = await supabase
+    .from("subscribers")
+    .select("email, tags, status")
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (row?.email) {
+    if (input.status === "unsubscribed" || row.status === "unsubscribed") {
+      const { cancelAllScheduledMailForSubscriber } = await import(
+        "@/lib/automation/cancel"
+      );
+      await cancelAllScheduledMailForSubscriber(row.email as string);
+    } else if (input.tags !== undefined) {
       const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
         "@/lib/automation/cancel"
       );
@@ -975,6 +1005,17 @@ export async function updateSubscriber(input: {
 export async function deleteSubscriber(id: string): Promise<ActionResult> {
   await requireAdmin();
   const supabase = getAdminClient();
+  const { data: row } = await supabase
+    .from("subscribers")
+    .select("email")
+    .eq("id", id)
+    .maybeSingle();
+  if (row?.email) {
+    const { cancelAllScheduledMailForSubscriber } = await import(
+      "@/lib/automation/cancel"
+    );
+    await cancelAllScheduledMailForSubscriber(row.email as string);
+  }
   const { error } = await supabase.from("subscribers").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/subscribers");

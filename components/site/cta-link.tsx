@@ -4,6 +4,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { useOfferPopup } from "@/components/site/offer-popup";
 import { trackMeta } from "@/lib/meta/client";
+import { trackSiteCheckout } from "@/lib/analytics/client";
 import { cn } from "@/lib/utils";
 import type { VariantProps } from "class-variance-authority";
 
@@ -45,6 +46,7 @@ export function CtaLink({
       return;
     }
     if (isStripeCheckoutUrl(href)) {
+      trackSiteCheckout();
       trackMeta("InitiateCheckout", {
         contentIds: [placementKey],
         contentType: "product",

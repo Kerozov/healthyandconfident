@@ -4,6 +4,7 @@ import type { Locale } from "@/i18n/config";
 import type { FormField, FormSettings, FormTheme } from "@/lib/forms/types";
 import { normalizeFormFields } from "@/lib/forms/answer-tags";
 import { trackMeta } from "@/lib/meta/client";
+import { trackSiteLead } from "@/lib/analytics/client";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -108,6 +109,7 @@ export function DynamicForm({
         { contentName: title, contentCategory: `form:${slug}` },
         { email: submittedEmail() },
       );
+      trackSiteLead();
       setState("done");
     } catch (err) {
       setState("error");

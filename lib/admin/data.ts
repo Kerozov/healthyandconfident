@@ -13,6 +13,7 @@ import type {
   SiteProduct,
 } from "@/lib/supabase/types";
 import { assignableSegments } from "@/lib/segments/hierarchy";
+import { fetchAllRows } from "@/lib/admin/stats-shared";
 
 export async function getDashboardStats() {
   const supabase = getAdminClient();
@@ -46,17 +47,19 @@ export type DashboardHighlights = {
   emailsSent: number;
   emailsOpened: number;
   openRate: number;
+  visitors: number;
+  pageviews: number;
 };
 
 /**
  * Lightweight 30-day numbers for the dashboard cards. Deliberately not the full
- * reports — those live on /admin/engagement and /admin/payments.
+ * reports — those live on /admin/visits, /admin/engagement and /admin/payments.
  */
 export async function getDashboardHighlights(): Promise<DashboardHighlights> {
   const supabase = getAdminClient();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [purchases, campaignSent, campaignOpened, autoSent, autoOpened] =
+  const [purchases, campaignSent, campaignOpened, autoSent, autoOpened, visitRows] =
     await Promise.all([
       supabase
         .from("subscriber_purchases")
@@ -87,6 +90,14 @@ export async function getDashboardHighlights(): Promise<DashboardHighlights> {
         .eq("channel", "email")
         .not("opened_at", "is", null)
         .gte("sent_at", since),
+      fetchAllRows<{ visitor_id: string }>((from, to) =>
+        supabase
+          .from("site_visits")
+          .select("visitor_id")
+          .eq("event", "pageview")
+          .gte("created_at", since)
+          .range(from, to),
+      ),
     ]);
 
   const rows =
@@ -126,6 +137,8 @@ export async function getDashboardHighlights(): Promise<DashboardHighlights> {
     openRate: emailsSent
       ? Math.round((emailsOpened / emailsSent) * 1000) / 10
       : 0,
+    pageviews: visitRows.length,
+    visitors: new Set(visitRows.map((r) => r.visitor_id)).size,
   };
 }
 

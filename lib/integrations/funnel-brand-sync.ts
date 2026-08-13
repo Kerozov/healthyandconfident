@@ -174,6 +174,17 @@ async function upsertContact(
   const { error } = await supabase.from("subscribers").update(patch).eq("id", existing.id);
   if (error) throw new Error(`${email}: ${error.message}`);
 
+  if (tagsChanged) {
+    try {
+      const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
+        "@/lib/automation/cancel"
+      );
+      await cancelIneligibleAutomationDeliveriesForSubscriber(email, mergedTags);
+    } catch (err) {
+      console.error("[funnel-brand-sync] cancel automations:", err);
+    }
+  }
+
   return "updated";
 }
 

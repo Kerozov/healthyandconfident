@@ -17,12 +17,14 @@ export type CheckoutSessionResult = {
 export type CheckoutTracking = {
   fbp?: string | null;
   fbc?: string | null;
+  userAgent?: string | null;
 };
 
 function trackingMetadata(tracking?: CheckoutTracking): Record<string, string> {
   const meta: Record<string, string> = {};
   if (tracking?.fbp) meta.fbp = tracking.fbp.slice(0, 200);
   if (tracking?.fbc) meta.fbc = tracking.fbc.slice(0, 400);
+  if (tracking?.userAgent) meta.client_ua = tracking.userAgent.slice(0, 500);
   return meta;
 }
 

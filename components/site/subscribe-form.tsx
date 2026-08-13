@@ -10,6 +10,7 @@ import {
 } from "@/lib/site/health-tags";
 import { mergeVisitorTags } from "@/lib/site/visitor-tags";
 import { trackMeta } from "@/lib/meta/client";
+import { trackSiteLead } from "@/lib/analytics/client";
 
 const COPY = {
   bg: {
@@ -152,6 +153,7 @@ export function SubscribeForm({
           lastName: payload.last_name ?? null,
         },
       );
+      trackSiteLead();
       setState("done");
       onSuccess?.();
     } catch {
