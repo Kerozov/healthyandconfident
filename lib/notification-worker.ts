@@ -43,8 +43,17 @@ export async function cancelJob(jobId: string): Promise<CancelJobResult> {
     cache: "no-store",
   });
 
-  if (res.status === 404) return "not_found";
-  return res.ok ? "canceled" : "failed";
+  if (res.status === 404 || res.status === 410) return "not_found";
+  if (res.ok) return "canceled";
+  if (res.status === 409) {
+    try {
+      const data = (await res.json()) as { status?: string };
+      if (data.status === "canceled") return "canceled";
+    } catch {
+      /* ignore */
+    }
+  }
+  return "failed";
 }
 
 async function recordWorkerJob(input: {
