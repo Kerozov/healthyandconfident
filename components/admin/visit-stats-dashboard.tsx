@@ -1,6 +1,6 @@
 "use client";
 
-import type { VisitStatsOverview } from "@/lib/admin/visit-stats";
+import type { VisitStatsOverview } from "@/lib/admin/visit-stats-types";
 import { formatNumber, formatPercent } from "@/lib/money";
 import { Card } from "@/components/admin/fields";
 import {

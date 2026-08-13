@@ -59,7 +59,7 @@ export async function getDashboardHighlights(): Promise<DashboardHighlights> {
   const supabase = getAdminClient();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [purchases, campaignSent, campaignOpened, autoSent, autoOpened, visitRows] =
+  const [purchases, campaignSent, campaignOpened, autoSent, autoOpened] =
     await Promise.all([
       supabase
         .from("subscriber_purchases")
@@ -90,15 +90,16 @@ export async function getDashboardHighlights(): Promise<DashboardHighlights> {
         .eq("channel", "email")
         .not("opened_at", "is", null)
         .gte("sent_at", since),
-      fetchAllRows<{ visitor_id: string }>((from, to) =>
-        supabase
-          .from("site_visits")
-          .select("visitor_id")
-          .eq("event", "pageview")
-          .gte("created_at", since)
-          .range(from, to),
-      ),
     ]);
+
+  const visitRows = await fetchAllRows<{ visitor_id: string }>((from, to) =>
+    supabase
+      .from("site_visits")
+      .select("visitor_id")
+      .eq("event", "pageview")
+      .gte("created_at", since)
+      .range(from, to),
+  );
 
   const rows =
     (purchases.data as {

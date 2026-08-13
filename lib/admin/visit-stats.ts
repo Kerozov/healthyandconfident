@@ -11,20 +11,31 @@ import {
   statsRange,
   trend,
   type StatsPeriod,
-  type StatsRange,
 } from "@/lib/admin/stats-shared";
 import {
   VISIT_DEVICE_LABELS,
   VISIT_SOURCE_LABELS,
   visitPathLabel,
   type VisitDevice,
-  type VisitEvent,
   type VisitSource,
 } from "@/lib/analytics/classify";
+import type {
+  RankedStat,
+  VisitStatsOverview,
+  VisitTotals,
+} from "@/lib/admin/visit-stats-types";
+
+export type {
+  RankedStat,
+  VisitStatsOverview,
+  VisitTimePoint,
+  VisitTotals,
+  VisitTrends,
+} from "@/lib/admin/visit-stats-types";
 
 type VisitRow = {
   created_at: string;
-  event: VisitEvent;
+  event: string;
   visitor_id: string;
   session_id: string;
   path: string;
@@ -32,61 +43,8 @@ type VisitRow = {
   referrer_host: string | null;
   utm_source: string | null;
   utm_campaign: string | null;
-  source: VisitSource;
-  device: VisitDevice;
-};
-
-export type VisitTotals = {
-  pageviews: number;
-  visitors: number;
-  sessions: number;
-  newVisitors: number;
-  returningVisitors: number;
-  bounceRate: number;
-  pagesPerSession: number;
-  avgSessionSeconds: number;
-  leads: number;
-  checkouts: number;
-  purchases: number;
-};
-
-export type VisitTrends = {
-  pageviews: number | null;
-  visitors: number | null;
-  sessions: number | null;
-  bounceRate: number | null;
-};
-
-export type VisitTimePoint = {
-  date: string;
-  pageviews: number;
-  visitors: number;
-  sessions: number;
-};
-
-export type RankedStat = {
-  id: string;
-  label: string;
-  value: number;
-  note?: string;
-};
-
-export type VisitStatsOverview = {
-  period: StatsPeriod;
-  range: StatsRange;
-  totals: VisitTotals;
-  previous: VisitTotals;
-  trends: VisitTrends;
-  timeline: VisitTimePoint[];
-  pages: RankedStat[];
-  landings: RankedStat[];
-  sources: RankedStat[];
-  devices: RankedStat[];
-  locales: RankedStat[];
-  referrers: RankedStat[];
-  campaigns: RankedStat[];
-  hours: { hour: number; views: number }[];
-  funnel: { visitors: number; leads: number; checkouts: number; purchases: number };
+  source: string;
+  device: string;
 };
 
 function emptyTotals(): VisitTotals {

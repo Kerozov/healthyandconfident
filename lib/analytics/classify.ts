@@ -143,7 +143,9 @@ export function sanitizeVisitPath(raw: string | null | undefined): string | null
   if (path.length > 200) return null;
   if (!/^\/(bg|en)(\/.*)?$/.test(path)) return null;
   if (path.includes("..") || path.includes("//") || path.includes("\\")) return null;
-  if (/[\u0000-\u001f]/.test(path)) return null;
+  for (let i = 0; i < path.length; i++) {
+    if (path.charCodeAt(i) < 32) return null;
+  }
   return path.replace(/\/+$/, "") || path;
 }
 
