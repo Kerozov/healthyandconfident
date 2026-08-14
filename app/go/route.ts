@@ -51,8 +51,19 @@ export async function GET(request: Request) {
   }
 
   const resolved = resolveCtaTarget(safeInternalTarget(to));
-  return NextResponse.redirect(
-    resolved || `${publicSiteOrigin()}${DEFAULT_TARGET}`,
-    302,
-  );
+  const destination = resolved || `${publicSiteOrigin()}${DEFAULT_TARGET}`;
+  const response = NextResponse.redirect(destination, 302);
+
+  // Checkout reads this cookie so a later Stripe session still belongs to the person
+  // who clicked the email — `/go` itself does not put `contact` on the landing URL.
+  if (contactId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contactId)) {
+    response.cookies.set("hc_contact", contactId, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: "lax",
+      httpOnly: true,
+    });
+  }
+
+  return response;
 }

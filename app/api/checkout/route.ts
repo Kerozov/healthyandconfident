@@ -1,4 +1,4 @@
-import { NextResponse, after } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { isLocale, type Locale } from "@/i18n/config";
 import {
   createProductCheckoutSession,
@@ -11,7 +11,7 @@ import { schedulePrePaymentReminders } from "@/lib/contacts/reminders";
 import { sendMetaEvent } from "@/lib/meta/capi";
 import { fbcFromClickId, metaUserFromRequest } from "@/lib/meta/request";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
       productIds?: string[];
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const productIds = body.productIds?.filter(Boolean) ?? [];
     const guideIds = body.guideIds?.filter(Boolean) ?? [];
     const locale = body.locale && isLocale(body.locale) ? (body.locale as Locale) : "bg";
-    const contactId = body.contactId?.trim();
+    const contactId = body.contactId?.trim() || request.cookies.get("hc_contact")?.value?.trim();
 
     if (productIds.length > 0 && guideIds.length > 0) {
       return NextResponse.json(

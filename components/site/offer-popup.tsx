@@ -191,7 +191,7 @@ export function OfferPopupProvider({
     document.body.style.overflow = "hidden";
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !pending) proceedWithOriginal();
+      if (e.key === "Escape" && !pending) dismiss(false);
     }
     window.addEventListener("keydown", onKeyDown);
 
@@ -199,7 +199,7 @@ export function OfferPopupProvider({
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [popup, pending]);
+  }, [popup, pending, dismiss]);
 
   const current = popup
     ? popup.step === "upsell"
@@ -286,7 +286,7 @@ export function OfferPopupProvider({
       {popup && offer && (
         <div
           className="fixed inset-0 z-[110] flex items-end justify-center bg-forest-900/55 p-4 backdrop-blur-sm sm:items-center"
-          onClick={() => !pending && proceedWithOriginal()}
+          onClick={() => !pending && dismiss(false)}
         >
           <div
             className="animate-fade-up relative w-full max-w-lg overflow-hidden rounded-3xl bg-cream-50 shadow-2xl"
@@ -296,7 +296,7 @@ export function OfferPopupProvider({
             onClick={(e) => e.stopPropagation()}
           >
             <ModalCloseButton
-              onClick={() => proceedWithOriginal()}
+              onClick={() => dismiss(false)}
               disabled={pending}
               label={locale === "bg" ? "Затвори" : "Close"}
             />
