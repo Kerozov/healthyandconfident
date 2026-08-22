@@ -29,6 +29,7 @@ export function DynamicForm({
   prefilledName,
   token,
   slug,
+  preview = false,
 }: {
   locale: Locale;
   title: string;
@@ -39,6 +40,8 @@ export function DynamicForm({
   prefilledName?: string;
   token?: string;
   slug: string;
+  /** Admin preview — shows thank-you without writing a submission. */
+  preview?: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string | string[] | boolean>>(() => {
     const init: Record<string, string | string[] | boolean> = {};
@@ -67,19 +70,39 @@ export function DynamicForm({
   }
 
   function label(f: FormField) {
-    return locale === "en" ? f.label_en : f.label_bg;
+    const value = locale === "en" ? f.label_en : f.label_bg;
+    return value?.trim() || f.label_bg || f.label_en;
   }
 
   function placeholder(f: FormField) {
-    return locale === "en" ? f.placeholder_en : f.placeholder_bg;
+    const value = locale === "en" ? f.placeholder_en : f.placeholder_bg;
+    return value?.trim() || f.placeholder_bg || f.placeholder_en;
   }
 
   function help(f: FormField) {
-    return locale === "en" ? f.help_en : f.help_bg;
+    const value = locale === "en" ? f.help_en : f.help_bg;
+    return value?.trim() || f.help_bg || f.help_en;
   }
 
   function optionLabel(opt: { label_bg: string; label_en: string }) {
-    return locale === "en" ? opt.label_en : opt.label_bg;
+    const value = locale === "en" ? opt.label_en : opt.label_bg;
+    return value?.trim() || opt.label_bg || opt.label_en;
+  }
+
+  function requiredMessage() {
+    return locale === "en"
+      ? "Please fill all required fields."
+      : "Попълни всички задължителни полета.";
+  }
+
+  function isBlank(field: FormField): boolean {
+    const val = values[field.id];
+    if (field.type === "checkbox") {
+      return !Array.isArray(val) || val.length === 0;
+    }
+    if (field.type === "consent") return !val;
+    if (typeof val === "string") return val.trim() === "";
+    return val === undefined || val === false;
   }
 
   /** Email the visitor typed (or the one the invite link carried) — for ad matching. */
@@ -96,6 +119,21 @@ export function DynamicForm({
     e.preventDefault();
     setState("loading");
     setErrorMsg(null);
+
+    const missing = renderFields.some(
+      (field) => field.required && field.type !== "heading" && isBlank(field),
+    );
+    if (missing) {
+      setState("error");
+      setErrorMsg(requiredMessage());
+      return;
+    }
+
+    if (preview) {
+      setState("done");
+      return;
+    }
+
     try {
       const res = await fetch(`/api/forms/${slug}/submit`, {
         method: "POST",
@@ -127,6 +165,15 @@ export function DynamicForm({
               {locale === "en" ? "Thank you!" : "Благодарим!"}
             </h1>
             <p className="mt-2 text-ink-soft">{thankYou}</p>
+            {preview && (
+              <button
+                type="button"
+                onClick={() => setState("idle")}
+                className="mt-4 text-sm font-semibold text-forest-600 hover:text-forest-700"
+              >
+                {locale === "en" ? "Show form again" : "Покажи формата отново"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -135,6 +182,11 @@ export function DynamicForm({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
+      {preview && (
+        <p className="mb-4 rounded-xl bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-900">
+          Преглед — изпращането не се записва.
+        </p>
+      )}
       <div className={cn("rounded-3xl border p-6 sm:p-10", themeShell[theme])}>
         <header className="mb-8 text-center">
           <h1 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
@@ -173,12 +225,19 @@ export function DynamicForm({
                     onChange={(e) => setValue(field.id, e.target.checked)}
                     className="mt-1 h-4 w-4 rounded border-ink/20 text-forest-600"
                   />
-                  <span className="text-sm text-ink">{label(field)}</span>
+                  <span className="text-sm text-ink">
+                    {label(field)}
+                    {field.required && <span className="text-coral-500"> *</span>}
+                    {help(field) ? (
+                      <span className="mt-1 block text-xs text-ink-soft">{help(field)}</span>
+                    ) : null}
+                  </span>
                 </label>
               );
             }
 
-            if (field.type === "radio" && field.options) {
+            if (field.type === "radio") {
+              const options = field.options ?? [];
               return (
                 <fieldset key={field.id}>
                   <legend className="mb-2 block text-sm font-medium text-ink">
@@ -189,7 +248,7 @@ export function DynamicForm({
                     <p className="mb-3 text-xs text-ink-soft">{help(field)}</p>
                   )}
                   <div className="space-y-2">
-                    {field.options.map((opt) => (
+                    {options.map((opt) => (
                       <label
                         key={opt.value}
                         className="flex cursor-pointer items-center gap-3 rounded-xl border border-ink/10 bg-white/90 px-4 py-3 transition hover:border-forest-500/30"
@@ -211,15 +270,20 @@ export function DynamicForm({
               );
             }
 
-            if (field.type === "checkbox" && field.options) {
+            if (field.type === "checkbox") {
               const selected = (values[field.id] as string[] | undefined) ?? [];
+              const options = field.options ?? [];
               return (
                 <fieldset key={field.id}>
                   <legend className="mb-2 block text-sm font-medium text-ink">
                     {label(field)}
+                    {field.required && <span className="text-coral-500"> *</span>}
                   </legend>
+                  {help(field) && (
+                    <p className="mb-3 text-xs text-ink-soft">{help(field)}</p>
+                  )}
                   <div className="space-y-2">
-                    {field.options.map((opt) => (
+                    {options.map((opt) => (
                       <label
                         key={opt.value}
                         className="flex cursor-pointer items-center gap-3 rounded-xl border border-ink/10 bg-white/90 px-4 py-3"
@@ -243,7 +307,8 @@ export function DynamicForm({
               );
             }
 
-            if (field.type === "select" && field.options) {
+            if (field.type === "select") {
+              const options = field.options ?? [];
               return (
                 <label key={field.id} className="block">
                   <span className="mb-1.5 block text-sm font-medium text-ink">
@@ -259,7 +324,7 @@ export function DynamicForm({
                     <option value="">
                       {locale === "en" ? "Select…" : "Избери…"}
                     </option>
-                    {field.options.map((opt) => (
+                    {options.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {optionLabel(opt)}
                       </option>
@@ -287,6 +352,9 @@ export function DynamicForm({
                     placeholder={placeholder(field)}
                     className={cn(inputClass, "resize-y min-h-[100px]")}
                   />
+                  {help(field) && (
+                    <span className="mt-1 block text-xs text-ink-soft">{help(field)}</span>
+                  )}
                 </label>
               );
             }
@@ -316,11 +384,13 @@ export function DynamicForm({
                   placeholder={placeholder(field)}
                   readOnly={
                     field.type === "email" &&
-                    Boolean(prefilledEmail) &&
-                    values[field.id] === prefilledEmail
+                    Boolean(token || (prefilledEmail && values[field.id] === prefilledEmail))
                   }
                   className={inputClass}
                 />
+                {help(field) && (
+                  <span className="mt-1 block text-xs text-ink-soft">{help(field)}</span>
+                )}
               </label>
             );
           })}

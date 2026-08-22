@@ -4,11 +4,15 @@ import { useCallback } from "react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { productPlacementKey } from "@/lib/site/product-placement";
+import {
+  productCanBeBought,
+  productStripeForLocale,
+} from "@/lib/site/product-locale";
 import { openStripeUrl, startStripeCheckout } from "@/lib/site/stripe-checkout";
 import { useOfferPopup } from "@/components/site/offer-popup";
 
-export function canBuyProduct(product: SiteProduct): boolean {
-  return Boolean(product.stripe_price_id?.trim() || product.stripe_url?.trim());
+export function canBuyProduct(product: SiteProduct, locale: Locale): boolean {
+  return productCanBeBought(product, locale);
 }
 
 /**
@@ -22,10 +26,9 @@ export function useProductCheckout(locale: Locale) {
   return useCallback(
     async (product: SiteProduct): Promise<void> => {
       const placementKey = productPlacementKey(product.id);
-      const checkoutUrl = product.stripe_url?.trim() ?? "";
-      // Site Checkout is preferred whenever a price id exists: purchase
-      // segments and post-purchase automations depend on our own session.
-      const hasSiteCheckout = Boolean(product.stripe_price_id?.trim());
+      const stripe = productStripeForLocale(product, locale);
+      const checkoutUrl = stripe.stripe_url;
+      const hasSiteCheckout = Boolean(stripe.stripe_price_id);
 
       if (hasSiteCheckout) {
         if (!tryOpenPlacement(placementKey, `site-checkout:${product.id}`, product)) {

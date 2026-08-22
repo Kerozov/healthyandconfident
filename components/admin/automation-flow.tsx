@@ -18,6 +18,8 @@ import {
   Trash2,
   Copy,
   ClipboardPaste,
+  ClipboardList,
+  Tags,
 } from "lucide-react";
 import type {
   Automation,
@@ -29,9 +31,18 @@ import type {
 import { cn } from "@/lib/utils";
 import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
 import {
+  formatFormAnswerConditionsLine,
+} from "@/lib/automation/form-conditions";
+import {
+  AUTOMATION_TRIGGERS,
+  TRIGGER_SECTION_LABELS,
+  normalizeAutomationTrigger,
+} from "@/lib/automation/triggers";
+import {
   formatSubscriberOriginsLine,
   subscriberOriginsFromStored,
 } from "@/lib/automation/subscriber-origins";
+import type { FormTemplateRecord } from "@/lib/forms/types";
 
 type AutomationRow = Automation & AutomationStats;
 
@@ -54,13 +65,19 @@ const TRIGGER_META: Record<
     icon: ShoppingBag,
     color: "bg-amber-100 text-amber-900 border-amber-200",
   },
+  form_submit: {
+    label: "След форма",
+    icon: ClipboardList,
+    color: "bg-violet-100 text-violet-900 border-violet-200",
+  },
+  segment_entry: {
+    label: "Влизане в сегмент",
+    icon: Tags,
+    color: "bg-forest-100 text-forest-900 border-forest-200",
+  },
 };
 
-/** Maps legacy DB value `registration` until migration 036 is applied. */
-function normalizeTrigger(trigger: string): AutomationTrigger {
-  if (trigger === "purchase") return "purchase";
-  return "new_subscriber";
-}
+export { TRIGGER_SECTION_LABELS };
 
 type ResolvedAudience = {
   groups: { id: string; name: string }[];
@@ -156,6 +173,8 @@ function buildForestByTrigger(
   const forest: Record<AutomationTrigger, TreeNode[]> = {
     new_subscriber: [],
     purchase: [],
+    form_submit: [],
+    segment_entry: [],
   };
 
   const roots = automations
@@ -163,16 +182,11 @@ function buildForestByTrigger(
     .sort((a, b) => a.sort_order - b.sort_order);
 
   for (const root of roots) {
-    forest[normalizeTrigger(root.trigger_event)].push(buildTree(automations, root));
+    forest[normalizeAutomationTrigger(root.trigger_event)].push(buildTree(automations, root));
   }
 
   return forest;
 }
-
-export const TRIGGER_SECTION_LABELS: Record<AutomationTrigger, string> = {
-  new_subscriber: "Нов абонат",
-  purchase: "След покупка",
-};
 
 export type FlatAutomationRow = {
   automation: AutomationRow;
@@ -188,7 +202,7 @@ export function flattenAutomationsForDisplay(
 ): FlatAutomationRow[] {
   const forest = buildForestByTrigger(automations);
   const result: FlatAutomationRow[] = [];
-  const triggers: AutomationTrigger[] = ["new_subscriber", "purchase"];
+  const triggers: AutomationTrigger[] = AUTOMATION_TRIGGERS;
 
   for (const trigger of triggers) {
     forest[trigger].forEach((tree, pathIndex) => {
@@ -268,6 +282,19 @@ function AudienceChips({
   );
 }
 
+function formTriggerLine(
+  automation: Automation,
+  forms?: FormTemplateRecord[],
+): string {
+  const form = forms?.find((f) => f.id === automation.trigger_form_id);
+  const name = form?.title_bg?.trim() || form?.name || "избрана форма";
+  const conditions = formatFormAnswerConditionsLine(
+    automation.form_answer_conditions,
+    form?.fields,
+  );
+  return conditions ? `Форма: ${name} · ${conditions}` : `Форма: ${name}`;
+}
+
 function FlowCard({
   automation,
   audience,
@@ -275,6 +302,7 @@ function FlowCard({
   parentName,
   selected,
   onSelect,
+  forms,
 }: {
   automation: AutomationRow;
   audience: ResolvedAudience;
@@ -282,6 +310,7 @@ function FlowCard({
   parentName?: string;
   selected?: boolean;
   onSelect?: (automation: AutomationRow) => void;
+  forms?: FormTemplateRecord[];
 }) {
   const signupLine = formatSignupSourcesLine(automation.signup_sources ?? []);
   const originLine = formatSubscriberOriginsLine(
@@ -346,11 +375,19 @@ function FlowCard({
         </p>
       </div>
 
+      {automation.trigger_event === "new_subscriber" && (
       <p className="mt-2 text-[11px] leading-relaxed text-ink-soft">
         {originLine
           ? `👤 Тип запис: ${originLine}`
           : "👤 Тип запис: по подразбиране (нови + вече регистрирани)"}
       </p>
+      )}
+
+      {automation.trigger_event === "form_submit" && (
+        <p className="mt-2 text-[11px] leading-relaxed text-violet-900">
+          📋 {formTriggerLine(automation, forms)}
+        </p>
+      )}
 
       <div className="mt-3 rounded-lg bg-cream/80 p-2.5">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-forest-600">
@@ -365,7 +402,7 @@ function FlowCard({
         <p className="mt-2 text-[10px] leading-snug text-slate-600">
           {audienceSummary(automation, audience)}
         </p>
-        {signupLine && (
+        {signupLine && automation.trigger_event === "new_subscriber" && (
           <p className="mt-2 text-[10px] leading-snug text-sky-800">
             Източник: {signupLine}
           </p>
@@ -448,6 +485,7 @@ type FlowActions = {
   onPasteAfter?: (automation: AutomationRow) => void;
   copiedId?: string | null;
   copiedName?: string | null;
+  forms?: FormTemplateRecord[];
 };
 
 function TreeBranch({
@@ -465,6 +503,7 @@ function TreeBranch({
   onPasteAfter,
   copiedId,
   copiedName,
+  forms,
 }: {
   node: TreeNode;
   groups: SegmentGroup[];
@@ -488,6 +527,7 @@ function TreeBranch({
             parentName={parentName}
             selected={selectedId === node.automation.id}
             onSelect={onSelect}
+            forms={forms}
           />
           {(onAddAfter || onDelete || onCopy || onPasteAfter) && (
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
@@ -583,6 +623,7 @@ function TreeBranch({
             onPasteAfter={onPasteAfter}
             copiedId={copiedId}
             copiedName={copiedName}
+            forms={forms}
           />
         </>
       )}
@@ -614,6 +655,7 @@ function TreeBranch({
                   onPasteAfter={onPasteAfter}
                   copiedId={copiedId}
                   copiedName={copiedName}
+                  forms={forms}
                 />
               </div>
             ))}
@@ -637,6 +679,7 @@ function TriggerSection({
   onPasteAfter,
   copiedId,
   copiedName,
+  forms,
 }: {
   trigger: AutomationTrigger;
   trees: TreeNode[];
@@ -691,6 +734,7 @@ function TriggerSection({
               onPasteAfter={onPasteAfter}
               copiedId={copiedId}
               copiedName={copiedName}
+              forms={forms}
             />
           </div>
         ))}
@@ -711,6 +755,7 @@ export function AutomationFlowView({
   onPasteAfterAutomation,
   copiedId,
   copiedName,
+  forms,
 }: {
   automations: AutomationRow[];
   groups: SegmentGroup[];
@@ -723,6 +768,7 @@ export function AutomationFlowView({
   onPasteAfterAutomation?: (automation: AutomationRow) => void;
   copiedId?: string | null;
   copiedName?: string | null;
+  forms?: FormTemplateRecord[];
 }) {
   const forest = buildForestByTrigger(automations);
   const hasAny = automations.length > 0;
@@ -766,7 +812,7 @@ export function AutomationFlowView({
       </div>
 
       <div className="space-y-8">
-        {(["new_subscriber", "purchase"] as const).map((trigger) => (
+        {AUTOMATION_TRIGGERS.map((trigger) => (
           <TriggerSection
             key={trigger}
             trigger={trigger}
@@ -781,6 +827,7 @@ export function AutomationFlowView({
             onPasteAfter={onPasteAfterAutomation}
             copiedId={copiedId}
             copiedName={copiedName}
+            forms={forms}
           />
         ))}
       </div>

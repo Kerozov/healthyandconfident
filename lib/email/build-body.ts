@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Locale } from "@/lib/supabase/types";
 import { expandEmailProducts } from "@/lib/email/expand-products";
+import { expandEmailGuides } from "@/lib/email/expand-guides";
 import { expandEmailForms } from "@/lib/email/expand-forms";
 import {
   bodyWithAttachment,
@@ -19,7 +20,8 @@ export async function buildEmailBodyForRecipient(input: {
 }): Promise<{ bodyHtml: string; attachments: WorkerAttachment[] }> {
   const normalized = normalizeEmailBodyHtml(input.html);
   const withProducts = await expandEmailProducts(normalized, input.locale);
-  const withForms = await expandEmailForms(withProducts, input.locale, {
+  const withGuides = await expandEmailGuides(withProducts, input.locale);
+  const withForms = await expandEmailForms(withGuides, input.locale, {
     email: input.email,
     subscriberId: input.subscriberId,
   });

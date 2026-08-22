@@ -11,6 +11,8 @@ import { GuideAdminGrid } from "@/components/admin/guide-admin-grid";
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
+import { PublicPathLinks } from "@/components/admin/public-path-links";
+import { guidePagePath } from "@/lib/site/product-placement";
 
 const EMPTY_GUIDE = {
   title_bg: "",
@@ -200,6 +202,22 @@ export function GuidesManagerPanel({
                 onChange={(e) => setForm({ ...form, title_en: e.target.value })}
               />
             </Field>
+            {editingId !== "new" && (
+              <Field label="Публични линкове">
+                <PublicPathLinks
+                  paths={[
+                    {
+                      label: guidePagePath(editingId, "bg"),
+                      href: guidePagePath(editingId, "bg"),
+                    },
+                    {
+                      label: guidePagePath(editingId, "en"),
+                      href: guidePagePath(editingId, "en"),
+                    },
+                  ]}
+                />
+              </Field>
+            )}
             <Field label="Описание — BG">
               <Textarea
                 rows={3}

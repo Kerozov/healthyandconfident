@@ -4,10 +4,8 @@ import { useState } from "react";
 import { ArrowUpRight, Loader2, ShieldCheck } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
-import {
-  canBuyProduct,
-  useProductCheckout,
-} from "@/components/site/use-product-checkout";
+import { useProductCheckout } from "@/components/site/use-product-checkout";
+import { productSellableInLocale } from "@/lib/site/product-locale";
 
 /**
  * Landing card behind every product link in an email. It exists so an email
@@ -32,7 +30,7 @@ export function ProductCheckoutCard({
   const cta =
     (locale === "bg" ? product.cta_label_bg : product.cta_label_en)?.trim() ||
     (locale === "bg" ? "Купи сега" : "Buy now");
-  const buyable = canBuyProduct(product);
+  const buyable = productSellableInLocale(product, locale);
 
   function buy() {
     setError(null);

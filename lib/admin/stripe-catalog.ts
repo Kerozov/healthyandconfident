@@ -6,19 +6,33 @@ import type { StripeCatalogRow } from "@/lib/stripe/catalog-types";
 import {
   getStripeCatalogProduct,
   listStripeCatalog,
+  listStripePaymentLinks,
 } from "@/lib/stripe/catalog";
 
-import type { StripeCatalogItem } from "@/lib/admin/stripe-product-types";
+import type { StripeCatalogItem, StripePaymentLinkItem } from "@/lib/admin/stripe-product-types";
 
-export type { StripeCatalogItem };
+export type { StripeCatalogItem, StripePaymentLinkItem };
 
-export async function getStripeCatalogForAdmin(): Promise<StripeCatalogItem[]> {
+export async function getStripeCatalogForAdmin(): Promise<{
+  items: StripeCatalogItem[];
+  paymentLinks: StripePaymentLinkItem[];
+}> {
   const [catalog, siteProducts] = await Promise.all([
     listStripeCatalog(),
     loadSiteProductsStripeIndex(),
   ]);
 
-  return catalog.map((row) => {
+  let paymentLinks: StripePaymentLinkItem[] = [];
+  try {
+    paymentLinks = await listStripePaymentLinks();
+  } catch (err) {
+    console.warn(
+      "[stripe] payment links unavailable:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  const items = catalog.map((row) => {
     const linked = siteProducts.get(row.stripeProductId);
     return {
       ...row,
@@ -26,6 +40,8 @@ export async function getStripeCatalogForAdmin(): Promise<StripeCatalogItem[]> {
       linkedProductTitle: linked?.title_bg ?? null,
     };
   });
+
+  return { items, paymentLinks };
 }
 
 async function loadSiteProductsStripeIndex(): Promise<Map<string, SiteProduct>> {
@@ -37,8 +53,10 @@ async function loadSiteProductsStripeIndex(): Promise<Map<string, SiteProduct>> 
 
   const map = new Map<string, SiteProduct>();
   for (const row of (data as SiteProduct[]) ?? []) {
-    const id = row.stripe_product_id?.trim();
-    if (id) map.set(id, row);
+    const bgId = row.stripe_product_id?.trim();
+    const enId = row.stripe_product_id_en?.trim();
+    if (bgId) map.set(bgId, row);
+    if (enId) map.set(enId, row);
   }
   return map;
 }
@@ -59,6 +77,9 @@ export function siteProductRowFromStripeCatalog(
     stripe_url: "",
     stripe_product_id: catalog.stripeProductId,
     stripe_price_id: catalog.stripePriceId ?? "",
+    stripe_url_en: "",
+    stripe_product_id_en: "",
+    stripe_price_id_en: "",
     price_label_bg: price,
     price_label_en: price,
     image_url: catalog.imageUrl,
@@ -70,6 +91,7 @@ export function siteProductRowFromStripeCatalog(
     audience_tags: [],
     purchase_tags: [],
     enabled: false,
+    enabled_en: false,
     sort_order: sortOrder,
   };
 }

@@ -1,7 +1,18 @@
 import type { EmailFooterConfig, Locale } from "@/lib/supabase/types";
 import { publicSiteOrigin } from "@/lib/site";
+import { parseSignatureLinks } from "@/lib/email/signature-links";
 
 const site = publicSiteOrigin();
+
+const HEADER_DEFAULTS = {
+  header_enabled: true,
+  header_title: "Vessie Nay",
+  header_tagline: "Healthy & Confident",
+  header_image_url: null as string | null,
+  header_image_full_width: false,
+  header_bg_color: "#2D7A47",
+  copyright_enabled: true,
+} as const;
 
 export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" | "updated_at">> = {
   bg: {
@@ -14,6 +25,7 @@ export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" |
       "Холистичен Диетолог B.Med.Sc. (Hons) & СПРАВЯНЕ с Инсулинова резистентност и Диабет 2",
     signature_email: "vessie@healthyandconfident.co.uk",
     signature_phone: "00 44 7876 565 263",
+    signature_links: [],
     brand_name: "Healthy and Confident",
     brand_color: "#2563eb",
     website_url: `${site}/bg`,
@@ -26,6 +38,8 @@ export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" |
     disclaimer:
       "Получихте този имейл, защото сте се регистрирали на наша платформа или сте участвали в наше обучение или програма.",
     preferences_url: null,
+    ...HEADER_DEFAULTS,
+    header_subtitle: "Холистичен диетолог",
   },
   en: {
     locale: "en",
@@ -37,6 +51,7 @@ export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" |
       "Holistic Dietitian B.Med.Sc. (Hons) — insulin resistance & type 2 diabetes",
     signature_email: "vessie@healthyandconfident.co.uk",
     signature_phone: "00 44 7876 565 263",
+    signature_links: [],
     brand_name: "Healthy and Confident",
     brand_color: "#2563eb",
     website_url: `${site}/en`,
@@ -49,6 +64,8 @@ export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" |
     disclaimer:
       "You received this email because you registered on our platform or took part in one of our trainings or programmes.",
     preferences_url: null,
+    ...HEADER_DEFAULTS,
+    header_subtitle: "Holistic Nutritionist",
   },
 };
 
@@ -68,5 +85,15 @@ export function footerConfigFromRow(
     ...defaults,
     ...row,
     locale,
+    header_enabled: row.header_enabled ?? defaults.header_enabled,
+    header_title: row.header_title || defaults.header_title,
+    header_tagline: row.header_tagline || defaults.header_tagline,
+    header_subtitle: row.header_subtitle || defaults.header_subtitle,
+    header_image_url: row.header_image_url ?? defaults.header_image_url,
+    header_image_full_width:
+      row.header_image_full_width ?? defaults.header_image_full_width,
+    header_bg_color: row.header_bg_color || defaults.header_bg_color,
+    copyright_enabled: row.copyright_enabled ?? defaults.copyright_enabled,
+    signature_links: parseSignatureLinks(row.signature_links),
   };
 }

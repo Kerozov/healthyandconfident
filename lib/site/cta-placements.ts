@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
+import { productVisibleInLocale } from "@/lib/site/product-locale";
 
 /** Placements where upsell/downsell popups are allowed (not hero, nav, or contact). */
 export const UPSELL_SECTION_PLACEMENT_KEYS = [
@@ -59,10 +60,12 @@ export function normalizeOfferType(
 export function resolveOffer(
   offerId: string | null | undefined,
   offersById: Record<string, SiteProduct>,
+  locale?: Locale,
 ): SiteProduct | null {
   if (!offerId) return null;
   const offer = offersById[offerId];
   if (!offer?.enabled) return null;
+  if (locale && !productVisibleInLocale(offer, locale)) return null;
   return offer;
 }
 
@@ -94,9 +97,10 @@ export function resolveOfferCta(locale: Locale, offer: SiteProduct): string {
 export function getPlacementOffer(
   placement: SiteCtaPlacement | undefined,
   offersById: Record<string, SiteProduct>,
+  locale?: Locale,
 ): { offer: SiteProduct; headline: string } | null {
   if (!placement?.offer_enabled) return null;
-  const offer = resolveOffer(placement.offer_id, offersById);
+  const offer = resolveOffer(placement.offer_id, offersById, locale);
   if (!offer) return null;
   return {
     offer,
@@ -127,7 +131,7 @@ export function resolvePlacementOffers(
     headlineEn: string | undefined,
   ): ResolvedOffer | null {
     if (!enabled) return null;
-    const offer = resolveOffer(offerId, offersById);
+    const offer = resolveOffer(offerId, offersById, locale);
     if (!offer) return null;
     if (baseProductId && offer.id === baseProductId) return null;
     const custom = locale === "bg" ? headlineBg : headlineEn;

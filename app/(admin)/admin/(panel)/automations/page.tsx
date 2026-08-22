@@ -1,4 +1,4 @@
-import { getAutomations, getSegments, getSegmentGroups, getSiteProducts } from "@/lib/admin/data";
+import { getAutomations, getSegments, getSegmentGroups, getSiteProducts, getSiteGuides } from "@/lib/admin/data";
 import { getFormTemplates } from "@/lib/admin/forms-data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { AutomationsManager } from "@/components/admin/automations-manager";
@@ -8,11 +8,12 @@ import { Alert, PageHeader } from "@/components/admin/ui";
 export const dynamic = "force-dynamic";
 
 export default async function AdminAutomationsPage() {
-  const [automations, segments, groups, products, forms] = await Promise.all([
+  const [automations, segments, groups, products, guides, forms] = await Promise.all([
     getAutomations(),
     getSegments(),
     getSegmentGroups(),
     getSiteProducts(true),
+    getSiteGuides(true),
     getFormTemplates(),
   ]);
   const workerOk = isNotificationWorkerConfigured();
@@ -21,7 +22,7 @@ export default async function AdminAutomationsPage() {
     <div>
       <PageHeader
         title="Автоматизации"
-        description="Автоматични имейли и SMS при записване, покупка или с закъснение."
+        description="Автоматични имейли и SMS при нов абонат, покупка, попълнена форма или влизане в сегмент."
       >
         {!workerOk && (
           <Alert variant="warning">
@@ -36,6 +37,7 @@ export default async function AdminAutomationsPage() {
           segments={segments}
           groups={groups}
           products={products}
+          guides={guides}
           forms={forms}
         />
 
@@ -47,6 +49,7 @@ export default async function AdminAutomationsPage() {
           <li>Имейл 1 — събитие „Нов абонат“, „Веднага“, без верига.</li>
           <li>Имейл 2 — „След“ Имейл 1 + 15 мин. (или след дни).</li>
           <li>Имейл 3 — след Имейл 2.</li>
+          <li>Или: събитие „След форма“ → избери формата → „Прати ако“ е отговорил дадено нещо.</li>
         </ol>
       </section>
     </div>

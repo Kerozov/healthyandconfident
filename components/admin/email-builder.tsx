@@ -16,13 +16,14 @@ import {
   MousePointerClick,
   MoveVertical,
   Package,
+  BookOpen,
   Plus,
   Quote,
   Trash2,
   Type,
   X,
 } from "lucide-react";
-import type { SiteProduct } from "@/lib/supabase/types";
+import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { EmailAttachmentPicker } from "@/components/admin/email-attachment-picker";
@@ -55,6 +56,7 @@ const BLOCK_ICONS: Record<EmailBlockType, React.ComponentType<{ className?: stri
   divider: Minus,
   spacer: MoveVertical,
   product: Package,
+  guide: BookOpen,
   form: ClipboardList,
   html: Code,
 };
@@ -62,7 +64,7 @@ const BLOCK_ICONS: Record<EmailBlockType, React.ComponentType<{ className?: stri
 const PALETTE: { title: string; types: EmailBlockType[] }[] = [
   { title: "Текст", types: ["text", "heading", "list", "quote"] },
   { title: "Медия", types: ["image", "columns"] },
-  { title: "Действие", types: ["button", "product", "form"] },
+  { title: "Действие", types: ["button", "product", "guide", "form"] },
   { title: "Оформление", types: ["divider", "spacer", "html"] },
 ];
 
@@ -71,6 +73,7 @@ export function EmailBuilder({
   onChange,
   locale = "bg",
   products = [],
+  guides = [],
   forms = [],
   heroImageUrl,
   onHeroImageChange,
@@ -84,6 +87,7 @@ export function EmailBuilder({
   onChange: (html: string) => void;
   locale?: "bg" | "en";
   products?: SiteProduct[];
+  guides?: SiteGuide[];
   forms?: FormTemplateRecord[];
   heroImageUrl?: string;
   onHeroImageChange?: (url: string) => void;
@@ -157,7 +161,7 @@ export function EmailBuilder({
     cancelDrag();
   }
 
-  const ctx: BlockEditorContext = { locale, products, forms, disabled };
+  const ctx: BlockEditorContext = { locale, products, guides, forms, disabled };
   const emptyCount = blocks.filter(isEmptyEmailBlock).length;
 
   return (
@@ -210,7 +214,7 @@ export function EmailBuilder({
                 Добави първия блок
               </span>
               <span className="text-xs text-ink-soft">
-                Текст, снимка, бутон, продукт или форма — в какъвто ред искаш.
+                Текст, снимка, бутон, продукт, наръчник или форма — в какъвто ред искаш.
               </span>
             </button>
           )}
@@ -221,6 +225,7 @@ export function EmailBuilder({
               {paletteAt === index && (
                 <Palette
                   products={products}
+                  guides={guides}
                   forms={forms}
                   onPick={(type) => addBlock(type, index)}
                   onClose={() => setPaletteAt(null)}
@@ -268,6 +273,7 @@ export function EmailBuilder({
         {paletteAt === blocks.length ? (
           <Palette
             products={products}
+            guides={guides}
             forms={forms}
             onPick={(type) => addBlock(type, blocks.length)}
             onClose={() => setPaletteAt(null)}
@@ -530,6 +536,20 @@ function BlockGlance({
     );
   }
 
+  if (block.type === "guide") {
+    const guide = ctx.guides.find(
+      (g) => g.id.toLowerCase() === block.guideId.toLowerCase(),
+    );
+    return (
+      <span className="truncate text-sm text-ink">
+        {guide
+          ? (ctx.locale === "en" ? guide.title_en : guide.title_bg) ||
+            guide.title_bg
+          : "Не е избран наръчник"}
+      </span>
+    );
+  }
+
   if (block.type === "form") {
     const form = ctx.forms.find(
       (f) => f.id.toLowerCase() === block.formId.toLowerCase(),
@@ -630,11 +650,13 @@ function Palette({
   onPick,
   onClose,
   products,
+  guides,
   forms,
 }: {
   onPick: (type: EmailBlockType) => void;
   onClose: () => void;
   products: SiteProduct[];
+  guides: SiteGuide[];
   forms: FormTemplateRecord[];
 }) {
   return (
@@ -663,6 +685,7 @@ function Palette({
                 const Icon = BLOCK_ICONS[type];
                 const empty =
                   (type === "product" && products.length === 0) ||
+                  (type === "guide" && guides.length === 0) ||
                   (type === "form" && forms.length === 0);
                 return (
                   <button

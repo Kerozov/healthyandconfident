@@ -11,7 +11,10 @@ import {
   refreshSiteProductFromStripe,
   siteProductRowFromStripeCatalog,
 } from "@/lib/admin/stripe-catalog";
-import type { StripeCatalogItem } from "@/lib/admin/stripe-product-types";
+import type {
+  StripeCatalogItem,
+  StripePaymentLinkItem,
+} from "@/lib/admin/stripe-product-types";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
   sendEmail,
@@ -24,8 +27,14 @@ import {
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
 import { mapWithConcurrency } from "@/lib/util/concurrency";
 import { runAutomations } from "@/lib/automation/send";
-import { composeBrandedEmail } from "@/lib/email/layout";
+import { buildBrandedEmail } from "@/lib/email/compose";
 import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
+import { footerConfigFromRow } from "@/lib/email/footer-defaults";
+import { resolveSignatureCatalogHrefs } from "@/lib/email/hydrate-signature-links";
+import {
+  parseSignatureLinks,
+  type EmailSignatureLink,
+} from "@/lib/email/signature-links";
 import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import {
   campaignCtaRedirectUrl,
@@ -45,6 +54,14 @@ import {
 } from "@/lib/campaign/sync-deliveries";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { deriveNewSubscribersOnly } from "@/lib/automation/subscriber-origins";
+import {
+  normalizeAutomationTrigger,
+  formSlugFromSource,
+} from "@/lib/automation/triggers";
+import {
+  parseFormAnswerConditions,
+  type FormAnswerCondition,
+} from "@/lib/automation/form-conditions";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
 import type { Automation, AutomationDelivery, SiteSectionKey } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
@@ -60,6 +77,7 @@ import {
 } from "@/lib/admin/engagement";
 import type { FormField, FormSettings } from "@/lib/forms/types";
 import { getFormPreset, FORM_PRESETS } from "@/lib/forms/presets";
+import { forceEmailFieldsRequired, emailFieldCount } from "@/lib/forms/required-email";
 import { getFormSubmissions } from "@/lib/admin/forms-data";
 import { publicFormInviteUrl } from "@/lib/forms/invite-url";
 import { createFormInviteToken } from "@/lib/forms/form-invite-token";
@@ -89,7 +107,7 @@ export async function savePost(input: {
   status: "draft" | "published";
   featured?: boolean;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("blog", { action: "save", summary: "Запази статия" });
   const supabase = getAdminClient();
 
   const tags = (input.tags || "")
@@ -139,7 +157,7 @@ export async function savePost(input: {
 }
 
 export async function publishPost(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("blog", { action: "publish", summary: "Публикува статия" });
   const supabase = getAdminClient();
   const { data: row, error: loadError } = await supabase
     .from("blog_posts")
@@ -174,7 +192,7 @@ export async function publishPost(id: string): Promise<ActionResult> {
 }
 
 export async function deletePost(id: string, locale: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("blog", { action: "delete", summary: "Изтри статия" });
   const supabase = getAdminClient();
   const { error } = await supabase.from("blog_posts").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -194,7 +212,7 @@ export async function savePopup(input: {
   segment_tag: string;
   delay_seconds: number;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("popup", { action: "save", summary: "Обнови popup" });
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("popup_config")
@@ -224,6 +242,7 @@ export async function saveEmailFooter(input: {
   signature_title: string;
   signature_email: string;
   signature_phone: string;
+  signature_links?: EmailSignatureLink[];
   brand_name: string;
   brand_color: string;
   website_url: string;
@@ -235,8 +254,22 @@ export async function saveEmailFooter(input: {
   youtube_url?: string;
   disclaimer: string;
   preferences_url?: string;
+  header_enabled: boolean;
+  header_title: string;
+  header_tagline: string;
+  header_subtitle: string;
+  header_image_url?: string;
+  header_image_full_width: boolean;
+  header_bg_color: string;
+  copyright_enabled: boolean;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("email-footer", { action: "save", summary: "Обнови email подпис" });
+  const resolvedLinks = (
+    await resolveSignatureCatalogHrefs({
+      ...footerConfigFromRow(null, input.locale),
+      signature_links: parseSignatureLinks(input.signature_links),
+    })
+  ).signature_links;
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("email_footer_config")
@@ -248,6 +281,7 @@ export async function saveEmailFooter(input: {
       signature_title: input.signature_title,
       signature_email: input.signature_email,
       signature_phone: input.signature_phone,
+      signature_links: resolvedLinks,
       brand_name: input.brand_name,
       brand_color: input.brand_color || "#2563eb",
       website_url: input.website_url,
@@ -259,6 +293,14 @@ export async function saveEmailFooter(input: {
       youtube_url: input.youtube_url?.trim() || null,
       disclaimer: input.disclaimer,
       preferences_url: input.preferences_url?.trim() || null,
+      header_enabled: input.header_enabled,
+      header_title: input.header_title,
+      header_tagline: input.header_tagline,
+      header_subtitle: input.header_subtitle,
+      header_image_url: input.header_image_url?.trim() || null,
+      header_image_full_width: input.header_image_full_width,
+      header_bg_color: input.header_bg_color || "#2D7A47",
+      copyright_enabled: input.copyright_enabled,
       updated_at: new Date().toISOString(),
     })
     .eq("locale", input.locale);
@@ -271,7 +313,7 @@ export async function saveEmailFooter(input: {
 type AutomationInput = {
   name: string;
   channel: "email" | "sms";
-  trigger_event: "purchase" | "new_subscriber";
+  trigger_event: Automation["trigger_event"];
   enabled: boolean;
   segment_keys: string[];
   group_ids: string[];
@@ -282,6 +324,8 @@ type AutomationInput = {
   signup_sources?: string[];
   subscriber_origins?: string[];
   new_subscribers_only: boolean;
+  trigger_form_id?: string | null;
+  form_answer_conditions?: FormAnswerCondition[];
   after_automation_id?: string | null;
   delay_days?: number;
   delay_minutes?: number;
@@ -325,9 +369,60 @@ function validatePurchaseAutomation(input: AutomationInput): string | null {
   if (input.trigger_event !== "purchase") return null;
   const ids = input.purchase_product_ids?.filter(Boolean) ?? [];
   if (ids.length === 0) {
-    return "При автоматизация „След покупка“ избери поне един продукт.";
+    return "При автоматизация „След покупка“ избери поне един продукт или наръчник.";
   }
   return null;
+}
+
+function validateSegmentEntryAutomation(input: AutomationInput): string | null {
+  if (input.trigger_event !== "segment_entry") return null;
+  const hasInclude =
+    (input.segment_keys?.filter(Boolean).length ?? 0) > 0 ||
+    (input.group_ids?.filter(Boolean).length ?? 0) > 0;
+  if (!hasInclude) {
+    return "При „Влизане в сегмент“ избери поне един сегмент или група във „Включване“.";
+  }
+  return null;
+}
+
+async function validateFormSubmitAutomation(
+  input: AutomationInput,
+): Promise<string | null> {
+  if (input.trigger_event !== "form_submit") return null;
+  const formId = input.trigger_form_id?.trim() || "";
+  if (!formId) {
+    return "При автоматизация „След форма“ избери форма.";
+  }
+  const supabase = getAdminClient();
+  const { data } = await supabase
+    .from("form_templates")
+    .select("id, fields")
+    .eq("id", formId)
+    .maybeSingle();
+  if (!data) return "Избраната форма не съществува.";
+  const fields = ((data as { fields: FormField[] | null }).fields ?? []) as FormField[];
+  if (emailFieldCount(fields) === 0) {
+    return "Формата трябва да има задължително поле за имейл, преди да я ползваш като тригер.";
+  }
+  return null;
+}
+
+async function validateAutomationInput(input: AutomationInput): Promise<string | null> {
+  return (
+    validatePurchaseAutomation(input) ||
+    validateSegmentEntryAutomation(input) ||
+    (await validateFormSubmitAutomation(input))
+  );
+}
+
+function automationFormPayload(input: AutomationInput) {
+  if (input.trigger_event !== "form_submit") {
+    return { trigger_form_id: null, form_answer_conditions: [] as FormAnswerCondition[] };
+  }
+  return {
+    trigger_form_id: input.trigger_form_id?.trim() || null,
+    form_answer_conditions: parseFormAnswerConditions(input.form_answer_conditions),
+  };
 }
 
 function automationOriginsPayload(input: AutomationInput) {
@@ -341,16 +436,18 @@ function automationOriginsPayload(input: AutomationInput) {
 export async function createAutomation(
   input: AutomationInput,
 ): Promise<ActionResult & { id?: string }> {
-  await requireAdmin();
-  const purchaseErr = validatePurchaseAutomation(input);
-  if (purchaseErr) return { ok: false, message: purchaseErr };
+  await requireAdmin("automations", { action: "create", summary: "Създаде автоматизация" });
+  const validationErr = await validateAutomationInput(input);
+  if (validationErr) return { ok: false, message: validationErr };
   const supabase = getAdminClient();
   const origins = automationOriginsPayload(input);
+  const formPayload = automationFormPayload(input);
   const { data, error } = await supabase
     .from("automations")
     .insert({
       ...input,
       ...origins,
+      ...formPayload,
       audience_logic: input.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
@@ -380,16 +477,18 @@ export async function updateAutomation(
   id: string,
   input: AutomationInput,
 ): Promise<ActionResult> {
-  await requireAdmin();
-  const purchaseErr = validatePurchaseAutomation(input);
-  if (purchaseErr) return { ok: false, message: purchaseErr };
+  await requireAdmin("automations", { action: "update", summary: "Обнови автоматизация" });
+  const validationErr = await validateAutomationInput(input);
+  if (validationErr) return { ok: false, message: validationErr };
   const supabase = getAdminClient();
   const origins = automationOriginsPayload(input);
+  const formPayload = automationFormPayload(input);
   const { error } = await supabase
     .from("automations")
     .update({
       ...input,
       ...origins,
+      ...formPayload,
       audience_logic: input.audience_logic === "all" ? "all" : "any",
       exclude_group_ids: input.exclude_group_ids ?? [],
       exclude_segment_keys: input.exclude_segment_keys ?? [],
@@ -419,12 +518,16 @@ export async function updateAutomation(
  * always created disabled so nothing goes out before it has been reviewed, and
  * `after_automation_id` decides where in a chain it lands — that is what makes
  * "copy here, paste there" possible without rebuilding the step by hand.
+ *
+ * A new row cannot cycle the existing tree: nothing points at it yet. Blocking
+ * "paste under the original's chain" was wrong and made the usual action
+ * (copy a step, paste it later in the same sequence) fail.
  */
 export async function duplicateAutomation(
   id: string,
   options?: { after_automation_id?: string | null; name?: string },
 ): Promise<ActionResult & { id?: string; name?: string }> {
-  await requireAdmin();
+  await requireAdmin("automations", { action: "duplicate", summary: "Дублира автоматизация" });
   const supabase = getAdminClient();
 
   const { data: source, error: readError } = await supabase
@@ -439,21 +542,17 @@ export async function duplicateAutomation(
 
   const original = source as Automation;
 
-  // Pasting under itself (or under one of its own descendants) would build a cycle.
-  let cursor = options?.after_automation_id ?? undefined;
-  const seen = new Set<string>();
-  while (cursor) {
-    if (cursor === id) {
-      return { ok: false, message: "Не може да поставиш копие под самата верига на оригинала." };
-    }
-    if (seen.has(cursor)) break;
-    seen.add(cursor);
-    const { data: parent } = await supabase
+  let parent: Automation | null = null;
+  if (options && options.after_automation_id) {
+    const { data: parentRow } = await supabase
       .from("automations")
-      .select("after_automation_id")
-      .eq("id", cursor)
-      .single();
-    cursor = (parent as { after_automation_id: string | null } | null)?.after_automation_id ?? undefined;
+      .select("*")
+      .eq("id", options.after_automation_id)
+      .maybeSingle();
+    if (!parentRow) {
+      return { ok: false, message: "Стъпката, след която поставяш, вече я няма." };
+    }
+    parent = parentRow as Automation;
   }
 
   const after_automation_id =
@@ -461,21 +560,65 @@ export async function duplicateAutomation(
       ? original.after_automation_id
       : options.after_automation_id || null;
 
-  const {
-    id: _id,
-    created_at: _createdAt,
-    updated_at: _updatedAt,
-    ...copyable
-  } = original;
+  const trigger_event = parent
+    ? normalizeAutomationTrigger(parent.trigger_event)
+    : normalizeAutomationTrigger(original.trigger_event);
+
+  const purchase_product_ids =
+    trigger_event === "purchase"
+      ? (parent?.purchase_product_ids?.filter(Boolean).length
+          ? parent.purchase_product_ids
+          : original.purchase_product_ids ?? [])
+      : original.purchase_product_ids ?? [];
 
   const { data, error } = await supabase
     .from("automations")
     .insert({
-      ...copyable,
       name: options?.name?.trim() || `${original.name} (копие)`,
+      channel: original.channel === "sms" ? "sms" : "email",
+      trigger_event,
       enabled: false,
+      segment_keys: original.segment_keys ?? [],
+      group_ids: original.group_ids ?? [],
+      audience_logic: original.audience_logic === "all" ? "all" : "any",
+      exclude_group_ids: original.exclude_group_ids ?? [],
+      exclude_segment_keys: original.exclude_segment_keys ?? [],
+      purchase_product_ids,
+      signup_sources: original.signup_sources ?? [],
+      subscriber_origins: original.subscriber_origins ?? [],
+      new_subscribers_only: original.new_subscribers_only,
+      trigger_form_id:
+        trigger_event === "form_submit"
+          ? parent?.trigger_form_id || original.trigger_form_id || null
+          : null,
+      form_answer_conditions:
+        trigger_event === "form_submit"
+          ? parseFormAnswerConditions(
+              parent?.form_answer_conditions ?? original.form_answer_conditions,
+            )
+          : [],
       after_automation_id,
-      sort_order: (original.sort_order ?? 0) + 5,
+      delay_days: Math.max(0, original.delay_days ?? 0),
+      delay_minutes: Math.max(0, original.delay_minutes ?? 0),
+      send_time: normalizeSendTime(original.send_time),
+      send_date: normalizeSendDate(original.send_date),
+      subject_bg: original.subject_bg ?? "",
+      html_bg: original.html_bg ?? "",
+      subject_en: original.subject_en ?? "",
+      html_en: original.html_en ?? "",
+      cta_label_bg: original.cta_label_bg ?? "",
+      cta_url_bg: original.cta_url_bg ?? "",
+      cta_label_en: original.cta_label_en ?? "",
+      cta_url_en: original.cta_url_en ?? "",
+      attachment_path_bg: original.attachment_path_bg,
+      attachment_filename_bg: original.attachment_filename_bg,
+      attachment_path_en: original.attachment_path_en,
+      attachment_filename_en: original.attachment_filename_en,
+      hero_image_url_bg: original.hero_image_url_bg,
+      hero_image_url_en: original.hero_image_url_en,
+      sms_bg: original.sms_bg ?? "",
+      sms_en: original.sms_en ?? "",
+      sort_order: (parent?.sort_order ?? original.sort_order ?? 0) + 5,
     })
     .select("id, name")
     .single();
@@ -487,7 +630,7 @@ export async function duplicateAutomation(
 }
 
 export async function deleteAutomation(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("automations", { action: "delete", summary: "Изтри автоматизация" });
   try {
     await cancelAutomationScheduledJobs(id);
   } catch {
@@ -504,7 +647,7 @@ export async function toggleAutomationEnabled(
   id: string,
   enabled: boolean,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("automations", { action: "update", summary: "Превключи автоматизация" });
   if (!enabled) {
     await cancelAutomationScheduledJobs(id);
   }
@@ -537,7 +680,7 @@ export async function diagnoseAutomationsForEmail(
     }
   | { ok: false; message: string }
 > {
-  await requireAdmin();
+  await requireAdmin("automations");
   const normalized = email.trim().toLowerCase();
   if (!normalized || !normalized.includes("@")) {
     return { ok: false, message: "Въведи валиден имейл." };
@@ -570,6 +713,28 @@ export async function diagnoseAutomationsForEmail(
       ? options.simulateIsNew
       : !subscriberFound;
 
+  let formId: string | null = null;
+  let formAnswers: Record<string, string | string[] | boolean> | undefined;
+  const formSlug = formSlugFromSource(source);
+  if (formSlug) {
+    const { getFormTemplateBySlug } = await import("@/lib/admin/forms-data");
+    const form = await getFormTemplateBySlug(formSlug, { includeDisabled: true });
+    formId = form?.id ?? null;
+    if (formId) {
+      const { data: submission } = await supabase
+        .from("form_submissions")
+        .select("answers")
+        .eq("form_id", formId)
+        .eq("email", normalized)
+        .order("submitted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const answers = (submission as { answers?: Record<string, string | string[] | boolean> } | null)
+        ?.answers;
+      if (answers && typeof answers === "object") formAnswers = answers;
+    }
+  }
+
   const diagnosis = await diagnoseAutomations({
     email: normalized,
     name: subscriber?.name ?? null,
@@ -577,15 +742,18 @@ export async function diagnoseAutomationsForEmail(
     locale: subscriber?.locale === "en" ? "en" : "bg",
     subscriberId: subscriber?.id ?? null,
     tags: subscriber?.tags ?? [],
+    priorTags: subscriberFound ? (subscriber?.tags ?? []) : undefined,
     isNew,
     source,
+    formId,
+    formAnswers,
   });
 
   return { ok: true, subscriberFound, diagnosis };
 }
 
 export async function syncAutomation(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("automations", { action: "sync", summary: "Синхронизира автоматизация" });
   const result = await syncAutomationDeliveries(id);
   revalidatePath("/admin/automations");
   return {
@@ -595,7 +763,7 @@ export async function syncAutomation(id: string): Promise<ActionResult> {
 }
 
 export async function syncAllAutomations(): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("automations", { action: "sync", summary: "Синхронизира всички автоматизации" });
   const supabase = getAdminClient();
   const { data } = await supabase.from("automations").select("id");
   const ids = ((data as { id: string }[]) ?? []).map((r) => r.id);
@@ -619,7 +787,7 @@ export async function getAutomationDeliveriesReport(
   | { ok: true; deliveries: AutomationDelivery[] }
   | { ok: false; message: string }
 > {
-  await requireAdmin();
+  await requireAdmin("automations");
   await syncAutomationDeliveries(automationId);
   const deliveries = await getAutomationDeliveries(automationId);
   revalidatePath("/admin/automations");
@@ -629,7 +797,7 @@ export async function getAutomationDeliveriesReport(
 export async function resendAutomationToNonOpeners(
   automationId: string,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("automations", { action: "send", summary: "Препрати автоматизация към неотворили" });
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -748,7 +916,7 @@ export async function addSubscriber(input: {
   locale: "bg" | "en";
   tags?: string[];
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "create", summary: "Добави абонат" });
   const supabase = getAdminClient();
   const email = input.email.trim().toLowerCase();
   const tags = Array.from(
@@ -804,6 +972,7 @@ export async function addSubscriber(input: {
       locale: input.locale,
       subscriberId: (row as { id: string } | null)?.id ?? null,
       tags: mergedTags,
+      priorTags: existing ? ((existing.tags as string[]) ?? []) : undefined,
       isNew,
       source: "manual",
     });
@@ -834,7 +1003,7 @@ export async function importSubscribers(input: {
     errors?: string[];
   }
 > {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "import", summary: "Импортира абонати" });
   const supabase = getAdminClient();
   const mergeSegments = input.mergeSegments !== false;
 
@@ -910,6 +1079,7 @@ export async function importSubscribers(input: {
           locale: payload.locale,
           subscriberId: (row as { id: string } | null)?.id ?? null,
           tags: mergedTags,
+          priorTags: existing ? ((existing.tags as string[]) ?? []) : undefined,
           isNew,
           source: "import",
         });
@@ -958,8 +1128,23 @@ export async function updateSubscriber(input: {
   status?: "subscribed" | "unsubscribed";
   notes?: string;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "update", summary: "Обнови абонат" });
   const supabase = getAdminClient();
+
+  const { data: existingRow } = await supabase
+    .from("subscribers")
+    .select("email, tags, status, name, phone, locale")
+    .eq("id", input.id)
+    .maybeSingle();
+  const existing = existingRow as {
+    email: string;
+    tags: string[] | null;
+    status: string;
+    name: string | null;
+    phone: string | null;
+    locale: string | null;
+  } | null;
+
   const patch: Partial<import("@/lib/supabase/types").Subscriber> = {};
   if (input.tags !== undefined) {
     patch.tags = Array.from(
@@ -995,6 +1180,21 @@ export async function updateSubscriber(input: {
         row.email as string,
         (row.tags as string[]) ?? [],
       );
+      try {
+        await runAutomations({
+          email: row.email as string,
+          name: existing?.name ?? null,
+          phone: existing?.phone ?? null,
+          locale: existing?.locale === "en" ? "en" : "bg",
+          subscriberId: input.id,
+          tags: (row.tags as string[]) ?? [],
+          priorTags: existing?.tags ?? [],
+          isNew: false,
+          source: "system",
+        });
+      } catch (err) {
+        console.error("[updateSubscriber] automations:", err);
+      }
     }
   }
 
@@ -1003,7 +1203,7 @@ export async function updateSubscriber(input: {
 }
 
 export async function deleteSubscriber(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "delete", summary: "Изтри абонат" });
   const supabase = getAdminClient();
   const { data: row } = await supabase
     .from("subscribers")
@@ -1028,7 +1228,7 @@ export async function createSegmentGroup(input: {
   description?: string;
   parent_id?: string | null;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "create", summary: "Създаде група" });
   const supabase = getAdminClient();
   const name = input.name.trim();
   if (!name) return { ok: false, message: "Group name is required." };
@@ -1061,7 +1261,7 @@ export async function updateSegmentGroup(input: {
   description?: string | null;
   parent_id?: string | null;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "update", summary: "Обнови група" });
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1109,7 +1309,7 @@ export async function updateSegmentGroup(input: {
 }
 
 export async function deleteSegmentGroup(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "delete", summary: "Изтри група" });
   const supabase = getAdminClient();
   const { error } = await supabase.from("segment_groups").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -1126,7 +1326,7 @@ export async function createSegment(input: {
   description?: string;
   group_id?: string | null;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "create", summary: "Създаде сегмент" });
   const supabase = getAdminClient();
   const key = slugify(input.key || input.name);
   if (!key || key === "all") {
@@ -1162,7 +1362,7 @@ export async function updateSegment(input: {
   description?: string | null;
   group_id?: string | null;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "update", summary: "Обнови сегмент" });
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1207,7 +1407,7 @@ export async function updateSegment(input: {
 }
 
 export async function deleteSegment(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("subscribers", { action: "delete", summary: "Изтри сегмент" });
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1329,7 +1529,7 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
 export async function previewAudience(
   input: AudienceInput,
 ): Promise<{ ok: true; emails: number; phones: number; label: string } | { ok: false; message: string }> {
-  await requireAdmin();
+  await requireAdmin(["campaigns", "automations"] as const);
   const audience = await resolveAudience(input);
   return {
     ok: true,
@@ -1531,13 +1731,14 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
         ctaLabel && ctaUrl
           ? campaignCtaRedirectUrl(campaignId, email, subscriberId)
           : null;
-      const wrappedHtml = composeBrandedEmail({
+      const wrappedHtml = await buildBrandedEmail({
         bodyHtml,
         locale: mailLocale,
         cta: ctaHref ? { label: ctaLabel, href: ctaHref } : null,
         unsubscribeHref: unsubscribeLinkForEmail(recipient, mailLocale),
         footerConfig,
         heroImageUrl: input.hero_image_url,
+        recipient: { email, subscriberId },
       });
 
       try {
@@ -1679,7 +1880,7 @@ export async function updateEmailCampaignCta(
   id: string,
   input: { cta_label: string; cta_url: string },
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "update", summary: "Обнови CTA на кампания" });
   const ctaLabel = input.cta_label.trim();
   const ctaUrl = input.cta_url.trim();
 
@@ -1717,7 +1918,7 @@ export async function sendEmailCampaign(input: {
   attachment_filename?: string;
   hero_image_url?: string;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "send", summary: "Изпрати имейл кампания" });
   const ctaLabel = input.cta_label?.trim() ?? "";
   const ctaUrl = input.cta_url?.trim() ?? "";
   if (ctaLabel && !ctaUrl) {
@@ -1747,7 +1948,7 @@ export async function sendEmailCampaign(input: {
 
 /** Pull authoritative status + open tracking from the worker into our DB. */
 export async function syncEmailCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "sync", summary: "Синхронизира кампания" });
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1824,7 +2025,7 @@ async function persistCampaignSync(
 
 /** Refresh every campaign that still has a worker job (skips drafts/failed-at-create). */
 export async function syncAllEmailCampaigns(): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "sync", summary: "Синхронизира всички кампании" });
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -1855,7 +2056,7 @@ export async function resendToNonOpeners(input: {
   campaignId: string;
   subject?: string;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "send", summary: "Препрати кампания към неотворили" });
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1922,7 +2123,7 @@ export async function getCampaignRecipientReport(
     }
   | { ok: false; message: string }
 > {
-  await requireAdmin();
+  await requireAdmin("campaigns");
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1956,7 +2157,7 @@ export async function getCampaignRecipientReport(
 }
 
 export async function getSubscriberEngagementReport(email: string) {
-  await requireAdmin();
+  await requireAdmin(["subscribers", "engagement", "contacts"] as const);
   const { getPersonProfile } = await import("@/lib/admin/person-profile");
   const [detail, profile] = await Promise.all([
     getSubscriberEngagementDetail(email),
@@ -1966,7 +2167,7 @@ export async function getSubscriberEngagementReport(email: string) {
 }
 
 export async function getSubscribersEngagementSummaries(emails: string[]) {
-  await requireAdmin();
+  await requireAdmin(["engagement", "subscribers"] as const);
   const map = await getEngagementSummaryForEmails(emails);
   return Object.fromEntries(map);
 }
@@ -1974,7 +2175,7 @@ export async function getSubscribersEngagementSummaries(emails: string[]) {
 const CANCELABLE_EMAIL_STATUSES: CampaignStatus[] = ["scheduled", "queued"];
 
 export async function cancelEmailCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "cancel", summary: "Отмени имейл кампания" });
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from("email_campaigns")
@@ -2027,7 +2228,7 @@ export async function cancelEmailCampaign(id: string): Promise<ActionResult> {
 }
 
 export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "delete", summary: "Изтри имейл кампания" });
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -2122,7 +2323,7 @@ export async function sendSmsCampaign(input: {
   audience: AudienceInput;
   scheduled_at?: string;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "send", summary: "Изпрати SMS кампания" });
   const supabase = getAdminClient();
   const audience = await resolveAudience(input.audience);
 
@@ -2226,7 +2427,7 @@ export async function sendSmsCampaign(input: {
 }
 
 export async function syncSmsCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "sync", summary: "Синхронизира SMS кампания" });
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -2258,7 +2459,7 @@ export async function syncSmsCampaign(id: string): Promise<ActionResult> {
 }
 
 export async function syncAllSmsCampaigns(): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "sync", summary: "Синхронизира всички SMS кампании" });
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -2287,7 +2488,7 @@ export async function syncAllSmsCampaigns(): Promise<ActionResult> {
 const CANCELABLE_SMS_STATUSES: SmsCampaignStatus[] = ["scheduled", "queued"];
 
 export async function cancelSmsCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "cancel", summary: "Отмени SMS кампания" });
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from("sms_campaigns")
@@ -2334,7 +2535,7 @@ export async function cancelSmsCampaign(id: string): Promise<ActionResult> {
 }
 
 export async function deleteSmsCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("campaigns", { action: "delete", summary: "Изтри SMS кампания" });
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -2443,7 +2644,7 @@ export async function saveSiteSection(input: {
   title_bg?: string;
   title_en?: string;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "save", summary: "Обнови секция на сайта" });
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_sections").upsert(
     {
@@ -2476,7 +2677,7 @@ export async function saveSiteEvent(input: {
   enabled?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "save", summary: "Запази събитие" });
   const supabase = getAdminClient();
   const row = {
     title_bg: input.title_bg.trim(),
@@ -2513,7 +2714,7 @@ export async function saveSiteEvent(input: {
 }
 
 export async function deleteSiteEvent(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "delete", summary: "Изтри събитие" });
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_events").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -2529,7 +2730,7 @@ export async function saveSiteVideo(input: {
   enabled?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "save", summary: "Запази видео" });
   const youtubeUrl = input.youtube_url.trim();
   if (!parseYoutubeVideoId(youtubeUrl)) {
     return { ok: false, message: "Невалиден YouTube линк." };
@@ -2559,7 +2760,7 @@ export async function saveSiteVideo(input: {
 }
 
 export async function deleteSiteVideo(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "delete", summary: "Изтри видео" });
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_videos").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -2583,7 +2784,7 @@ export async function saveSiteGuide(input: {
   enabled?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "save", summary: "Запази наръчник" });
   const supabase = getAdminClient();
   const titleBg = input.title_bg.trim();
   const titleEn = input.title_en.trim() || titleBg;
@@ -2651,7 +2852,7 @@ export async function saveSiteGuide(input: {
 }
 
 export async function deleteSiteGuide(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "delete", summary: "Изтри наръчник" });
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_guides").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -2660,7 +2861,7 @@ export async function deleteSiteGuide(id: string): Promise<ActionResult> {
 }
 
 export async function reorderSiteGuides(ids: string[]): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "update", summary: "Пренареди наръчници" });
   const supabase = getAdminClient();
   await Promise.all(
     ids.map((id, index) =>
@@ -2674,6 +2875,60 @@ export async function reorderSiteGuides(ids: string[]): Promise<ActionResult> {
   return { ok: true };
 }
 
+async function resolveLocaleStripeIds(input: {
+  stripe_id?: string;
+  stripe_product_id?: string;
+  stripe_price_id?: string;
+  stripe_url?: string;
+  label: string;
+  optional?: boolean;
+}): Promise<
+  ActionResult & {
+    stripe_url: string;
+    stripe_product_id: string;
+    stripe_price_id: string;
+  }
+> {
+  const stripeUrl = input.stripe_url?.trim() ?? "";
+  const stripeIdInput =
+    input.stripe_id?.trim() ||
+    input.stripe_price_id?.trim() ||
+    input.stripe_product_id?.trim() ||
+    "";
+  const parsed = parseStripeIdInput(stripeIdInput);
+  if (stripeIdInput && !parsed.stripe_price_id && !parsed.stripe_product_id) {
+    return {
+      ok: false,
+      message: `„${stripeIdInput}“ (${input.label}) не е Stripe ID. Трябва да започва с price_ или prod_.`,
+      stripe_url: "",
+      stripe_product_id: "",
+      stripe_price_id: "",
+    };
+  }
+  if (!stripeIdInput && !stripeUrl && !input.optional) {
+    return {
+      ok: false,
+      message: `Попълни Stripe продукт или Payment Link за ${input.label}.`,
+      stripe_url: "",
+      stripe_product_id: "",
+      stripe_price_id: "",
+    };
+  }
+  try {
+    const stripeIds = await enrichStripePriceFromProduct(parsed);
+    return { ok: true, stripe_url: stripeUrl, ...stripeIds };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe product lookup failed";
+    return {
+      ok: false,
+      message: `${input.label}: ${message}`,
+      stripe_url: "",
+      stripe_product_id: "",
+      stripe_price_id: "",
+    };
+  }
+}
+
 export async function saveSiteProduct(input: {
   id?: string;
   title_bg: string;
@@ -2684,6 +2939,10 @@ export async function saveSiteProduct(input: {
   stripe_id?: string;
   stripe_product_id?: string;
   stripe_price_id?: string;
+  stripe_url_en?: string;
+  stripe_id_en?: string;
+  stripe_product_id_en?: string;
+  stripe_price_id_en?: string;
   price_label_bg?: string;
   price_label_en?: string;
   image_url?: string;
@@ -2692,6 +2951,7 @@ export async function saveSiteProduct(input: {
   cta_label_bg?: string;
   cta_label_en?: string;
   enabled?: boolean;
+  enabled_en?: boolean;
   sort_order?: number;
   purchase_tags?: string[];
   upsell_offer_id?: string | null;
@@ -2703,7 +2963,7 @@ export async function saveSiteProduct(input: {
   downsell_headline_bg?: string;
   downsell_headline_en?: string;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "save", summary: "Запази продукт" });
   const supabase = getAdminClient();
   const titleBg = input.title_bg.trim();
   const titleEn = input.title_en.trim() || titleBg;
@@ -2711,34 +2971,30 @@ export async function saveSiteProduct(input: {
     return { ok: false, message: "Попълни име на продукта (BG)." };
   }
 
-  const stripeIdInput =
-    input.stripe_id?.trim() ||
-    input.stripe_price_id?.trim() ||
-    input.stripe_product_id?.trim() ||
-    "";
-  const parsed = parseStripeIdInput(stripeIdInput);
-  if (stripeIdInput && !parsed.stripe_price_id && !parsed.stripe_product_id) {
-    return {
-      ok: false,
-      message: `„${stripeIdInput}“ не е Stripe ID. Трябва да започва с price_ или prod_ — копирай го от Stripe → Products.`,
-    };
-  }
-  let stripeIds = {
-    stripe_product_id: parsed.stripe_product_id,
-    stripe_price_id: parsed.stripe_price_id,
-  };
-  try {
-    stripeIds = await enrichStripePriceFromProduct(stripeIds);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Stripe product lookup failed";
-    return { ok: false, message };
-  }
+  const bg = await resolveLocaleStripeIds({
+    stripe_id: input.stripe_id,
+    stripe_product_id: input.stripe_product_id,
+    stripe_price_id: input.stripe_price_id,
+    stripe_url: input.stripe_url,
+    label: "BG",
+  });
+  if (!bg.ok) return bg;
 
-  const stripeUrl = input.stripe_url?.trim() ?? "";
-  if (!stripeUrl && !stripeIds.stripe_price_id) {
+  const enabledEn = input.enabled_en ?? true;
+  const en = await resolveLocaleStripeIds({
+    stripe_id: input.stripe_id_en,
+    stripe_product_id: input.stripe_product_id_en,
+    stripe_price_id: input.stripe_price_id_en,
+    stripe_url: input.stripe_url_en,
+    label: "EN",
+    optional: true,
+  });
+  if (!en.ok) return en;
+
+  if (!bg.stripe_url && !bg.stripe_price_id) {
     return {
       ok: false,
-      message: "Попълни Stripe Price/Product ID (price_… или prod_…) или Payment Link.",
+      message: "За българския вариант попълни Stripe продукт или Payment Link.",
     };
   }
 
@@ -2775,14 +3031,17 @@ export async function saveSiteProduct(input: {
     downsell_headline_en: input.downsell_headline_en?.trim() ?? "",
   };
 
-  const row = {
+  const row: Record<string, unknown> = {
     title_bg: titleBg,
     title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
     description_en: input.description_en?.trim() ?? "",
-    stripe_url: stripeUrl,
-    stripe_product_id: stripeIds.stripe_product_id,
-    stripe_price_id: stripeIds.stripe_price_id,
+    stripe_url: bg.stripe_url,
+    stripe_product_id: bg.stripe_product_id,
+    stripe_price_id: bg.stripe_price_id,
+    stripe_url_en: en.stripe_url,
+    stripe_product_id_en: en.stripe_product_id,
+    stripe_price_id_en: en.stripe_price_id,
     price_label_bg: input.price_label_bg?.trim() ?? "",
     price_label_en: input.price_label_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
@@ -2794,9 +3053,13 @@ export async function saveSiteProduct(input: {
     audience_tags: [] as string[],
     purchase_tags: (input.purchase_tags ?? []).filter(Boolean),
     enabled: input.enabled ?? true,
-    sort_order: input.sort_order ?? 0,
+    enabled_en: enabledEn,
     updated_at: new Date().toISOString(),
   };
+
+  if (!input.id) {
+    row.sort_order = input.sort_order ?? 0;
+  }
 
   if (input.id) {
     const { error } = await supabase.from("site_products").update(row).eq("id", input.id);
@@ -2804,8 +3067,8 @@ export async function saveSiteProduct(input: {
     const sync = await syncProductPlacement(
       supabase,
       input.id,
-      row.title_bg,
-      row.title_en,
+      row.title_bg as string,
+      row.title_en as string,
       offers,
     );
     if (!sync.ok) return sync;
@@ -2823,8 +3086,8 @@ export async function saveSiteProduct(input: {
   const sync = await syncProductPlacement(
     supabase,
     productId,
-    row.title_bg,
-    row.title_en,
+    row.title_bg as string,
+    row.title_en as string,
     offers,
   );
   if (!sync.ok) return sync;
@@ -2833,7 +3096,7 @@ export async function saveSiteProduct(input: {
 }
 
 export async function deleteSiteProduct(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "delete", summary: "Изтри продукт" });
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_products").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -2846,12 +3109,15 @@ export async function deleteSiteProduct(id: string): Promise<ActionResult> {
 }
 
 export async function fetchStripeCatalog(): Promise<
-  ActionResult & { items?: StripeCatalogItem[] }
+  ActionResult & {
+    items?: StripeCatalogItem[];
+    paymentLinks?: StripePaymentLinkItem[];
+  }
 > {
-  await requireAdmin();
+  await requireAdmin("website");
   try {
-    const items = await getStripeCatalogForAdmin();
-    return { ok: true, items };
+    const { items, paymentLinks } = await getStripeCatalogForAdmin();
+    return { ok: true, items, paymentLinks };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Stripe catalog failed";
     return { ok: false, message };
@@ -2861,7 +3127,7 @@ export async function fetchStripeCatalog(): Promise<
 export async function importStripeProduct(
   stripeProductId: string,
 ): Promise<ActionResult & { id?: string }> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "create", summary: "Импортира Stripe продукт" });
   const prodId = stripeProductId.trim();
   if (!prodId.startsWith("prod_")) {
     return { ok: false, message: "Невалиден Stripe Product ID." };
@@ -2871,7 +3137,7 @@ export async function importStripeProduct(
   const { data: existing } = await supabase
     .from("site_products")
     .select("id")
-    .eq("stripe_product_id", prodId)
+    .or(`stripe_product_id.eq.${prodId},stripe_product_id_en.eq.${prodId}`)
     .maybeSingle();
 
   if (existing) {
@@ -2907,7 +3173,7 @@ export async function importStripeProduct(
 export async function syncSiteProductFromStripe(
   siteProductId: string,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "sync", summary: "Синхронизира продукт от Stripe" });
   const supabase = getAdminClient();
   const { data: product, error } = await supabase
     .from("site_products")
@@ -2946,7 +3212,7 @@ export async function syncSiteProductFromStripe(
 }
 
 export async function reorderSiteProducts(ids: string[]): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "update", summary: "Пренареди продукти" });
   const supabase = getAdminClient();
   await Promise.all(
     ids.map((id, index) =>
@@ -2970,7 +3236,7 @@ export async function saveCtaPlacement(input: {
   button_label_en?: string;
   button_url?: string;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("website", { action: "save", summary: "Обнови CTA на сайта" });
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("site_cta_placements")
@@ -2994,7 +3260,7 @@ export async function saveCtaPlacement(input: {
 export async function uploadSiteImage(
   formData: FormData,
 ): Promise<ActionResult & { url?: string }> {
-  await requireAdmin();
+  await requireAdmin(["blog", "website", "popup", "email-footer", "forms", "campaigns", "automations"] as const, { action: "upload", summary: "Качи изображение" });
 
   const file = formData.get("file");
   const folder = formData.get("folder");
@@ -3016,7 +3282,7 @@ export async function uploadEmailAttachment(
 ): Promise<
   ActionResult & { path?: string; filename?: string; url?: string }
 > {
-  await requireAdmin();
+  await requireAdmin(["campaigns", "automations", "email-footer"] as const, { action: "upload", summary: "Качи прикачен файл" });
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
@@ -3036,7 +3302,7 @@ export async function uploadEmailAttachment(
 // ── Forms ─────────────────────────────────────────────────────
 
 export async function createFormFromPreset(presetKey: string): Promise<ActionResult & { id?: string }> {
-  await requireAdmin();
+  await requireAdmin("forms", { action: "create", summary: "Създаде форма" });
   const preset = getFormPreset(presetKey);
   if (!preset) return { ok: false, message: "Шаблонът не е намерен." };
 
@@ -3064,7 +3330,7 @@ export async function createFormFromPreset(presetKey: string): Promise<ActionRes
       title_en: preset.title_en,
       description_bg: preset.description_bg,
       description_en: preset.description_en,
-      fields: preset.fields,
+      fields: forceEmailFieldsRequired(preset.fields),
       settings: preset.settings,
       email_subject_bg: preset.email_subject_bg,
       email_subject_en: preset.email_subject_en,
@@ -3099,12 +3365,18 @@ export async function saveFormTemplate(input: {
   attachment_filename?: string;
   hero_image_url?: string;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin();
+  await requireAdmin("forms", { action: "save", summary: "Запази форма" });
   const supabase = getAdminClient();
   const name = input.name.trim();
   const slug = slugify(input.slug.trim() || name);
   if (!name) return { ok: false, message: "Попълни име на формата." };
   if (!slug) return { ok: false, message: "Невалиден URL адрес (slug)." };
+  if (emailFieldCount(input.fields) === 0) {
+    return {
+      ok: false,
+      message: "Формата трябва да има задължително поле за имейл.",
+    };
+  }
 
   const row = {
     name,
@@ -3113,7 +3385,7 @@ export async function saveFormTemplate(input: {
     title_en: input.title_en.trim() || input.title_bg.trim(),
     description_bg: input.description_bg.trim(),
     description_en: input.description_en.trim(),
-    fields: input.fields,
+    fields: forceEmailFieldsRequired(input.fields),
     settings: input.settings,
     email_subject_bg: input.email_subject_bg.trim(),
     email_subject_en: input.email_subject_en.trim() || input.email_subject_bg.trim(),
@@ -3144,7 +3416,7 @@ export async function saveFormTemplate(input: {
 }
 
 export async function deleteFormTemplate(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("forms", { action: "delete", summary: "Изтри форма" });
   const supabase = getAdminClient();
   const { error } = await supabase.from("form_templates").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -3156,7 +3428,7 @@ export async function sendFormByEmail(input: {
   formId: string;
   audience: AudienceInput;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("forms", { action: "send", summary: "Изпрати форма по имейл" });
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -3201,14 +3473,18 @@ export async function sendFormByEmail(input: {
       return false;
     }
 
-    await supabase.from("form_invitations").insert({
+    const { error: inviteError } = await supabase.from("form_invitations").insert({
       form_id: form.id,
       subscriber_id: sub?.id ?? null,
       email: email.toLowerCase(),
       token,
     });
+    if (inviteError) {
+      console.error("[sendFormByEmail] invitation insert:", inviteError.message);
+      return false;
+    }
 
-    const formUrl = publicFormInviteUrl(form.slug, locale, form.id, email, sub?.id);
+    const formUrl = publicFormInviteUrl(form.slug, locale, token);
     const subjectTpl =
       locale === "en" ? form.email_subject_en : form.email_subject_bg;
     const introTpl = locale === "en" ? form.email_intro_en : form.email_intro_bg;
@@ -3229,7 +3505,7 @@ export async function sendFormByEmail(input: {
       attachmentFilename: form.attachment_filename,
     });
 
-    const html = composeBrandedEmail({
+    const html = await buildBrandedEmail({
       bodyHtml,
       locale,
       cta: {
@@ -3239,6 +3515,7 @@ export async function sendFormByEmail(input: {
       unsubscribeHref: unsubscribeLinkForEmail(email, locale),
       footerConfig: locale === "en" ? footerEn : footerBg,
       heroImageUrl: form.hero_image_url,
+      recipient: { email, subscriberId: sub?.id },
     });
 
     try {
@@ -3263,7 +3540,7 @@ export async function sendFormByEmail(input: {
 }
 
 export async function getFormSubmissionsReport(formId: string) {
-  await requireAdmin();
+  await requireAdmin("forms");
   const submissions = await getFormSubmissions(formId);
   return { ok: true as const, submissions };
 }
@@ -3272,7 +3549,7 @@ export async function getFormSubmissionsReport(formId: string) {
 export async function cancelContactJobAction(
   localJobId: string,
 ): Promise<{ ok: boolean; message?: string }> {
-  await requireAdmin();
+  await requireAdmin("contacts", { action: "cancel", summary: "Отмени задача на контакт" });
   const { cancelContactWorkerJobById } = await import("@/lib/notification-worker");
   const canceled = await cancelContactWorkerJobById(localJobId);
   revalidatePath("/admin/contacts");
@@ -3290,7 +3567,7 @@ export async function saveZoomLiveConfig(input: {
   label_en: string;
   manual_is_live: boolean;
 }): Promise<{ ok: boolean; message?: string }> {
-  await requireAdmin();
+  await requireAdmin("zoom", { action: "save", summary: "Обнови Zoom настройка" });
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("zoom_live_config")
@@ -3334,7 +3611,7 @@ export async function saveMetaPixelConfig(input: {
   catalog_id?: string;
   notes?: string;
 }): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("meta", { action: "save", summary: "Обнови Meta Pixel" });
 
   const pixelId = input.pixel_id.trim();
   if (pixelId && !/^\d{6,25}$/.test(pixelId)) {
@@ -3392,7 +3669,7 @@ export async function saveMetaPixelConfig(input: {
 
 /** Sends a Lead event to Meta so the admin can confirm the connection works. */
 export async function sendMetaTestEvent(): Promise<ActionResult> {
-  await requireAdmin();
+  await requireAdmin("meta", { action: "send", summary: "Изпрати тестов Meta event" });
 
   const result = await sendMetaEvent({
     eventName: "Lead",

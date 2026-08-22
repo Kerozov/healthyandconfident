@@ -21,6 +21,7 @@ import {
   productEmailMarker,
   type EmailProductLinkMode,
 } from "@/lib/email/products-block";
+import { guideEmailMarker } from "@/lib/email/guides-block";
 
 export type EmailBlockAlign = "left" | "center" | "right";
 export type EmailTextSize = "sm" | "md" | "lg";
@@ -78,6 +79,12 @@ export type EmailBlock =
       type: "product";
       productId: string;
       /** `site` runs the upsell before Stripe; `stripe` jumps straight to it. */
+      linkMode: EmailProductLinkMode;
+    }
+  | {
+      id: string;
+      type: "guide";
+      guideId: string;
       linkMode: EmailProductLinkMode;
     }
   | { id: string; type: "form"; formId: string }
@@ -201,6 +208,8 @@ export function createEmailBlock(type: EmailBlockType): EmailBlock {
       return { id, type, size: 24 };
     case "product":
       return { id, type, productId: "", linkMode: "site" };
+    case "guide":
+      return { id, type, guideId: "", linkMode: "site" };
     case "form":
       return { id, type, formId: "" };
     case "html":
@@ -230,6 +239,8 @@ export function isEmptyEmailBlock(block: EmailBlock): boolean {
       return block.items.every((item) => !item.trim());
     case "product":
       return !block.productId;
+    case "guide":
+      return !block.guideId;
     case "form":
       return !block.formId;
     case "html":
@@ -402,6 +413,10 @@ export function serializeEmailBlock(block: EmailBlock): string {
       return block.productId
         ? productEmailMarker(block.productId, block.linkMode)
         : "";
+    case "guide":
+      return block.guideId
+        ? guideEmailMarker(block.guideId, block.linkMode)
+        : "";
     case "form":
       return block.formId ? `<!-- hc-email-form:${block.formId} -->` : "";
     case "html":
@@ -421,10 +436,12 @@ export function serializeEmailBlocks(blocks: EmailBlock[]): string {
 /* ------------------------------------------------------------------ parser */
 
 const MARKER_SPLIT_RE =
-  /(<!--\s*hc-email-(?:btn|product|form):[\s\S]*?-->)/gi;
+  /(<!--\s*hc-email-(?:btn|product|form|guide):[\s\S]*?-->)/gi;
 const BTN_MARKER_RE = /^<!--\s*hc-email-btn:([^|]+)\|([^>]+?)\s*-->$/i;
 const PRODUCT_MARKER_RE =
   /^<!--\s*hc-email-product:([0-9a-f-]{36})(?::(site|stripe))?\s*-->$/i;
+const GUIDE_MARKER_RE =
+  /^<!--\s*hc-email-guide:([0-9a-f-]{36})(?::(site|stripe))?\s*-->$/i;
 const FORM_MARKER_RE = /^<!--\s*hc-email-form:([0-9a-f-]{36})\s*-->$/i;
 const BLOCK_TAG_RE =
   /<(p|div|br|table|h[1-6]|ul|ol|li|img|tr|td|th|blockquote|a)\b/i;
@@ -454,6 +471,15 @@ function parseLegacyMarker(chunk: string): EmailBlock | null {
       type: "product",
       productId: product[1],
       linkMode: normalizeProductLinkMode(product[2]),
+    };
+  }
+  const guide = GUIDE_MARKER_RE.exec(chunk);
+  if (guide) {
+    return {
+      id: newEmailBlockId(),
+      type: "guide",
+      guideId: guide[1],
+      linkMode: normalizeProductLinkMode(guide[2]),
     };
   }
   const form = FORM_MARKER_RE.exec(chunk);
@@ -830,6 +856,7 @@ export const EMAIL_BLOCK_LABELS: Record<EmailBlockType, string> = {
   divider: "Разделител",
   spacer: "Разстояние",
   product: "Продукт",
+  guide: "Наръчник",
   form: "Форма",
   html: "HTML",
 };
@@ -861,6 +888,8 @@ export function emailBlockSummary(block: EmailBlock): string {
       return "Тънка линия";
     case "product":
       return block.productId ? "Продуктова карта" : "Не е избран продукт";
+    case "guide":
+      return block.guideId ? "Карта с наръчник" : "Не е избран наръчник";
     case "form":
       return block.formId ? "Карта с форма" : "Не е избрана форма";
     case "html":

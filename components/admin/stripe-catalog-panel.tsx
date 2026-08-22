@@ -7,6 +7,7 @@ import {
   fetchStripeCatalog,
   importStripeProduct,
 } from "@/app/(admin)/admin/actions";
+import { invalidateStripeCatalogCache } from "@/components/admin/stripe-locale-picker";
 import { cn } from "@/lib/utils";
 
 export function StripeCatalogPanel({
@@ -55,6 +56,7 @@ export function StripeCatalogPanel({
         return;
       }
       if (res.id) {
+        invalidateStripeCatalogCache();
         onImported(res.id);
       }
       loadCatalog();

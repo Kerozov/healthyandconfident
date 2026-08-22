@@ -152,10 +152,17 @@ export function MenuPopupProvider({
                     if (typeof window !== "undefined") {
                       localStorage.setItem(storageKey, "subscribed");
                     }
-                    tryOpenPlacement("leadmagnet_cta", "");
-                    setTimeout(() => close(false), 2500);
+                    const openedOffer = tryOpenPlacement("leadmagnet_cta", "");
+                    if (openedOffer) {
+                      // Close now so this dialog's scroll-lock cleanup cannot
+                      // unlock the page under the offer popup 2.5s later.
+                      close(false);
+                    } else {
+                      window.setTimeout(() => close(false), 2500);
+                    }
                   }}
-                />              )}
+                />
+              )}
             </div>
           </div>
         </div>

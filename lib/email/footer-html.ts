@@ -1,10 +1,16 @@
 import type { EmailFooterConfig, Locale } from "@/lib/supabase/types";
+import {
+  isSafeSignatureHref,
+  parseSignatureLinks,
+  signatureLinkHref,
+} from "@/lib/email/signature-links";
 
 const COLORS = {
   textPrimary: "#1A2E1A",
   textMuted: "#5A7A5A",
   divider: "#E0E0E0",
   iconBg: "#1A1A1A",
+  gold: "#F0B429",
 } as const;
 
 function escapeHtml(text: string): string {
@@ -37,7 +43,38 @@ function socialIcon(href: string | null, letter: string, title: string): string 
     </td>`;
 }
 
-function signatureBlock(config: EmailFooterConfig): string {
+function signatureLinksHtml(config: EmailFooterConfig, locale: Locale): string {
+  const brandColor = escapeHtml(config.brand_color?.trim() || "#2563eb");
+  const items = parseSignatureLinks(config.signature_links)
+    .map((item) => {
+      const href = signatureLinkHref(item, locale);
+      const label = item.label.trim();
+      if (!label || !href || !isSafeSignatureHref(href)) return "";
+      const safeHref = escapeHtml(href);
+      const safeLabel = escapeHtml(label);
+      if (item.appearance === "button") {
+        return `
+<table role="presentation" cellspacing="0" cellpadding="0" style="margin:10px 0 0">
+  <tr>
+    <td>
+      <a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background-color:${COLORS.gold};color:${COLORS.textPrimary};font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;text-decoration:none;padding:10px 18px;border-radius:8px">
+        ${safeLabel}
+      </a>
+    </td>
+  </tr>
+</table>`;
+      }
+      return `<p style="margin:8px 0 0;line-height:1.45">${link(
+        href,
+        label,
+        `color:${brandColor};font-size:13px;font-weight:700;text-decoration:underline`,
+      )}</p>`;
+    })
+    .filter(Boolean);
+  return items.join("");
+}
+
+function signatureBlock(config: EmailFooterConfig, locale: Locale): string {
   if (!config.signature_enabled) return "";
 
   const imageCell = config.signature_image_url?.trim()
@@ -61,6 +98,8 @@ function signatureBlock(config: EmailFooterConfig): string {
       </p>`
     : "";
 
+  const linksHtml = signatureLinksHtml(config, locale);
+
   return `
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:8px">
   <tr>
@@ -71,6 +110,7 @@ function signatureBlock(config: EmailFooterConfig): string {
       ${config.signature_title.trim() ? `<p style="margin:0;font-size:12px;color:${COLORS.textMuted};line-height:1.45">${escapeHtml(config.signature_title.trim())}</p>` : ""}
       ${emailLine}
       ${phoneLine}
+      ${linksHtml}
     </td>
   </tr>
 </table>`;
@@ -107,7 +147,7 @@ export function renderEmailSignatureAndFooter(
   unsubscribeHref?: string | null,
 ): string {
   const brandColor = config.brand_color?.trim() || "#2563eb";
-  const signature = signatureBlock(config);
+  const signature = signatureBlock(config, locale);
   const fb = socialIcon(config.facebook_url, "f", "Facebook");
   const yt = socialIcon(config.youtube_url, "▶", "YouTube");
   const socialRow =

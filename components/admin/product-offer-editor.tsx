@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowDown, Info } from "lucide-react";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { Field, Input, Select } from "@/components/admin/fields";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
-import { isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
+import { productHasStripePrice } from "@/lib/site/product-locale";
 import { cn } from "@/lib/utils";
 
 export type ProductOfferForm = {
@@ -18,9 +18,13 @@ export type ProductOfferForm = {
   downsell_headline_en: string;
 };
 
-/** Bundling the offer into the same Stripe session needs a price on both sides. */
-function hasStripePrice(product: SiteProduct): boolean {
-  return Boolean(product.stripe_price_id?.trim());
+function hasStripePrice(product: SiteProduct, locale: "bg" | "en"): boolean {
+  return productHasStripePrice(product, locale);
+}
+
+function inputLooksLikePrice(stripeId: string): boolean {
+  const id = stripeId.trim();
+  return id.startsWith("price_") || id.startsWith("prod_");
 }
 
 export function ProductOfferEditor({
@@ -28,19 +32,23 @@ export function ProductOfferEditor({
   editingProductId,
   form,
   onChange,
-  currentStripeId,
+  currentStripeIdBg,
+  currentStripeIdEn,
 }: {
   products: SiteProduct[];
   editingProductId: string | "new" | null;
   form: ProductOfferForm;
   onChange: (patch: Partial<ProductOfferForm>) => void;
-  /** Raw `price_…` / `prod_…` field of the product being edited. */
-  currentStripeId: string;
+  /** Raw `price_…` / `prod_…` field of the product being edited (BG). */
+  currentStripeIdBg: string;
+  /** Same for the English Stripe attachment. */
+  currentStripeIdEn: string;
 }) {
   const selectable = products.filter((p) => p.id !== editingProductId);
   const upsell = products.find((p) => p.id === form.upsell_offer_id) ?? null;
   const downsell = products.find((p) => p.id === form.downsell_offer_id) ?? null;
-  const baseHasPrice = isValidStripeIdInput(currentStripeId);
+  const baseHasBgPrice = inputLooksLikePrice(currentStripeIdBg);
+  const baseHasEnPrice = inputLooksLikePrice(currentStripeIdEn);
 
   const problems: string[] = [];
   if (form.upsell_offer_enabled && !upsell) {
@@ -49,18 +57,34 @@ export function ProductOfferEditor({
   if (form.downsell_enabled && !downsell) {
     problems.push("Избери продукт за втората оферта.");
   }
-  if ((form.upsell_offer_enabled || form.downsell_enabled) && !baseHasPrice) {
+  if (
+    (form.upsell_offer_enabled || form.downsell_enabled) &&
+    !baseHasBgPrice &&
+    !baseHasEnPrice
+  ) {
     problems.push(
       "Този продукт няма Stripe Price ID (price_… или prod_…). Без него двата продукта не могат да влязат в една сметка и офертата се пропуска.",
     );
   }
-  if (form.upsell_offer_enabled && upsell && !hasStripePrice(upsell)) {
-    problems.push(
-      `„${upsell.title_bg}“ няма Stripe Price ID — добави ѝ price_… , за да може да се купи заедно с този продукт.`,
-    );
+  if (form.upsell_offer_enabled && upsell) {
+    if (baseHasBgPrice && !hasStripePrice(upsell, "bg")) {
+      problems.push(
+        `„${upsell.title_bg}“ няма български Stripe Price ID — добави ѝ price_… , за да може да се купи заедно с този продукт на /bg.`,
+      );
+    }
+    if (baseHasEnPrice && !hasStripePrice(upsell, "en")) {
+      problems.push(
+        `„${upsell.title_bg}“ няма английски Stripe Price ID — без него EN посетителите не могат да вземат двата продукта в една сметка.`,
+      );
+    }
   }
-  if (form.downsell_enabled && downsell && !hasStripePrice(downsell)) {
-    problems.push(`„${downsell.title_bg}“ няма Stripe Price ID.`);
+  if (form.downsell_enabled && downsell) {
+    if (baseHasBgPrice && !hasStripePrice(downsell, "bg")) {
+      problems.push(`„${downsell.title_bg}“ няма български Stripe Price ID.`);
+    }
+    if (baseHasEnPrice && !hasStripePrice(downsell, "en")) {
+      problems.push(`„${downsell.title_bg}“ няма английски Stripe Price ID.`);
+    }
   }
   if (
     form.upsell_offer_id &&

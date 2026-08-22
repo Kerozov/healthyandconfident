@@ -18,6 +18,8 @@ import type {
   SiteVideo,
   SiteCtaPlacement,
   SiteVisit,
+  AdminUser,
+  AdminAuditLog,
   ZoomLiveConfig,
   ZoomWebhookLog,
   ZoomSessionEvent,
@@ -108,6 +110,8 @@ export type Database = {
       meta_event_log: TableShape<MetaEventLogRow>;
       integration_sync_state: TableShape<IntegrationSyncState>;
       site_visits: TableShape<SiteVisit>;
+      admin_users: TableShape<AdminUser>;
+      admin_audit_log: TableShape<AdminAuditLog>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

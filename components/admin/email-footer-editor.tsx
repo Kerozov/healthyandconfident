@@ -2,14 +2,29 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Save, Check } from "lucide-react";
-import type { EmailFooterConfig } from "@/lib/supabase/types";
+import type { EmailFooterConfig, SiteProduct } from "@/lib/supabase/types";
+import type { FormTemplateRecord } from "@/lib/forms/types";
 import { saveEmailFooter } from "@/app/(admin)/admin/actions";
 import { composeBrandedEmail } from "@/lib/email/layout";
 import { footerConfigFromRow } from "@/lib/email/footer-defaults";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
+import { SignatureLinksEditor } from "@/components/admin/signature-links-editor";
+import {
+  parseSignatureLinks,
+  serializeSignatureLinks,
+  type EmailSignatureLink,
+} from "@/lib/email/signature-links";
 
 type FormState = {
+  header_enabled: boolean;
+  header_title: string;
+  header_tagline: string;
+  header_subtitle: string;
+  header_image_url: string;
+  header_image_full_width: boolean;
+  header_bg_color: string;
+  copyright_enabled: boolean;
   signature_enabled: boolean;
   signature_image_url: string;
   signature_closing: string;
@@ -17,6 +32,7 @@ type FormState = {
   signature_title: string;
   signature_email: string;
   signature_phone: string;
+  signature_links: EmailSignatureLink[];
   brand_name: string;
   brand_color: string;
   website_url: string;
@@ -32,6 +48,14 @@ type FormState = {
 
 function toForm(config: EmailFooterConfig): FormState {
   return {
+    header_enabled: config.header_enabled !== false,
+    header_title: config.header_title ?? "",
+    header_tagline: config.header_tagline ?? "",
+    header_subtitle: config.header_subtitle ?? "",
+    header_image_url: config.header_image_url ?? "",
+    header_image_full_width: Boolean(config.header_image_full_width),
+    header_bg_color: config.header_bg_color || "#2D7A47",
+    copyright_enabled: config.copyright_enabled !== false,
     signature_enabled: config.signature_enabled,
     signature_image_url: config.signature_image_url ?? "",
     signature_closing: config.signature_closing,
@@ -39,6 +63,7 @@ function toForm(config: EmailFooterConfig): FormState {
     signature_title: config.signature_title,
     signature_email: config.signature_email,
     signature_phone: config.signature_phone,
+    signature_links: parseSignatureLinks(config.signature_links),
     brand_name: config.brand_name,
     brand_color: config.brand_color,
     website_url: config.website_url,
@@ -53,10 +78,23 @@ function toForm(config: EmailFooterConfig): FormState {
   };
 }
 
-function toConfig(locale: "bg" | "en", form: FormState): EmailFooterConfig {
+function toConfig(
+  locale: "bg" | "en",
+  form: FormState,
+  products: SiteProduct[],
+  forms: FormTemplateRecord[],
+): EmailFooterConfig {
   const base = footerConfigFromRow(null, locale);
   return {
     ...base,
+    header_enabled: form.header_enabled,
+    header_title: form.header_title,
+    header_tagline: form.header_tagline,
+    header_subtitle: form.header_subtitle,
+    header_image_url: form.header_image_url.trim() || null,
+    header_image_full_width: form.header_image_full_width,
+    header_bg_color: form.header_bg_color || "#2D7A47",
+    copyright_enabled: form.copyright_enabled,
     signature_enabled: form.signature_enabled,
     signature_image_url: form.signature_image_url.trim() || null,
     signature_closing: form.signature_closing,
@@ -64,6 +102,10 @@ function toConfig(locale: "bg" | "en", form: FormState): EmailFooterConfig {
     signature_title: form.signature_title,
     signature_email: form.signature_email,
     signature_phone: form.signature_phone,
+    signature_links: serializeSignatureLinks(form.signature_links, locale, {
+      products,
+      forms,
+    }),
     brand_name: form.brand_name,
     brand_color: form.brand_color,
     website_url: form.website_url,
@@ -78,7 +120,15 @@ function toConfig(locale: "bg" | "en", form: FormState): EmailFooterConfig {
   };
 }
 
-export function EmailFooterEditor({ config }: { config: EmailFooterConfig }) {
+export function EmailFooterEditor({
+  config,
+  products,
+  forms,
+}: {
+  config: EmailFooterConfig;
+  products: SiteProduct[];
+  forms: FormTemplateRecord[];
+}) {
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +140,7 @@ export function EmailFooterEditor({ config }: { config: EmailFooterConfig }) {
   }
 
   const previewHtml = useMemo(() => {
-    const footerConfig = toConfig(config.locale, form);
+    const footerConfig = toConfig(config.locale, form, products, forms);
     return composeBrandedEmail({
       bodyHtml:
         "<p style='margin:0;color:#1A2E1A'>Примерен текст на имейл. Тук се показва съдържанието на кампанията или автоматизацията.</p>",
@@ -98,7 +148,7 @@ export function EmailFooterEditor({ config }: { config: EmailFooterConfig }) {
       unsubscribeHref: `/${config.locale}/unsubscribe?token=example`,
       footerConfig,
     });
-  }, [config.locale, form]);
+  }, [config.locale, form, products, forms]);
 
   function submit() {
     setError(null);
@@ -112,11 +162,81 @@ export function EmailFooterEditor({ config }: { config: EmailFooterConfig }) {
     });
   }
 
-  const title = config.locale === "bg" ? "Български footer" : "English footer";
+  const title = config.locale === "bg" ? "Български имейл" : "English email";
 
   return (
     <div className="space-y-6">
       <Card title={title} className="space-y-4">
+        <p className="text-sm font-semibold text-ink">Горен header</p>
+        <p className="text-xs text-ink-soft">
+          Зелената лента най-отгоре на всеки имейл. Може да е текст, снимка или и двете
+          — и може да се изключи.
+        </p>
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={form.header_enabled}
+            onChange={(e) => set("header_enabled", e.target.checked)}
+          />
+          Показвай header
+        </label>
+
+        {form.header_enabled && (
+          <div className="space-y-4 rounded-xl border border-ink/10 bg-cream-2/20 p-4">
+            <ImageUploadField
+              label="Снимка / лого в header"
+              hint="Празно = само текст. Малко лого в лентата, или пълна ширина отдолу."
+              value={form.header_image_url}
+              onChange={(url) => set("header_image_url", url)}
+              folder="email"
+              previewFit="contain"
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.header_image_full_width}
+                onChange={(e) => set("header_image_full_width", e.target.checked)}
+              />
+              Снимката на пълна ширина (като банер)
+            </label>
+            <Field label="Име (голям текст)">
+              <Input
+                value={form.header_title}
+                onChange={(e) => set("header_title", e.target.value)}
+              />
+            </Field>
+            <Field label="Подзаглавие">
+              <Input
+                value={form.header_tagline}
+                onChange={(e) => set("header_tagline", e.target.value)}
+              />
+            </Field>
+            <Field label="Трети ред (длъжност)">
+              <Input
+                value={form.header_subtitle}
+                onChange={(e) => set("header_subtitle", e.target.value)}
+              />
+            </Field>
+            <Field label="Цвят на лентата">
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={form.header_bg_color}
+                  onChange={(e) => set("header_bg_color", e.target.value)}
+                  className="h-11 w-14 cursor-pointer rounded-lg border border-ink/15"
+                />
+                <Input
+                  value={form.header_bg_color}
+                  onChange={(e) => set("header_bg_color", e.target.value)}
+                />
+              </div>
+            </Field>
+          </div>
+        )}
+
+        <hr className="border-ink/10" />
+        <p className="text-sm font-semibold text-ink">Личен подпис</p>
+
         <label className="flex items-center gap-2 text-sm font-medium">
           <input
             type="checkbox"
@@ -168,6 +288,14 @@ export function EmailFooterEditor({ config }: { config: EmailFooterConfig }) {
             onChange={(e) => set("signature_phone", e.target.value)}
           />
         </Field>
+
+        <SignatureLinksEditor
+          locale={config.locale}
+          links={form.signature_links}
+          products={products}
+          forms={forms}
+          onChange={(signature_links) => set("signature_links", signature_links)}
+        />
 
         <hr className="border-ink/10" />
         <p className="text-sm font-semibold text-ink">Фирмен footer</p>
@@ -258,6 +386,14 @@ export function EmailFooterEditor({ config }: { config: EmailFooterConfig }) {
             placeholder="https://..."
           />
         </Field>
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={form.copyright_enabled}
+            onChange={(e) => set("copyright_enabled", e.target.checked)}
+          />
+          Показвай © ред в края
+        </label>
 
         {error && <p className="text-sm text-coral-600">{error}</p>}
 

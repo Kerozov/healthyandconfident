@@ -4,6 +4,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { ShoppingBag } from "lucide-react";
 import { ShopProductGrid } from "@/components/site/sections/shop-grid";
+import { filterProductsForLocale } from "@/lib/site/product-locale";
 
 export function ShopSection({
   dict,
@@ -16,7 +17,8 @@ export function ShopSection({
   section: SiteSection;
   products: SiteProduct[];
 }) {
-  if (products.length === 0) return null;
+  const visible = filterProductsForLocale(products, locale);
+  if (visible.length === 0) return null;
 
   const title =
     locale === "bg"
@@ -25,6 +27,8 @@ export function ShopSection({
 
   return (
     <section id="shop" className="section-pad scroll-mt-24 bg-white">
+      {/* Older links and emails used #products */}
+      <div id="products" className="sr-only" />
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">
@@ -37,7 +41,7 @@ export function ShopSection({
         </div>
 
         <ShopProductGrid
-          products={products}
+          products={visible}
           locale={locale}
           shopEyebrow={dict.shop.eyebrow}
           shopCta={dict.shop.cta}

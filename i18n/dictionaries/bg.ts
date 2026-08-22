@@ -369,13 +369,13 @@ export const bg: Dictionary = {
     eyebrow: "Продукти",
     title: "Купи онлайн",
     subtitle: "Избери продукт и плати сигурно през Stripe.",
-    cta: "Купи сега",
+    cta: "Виж продукта",
   },
   guides: {
     eyebrow: "Ръководства",
     title: "Ръководства и наръчници",
     subtitle: "Практични PDF ръководства за хранене, гарнитури и здравословен начин на живот.",
-    cta: "Вземи ръководството",
+    cta: "Виж ръководството",
   },
   videos: {
     eyebrow: "Видеа",
@@ -415,7 +415,9 @@ export const bg: Dictionary = {
         links: [
           { label: "За мен", href: "/bg#about" },
           { label: "Храна", href: "/bg#food" },
-          { label: "Програми", href: "/bg#programs" },
+          { label: "Програми", href: "/bg/programs" },
+          { label: "Продукти", href: "/bg/products" },
+          { label: "Ръководства", href: "/bg/guides" },
           { label: "Резултати", href: "/bg#results" },
           { label: "Google отзиви", href: "/bg#google-reviews" },
           { label: "Блог", href: "/bg/blog" },
@@ -425,6 +427,7 @@ export const bg: Dictionary = {
       {
         title: "Програми",
         links: [
+          { label: "Всички програми", href: "/bg/programs" },
           { label: "Лято – стройна и спокойна", href: "/bg/programs/summer-programme" },
           { label: "Балансирано хранене 21 дни", href: "/bg#challenge-21" },
           { label: "Живей без резистентност", href: "/bg/programs/zhivey-bez-rezistentnost" },

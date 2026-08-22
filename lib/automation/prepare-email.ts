@@ -82,6 +82,7 @@ export async function prepareEmailAutomationJob(
     vars: { name: ctx.name, email },
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
     heroImageUrl,
+    recipient: { email, subscriberId: ctx.subscriberId },
   });
 
   const sendAt = computeAutomationSendAt(automation);

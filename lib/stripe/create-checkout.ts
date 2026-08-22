@@ -4,6 +4,10 @@ import type { Locale } from "@/i18n/config";
 import { publicSiteOrigin } from "@/lib/site";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { SiteProduct } from "@/lib/supabase/types";
+import {
+  productSellableInLocale,
+  productStripeForLocale,
+} from "@/lib/site/product-locale";
 import { getStripe } from "@/lib/stripe/server";
 
 /** Checkout URL plus the amounts needed for ad-platform conversion events. */
@@ -128,7 +132,17 @@ export async function createProductCheckoutSession(
   const byId = new Map(products.map((p) => [p.id, p]));
   const ordered = productIds.map((id) => byId.get(id)!);
 
-  const priceIds = ordered.map((p) => p.stripe_price_id?.trim() ?? "");
+  if (ordered.some((p) => !productSellableInLocale(p, locale))) {
+    throw new Error(
+      locale === "en"
+        ? "One of the products is not available in this language."
+        : "Един от продуктите не е наличен за този език.",
+    );
+  }
+
+  const priceIds = ordered.map(
+    (p) => productStripeForLocale(p, locale).stripe_price_id,
+  );
   if (priceIds.some((id) => !id)) {
     throw new Error(
       "Липсва Stripe Price ID на един от продуктите. Добави price_… в админ → Оферти.",
@@ -146,7 +160,7 @@ export async function createProductCheckoutSession(
   const origin = publicSiteOrigin();
 
   const stripeProductIds = ordered
-    .map((p) => p.stripe_product_id?.trim())
+    .map((p) => productStripeForLocale(p, locale).stripe_product_id)
     .filter(Boolean);
 
   const session = await stripe.checkout.sessions.create({

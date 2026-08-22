@@ -31,6 +31,7 @@ const blocks: EmailBlock[] = [
   createEmailBlock("divider"),
   { ...createEmailBlock("spacer"), type: "spacer", size: 40 } as EmailBlock,
   { ...createEmailBlock("product"), type: "product", productId: "11111111-2222-3333-4444-555555555555", linkMode: "site" } as EmailBlock,
+  { ...createEmailBlock("guide"), type: "guide", guideId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", linkMode: "site" } as EmailBlock,
   { ...createEmailBlock("form"), type: "form", formId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" } as EmailBlock,
   { ...createEmailBlock("html"), type: "html", html: "<table><tr><td>raw</td></tr></table>" } as EmailBlock,
 ];

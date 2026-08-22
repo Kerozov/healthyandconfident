@@ -137,6 +137,13 @@ export const FORM_PRESETS: FormPreset[] = [
     },
     fields: [
       {
+        id: fid("email"),
+        type: "email",
+        label_bg: "Имейл",
+        label_en: "Email",
+        required: true,
+      },
+      {
         id: fid("rating"),
         type: "radio",
         label_bg: "Обща оценка",

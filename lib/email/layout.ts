@@ -48,8 +48,78 @@ function isSafeHref(href: string): boolean {
   return false;
 }
 
-function headerSubtitle(locale: "bg" | "en"): string {
-  return locale === "en" ? "Holistic Nutritionist" : "Холистичен диетолог";
+function headerBand(footer: EmailFooterConfig): string {
+  if (footer.header_enabled === false) return "";
+
+  const bg = footer.header_bg_color?.trim() || COLORS.green;
+  const title = (footer.header_title ?? "").trim();
+  const tagline = (footer.header_tagline ?? "").trim();
+  const subtitle = (footer.header_subtitle ?? "").trim();
+  const imageUrl = footer.header_image_url?.trim() ?? "";
+  const fullWidth = Boolean(footer.header_image_full_width);
+
+  const hasText = Boolean(title || tagline || subtitle);
+  if (!imageUrl && !hasText) return "";
+
+  const image = imageUrl
+    ? fullWidth
+      ? `<img src="${escapeHtml(imageUrl)}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none" />`
+      : `<img src="${escapeHtml(imageUrl)}" alt="" width="160" style="display:block;margin:0 auto 16px;width:auto;max-width:180px;max-height:96px;height:auto;border:0;outline:none" />`
+    : "";
+
+  if (fullWidth && imageUrl && !hasText) {
+    return `
+        <tr>
+          <td style="padding:0;line-height:0;font-size:0;background-color:${escapeHtml(bg)}">
+            ${image}
+          </td>
+        </tr>`;
+  }
+
+  const textBlock = hasText
+    ? `${title ? `<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:600;color:#ffffff;line-height:1.2">${escapeHtml(title)}</p>` : ""}
+            ${tagline ? `<p style="margin:${title ? "10px" : "0"} 0 0;font-size:15px;color:rgba(255,255,255,0.9);line-height:1.4">${escapeHtml(tagline)}</p>` : ""}
+            ${subtitle ? `<p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.75);line-height:1.4">${escapeHtml(subtitle)}</p>` : ""}`
+    : "";
+
+  const fullWidthRow =
+    fullWidth && imageUrl
+      ? `
+        <tr>
+          <td style="padding:0;line-height:0;font-size:0;background-color:${escapeHtml(bg)}">
+            ${image}
+          </td>
+        </tr>`
+      : "";
+
+  const logoInBand = !fullWidth && imageUrl ? image : "";
+
+  if (!logoInBand && !textBlock && !fullWidthRow) return "";
+
+  const band =
+    logoInBand || textBlock
+      ? `
+        <tr>
+          <td style="background-color:${escapeHtml(bg)};padding:36px 28px;text-align:center">
+            ${logoInBand}
+            ${textBlock}
+          </td>
+        </tr>`
+      : "";
+
+  return `${fullWidthRow}${band}`;
+}
+
+function copyrightLine(footer: EmailFooterConfig, year: number): string {
+  if (footer.copyright_enabled === false) return "";
+  const name =
+    footer.header_title?.trim() ||
+    footer.brand_name?.trim() ||
+    siteConfig.brand;
+  return `
+            <p style="margin:20px 0 0;font-size:11px;color:${COLORS.textMuted};line-height:1.5;text-align:center">
+              © ${year} ${escapeHtml(name)}
+            </p>`;
 }
 
 function ctaBlock(cta: EmailCta): string {
@@ -97,7 +167,6 @@ export function composeBrandedEmail(options: ComposeEmailOptions): string {
   }
 
   const year = new Date().getFullYear();
-  const subtitle = headerSubtitle(locale);
   const button = cta ? ctaBlock(cta) : "";
   const footer = resolveFooterConfig(locale, footerConfig);
   const signatureFooter = renderEmailSignatureAndFooter(
@@ -106,6 +175,8 @@ export function composeBrandedEmail(options: ComposeEmailOptions): string {
     unsubscribeHref,
   );
   const heroRow = renderEmailHeroImage(heroImageUrl);
+  const headerRow = headerBand(footer);
+  const yearLine = copyrightLine(footer, year);
 
   return `<!DOCTYPE html>
 <html lang="${locale === "en" ? "en" : "bg"}">
@@ -113,7 +184,7 @@ export function composeBrandedEmail(options: ComposeEmailOptions): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>${escapeHtml(siteConfig.brand)}</title>
+  <title>${escapeHtml((footer.header_title ?? "").trim() || siteConfig.brand)}</title>
 </head>
 <body style="margin:0;padding:0;background-color:${COLORS.bgPrimary};font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased">
 ${MARKER}
@@ -122,19 +193,7 @@ ${MARKER}
     <td align="center" style="padding:32px 16px">
       <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:${COLORS.bgCard};border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(61,43,31,0.08)">
         ${heroRow}
-        <tr>
-          <td style="background-color:${COLORS.green};padding:36px 28px;text-align:center">
-            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:600;color:#ffffff;line-height:1.2">
-              ${escapeHtml(siteConfig.brand)}
-            </p>
-            <p style="margin:10px 0 0;font-size:15px;color:rgba(255,255,255,0.9);line-height:1.4">
-              ${escapeHtml(siteConfig.tagline)}
-            </p>
-            <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.75);line-height:1.4">
-              ${escapeHtml(subtitle)}
-            </p>
-          </td>
-        </tr>
+        ${headerRow}
         <tr>
           <td style="padding:32px 28px;color:${COLORS.textPrimary};font-size:16px;line-height:1.65">
             ${bodyHtml}
@@ -144,9 +203,7 @@ ${MARKER}
         <tr>
           <td style="background-color:${COLORS.footerBg};padding:24px 28px;border-top:1px solid rgba(155,123,106,0.15)">
             ${signatureFooter}
-            <p style="margin:20px 0 0;font-size:11px;color:${COLORS.textMuted};line-height:1.5;text-align:center">
-              © ${year} ${escapeHtml(siteConfig.brand)}
-            </p>
+            ${yearLine}
           </td>
         </tr>
       </table>

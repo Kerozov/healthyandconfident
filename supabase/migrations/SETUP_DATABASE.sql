@@ -154,7 +154,7 @@ create table if not exists public.automations (
   name                 text not null,
   channel              text not null check (channel in ('email', 'sms')),
   trigger_event        text not null check (trigger_event in (
-    'purchase', 'new_subscriber'
+    'purchase', 'new_subscriber', 'form_submit', 'segment_entry'
   )),
   enabled              boolean not null default false,
   segment_keys         text[] not null default '{}',
@@ -275,6 +275,9 @@ create table if not exists public.site_products (
   stripe_url      text not null,
   stripe_product_id text not null default '',
   stripe_price_id text not null default '',
+  stripe_url_en   text not null default '',
+  stripe_product_id_en text not null default '',
+  stripe_price_id_en text not null default '',
   price_label_bg  text not null default '',
   price_label_en  text not null default '',
   image_url       text,
@@ -286,6 +289,7 @@ create table if not exists public.site_products (
   audience_tags   text[] not null default '{}',
   purchase_tags   text[] not null default '{}',
   enabled         boolean not null default true,
+  enabled_en      boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
@@ -798,6 +802,15 @@ create table if not exists public.email_footer_config (
   youtube_url         text,
   disclaimer          text not null default '',
   preferences_url     text,
+  header_enabled      boolean not null default true,
+  header_title        text not null default '',
+  header_tagline      text not null default '',
+  header_subtitle     text not null default '',
+  header_image_url    text,
+  header_image_full_width boolean not null default false,
+  header_bg_color     text not null default '#2D7A47',
+  copyright_enabled   boolean not null default true,
+  signature_links     jsonb not null default '[]',
   updated_at          timestamptz not null default now()
 );
 
@@ -1374,7 +1387,124 @@ revoke all on public.site_visits from anon, authenticated;
 
 notify pgrst, 'reload schema';
 
-select 'Setup complete — schema up to date through 050 (offers, downsell, stats, Meta Pixel, FunnelBrand sync, site visits)' as result;
+-- 051: per-locale Stripe on products + editable email header
+alter table public.site_products
+  add column if not exists stripe_url_en text not null default '',
+  add column if not exists stripe_product_id_en text not null default '',
+  add column if not exists stripe_price_id_en text not null default '',
+  add column if not exists enabled_en boolean not null default true;
+
+alter table public.email_footer_config
+  add column if not exists header_enabled boolean not null default true,
+  add column if not exists header_title text not null default '',
+  add column if not exists header_tagline text not null default '',
+  add column if not exists header_subtitle text not null default '',
+  add column if not exists header_image_url text,
+  add column if not exists header_image_full_width boolean not null default false,
+  add column if not exists header_bg_color text not null default '#2D7A47',
+  add column if not exists copyright_enabled boolean not null default true;
+
+update public.email_footer_config
+set
+  header_title = case when header_title = '' then 'Vessie Nay' else header_title end,
+  header_tagline = case when header_tagline = '' then 'Healthy & Confident' else header_tagline end,
+  header_subtitle = case
+    when header_subtitle <> '' then header_subtitle
+    when locale = 'en' then 'Holistic Nutritionist'
+    else 'Холистичен диетолог'
+  end,
+  header_bg_color = case
+    when header_bg_color is null or header_bg_color = '' then '#2D7A47'
+    else header_bg_color
+  end;
+
+notify pgrst, 'reload schema';
+
+-- 052: admin profiles + audit log
+create table if not exists public.admin_users (
+  id              uuid primary key default gen_random_uuid(),
+  username        text not null,
+  display_name    text not null,
+  password_hash   text,
+  role            text not null default 'member'
+                    check (role in ('owner', 'member')),
+  screens         text[] not null default '{}',
+  active          boolean not null default true,
+  last_login_at   timestamptz,
+  last_seen_at    timestamptz,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+create unique index if not exists admin_users_username_idx
+  on public.admin_users (lower(username));
+
+create unique index if not exists admin_users_one_owner_idx
+  on public.admin_users (role)
+  where role = 'owner';
+
+drop trigger if exists admin_users_updated_at on public.admin_users;
+create trigger admin_users_updated_at
+  before update on public.admin_users
+  for each row execute function public.set_updated_at();
+
+create table if not exists public.admin_audit_log (
+  id              uuid primary key default gen_random_uuid(),
+  actor_id        uuid references public.admin_users(id) on delete set null,
+  actor_username  text not null,
+  actor_name      text not null,
+  screen          text not null default '',
+  action          text not null,
+  summary         text not null,
+  entity_type     text,
+  entity_id       text,
+  created_at      timestamptz not null default now()
+);
+
+create index if not exists admin_audit_log_created_idx
+  on public.admin_audit_log (created_at desc);
+
+create index if not exists admin_audit_log_actor_created_idx
+  on public.admin_audit_log (actor_id, created_at desc);
+
+alter table public.admin_users enable row level security;
+alter table public.admin_audit_log enable row level security;
+
+revoke all on public.admin_users from anon, authenticated;
+revoke all on public.admin_audit_log from anon, authenticated;
+
+notify pgrst, 'reload schema';
+
+-- 053: clickable links/buttons in the email signature
+alter table public.email_footer_config
+  add column if not exists signature_links jsonb not null default '[]';
+
+notify pgrst, 'reload schema';
+
+-- 054: form-submit + segment-entry automation triggers
+alter table public.automations
+  drop constraint if exists automations_trigger_event_check;
+
+alter table public.automations
+  add constraint automations_trigger_event_check
+  check (trigger_event in (
+    'purchase', 'new_subscriber', 'form_submit', 'segment_entry'
+  ));
+
+alter table public.automations
+  add column if not exists trigger_form_id uuid
+    references public.form_templates(id) on delete set null;
+
+alter table public.automations
+  add column if not exists form_answer_conditions jsonb not null default '[]';
+
+create index if not exists automations_trigger_form_idx
+  on public.automations (trigger_form_id)
+  where trigger_form_id is not null;
+
+notify pgrst, 'reload schema';
+
+select 'Setup complete — schema up to date through 054 (form + segment automation triggers)' as result;
 
 
 

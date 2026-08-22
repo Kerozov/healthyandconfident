@@ -3,6 +3,11 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, AutomationTrigger, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { subscriberMatchesAutomationAudience, automationMatchesPurchaseProducts, automationMatchesSignupSource, automationMatchesSubscriberOrigin } from "@/lib/automation/audience";
+import { formAnswersMatchConditions } from "@/lib/automation/form-conditions";
+import {
+  automationTriggerMatchesEvents,
+  resolveAutomationTriggerEvents,
+} from "@/lib/automation/triggers";
 import { expandAudienceKeys } from "@/lib/segments/hierarchy";
 import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
 import { buildBrandedEmail } from "@/lib/email/compose";
@@ -29,7 +34,6 @@ import {
 } from "@/lib/worker/config";
 import { sendEmail, scheduleEmail, submitEmailJobsBatch } from "@/lib/worker/email";
 import { sendSms, scheduleSms } from "@/lib/worker/sms";
-import { isSiteSignupSource } from "@/lib/automation/subscriber-origins";
 
 export type AutomationRunContext = {
   email: string;
@@ -43,36 +47,11 @@ export type AutomationRunContext = {
   isNew: boolean;
   source?: string;
   purchasedProductIds?: string[];
+  /** When source is a form submit — the form template id. */
+  formId?: string | null;
+  /** Answers from that submission (choice fields only are filtered). */
+  formAnswers?: Record<string, string | string[] | boolean>;
 };
-
-function resolveTriggerEvents(
-  source: string,
-  isNew: boolean,
-): Array<"purchase" | "new_subscriber" | "registration"> {
-  // Payment always starts the purchase flow only — not welcome drips.
-  if (source === "purchase") return ["purchase"];
-  // Public site signup (menu, popup, hero, nav…) — even if email already exists.
-  if (isSiteSignupSource(source)) {
-    return ["new_subscriber", "registration"];
-  }
-  if (isNew) return ["new_subscriber", "registration"];
-  return [];
-}
-
-/** Whether this automation's trigger would run for the resolved event list. */
-function automationTriggerMatchesEvents(
-  automation: Automation,
-  events: string[],
-): boolean {
-  if (events.includes(automation.trigger_event)) return true;
-  if (
-    automation.trigger_event === "new_subscriber" &&
-    events.includes("registration")
-  ) {
-    return true;
-  }
-  return false;
-}
 
 export type AutomationRunReport = {
   workerConfigured: boolean;
@@ -94,7 +73,70 @@ function passesSubscriberOriginGate(
   if (ctx.source === "purchase" && automation.trigger_event === "purchase") {
     return true;
   }
+  if (
+    automation.trigger_event === "form_submit" ||
+    automation.trigger_event === "segment_entry"
+  ) {
+    return true;
+  }
   return automationMatchesSubscriberOrigin(automation, ctx);
+}
+
+function hasIncludeAudience(automation: Automation): boolean {
+  return (
+    (automation.segment_keys?.filter(Boolean).length ?? 0) > 0 ||
+    (automation.group_ids?.filter(Boolean).length ?? 0) > 0
+  );
+}
+
+/**
+ * Dedicated "entered this segment" trigger: they match now, and did not match
+ * on priorTags. Missing priorTags only fires for brand-new subscribers.
+ */
+function passesSegmentEntryGate(
+  automation: Automation,
+  ctx: AutomationRunContext,
+  segments: Segment[],
+  groups: SegmentGroup[],
+): boolean {
+  if (automation.trigger_event !== "segment_entry") return true;
+  if (!hasIncludeAudience(automation)) return false;
+
+  const nowTags = ctx.tags ?? [];
+  if (!subscriberMatchesAutomationAudience(automation, nowTags, segments, groups)) {
+    return false;
+  }
+
+  const prior = ctx.priorTags;
+  if (prior === undefined) return ctx.isNew;
+
+  return !subscriberMatchesAutomationAudience(
+    automation,
+    prior,
+    segments,
+    groups,
+  );
+}
+
+function passesFormSubmitGate(
+  automation: Automation,
+  ctx: AutomationRunContext,
+): { ok: true } | { ok: false; reason: string } {
+  if (automation.trigger_event !== "form_submit") return { ok: true };
+  const formId = automation.trigger_form_id || null;
+  if (!formId) return { ok: false, reason: "form_filter" };
+  if (!ctx.formId || ctx.formId !== formId) {
+    return { ok: false, reason: "form_filter" };
+  }
+  if (
+    !formAnswersMatchConditions(
+      automation.form_answer_conditions,
+      ctx.formAnswers ?? {},
+    )
+  ) {
+    return { ok: false, reason: "form_answers" };
+  }
+  return { ok: true };
 }
 
 /**
@@ -292,23 +334,10 @@ async function scheduleChainedFromParent(
     : parsedParentAt;
 
   for (const rule of (data as Automation[]) ?? []) {
-    const email = ctx.email.trim().toLowerCase();
-    if (!passesSubscriberOriginGate(rule, ctx)) continue;
-    if (!passesPurchaseSegmentEntryGate(rule, ctx, segments, groups)) continue;
-    if (!segmentMatches(rule, ctx.tags ?? [], segments, groups)) continue;
-    if (
-      rule.trigger_event === "purchase" &&
-      !automationMatchesPurchaseProducts(rule, ctx.purchasedProductIds ?? [])
-    ) {
-      continue;
-    }
-    if (
-      rule.trigger_event !== "purchase" &&
-      !automationMatchesSignupSource(rule, ctx.source)
-    ) {
-      continue;
-    }
-    if (await alreadyQueuedOrSent(rule.id, email)) continue;
+    const gate = await passesAutomationGates(rule, ctx, segments, groups, {
+      fromChain: true,
+    });
+    if (!gate.ok) continue;
     try {
       const sendAt = computeChainedSendAt(rule, parentAt);
       const sendNow = new Date(sendAt).getTime() <= Date.now() + 1000;
@@ -436,6 +465,7 @@ async function scheduleAutomation(
     vars: { name: ctx.name, email },
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
     heroImageUrl,
+    recipient: { email, subscriberId: ctx.subscriberId },
   });
 
   const res = await scheduleEmail({
@@ -560,6 +590,7 @@ async function sendAutomationNow(
     vars: { name: ctx.name, email },
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
     heroImageUrl,
+    recipient: { email, subscriberId: ctx.subscriberId },
   });
 
   const res = await sendEmail({ subject, html, recipients: [email], attachments });
@@ -604,10 +635,15 @@ async function passesAutomationGates(
     return { ok: false, reason: "product_filter" };
   }
   if (
-    automation.trigger_event !== "purchase" &&
+    automation.trigger_event === "new_subscriber" &&
     !automationMatchesSignupSource(automation, ctx.source)
   ) {
     return { ok: false, reason: `signup_source (${ctx.source ?? "∅"})` };
+  }
+  const formGate = passesFormSubmitGate(automation, ctx);
+  if (!formGate.ok) return formGate;
+  if (!passesSegmentEntryGate(automation, ctx, segments, groups)) {
+    return { ok: false, reason: "segment_entry_gate" };
   }
   if (await alreadyQueuedOrSent(automation.id, email)) {
     return { ok: false, reason: "already_queued_or_sent" };
@@ -710,7 +746,7 @@ export async function runAutomations(
   }
 
   const source = ctx.source ?? "popup";
-  const events = resolveTriggerEvents(source, ctx.isNew);
+  const events = resolveAutomationTriggerEvents(source, ctx.isNew);
   report.triggerEvents = events;
   if (events.length === 0) {
     console.info(
@@ -970,7 +1006,7 @@ export async function diagnoseAutomations(
   const cfg = getNotificationWorkerConfig();
   const email = ctx.email.trim().toLowerCase();
   const source = ctx.source ?? "popup";
-  const events = resolveTriggerEvents(source, ctx.isNew);
+  const events = resolveAutomationTriggerEvents(source, ctx.isNew);
   const notes: string[] = [];
 
   const diagnosis: AutomationDiagnosis = {
@@ -1072,7 +1108,7 @@ export async function diagnoseAutomations(
       continue;
     }
 
-    if (!automationTriggerMatchesEvents(rule, events)) {
+    if (!automationTriggerMatchesEvents(rule.trigger_event, events)) {
       diagnosis.rules.push({
         name: rule.name,
         enabled: true,

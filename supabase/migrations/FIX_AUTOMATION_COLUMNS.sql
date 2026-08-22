@@ -90,6 +90,23 @@ set subscriber_origins = case
 end
 where coalesce(array_length(subscriber_origins, 1), 0) = 0;
 
+-- 054: form-submit + segment-entry
+alter table public.automations
+  drop constraint if exists automations_trigger_event_check;
+
+alter table public.automations
+  add constraint automations_trigger_event_check
+  check (trigger_event in (
+    'purchase', 'new_subscriber', 'form_submit', 'segment_entry'
+  ));
+
+alter table public.automations
+  add column if not exists trigger_form_id uuid
+    references public.form_templates(id) on delete set null;
+
+alter table public.automations
+  add column if not exists form_answer_conditions jsonb not null default '[]';
+
 create table if not exists public.subscriber_purchases (
   id                 uuid primary key default gen_random_uuid(),
   subscriber_id      uuid references public.subscribers(id) on delete set null,

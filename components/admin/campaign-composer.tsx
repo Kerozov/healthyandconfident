@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
-import type { AudienceInput, Segment, SegmentGroup, SiteProduct } from "@/lib/supabase/types";
+import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import {
   sendEmailCampaign,
@@ -20,6 +20,7 @@ export function CampaignComposer({
   segments,
   groups,
   products,
+  guides = [],
   forms,
   subscriberTags,
   workerConfigured,
@@ -29,6 +30,7 @@ export function CampaignComposer({
   segments: Segment[];
   groups: SegmentGroup[];
   products: SiteProduct[];
+  guides?: SiteGuide[];
   forms: FormTemplateRecord[];
   subscriberTags: string[];
   workerConfigured: boolean;
@@ -174,6 +176,7 @@ export function CampaignComposer({
                   onChange={(html) => setEmail({ ...email, html })}
                   locale={email.audience.locale === "en" ? "en" : "bg"}
                   products={products}
+                  guides={guides}
                   forms={forms}
                   heroImageUrl={email.hero_image_url}
                   onHeroImageChange={(hero_image_url) =>
@@ -268,6 +271,7 @@ export function CampaignComposer({
                   ctaUrl={showButton ? email.cta_url : ""}
                   locale={email.audience.locale === "en" ? "en" : "bg"}
                   products={products}
+                  guides={guides}
                   forms={forms}
                   heroImageUrl={email.hero_image_url}
                 />

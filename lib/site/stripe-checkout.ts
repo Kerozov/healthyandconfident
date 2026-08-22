@@ -1,10 +1,14 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
+import { productHasStripePrice } from "@/lib/site/product-locale";
 import { metaEventId, metaBrowserIds, trackMeta } from "@/lib/meta/client";
 import { trackSiteCheckout } from "@/lib/analytics/client";
 
-export function canBundleCheckout(...products: (SiteProduct | null | undefined)[]): boolean {
-  return products.every((p) => Boolean(p?.stripe_price_id?.trim()));
+export function canBundleCheckout(
+  locale: Locale,
+  ...products: (SiteProduct | null | undefined)[]
+): boolean {
+  return products.every((p) => Boolean(p && productHasStripePrice(p, locale)));
 }
 
 /**

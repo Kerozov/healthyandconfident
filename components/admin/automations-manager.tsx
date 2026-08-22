@@ -19,6 +19,7 @@ import {
   UserPlus,
   UserMinus,
   Copy,
+  ClipboardCopy,
   ClipboardPaste,
 } from "lucide-react";
 import type { FormTemplateRecord } from "@/lib/forms/types";
@@ -31,6 +32,7 @@ import type {
   Segment,
   SegmentGroup,
   SiteProduct,
+  SiteGuide,
 } from "@/lib/supabase/types";
 import {
   createAutomation,
@@ -61,6 +63,27 @@ import {
   type SubscriberOrigin,
 } from "@/lib/automation/subscriber-origins";
 import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
+import {
+  ALL_SUBSCRIBER_ORIGINS,
+  DEFAULT_SUBSCRIBER_ORIGINS,
+  formatSubscriberOriginsLine,
+  subscriberOriginsFromStored,
+  type SubscriberOrigin,
+} from "@/lib/automation/subscriber-origins";
+import {
+  AUTOMATION_TRIGGER_META,
+  AUTOMATION_TRIGGERS,
+} from "@/lib/automation/triggers";
+import {
+  parseFormAnswerConditions,
+  formatFormAnswerConditionsLine,
+  type FormAnswerCondition,
+} from "@/lib/automation/form-conditions";
+import {
+  FormAnswerConditionsEditor,
+  FormTriggerPicker,
+} from "@/components/admin/form-answer-conditions";
+import { hasRequiredEmailField } from "@/lib/forms/required-email";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -140,18 +163,10 @@ const TRIGGER_OPTIONS: {
   value: AutomationTrigger;
   label: string;
   hint: string;
-}[] = [
-  {
-    value: "new_subscriber",
-    label: "Нов абонат",
-    hint: "Първи път в списъка — сайт, ръчно или импорт. Разделяй с тагове/сегменти (напр. изключи „manual“).",
-  },
-  {
-    value: "purchase",
-    label: "След покупка",
-    hint: "След успешно плащане в Stripe. Задай продукт и/или сегмент в „Включване“.",
-  },
-];
+}[] = AUTOMATION_TRIGGERS.map((value) => ({
+  value,
+  ...AUTOMATION_TRIGGER_META[value],
+}));
 
 function TogglePair({
   label,
@@ -340,6 +355,8 @@ const EMPTY_FORM = {
   signup_sources: [] as string[],
   subscriber_origins: [...DEFAULT_SUBSCRIBER_ORIGINS] as SubscriberOrigin[],
   new_subscribers_only: true,
+  trigger_form_id: "",
+  form_answer_conditions: [] as FormAnswerCondition[],
   after_automation_id: "" as string,
   delay_days: 0,
   delay_minutes: 0,
@@ -382,6 +399,8 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
       a.new_subscribers_only,
     ),
     new_subscribers_only: a.new_subscribers_only,
+    trigger_form_id: a.trigger_form_id ?? "",
+    form_answer_conditions: parseFormAnswerConditions(a.form_answer_conditions),
     after_automation_id: a.after_automation_id ?? "",
     delay_days: a.delay_days ?? 0,
     delay_minutes: a.delay_minutes ?? 0,
@@ -412,12 +431,14 @@ export function AutomationsManager({
   segments,
   groups,
   products,
+  guides = [],
   forms,
 }: {
   automations: AutomationRow[];
   segments: Segment[];
   groups: SegmentGroup[];
   products: SiteProduct[];
+  guides?: SiteGuide[];
   forms: FormTemplateRecord[];
 }) {
   const router = useRouter();
@@ -501,6 +522,10 @@ export function AutomationsManager({
         parent.new_subscribers_only,
       ),
       new_subscribers_only: parent.new_subscribers_only,
+      trigger_form_id: parent.trigger_form_id ?? "",
+      form_answer_conditions: parseFormAnswerConditions(
+        parent.form_answer_conditions,
+      ),
       after_automation_id: parent.id,
       delay_days: 0,
       delay_minutes: 15,
@@ -540,11 +565,41 @@ export function AutomationsManager({
       setError("При „След покупка“ избери поне един продукт.");
       return;
     }
+    if (form.trigger_event === "form_submit") {
+      if (!form.trigger_form_id) {
+        setError("При „След форма“ избери форма.");
+        return;
+      }
+      const selectedForm = forms.find((f) => f.id === form.trigger_form_id);
+      if (selectedForm && !hasRequiredEmailField(selectedForm.fields)) {
+        setError("Формата трябва да има задължителен имейл.");
+        return;
+      }
+      const incomplete = form.form_answer_conditions.some(
+        (c) => c.field_id && c.values.length === 0,
+      );
+      if (incomplete) {
+        setError("Избери поне един отговор за всяко условие, или премахни реда.");
+        return;
+      }
+    }
+    if (
+      form.trigger_event === "segment_entry" &&
+      (form.segment_keys?.filter(Boolean).length ?? 0) === 0 &&
+      (form.group_ids?.filter(Boolean).length ?? 0) === 0
+    ) {
+      setError("При „Влизане в сегмент“ избери поне един сегмент или група във „Включване“.");
+      return;
+    }
     startTransition(async () => {
       const payload = {
         ...form,
         after_automation_id: form.after_automation_id || null,
         send_date: form.send_date.trim() || null,
+        trigger_form_id: form.trigger_form_id || null,
+        form_answer_conditions: parseFormAnswerConditions(
+          form.form_answer_conditions,
+        ),
       };
       const res =
         editingId === "new"
@@ -589,11 +644,15 @@ export function AutomationsManager({
 
   /**
    * `after` = paste as the next step of that automation; `null` = paste as a new
-   * chain start. The copy is always created disabled.
+   * chain start. The copy is always created disabled so the live chain stays
+   * untouched until you review and enable it.
    */
   function pasteAutomation(after: AutomationRow | null) {
     if (!clipboard) return;
     const source = clipboard;
+    const forksExisting = after
+      ? automations.some((row) => row.after_automation_id === after.id)
+      : false;
     setError(null);
     setNote(null);
     startTransition(async () => {
@@ -606,7 +665,9 @@ export function AutomationsManager({
       }
       setNote(
         after
-          ? `Създадено копие „${res.name}“ след „${after.name}“ — изключено, отвори го за редакция.`
+          ? forksExisting
+            ? `Създадено копие „${res.name}“ като нов клон след „${after.name}“ — изключено, за да не спре текущата верига. Отвори го за редакция.`
+            : `Създадено копие „${res.name}“ след „${after.name}“ — изключено, отвори го за редакция.`
           : `Създадено копие „${res.name}“ като нова верига — изключено, отвори го за редакция.`,
       );
       router.refresh();
@@ -887,7 +948,7 @@ export function AutomationsManager({
                   <option value="sms">SMS</option>
                 </Select>
               </Field>
-              <Field label="Събитие">
+              <Field label="Събитие" hint={triggerMeta?.hint}>
                 <Select
                   value={form.trigger_event}
                   onChange={(e) => {
@@ -899,6 +960,32 @@ export function AutomationsManager({
                         ? {
                             subscriber_origins: [...ALL_SUBSCRIBER_ORIGINS],
                             new_subscribers_only: false,
+                            trigger_form_id: "",
+                            form_answer_conditions: [],
+                          }
+                        : {}),
+                      ...(trigger_event === "form_submit"
+                        ? {
+                            subscriber_origins: [...ALL_SUBSCRIBER_ORIGINS],
+                            new_subscribers_only: false,
+                            signup_sources: [],
+                            purchase_product_ids: [],
+                          }
+                        : {}),
+                      ...(trigger_event === "segment_entry"
+                        ? {
+                            subscriber_origins: [...ALL_SUBSCRIBER_ORIGINS],
+                            new_subscribers_only: false,
+                            signup_sources: [],
+                            purchase_product_ids: [],
+                            trigger_form_id: "",
+                            form_answer_conditions: [],
+                          }
+                        : {}),
+                      ...(trigger_event === "new_subscriber"
+                        ? {
+                            trigger_form_id: "",
+                            form_answer_conditions: [],
                           }
                         : {}),
                     });
@@ -936,10 +1023,11 @@ export function AutomationsManager({
               <WorkspacePanel
                 tone="gold"
                 title="При покупка на"
-                description="Автоматизацията тръгва само след плащане на избраните продукти."
+                description="Автоматизацията тръгва само след плащане на избраните продукти и наръчници."
               >
                 <PurchaseProductPicker
                   products={products}
+                  guides={guides}
                   selectedIds={form.purchase_product_ids}
                   onChange={(purchase_product_ids) =>
                     setForm({ ...form, purchase_product_ids })
@@ -949,7 +1037,41 @@ export function AutomationsManager({
               </WorkspacePanel>
             )}
 
-            {form.trigger_event !== "purchase" && (
+            {form.trigger_event === "form_submit" && (
+              <WorkspacePanel
+                tone="violet"
+                title="След коя форма"
+                description="Имейлът във формата е задължителен. Можеш да добавиш условия по изборни отговори — не по свободен текст."
+              >
+                <FormTriggerPicker
+                  forms={forms}
+                  selectedId={form.trigger_form_id}
+                  onChange={(trigger_form_id) =>
+                    setForm({
+                      ...form,
+                      trigger_form_id,
+                      form_answer_conditions: [],
+                    })
+                  }
+                  disabled={pending}
+                />
+                <div className="mt-4 border-t border-ink/10 pt-4">
+                  <p className="mb-2 text-sm font-semibold text-ink">
+                    Условия по отговори
+                  </p>
+                  <FormAnswerConditionsEditor
+                    form={forms.find((f) => f.id === form.trigger_form_id) ?? null}
+                    conditions={form.form_answer_conditions}
+                    onChange={(form_answer_conditions) =>
+                      setForm({ ...form, form_answer_conditions })
+                    }
+                    disabled={pending}
+                  />
+                </div>
+              </WorkspacePanel>
+            )}
+
+            {form.trigger_event === "new_subscriber" && (
               <WorkspacePanel tone="violet" title="Тип на записа">
                 <SubscriberOriginPicker
                   selected={form.subscriber_origins}
@@ -965,9 +1087,11 @@ export function AutomationsManager({
             <div className="min-w-0 space-y-5 xl:col-span-8 2xl:col-span-4">
             <WorkspacePanel title="Аудитория">
               <p className="mb-3 text-xs leading-relaxed text-ink-soft">
-                Включване = кой да получи тази стъпка. Изключване = кой никога не
-                трябва да я получи (напр. вече платил). Смяната на сегмент отменя
-                насрочения имейл във воркера — не чака датата на изпращане.
+                {form.trigger_event === "segment_entry"
+                  ? "Включване е самият тригер — автоматизацията тръгва, когато човекът влезе в тези сегменти/групи за първи път. Изключване спира изпращането."
+                  : form.trigger_event === "form_submit"
+                    ? "По желание ограничи кой да получи стъпката след формата. Празно включване = всеки, който е попълнил и минава условията по отговори."
+                    : "Включване = кой да получи тази стъпка. Изключване = кой никога не трябва да я получи (напр. вече платил). Смяната на сегмент отменя насрочения имейл във воркера — не чака датата на изпращане."}
               </p>
               <div className="grid gap-3">
                 <div className="rounded-xl border border-forest-500/25 bg-forest-50/30 p-3 space-y-2">
@@ -1040,7 +1164,7 @@ export function AutomationsManager({
               </div>
             </WorkspacePanel>
 
-            {form.trigger_event !== "purchase" && (
+            {form.trigger_event === "new_subscriber" && (
               <WorkspacePanel tone="sky" title="Само при запис от избран източник">
                 <SignupSourcePicker
                   forms={forms}
@@ -1234,6 +1358,7 @@ export function AutomationsManager({
                       onChange={(html_bg) => setForm({ ...form, html_bg })}
                       locale="bg"
                       products={products}
+                      guides={guides}
                       forms={forms}
                       heroImageUrl={form.hero_image_url_bg}
                       onHeroImageChange={(hero_image_url_bg) =>
@@ -1275,6 +1400,7 @@ export function AutomationsManager({
                       ctaUrl={form.cta_url_bg}
                       locale="bg"
                       products={products}
+                      guides={guides}
                       forms={forms}
                       heroImageUrl={form.hero_image_url_bg}
                     />
@@ -1297,6 +1423,7 @@ export function AutomationsManager({
                       locale="en"
                       title="Email content"
                       products={products}
+                      guides={guides}
                       forms={forms}
                       heroImageUrl={form.hero_image_url_en}
                       onHeroImageChange={(hero_image_url_en) =>
@@ -1338,6 +1465,7 @@ export function AutomationsManager({
                       ctaUrl={form.cta_url_en}
                       locale="en"
                       products={products}
+                      guides={guides}
                       forms={forms}
                       heroImageUrl={form.hero_image_url_en}
                     />
@@ -1378,6 +1506,7 @@ export function AutomationsManager({
             automations={automations}
             groups={groups}
             segments={segments}
+            forms={forms}
             selectedId={editingId !== "new" ? editingId : null}
             onSelectAutomation={openEditFromFlow}
             onAddAfterAutomation={openNewAfter}
@@ -1424,7 +1553,22 @@ export function AutomationsManager({
             if (showHeader) lastTrigger = trigger;
             const rate = openRate(a);
             const audienceLine = formatAutomationAudienceLine(a, groups, segments);
-            const signupSourcesLine = formatSignupSourcesLine(a.signup_sources ?? [], forms);
+            const signupSourcesLine =
+              a.trigger_event === "new_subscriber"
+                ? formatSignupSourcesLine(a.signup_sources ?? [], forms)
+                : null;
+            const selectedForm = forms.find((f) => f.id === a.trigger_form_id);
+            const formConditionsLine =
+              a.trigger_event === "form_submit"
+                ? formatFormAnswerConditionsLine(
+                    a.form_answer_conditions,
+                    selectedForm?.fields,
+                  )
+                : null;
+            const formNameLine =
+              a.trigger_event === "form_submit"
+                ? `форма: ${selectedForm?.title_bg || selectedForm?.name || "—"}`
+                : null;
             const rowBusy = busyId === a.id && pending;
             const isExpanded = expandedId === a.id;
             const canResend =
@@ -1479,9 +1623,12 @@ export function AutomationsManager({
                   )}
                   <p className="mt-1 text-sm text-ink-soft">
                     {triggerSummary(a)}
+                    {formNameLine && ` · ${formNameLine}`}
+                    {formConditionsLine && ` · ${formConditionsLine}`}
                     {audienceLine && ` · ${audienceLine}`}
                     {signupSourcesLine && ` · източник: ${signupSourcesLine}`}
-                    {` · ${audienceSummary(a)}`}
+                    {a.trigger_event === "new_subscriber" &&
+                      ` · ${audienceSummary(a)}`}
                   </p>
                   <p className="mt-1 text-sm font-medium text-forest-700">
                     {scheduleSummary(a, automations)}
@@ -1539,8 +1686,19 @@ export function AutomationsManager({
                       clipboard?.id === a.id ? "text-forest-700" : "text-ink-soft",
                     )}
                   >
-                    <ClipboardPaste className="h-4 w-4" />
+                    <ClipboardCopy className="h-4 w-4" />
                   </button>
+                  {clipboard && (
+                    <button
+                      type="button"
+                      onClick={() => pasteAutomation(a)}
+                      disabled={pending}
+                      title={`Постави „${clipboard.name}“ след тази стъпка`}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-forest-700 hover:bg-forest-500/10 disabled:opacity-40"
+                    >
+                      <ClipboardPaste className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => openEdit(a)}
                     disabled={pending}

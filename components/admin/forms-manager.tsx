@@ -44,6 +44,11 @@ import {
   type FormFieldDefault,
 } from "@/lib/forms/field-defaults";
 import { resolveTagsOnSubmit } from "@/lib/forms/tags-on-submit";
+import {
+  emailFieldCount,
+  hasRequiredEmailField,
+  newRequiredEmailField,
+} from "@/lib/forms/required-email";
 import { publicFormUrl, siteOrigin } from "@/lib/forms/urls";
 import { formatDate } from "@/lib/utils";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
@@ -112,6 +117,7 @@ export function FormsManager({
   const [pending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [tab, setTab] = useState<EditorTab>("content");
+  const [previewLocale, setPreviewLocale] = useState<"bg" | "en">("bg");
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<
@@ -229,6 +235,11 @@ export function FormsManager({
 
   function save() {
     setError(null);
+    if (!hasRequiredEmailField(form.fields)) {
+      setError("Формата трябва да има задължително поле за имейл — автоматизациите тръгват по него.");
+      setTab("fields");
+      return;
+    }
     startTransition(async () => {
       const res = await saveFormTemplate(form);
       if (!res.ok) {
@@ -350,6 +361,14 @@ export function FormsManager({
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
                 />
               </Field>
+              <label className="flex items-center gap-2 text-sm font-medium md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={form.enabled}
+                  onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+                />
+                Активна форма (видима на сайта)
+              </label>
               <Field label="Заглавие — BG">
                 <Input
                   value={form.title_bg}
@@ -443,6 +462,25 @@ export function FormsManager({
 
           {tab === "fields" && (
             <div className="space-y-4">
+              {!hasRequiredEmailField(form.fields) && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-coral-200 bg-coral-50 px-4 py-3">
+                  <p className="text-sm text-coral-900">
+                    Имейлът е задължителен във всяка форма — така автоматизация може да тръгне след попълване.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        fields: [newRequiredEmailField(), ...form.fields],
+                      })
+                    }
+                    className="rounded-full bg-coral-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-coral-800"
+                  >
+                    Добави имейл
+                  </button>
+                </div>
+              )}
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
                 <p className="text-sm font-semibold text-forest-800">Шаблони с отговор → сегмент</p>
                 <p className="text-xs text-ink-soft">
@@ -547,12 +585,21 @@ export function FormsManager({
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={() => {
+                            if (
+                              field.type === "email" &&
+                              emailFieldCount(form.fields) <= 1
+                            ) {
+                              setError(
+                                "Формата трябва да има задължително поле за имейл.",
+                              );
+                              return;
+                            }
                             setForm({
                               ...form,
                               fields: form.fields.filter((f) => f.id !== field.id),
-                            })
-                          }
+                            });
+                          }}
                           className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-coral-600 hover:bg-coral-500/10"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -585,25 +632,46 @@ export function FormsManager({
                           {field.type !== "radio" &&
                             field.type !== "select" &&
                             field.type !== "checkbox" && (
-                              <Field label="Placeholder BG">
-                                <Input
-                                  value={field.placeholder_bg ?? ""}
-                                  onChange={(e) => {
-                                    const fields = [...form.fields];
-                                    fields[index] = {
-                                      ...field,
-                                      placeholder_bg: e.target.value,
-                                    };
-                                    setForm({ ...form, fields });
-                                  }}
-                                />
-                              </Field>
+                              <>
+                                <Field label="Placeholder BG">
+                                  <Input
+                                    value={field.placeholder_bg ?? ""}
+                                    onChange={(e) => {
+                                      const fields = [...form.fields];
+                                      fields[index] = {
+                                        ...field,
+                                        placeholder_bg: e.target.value,
+                                      };
+                                      setForm({ ...form, fields });
+                                    }}
+                                  />
+                                </Field>
+                                <Field label="Placeholder EN">
+                                  <Input
+                                    value={field.placeholder_en ?? ""}
+                                    onChange={(e) => {
+                                      const fields = [...form.fields];
+                                      fields[index] = {
+                                        ...field,
+                                        placeholder_en: e.target.value,
+                                      };
+                                      setForm({ ...form, fields });
+                                    }}
+                                  />
+                                </Field>
+                              </>
                             )}
+                        </>
+                      )}
+                      {field.type !== "heading" && (
+                        <>
                           <label className="flex items-center gap-2 text-sm">
                             <input
                               type="checkbox"
-                              checked={field.required ?? false}
+                              checked={field.type === "email" ? true : (field.required ?? false)}
+                              disabled={field.type === "email"}
                               onChange={(e) => {
+                                if (field.type === "email") return;
                                 const fields = [...form.fields];
                                 fields[index] = {
                                   ...field,
@@ -613,7 +681,30 @@ export function FormsManager({
                               }}
                             />
                             Задължително
+                            {field.type === "email" && (
+                              <span className="text-xs text-ink-soft">(имейлът винаги е задължителен)</span>
+                            )}
                           </label>
+                          <Field label="Подсказка BG">
+                            <Input
+                              value={field.help_bg ?? ""}
+                              onChange={(e) => {
+                                const fields = [...form.fields];
+                                fields[index] = { ...field, help_bg: e.target.value };
+                                setForm({ ...form, fields });
+                              }}
+                            />
+                          </Field>
+                          <Field label="Подсказка EN">
+                            <Input
+                              value={field.help_en ?? ""}
+                              onChange={(e) => {
+                                const fields = [...form.fields];
+                                fields[index] = { ...field, help_en: e.target.value };
+                                setForm({ ...form, fields });
+                              }}
+                            />
+                          </Field>
                         </>
                       )}
                       {(field.type === "select" ||
@@ -699,14 +790,39 @@ export function FormsManager({
           )}
 
           {tab === "preview" && (
-            <div className="rounded-2xl border border-ink/10 bg-cream-2/30 p-4">
+            <div className="space-y-3 rounded-2xl border border-ink/10 bg-cream-2/30 p-4">
+              <div className="inline-flex rounded-xl border border-ink/15 bg-white p-1">
+                {(["bg", "en"] as const).map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => setPreviewLocale(loc)}
+                    className={cn(
+                      "rounded-lg px-3 py-1.5 text-xs font-semibold",
+                      previewLocale === loc
+                        ? "bg-forest-600 text-cream"
+                        : "text-ink-soft hover:bg-cream",
+                    )}
+                  >
+                    {loc === "bg" ? "Български" : "English"}
+                  </button>
+                ))}
+              </div>
               <DynamicForm
-                locale="bg"
-                title={form.title_bg || form.name}
-                description={form.description_bg}
+                key={previewLocale}
+                locale={previewLocale}
+                title={
+                  previewLocale === "en"
+                    ? form.title_en || form.title_bg || form.name
+                    : form.title_bg || form.name
+                }
+                description={
+                  previewLocale === "en" ? form.description_en : form.description_bg
+                }
                 fields={form.fields}
                 settings={form.settings}
                 slug={form.slug || "preview"}
+                preview
               />
             </div>
           )}
@@ -721,6 +837,12 @@ export function FormsManager({
                 onChange={setSendAudience}
               />
               {sendNote && <p className="text-sm text-ink-soft">{sendNote}</p>}
+              {!form.enabled && (
+                <p className="text-xs text-amber-800">
+                  Формата е скрита от публичния URL. Поканените по имейл пак могат да я попълнят
+                  с линка от писмото.
+                </p>
+              )}
               <button
                 type="button"
                 disabled={pending}

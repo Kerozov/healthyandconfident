@@ -370,13 +370,13 @@ export const en: Dictionary = {
     eyebrow: "Shop",
     title: "Buy online",
     subtitle: "Choose a product and pay securely via Stripe.",
-    cta: "Buy now",
+    cta: "View product",
   },
   guides: {
     eyebrow: "Guides",
     title: "Guides & handbooks",
     subtitle: "Practical PDF guides for meals, side dishes and healthy living.",
-    cta: "Get the guide",
+    cta: "View the guide",
   },
   videos: {
     eyebrow: "Videos",
@@ -416,7 +416,9 @@ export const en: Dictionary = {
         links: [
           { label: "About", href: "/en#about" },
           { label: "Meals", href: "/en#food" },
-          { label: "Programs", href: "/en#programs" },
+          { label: "Programs", href: "/en/programs" },
+          { label: "Products", href: "/en/products" },
+          { label: "Guides", href: "/en/guides" },
           { label: "Results", href: "/en#results" },
           { label: "Google reviews", href: "/en#google-reviews" },
           { label: "Blog", href: "/en/blog" },
@@ -426,6 +428,7 @@ export const en: Dictionary = {
       {
         title: "Programs",
         links: [
+          { label: "All programmes", href: "/en/programs" },
           { label: "Summer — slim and calm", href: "/en/programs/summer-programme" },
           { label: "Balanced Nutrition 21 Days", href: "/en#challenge-21" },
           { label: "Live Without Resistance", href: "/en/programs/zhivey-bez-rezistentnost" },

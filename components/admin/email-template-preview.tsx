@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import { Monitor, Smartphone } from "lucide-react";
 import { composeBrandedEmail } from "@/lib/email/layout";
 import { expandEmailProductMarkers } from "@/lib/email/products-block";
+import { expandEmailGuideMarkers } from "@/lib/email/guides-block";
 import { expandEmailFormMarkers } from "@/lib/email/forms-block";
 import { normalizeEmailBodyHtml } from "@/lib/email/normalize-body";
 import type { FormTemplateRecord } from "@/lib/forms/types";
-import type { SiteProduct } from "@/lib/supabase/types";
+import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
 export function EmailTemplatePreview({
@@ -16,6 +17,7 @@ export function EmailTemplatePreview({
   ctaUrl,
   locale = "bg",
   products = [],
+  guides = [],
   forms = [],
   heroImageUrl = "",
   height = 620,
@@ -25,6 +27,7 @@ export function EmailTemplatePreview({
   ctaUrl: string;
   locale?: "bg" | "en";
   products?: SiteProduct[];
+  guides?: SiteGuide[];
   forms?: FormTemplateRecord[];
   heroImageUrl?: string;
   /** Preview viewport height in px. */
@@ -38,6 +41,9 @@ export function EmailTemplatePreview({
     const productsById = new Map(
       products.map((product) => [product.id.toLowerCase(), product]),
     );
+    const guidesById = new Map(
+      guides.map((guide) => [guide.id.toLowerCase(), guide]),
+    );
     const formsById = new Map(forms.map((form) => [form.id.toLowerCase(), form]));
     const previewHref = new Map(
       forms.map((form) => [form.id.toLowerCase(), `/${locale}/forms/${form.slug}`]),
@@ -46,6 +52,7 @@ export function EmailTemplatePreview({
       bodyHtml.trim() || "Съдържание на имейла…",
     );
     expandedBody = expandEmailProductMarkers(expandedBody, productsById, locale);
+    expandedBody = expandEmailGuideMarkers(expandedBody, guidesById, locale);
     expandedBody = expandEmailFormMarkers(
       expandedBody,
       formsById,
@@ -59,7 +66,7 @@ export function EmailTemplatePreview({
       unsubscribeHref: `/${locale}/unsubscribe?token=example`,
       heroImageUrl: heroImageUrl.trim() || null,
     });
-  }, [bodyHtml, ctaLabel, ctaUrl, locale, products, forms, heroImageUrl]);
+  }, [bodyHtml, ctaLabel, ctaUrl, locale, products, guides, forms, heroImageUrl]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-ink/10 bg-ink/5">

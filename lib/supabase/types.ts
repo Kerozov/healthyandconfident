@@ -1,3 +1,5 @@
+import type { EmailSignatureLink } from "@/lib/email/signature-links";
+
 export type Locale = "bg" | "en";
 
 export type BlogPost = {
@@ -92,6 +94,7 @@ export type EmailFooterConfig = {
   signature_title: string;
   signature_email: string;
   signature_phone: string;
+  signature_links: EmailSignatureLink[];
   brand_name: string;
   brand_color: string;
   website_url: string;
@@ -103,10 +106,22 @@ export type EmailFooterConfig = {
   youtube_url: string | null;
   disclaimer: string;
   preferences_url: string | null;
+  header_enabled: boolean;
+  header_title: string;
+  header_tagline: string;
+  header_subtitle: string;
+  header_image_url: string | null;
+  header_image_full_width: boolean;
+  header_bg_color: string;
+  copyright_enabled: boolean;
   updated_at: string;
 };
 
-export type AutomationTrigger = "purchase" | "new_subscriber";
+export type AutomationTrigger =
+  | "purchase"
+  | "new_subscriber"
+  | "form_submit"
+  | "segment_entry";
 
 export type AutomationChannel = "email" | "sms";
 
@@ -141,6 +156,10 @@ export type Automation = {
   /** new | existing_registered | manual | import — empty uses legacy new_subscribers_only */
   subscriber_origins: string[];
   new_subscribers_only: boolean;
+  /** When trigger is form_submit — which form starts this chain. */
+  trigger_form_id: string | null;
+  /** Choice-question filters (include / exclude). Empty = any answers. */
+  form_answer_conditions: import("@/lib/automation/form-conditions").FormAnswerCondition[];
   after_automation_id: string | null;
   delay_days: number;
   /** Minutes after previous automation (or event) when delay_days is 0 */
@@ -392,6 +411,9 @@ export type SiteProduct = {
   stripe_url: string;
   stripe_product_id: string;
   stripe_price_id: string;
+  stripe_url_en: string;
+  stripe_product_id_en: string;
+  stripe_price_id_en: string;
   price_label_bg: string;
   price_label_en: string;
   image_url: string | null;
@@ -404,6 +426,8 @@ export type SiteProduct = {
   /** Tags applied to subscriber when this product is purchased */
   purchase_tags: string[];
   enabled: boolean;
+  /** When false, the product is hidden on the English site and in EN emails. */
+  enabled_en: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -467,4 +491,33 @@ export type SiteVisit = {
   utm_campaign: string | null;
   source: string;
   device: "mobile" | "tablet" | "desktop";
+};
+
+export type AdminUserRole = "owner" | "member";
+
+export type AdminUser = {
+  id: string;
+  username: string;
+  display_name: string;
+  password_hash: string | null;
+  role: AdminUserRole;
+  screens: string[];
+  active: boolean;
+  last_login_at: string | null;
+  last_seen_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminAuditLog = {
+  id: string;
+  actor_id: string | null;
+  actor_username: string;
+  actor_name: string;
+  screen: string;
+  action: string;
+  summary: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  created_at: string;
 };

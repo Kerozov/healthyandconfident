@@ -270,7 +270,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     priorTags,
     isNew,
     source: "purchase",
-    purchasedProductIds: productIds,
+    purchasedProductIds: [...productIds, ...guideIds],
   });
 
   if (subscriberId) {

@@ -3,6 +3,7 @@ import { ArrowUpRight, Sparkles } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { resolveOfferCta, resolveOfferHeadline } from "@/lib/site/cta-placements";
+import { productHasCheckoutForLocale } from "@/lib/site/product-locale";
 import { productCheckoutPath } from "@/lib/site/product-placement";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ export function OfferPitch({
   const cta = resolveOfferCta(locale, offer);
   // Always through the product page: it works for products that only have a
   // Stripe Price ID, and it runs that product's own offer before checkout.
-  const canBuy = Boolean(offer.stripe_price_id?.trim() || offer.stripe_url?.trim());
+  const canBuy = productHasCheckoutForLocale(offer, locale);
   const checkoutUrl = canBuy ? productCheckoutPath(offer.id, locale) : "";
 
   return (

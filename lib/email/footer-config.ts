@@ -3,6 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { EmailFooterConfig, Locale } from "@/lib/supabase/types";
 import { footerConfigFromRow } from "@/lib/email/footer-defaults";
+import { resolveSignatureCatalogHrefs } from "@/lib/email/hydrate-signature-links";
 
 export { DEFAULT_EMAIL_FOOTER, footerConfigFromRow } from "@/lib/email/footer-defaults";
 
@@ -22,7 +23,9 @@ export async function getEmailFooterConfig(locale: Locale): Promise<EmailFooterC
       .select("*")
       .eq("locale", locale)
       .maybeSingle();
-    const config = footerConfigFromRow((data as EmailFooterConfig | null) ?? null, locale);
+    const config = await resolveSignatureCatalogHrefs(
+      footerConfigFromRow((data as EmailFooterConfig | null) ?? null, locale),
+    );
     cache.set(locale, { at: Date.now(), config });
     return config;
   } catch {

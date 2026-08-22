@@ -1,12 +1,8 @@
-"use client";
-
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
-import {
-  canBuyProduct,
-  useProductCheckout,
-} from "@/components/site/use-product-checkout";
+import { productCheckoutPath } from "@/lib/site/product-placement";
 
 export function ShopProductGrid({
   products,
@@ -19,15 +15,7 @@ export function ShopProductGrid({
   shopEyebrow: string;
   shopCta: string;
 }) {
-  const buyProduct = useProductCheckout(locale);
-
   if (products.length === 0) return null;
-
-  function openProduct(product: SiteProduct) {
-    void buyProduct(product).catch((err) => {
-      console.error("[shop] checkout failed", err);
-    });
-  }
 
   return (
     <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -37,15 +25,12 @@ export function ShopProductGrid({
           locale === "bg" ? product.description_bg : product.description_en;
         const price =
           locale === "bg" ? product.price_label_bg : product.price_label_en;
-        const canCheckout = canBuyProduct(product);
 
         return (
-          <button
+          <Link
             key={product.id}
-            type="button"
-            onClick={() => openProduct(product)}
-            disabled={!canCheckout}
-            className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
+            href={productCheckoutPath(product.id, locale)}
+            className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
           >
             <div className="flex min-h-[168px] items-center justify-center overflow-hidden bg-cream-2 sm:min-h-[200px]">
               {product.image_url ? (
@@ -79,7 +64,7 @@ export function ShopProductGrid({
                 {shopCta} <ArrowUpRight className="h-4 w-4" />
               </span>
             </div>
-          </button>
+          </Link>
         );
       })}
     </div>

@@ -25,84 +25,72 @@ import {
   Target,
   BookOpen,
   Eye,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  ADMIN_SCREEN_GROUPS,
+  type AdminScreenKey,
+} from "@/lib/admin/screens";
+import type { AdminActorPublic } from "@/lib/admin/actor-types";
+import { AccountPasswordForm } from "@/components/admin/account-password-form";
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-  exact?: boolean;
+const ICONS: Record<AdminScreenKey, typeof LayoutDashboard> = {
+  dashboard: LayoutDashboard,
+  guide: BookOpen,
+  blog: FileText,
+  website: Globe,
+  popup: MousePointerClick,
+  "email-footer": Signature,
+  subscribers: Users,
+  contacts: Route,
+  zoom: Video,
+  forms: ClipboardList,
+  campaigns: Megaphone,
+  automations: Mail,
+  meta: Target,
+  visits: Eye,
+  engagement: BarChart3,
+  payments: CreditCard,
 };
 
-const navGroups: { label: string; items: NavItem[] }[] = [
-  {
-    label: "Преглед",
-    items: [
-      { href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true },
-      { href: "/admin/guide", label: "Ръководство", icon: BookOpen },
-    ],
-  },
-  {
-    label: "Съдържание",
-    items: [
-      { href: "/admin/blog", label: "Блог", icon: FileText },
-      { href: "/admin/website", label: "Уебсайт", icon: Globe },
-      { href: "/admin/popup", label: "Popup", icon: MousePointerClick },
-      { href: "/admin/email-footer", label: "Email подпис", icon: Signature },
-    ],
-  },
-  {
-    label: "Аудитория",
-    items: [
-      { href: "/admin/subscribers", label: "Абонати", icon: Users },
-      { href: "/admin/contacts", label: "Контакти", icon: Route },
-      { href: "/admin/zoom", label: "Zoom", icon: Video },
-      { href: "/admin/forms", label: "Форми", icon: ClipboardList },
-    ],
-  },
-  {
-    label: "Маркетинг",
-    items: [
-      { href: "/admin/campaigns", label: "Кампании", icon: Megaphone },
-      { href: "/admin/automations", label: "Автоматизации", icon: Mail },
-      { href: "/admin/meta", label: "Meta реклами", icon: Target },
-    ],
-  },
-  {
-    label: "Анализи",
-    items: [
-      { href: "/admin/visits", label: "Посещения", icon: Eye },
-      { href: "/admin/engagement", label: "Статистика имейли", icon: BarChart3 },
-      { href: "/admin/payments", label: "Плащания", icon: CreditCard },
-    ],
-  },
-];
+function canSeeScreen(actor: AdminActorPublic, key: AdminScreenKey) {
+  if (actor.role === "owner") return true;
+  if (key === "dashboard") return true;
+  return actor.screens.includes(key);
+}
 
-function isActive(pathname: string, item: NavItem) {
-  return item.exact ? pathname === item.href : pathname.startsWith(item.href);
+function isActive(pathname: string, href: string, exact?: boolean) {
+  return exact ? pathname === href : pathname.startsWith(href);
 }
 
 function NavLinks({
   pathname,
+  actor,
   onNavigate,
   className,
 }: {
   pathname: string;
+  actor: AdminActorPublic;
   onNavigate?: () => void;
   className?: string;
 }) {
+  const groups = ADMIN_SCREEN_GROUPS.map((group) => ({
+    ...group,
+    screens: group.screens.filter((screen) => canSeeScreen(actor, screen.key)),
+  })).filter((group) => group.screens.length > 0);
+
   return (
     <div className={cn("space-y-6", className)}>
-      {navGroups.map((group) => (
+      {groups.map((group) => (
         <div key={group.label}>
           <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-soft/70">
             {group.label}
           </p>
           <ul className="space-y-0.5">
-            {group.items.map((item) => {
-              const active = isActive(pathname, item);
-              const Icon = item.icon;
+            {group.screens.map((item) => {
+              const active = isActive(pathname, item.href, item.exact);
+              const Icon = ICONS[item.key];
               return (
                 <li key={item.href}>
                   <Link
@@ -125,11 +113,37 @@ function NavLinks({
           </ul>
         </div>
       ))}
+
+      {actor.role === "owner" ? (
+        <div>
+          <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-soft/70">
+            Екип
+          </p>
+          <ul className="space-y-0.5">
+            <li>
+              <Link
+                href="/admin/team"
+                onClick={onNavigate}
+                aria-current={pathname.startsWith("/admin/team") ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35",
+                  pathname.startsWith("/admin/team")
+                    ? "bg-forest-600 text-cream shadow-sm"
+                    : "text-ink-soft hover:bg-ink/5 hover:text-ink",
+                )}
+              >
+                <Shield className="h-4 w-4 shrink-0" aria-hidden />
+                Профили и промени
+              </Link>
+            </li>
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ actor }: { actor: AdminActorPublic }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -150,7 +164,14 @@ export function Sidebar() {
   }
 
   const footer = (
-    <div className="flex flex-col gap-2 border-t border-ink/10 p-4">
+    <div className="flex flex-col gap-3 border-t border-ink/10 p-4">
+      <div className="rounded-xl bg-cream-2/80 px-3 py-2.5">
+        <p className="truncate text-sm font-semibold text-ink">{actor.displayName}</p>
+        <p className="truncate text-xs text-ink-soft">
+          @{actor.username} · {actor.role === "owner" ? "главен админ" : "профил"}
+        </p>
+      </div>
+      <AccountPasswordForm />
       <Link
         href="/bg"
         target="_blank"
@@ -230,7 +251,7 @@ export function Sidebar() {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
+          <NavLinks pathname={pathname} actor={actor} onNavigate={() => setOpen(false)} />
         </nav>
 
         {footer}

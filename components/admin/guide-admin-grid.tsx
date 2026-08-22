@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { GripVertical, Pencil, Trash2, BookOpen } from "lucide-react";
 import type { SiteGuide } from "@/lib/supabase/types";
 import { reorderSiteGuides } from "@/app/(admin)/admin/actions";
+import { guidePagePath } from "@/lib/site/product-placement";
+import { PublicPathLinks } from "@/components/admin/public-path-links";
 import { cn } from "@/lib/utils";
 
 export function GuideAdminGrid({
@@ -104,6 +106,16 @@ export function GuideAdminGrid({
                 {guide.description_bg}
               </p>
             )}
+            <div className="mt-3">
+              <PublicPathLinks
+                paths={[
+                  {
+                    label: guidePagePath(guide.id, "bg"),
+                    href: guidePagePath(guide.id, "bg"),
+                  },
+                ]}
+              />
+            </div>
             <div className="mt-4 flex gap-1">
               <button
                 type="button"

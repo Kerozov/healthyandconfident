@@ -15,7 +15,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
-  const form = await getFormTemplateBySlug(slug);
+  const form = await getFormTemplateBySlug(slug, { includeDisabled: true });
   if (!form) return { title: "Form" };
   const title = locale === "en" ? form.title_en : form.title_bg;
   return { title };
@@ -33,16 +33,18 @@ export default async function PublicFormPage({
   if (!isLocale(locale)) notFound();
 
   const l = locale as Locale;
-  const form = await getFormTemplateBySlug(slug);
+  const form = await getFormTemplateBySlug(slug, { includeDisabled: true });
   if (!form) notFound();
 
   let prefilledEmail: string | undefined;
   let prefilledName: string | undefined;
+  let inviteToken: string | undefined;
 
   if (token) {
     const payload = verifyFormInviteToken(token);
     if (payload && payload.f === form.id) {
       prefilledEmail = payload.e;
+      inviteToken = token;
       if (payload.sid) {
         const supabase = getAdminClient();
         const { data } = await supabase
@@ -54,6 +56,9 @@ export default async function PublicFormPage({
       }
     }
   }
+
+  // Hidden forms stay off the public URL, but a valid invite still opens them.
+  if (!form.enabled && !inviteToken) notFound();
 
   const title = l === "en" ? form.title_en : form.title_bg;
   const description = l === "en" ? form.description_en : form.description_bg;
@@ -67,7 +72,7 @@ export default async function PublicFormPage({
       settings={form.settings}
       prefilledEmail={prefilledEmail}
       prefilledName={prefilledName}
-      token={token}
+      token={inviteToken}
       slug={slug}
     />
   );

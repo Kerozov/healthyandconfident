@@ -1,9 +1,8 @@
-"use client";
-
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteGuide } from "@/lib/supabase/types";
-import { openStripeUrl, startGuideCheckout } from "@/lib/site/stripe-checkout";
+import { guidePagePath } from "@/lib/site/product-placement";
 
 function GuideCardImage({ src, alt }: { src: string; alt: string }) {
   return (
@@ -37,28 +36,12 @@ export function GuidesGrid({
           locale === "bg" ? guide.description_bg : guide.description_en;
         const price =
           locale === "bg" ? guide.price_label_bg : guide.price_label_en;
-        const checkoutUrl = guide.stripe_url?.trim() ?? "";
-        const hasSiteCheckout = Boolean(guide.stripe_price_id?.trim());
-        const canCheckout = Boolean(checkoutUrl || hasSiteCheckout);
 
         return (
-          <button
+          <Link
             key={guide.id}
-            type="button"
-            onClick={() => {
-              // Prefer site Checkout when price_id exists — purchase segments + automations.
-              if (hasSiteCheckout) {
-                void startGuideCheckout(guide.id, locale).catch((err) => {
-                  console.error("[guides] checkout failed", err);
-                });
-                return;
-              }
-              if (checkoutUrl) {
-                openStripeUrl(checkoutUrl, [guide.id]);
-              }
-            }}
-            disabled={!canCheckout}
-            className="group flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60"
+            href={guidePagePath(guide.id, locale)}
+            className="group flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
           >
             {guide.image_url ? (
               <GuideCardImage src={guide.image_url} alt={title} />
@@ -88,7 +71,7 @@ export function GuidesGrid({
                 {cta} <ArrowUpRight className="h-4 w-4" />
               </span>
             </div>
-          </button>
+          </Link>
         );
       })}
     </div>

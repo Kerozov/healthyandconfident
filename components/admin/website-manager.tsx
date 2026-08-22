@@ -25,7 +25,8 @@ import type {
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
-import { productPlacementKey } from "@/lib/site/product-placement";
+import { productPlacementKey, productCheckoutPath } from "@/lib/site/product-placement";
+import { PublicPathLinks } from "@/components/admin/public-path-links";
 import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { CtaPlacementsPanel, WebsiteTabs } from "@/components/admin/website-cta-panel";
 import {
@@ -40,7 +41,12 @@ import {
 import { GuidesManagerPanel } from "@/components/admin/guides-manager";
 import { ProductAdminGrid } from "@/components/admin/product-admin-grid";
 import { ProductOfferEditor } from "@/components/admin/product-offer-editor";
-import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { StripeCatalogPanel } from "@/components/admin/stripe-catalog-panel";
+import {
+  StripeLocalePicker,
+  invalidateStripeCatalogCache,
+} from "@/components/admin/stripe-locale-picker";
+import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { cn } from "@/lib/utils";
 
@@ -153,6 +159,8 @@ const EMPTY_PRODUCT = {
   description_en: "",
   stripe_url: "",
   stripe_id: "",
+  stripe_url_en: "",
+  stripe_id_en: "",
   price_label_bg: "",
   price_label_en: "",
   image_url: "",
@@ -170,7 +178,7 @@ const EMPTY_PRODUCT = {
   downsell_headline_en: "",
   purchase_tags: [] as string[],
   enabled: true,
-  sort_order: 0,
+  enabled_en: true,
 };
 
 export function WebsiteManager({
@@ -310,7 +318,7 @@ export function WebsiteManager({
 
   function openNewProduct() {
     setEditingProductId("new");
-    setProductForm({ ...EMPTY_PRODUCT, sort_order: (products.length + 1) * 10 });
+    setProductForm({ ...EMPTY_PRODUCT });
     setError(null);
   }
 
@@ -324,6 +332,11 @@ export function WebsiteManager({
       description_en: product.description_en,
       stripe_url: product.stripe_url,
       stripe_id: formatStripeIdInput(product),
+      stripe_url_en: product.stripe_url_en ?? "",
+      stripe_id_en: formatStripeIdInput({
+        stripe_product_id: product.stripe_product_id_en,
+        stripe_price_id: product.stripe_price_id_en,
+      }),
       price_label_bg: product.price_label_bg,
       price_label_en: product.price_label_en,
       image_url: product.image_url ?? "",
@@ -341,7 +354,7 @@ export function WebsiteManager({
       downsell_headline_en: placement?.downsell_headline_en ?? "",
       purchase_tags: product.purchase_tags ?? [],
       enabled: product.enabled,
-      sort_order: product.sort_order,
+      enabled_en: product.enabled_en !== false,
     });
     setError(null);
   }
@@ -358,6 +371,8 @@ export function WebsiteManager({
       const res = await saveSiteProduct({
         id: editingProductId === "new" ? undefined : editingProductId!,
         ...productForm,
+        sort_order:
+          editingProductId === "new" ? (products.length + 1) * 10 : undefined,
         purchase_tags: productForm.purchase_tags,
         upsell_offer_id: productForm.upsell_offer_id || null,
         downsell_offer_id: productForm.downsell_offer_id || null,
@@ -367,6 +382,7 @@ export function WebsiteManager({
         return;
       }
       setEditingProductId(null);
+      invalidateStripeCatalogCache();
       refresh();
     });
   }
@@ -414,36 +430,34 @@ export function WebsiteManager({
         >
           <div className="mb-4 space-y-2 text-sm text-ink-soft">
             <p>
-              Добави продукт ръчно с <strong>Stripe Price ID</strong> (
-              <code>price_…</code>) или <strong>Product ID</strong> (
-              <code>prod_…</code> — взима default цената). Payment Link е резервен
-              вариант — ако има <code>price_/prod_</code>, сайтът ползва Checkout
-              (нужно за сегменти след покупка <em>и</em> за да може продуктът да се
-              продава заедно с оферта).
+              Закачи <strong>отделен Stripe продукт или Payment Link</strong> за
+              български и за английски. Подреди с влачене в списъка долу — без
+              ръчни номера.
             </p>
             <p>
-              Всеки продукт може да има своя оферта. Тя се показва навсякъде, откъдето
-              се купува продуктът — в магазина, на страниците на програмите и при клик
-              на продуктов блок в имейл.
+              Ако има Stripe цена (<code>price_/prod_</code>), сайтът ползва
+              Checkout (нужно за сегменти след покупка и за оферта в същата
+              сметка). Payment Link е резервен вариант.
             </p>
           </div>
           <SectionToggle section={productsSection} onSaved={refresh} />
 
+          {!editingProductId && (
+            <StripeCatalogPanel
+              onEditProduct={(id) => {
+                const product = products.find((p) => p.id === id);
+                if (product) openEditProduct(product);
+              }}
+              onImported={() => {
+                invalidateStripeCatalogCache();
+                refresh();
+              }}
+            />
+          )}
+
           {editingProductId ? (
             <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Ред">
-                  <Input
-                    type="number"
-                    value={productForm.sort_order}
-                    onChange={(e) =>
-                      setProductForm({
-                        ...productForm,
-                        sort_order: Number(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </Field>
                 <Field label="Име — BG">
                   <Input
                     value={productForm.title_bg}
@@ -478,36 +492,28 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field
-                  label="Stripe Price ID или Product ID"
-                  hint="price_… или prod_… — задължително за сегменти след покупка и автоматизации. Ако има и Payment Link, сайтът ползва Checkout през price_…"
-                >
-                  <Input
-                    value={productForm.stripe_id}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, stripe_id: e.target.value })
-                    }
-                    placeholder="price_1ABC… или prod_1ABC…"
-                  />
-                </Field>
-                <Field
-                  label="Payment Link (по избор)"
-                  hint="buy.stripe.com — ползва се само ако няма price_/prod_. С price_ сайтът винаги ползва Checkout."
-                >
-                  <Input
-                    value={productForm.stripe_url}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, stripe_url: e.target.value })
-                    }
-                    placeholder="https://buy.stripe.com/..."
-                  />
-                </Field>
                 <ImageUploadField
                   label="Снимка"
                   value={productForm.image_url}
                   onChange={(url) => setProductForm({ ...productForm, image_url: url })}
                   folder="products"
                 />
+                {editingProductId !== "new" && (
+                  <Field label="Публични линкове">
+                    <PublicPathLinks
+                      paths={[
+                        {
+                          label: productCheckoutPath(editingProductId, "bg"),
+                          href: productCheckoutPath(editingProductId, "bg"),
+                        },
+                        {
+                          label: productCheckoutPath(editingProductId, "en"),
+                          href: productCheckoutPath(editingProductId, "en"),
+                        },
+                      ]}
+                    />
+                  </Field>
+                )}
                 <Field label="Цена — BG">
                   <Input
                     value={productForm.price_label_bg}
@@ -562,12 +568,64 @@ export function WebsiteManager({
                   />
                 </Field>
               </div>
+
+              <StripeLocalePicker
+                label="Плащане — български"
+                hint="Това се ползва на /bg и като резерва за английски, ако там няма отделен Stripe."
+                value={{
+                  stripe_id: productForm.stripe_id,
+                  stripe_url: productForm.stripe_url,
+                  price_label: productForm.price_label_bg,
+                }}
+                onChange={(next) =>
+                  setProductForm({
+                    ...productForm,
+                    stripe_id: next.stripe_id,
+                    stripe_url: next.stripe_url,
+                    price_label_bg: next.price_label ?? productForm.price_label_bg,
+                  })
+                }
+                disabled={pending}
+              />
+
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={productForm.enabled_en}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, enabled_en: e.target.checked })
+                  }
+                />
+                Английска версия (магазин /en и английски имейли)
+              </label>
+
+              {productForm.enabled_en && (
+                <StripeLocalePicker
+                  label="Плащане — английски"
+                  hint="Отделен Stripe продукт или Payment Link. Ако оставиш празно, ползва се българското плащане."
+                  value={{
+                    stripe_id: productForm.stripe_id_en,
+                    stripe_url: productForm.stripe_url_en,
+                    price_label: productForm.price_label_en,
+                  }}
+                  onChange={(next) =>
+                    setProductForm({
+                      ...productForm,
+                      stripe_id_en: next.stripe_id,
+                      stripe_url_en: next.stripe_url,
+                      price_label_en: next.price_label ?? productForm.price_label_en,
+                    })
+                  }
+                  disabled={pending}
+                />
+              )}
               <ProductOfferEditor
                 products={products}
                 editingProductId={editingProductId}
                 form={productForm}
                 onChange={(patch) => setProductForm({ ...productForm, ...patch })}
-                currentStripeId={productForm.stripe_id}
+                currentStripeIdBg={productForm.stripe_id}
+                currentStripeIdEn={productForm.stripe_id_en}
               />
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
                 <p className="text-sm font-semibold text-forest-800">Сегменти след покупка</p>
@@ -594,7 +652,7 @@ export function WebsiteManager({
                     setProductForm({ ...productForm, enabled: e.target.checked })
                   }
                 />
-                Активен продукт
+                Активен продукт (български магазин)
               </label>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -618,6 +676,9 @@ export function WebsiteManager({
           ) : null}
 
           <div className="mt-4">
+            <p className="mb-3 text-xs font-medium text-ink-soft">
+              Хвани иконата с точките и влачи, за да смениш реда в магазина.
+            </p>
             <ProductAdminGrid
               products={products}
               onEdit={openEditProduct}

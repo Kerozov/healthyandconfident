@@ -2,8 +2,11 @@
 
 import { useRef } from "react";
 import { Mail, Plus, Trash2, User } from "lucide-react";
-import type { SiteProduct } from "@/lib/supabase/types";
+import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
+import { productSellableInLocale } from "@/lib/site/product-locale";
+import { guideSellable } from "@/lib/site/guide-catalog";
+import type { EmailProductLinkMode } from "@/lib/email/products-block";
 import { Input, Textarea } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { insertAtCursor } from "@/lib/email/body-buttons";
@@ -16,14 +19,14 @@ import { cn } from "@/lib/utils";
 
 type Block<T extends EmailBlock["type"]> = Extract<EmailBlock, { type: T }>;
 
-/** A product needs a Stripe price or a payment link before it can be sold. */
-function canSellProduct(product: SiteProduct): boolean {
-  return Boolean(product.stripe_price_id?.trim() || product.stripe_url?.trim());
+function canSellProduct(product: SiteProduct, locale: "bg" | "en"): boolean {
+  return productSellableInLocale(product, locale);
 }
 
 export type BlockEditorContext = {
   locale: "bg" | "en";
   products: SiteProduct[];
+  guides: SiteGuide[];
   forms: FormTemplateRecord[];
   disabled?: boolean;
 };
@@ -468,77 +471,14 @@ export function EmailBlockEditor({
       );
 
     case "product":
+    case "guide":
       return (
-        <div className="space-y-3">
-          <Row label="Продукт — картата се попълва с актуалната цена при изпращане">
-            {ctx.products.length === 0 ? (
-              <p className="text-sm text-ink-soft">
-                Няма продукти — създай ги в Admin → Website → Продукти.
-              </p>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {[...ctx.products]
-                  .sort(
-                    (a, b) =>
-                      a.sort_order - b.sort_order ||
-                      a.title_bg.localeCompare(b.title_bg, "bg"),
-                  )
-                  .map((product) => (
-                    <PickerCard
-                      key={product.id}
-                      selected={
-                        block.productId.toLowerCase() ===
-                        product.id.toLowerCase()
-                      }
-                      disabled={disabled || !canSellProduct(product)}
-                      onClick={() => onChange({ ...block, productId: product.id })}
-                      thumbnail={product.image_url ?? ""}
-                      title={
-                        (ctx.locale === "en"
-                          ? product.title_en
-                          : product.title_bg) || product.title_bg
-                      }
-                      note={
-                        canSellProduct(product)
-                          ? ctx.locale === "en"
-                            ? product.price_label_en
-                            : product.price_label_bg
-                          : "няма Stripe цена — добави я в Website → Продукти"
-                      }
-                    />
-                  ))}
-              </div>
-            )}
-          </Row>
-
-          <Row label="Накъде води бутонът">
-            <Segmented
-              value={block.linkMode}
-              disabled={disabled}
-              onChange={(linkMode) => onChange({ ...block, linkMode })}
-              options={[
-                { value: "site", label: "Към сайта (с оферта)" },
-                { value: "stripe", label: "Право към Stripe" },
-              ]}
-            />
-          </Row>
-          <p className="text-xs leading-relaxed text-ink-soft">
-            {block.linkMode === "site" ? (
-              <>
-                Отваря страницата на продукта в сайта. Там се показва
-                допълнителната оферта (upsell), която си задал в{" "}
-                <strong>Website → Продукти</strong>, и покупката се записва към
-                абоната — така работят сегментите след покупка и автоматизациите.
-              </>
-            ) : (
-              <>
-                Води директно към Stripe Payment Link. <strong>Офертата не се
-                показва</strong> и покупката може да не се свърже с абоната.
-                Ползвай само ако продуктът няма Stripe цена.
-              </>
-            )}
-          </p>
-        </div>
+        <CatalogOfferPicker
+          block={block}
+          onChange={onChange}
+          ctx={ctx}
+          disabled={disabled}
+        />
       );
 
     case "form":
@@ -558,14 +498,14 @@ export function EmailBlockEditor({
                     selected={
                       block.formId.toLowerCase() === form.id.toLowerCase()
                     }
-                    disabled={disabled || !form.enabled}
+                    disabled={disabled}
                     onClick={() => onChange({ ...block, formId: form.id })}
                     emoji="📋"
                     title={
                       (ctx.locale === "en" ? form.title_en : form.title_bg) ||
                       form.name
                     }
-                    note={form.enabled ? `/${form.slug}` : "изключена"}
+                    note={form.enabled ? `/${form.slug}` : "скрита — само с покана"}
                   />
                 ))}
             </div>
@@ -594,6 +534,166 @@ export function EmailBlockEditor({
     default:
       return null;
   }
+}
+
+function CatalogOfferPicker({
+  block,
+  onChange,
+  ctx,
+  disabled,
+}: {
+  block: Block<"product"> | Block<"guide">;
+  onChange: (next: EmailBlock) => void;
+  ctx: BlockEditorContext;
+  disabled?: boolean;
+}) {
+  const selectedId =
+    block.type === "product" ? block.productId : block.guideId;
+  const linkMode = block.linkMode;
+  const products = [...ctx.products].sort(
+    (a, b) =>
+      a.sort_order - b.sort_order || a.title_bg.localeCompare(b.title_bg, "bg"),
+  );
+  const guides = [...(ctx.guides ?? [])].sort(
+    (a, b) =>
+      a.sort_order - b.sort_order || a.title_bg.localeCompare(b.title_bg, "bg"),
+  );
+
+  function setLinkMode(next: EmailProductLinkMode) {
+    onChange({ ...block, linkMode: next });
+  }
+
+  function pickProduct(productId: string) {
+    onChange({
+      id: block.id,
+      type: "product",
+      productId,
+      linkMode,
+    });
+  }
+
+  function pickGuide(guideId: string) {
+    onChange({
+      id: block.id,
+      type: "guide",
+      guideId,
+      linkMode,
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <Row label="Продукт или наръчник — картата се попълва с актуалната цена при изпращане">
+        {products.length === 0 && guides.length === 0 ? (
+          <p className="text-sm text-ink-soft">
+            Няма продукти или ръководства — създай ги в Admin → Website.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {products.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-[11px] font-semibold text-ink-soft">
+                  Продукти
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {products.map((product) => {
+                    const sellable = canSellProduct(product, ctx.locale);
+                    return (
+                      <PickerCard
+                        key={product.id}
+                        selected={
+                          block.type === "product" &&
+                          selectedId.toLowerCase() === product.id.toLowerCase()
+                        }
+                        disabled={disabled || !sellable}
+                        onClick={() => pickProduct(product.id)}
+                        thumbnail={product.image_url ?? ""}
+                        title={
+                          (ctx.locale === "en"
+                            ? product.title_en
+                            : product.title_bg) || product.title_bg
+                        }
+                        note={
+                          sellable
+                            ? ctx.locale === "en"
+                              ? product.price_label_en
+                              : product.price_label_bg
+                            : "няма Stripe цена — добави я в Website → Продукти"
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {guides.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-[11px] font-semibold text-ink-soft">
+                  Ръководства
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {guides.map((guide) => {
+                    const sellable = guideSellable(guide);
+                    return (
+                      <PickerCard
+                        key={guide.id}
+                        selected={
+                          block.type === "guide" &&
+                          selectedId.toLowerCase() === guide.id.toLowerCase()
+                        }
+                        disabled={disabled || !sellable}
+                        onClick={() => pickGuide(guide.id)}
+                        thumbnail={guide.image_url ?? ""}
+                        emoji="📘"
+                        title={
+                          (ctx.locale === "en"
+                            ? guide.title_en
+                            : guide.title_bg) || guide.title_bg
+                        }
+                        note={
+                          sellable
+                            ? ctx.locale === "en"
+                              ? guide.price_label_en
+                              : guide.price_label_bg
+                            : "няма Stripe цена — добави я в Website → Ръководства"
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Row>
+
+      <Row label="Накъде води бутонът">
+        <Segmented
+          value={linkMode}
+          disabled={disabled}
+          onChange={setLinkMode}
+          options={[
+            { value: "site", label: "Към сайта (с оферта)" },
+            { value: "stripe", label: "Право към Stripe" },
+          ]}
+        />
+      </Row>
+      <p className="text-xs leading-relaxed text-ink-soft">
+        {linkMode === "site" ? (
+          <>
+            Отваря страницата на продукта или наръчника в сайта. За продукти там
+            се показва допълнителната оферта (upsell) и покупката се записва към
+            абоната.
+          </>
+        ) : (
+          <>
+            Води директно към Stripe Payment Link. <strong>Офертата не се
+            показва</strong> и покупката може да не се свърже с абоната.
+          </>
+        )}
+      </p>
+    </div>
+  );
 }
 
 function PickerCard({

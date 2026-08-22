@@ -7,3 +7,13 @@ export type StripeCatalogRow = {
   priceLabel: string;
   active: boolean;
 };
+
+export type StripePaymentLinkRow = {
+  id: string;
+  url: string;
+  name: string;
+  priceLabel: string;
+  stripeProductId: string | null;
+  stripePriceId: string | null;
+  active: boolean;
+};

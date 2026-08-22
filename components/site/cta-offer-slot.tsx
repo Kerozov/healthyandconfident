@@ -24,7 +24,7 @@ export function CtaOfferSlot({
   const placement = placements[placementKey];
   if (!placement?.offer_enabled) return null;
 
-  const offer = resolveOffer(placement.offer_id, offersById);
+  const offer = resolveOffer(placement.offer_id, offersById, locale);
   if (!offer || !offerMatchesVisitor(offer)) return null;
 
   const headline =
@@ -58,7 +58,7 @@ export function EventOfferSlot({
   className?: string;
 }) {
   if (!event.offer_enabled) return null;
-  const offer = resolveOffer(event.offer_id, offersById);
+  const offer = resolveOffer(event.offer_id, offersById, locale);
   if (!offer || !offerMatchesVisitor(offer)) return null;
 
   const headline =

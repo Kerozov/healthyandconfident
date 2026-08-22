@@ -25,6 +25,7 @@ import {
   openStripeUrl,
   startStripeCheckout,
 } from "@/lib/site/stripe-checkout";
+import { productStripeForLocale } from "@/lib/site/product-locale";
 
 type PopupState = {
   /** Which of the two offers is on screen right now. */
@@ -85,14 +86,14 @@ function navigateTo(
 function offerIsAddable(
   offer: ResolvedOffer | null,
   baseProduct: SiteProduct | undefined,
+  locale: Locale,
 ): boolean {
   if (!offer) return false;
   if (!baseProduct) {
-    return (
-      canBundleCheckout(offer.offer) || Boolean(offer.offer.stripe_url?.trim())
-    );
+    const stripe = productStripeForLocale(offer.offer, locale);
+    return Boolean(stripe.stripe_price_id || stripe.stripe_url);
   }
-  return canBundleCheckout(baseProduct, offer.offer);
+  return canBundleCheckout(locale, baseProduct, offer.offer);
 }
 
 export function OfferPopupProvider({
@@ -125,8 +126,8 @@ export function OfferPopupProvider({
         base?.id,
       );
 
-      const showUpsell = offerIsAddable(upsell, base) ? upsell : null;
-      const showDownsell = offerIsAddable(downsell, base) ? downsell : null;
+      const showUpsell = offerIsAddable(upsell, base, locale) ? upsell : null;
+      const showDownsell = offerIsAddable(downsell, base, locale) ? downsell : null;
       if (!showUpsell && !showDownsell) return false;
 
       setCheckoutError(null);
@@ -171,11 +172,11 @@ export function OfferPopupProvider({
     if (!popup) return;
     const baseProduct = popup.baseProduct;
     if (baseProduct) {
-      if (canBundleCheckout(baseProduct)) {
+      if (canBundleCheckout(locale, baseProduct)) {
         checkoutProducts([baseProduct.id]);
         return;
       }
-      const url = baseProduct.stripe_url?.trim();
+      const url = productStripeForLocale(baseProduct, locale).stripe_url;
       if (url) {
         setPopup(null);
         openStripeUrl(url, [baseProduct.id]);
@@ -185,13 +186,19 @@ export function OfferPopupProvider({
     dismiss(true);
   }
 
+  /** Close extra offers and continue whatever the visitor originally clicked. */
+  function closeOfferDialog() {
+    if (pending) return;
+    proceedWithOriginal();
+  }
+
   useEffect(() => {
     if (!popup) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !pending) dismiss(false);
+      if (e.key === "Escape" && !pending) proceedWithOriginal();
     }
     window.addEventListener("keydown", onKeyDown);
 
@@ -240,11 +247,11 @@ export function OfferPopupProvider({
       checkoutProducts([baseProduct.id, offer.id]);
       return;
     }
-    if (canBundleCheckout(offer)) {
+    if (canBundleCheckout(locale, offer)) {
       checkoutProducts([offer.id]);
       return;
     }
-    const url = offer.stripe_url?.trim();
+    const url = productStripeForLocale(offer, locale).stripe_url;
     if (url) {
       setPopup(null);
       openStripeUrl(url, [offer.id]);
@@ -286,7 +293,7 @@ export function OfferPopupProvider({
       {popup && offer && (
         <div
           className="fixed inset-0 z-[110] flex items-end justify-center bg-forest-900/55 p-4 backdrop-blur-sm sm:items-center"
-          onClick={() => !pending && dismiss(false)}
+          onClick={() => closeOfferDialog()}
         >
           <div
             className="animate-fade-up relative w-full max-w-lg overflow-hidden rounded-3xl bg-cream-50 shadow-2xl"
@@ -296,7 +303,7 @@ export function OfferPopupProvider({
             onClick={(e) => e.stopPropagation()}
           >
             <ModalCloseButton
-              onClick={() => dismiss(false)}
+              onClick={() => closeOfferDialog()}
               disabled={pending}
               label={locale === "bg" ? "Затвори" : "Close"}
             />

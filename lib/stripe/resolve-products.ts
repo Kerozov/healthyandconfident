@@ -35,10 +35,18 @@ async function loadCatalogMaps() {
   const productByPrice = new Map<string, SiteProduct>();
   const productByStripeProduct = new Map<string, SiteProduct>();
   for (const product of products) {
-    const priceId = product.stripe_price_id?.trim();
-    if (priceId) productByPrice.set(priceId, product);
-    const prodId = product.stripe_product_id?.trim();
-    if (prodId) productByStripeProduct.set(prodId, product);
+    for (const priceId of [
+      product.stripe_price_id?.trim(),
+      product.stripe_price_id_en?.trim(),
+    ]) {
+      if (priceId) productByPrice.set(priceId, product);
+    }
+    for (const prodId of [
+      product.stripe_product_id?.trim(),
+      product.stripe_product_id_en?.trim(),
+    ]) {
+      if (prodId) productByStripeProduct.set(prodId, product);
+    }
   }
 
   const guideByPrice = new Map<string, SiteGuide>();
@@ -105,12 +113,26 @@ function resolveLineAmount(
   return { amountCents: null, currency: fallback.currency };
 }
 
+function pickPaidPriceId(
+  product: SiteProduct,
+  byPrice: Map<string, LineAmount>,
+  localeHint: "bg" | "en",
+): string {
+  const bgPrice = product.stripe_price_id?.trim() || "";
+  const enPrice = product.stripe_price_id_en?.trim() || "";
+  if (bgPrice && byPrice.has(bgPrice)) return bgPrice;
+  if (enPrice && byPrice.has(enPrice)) return enPrice;
+  if (localeHint === "en" && enPrice) return enPrice;
+  return bgPrice || enPrice;
+}
+
 function lineFromProducts(
   productIds: string[],
   products: SiteProduct[],
   byPrice: Map<string, LineAmount>,
   fallback: LineAmount,
   singleLineOrder: boolean,
+  localeHint: "bg" | "en",
 ): ResolvedLineItem[] {
   const byId = new Map(products.map((p) => [p.id, p]));
   const items: ResolvedLineItem[] = [];
@@ -118,8 +140,15 @@ function lineFromProducts(
   for (const id of productIds) {
     const product = byId.get(id);
     if (!product) continue;
-    const stripeProductId = product.stripe_product_id?.trim();
-    const stripePriceId = product.stripe_price_id?.trim() || "";
+    const bgPrice = product.stripe_price_id?.trim() || "";
+    const enPrice = product.stripe_price_id_en?.trim() || "";
+    const stripePriceId = pickPaidPriceId(product, byPrice, localeHint);
+    const stripeProductId =
+      (stripePriceId === enPrice
+        ? product.stripe_product_id_en?.trim()
+        : product.stripe_product_id?.trim()) ||
+      product.stripe_product_id?.trim() ||
+      product.stripe_product_id_en?.trim();
     if (!stripeProductId && !stripePriceId) continue;
     const amount = resolveLineAmount(stripePriceId, byPrice, fallback, singleLineOrder);
     items.push({
@@ -191,9 +220,11 @@ export async function resolveLineItemsFromCheckoutSession(
       amountCents: session.amount_total ?? null,
       currency: session.currency ?? null,
     };
-    const byPrice = singleLineOrder
-      ? new Map<string, LineAmount>()
-      : await loadAmountsByPrice(session.id);
+    // Always load line items so EN vs BG price IDs are chosen from what Stripe
+    // actually charged — skipping this for one-line orders stored the BG price
+    // on English checkouts.
+    const byPrice = await loadAmountsByPrice(session.id);
+    const localeHint = session.metadata?.locale === "en" ? "en" : "bg";
 
     return [
       ...lineFromProducts(
@@ -202,6 +233,7 @@ export async function resolveLineItemsFromCheckoutSession(
         byPrice,
         fallback,
         singleLineOrder,
+        localeHint,
       ),
       ...lineFromGuides(guideIdsFromMeta, guides, byPrice, fallback, singleLineOrder),
     ];

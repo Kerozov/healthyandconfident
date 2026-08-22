@@ -4,6 +4,7 @@ import {
   getSegments,
   getSegmentGroups,
   getSiteProducts,
+  getSiteGuides,
   getSubscriberTags,
 } from "@/lib/admin/data";
 import { getFormTemplates } from "@/lib/admin/forms-data";
@@ -14,13 +15,14 @@ import { PageHeader } from "@/components/admin/ui";
 export const dynamic = "force-dynamic";
 
 export default async function AdminCampaignsPage() {
-  const [emailCampaigns, smsCampaigns, segments, groups, products, forms, subscriberTags] =
+  const [emailCampaigns, smsCampaigns, segments, groups, products, guides, forms, subscriberTags] =
     await Promise.all([
       getEmailCampaigns(),
       getSmsCampaigns(),
       getSegments(),
       getSegmentGroups(),
       getSiteProducts(true),
+      getSiteGuides(true),
       getFormTemplates(),
       getSubscriberTags(),
     ]);
@@ -39,6 +41,7 @@ export default async function AdminCampaignsPage() {
           segments={segments}
           groups={groups}
           products={products}
+          guides={guides}
           forms={forms}
           subscriberTags={subscriberTags}
           workerConfigured={workerConfigured}

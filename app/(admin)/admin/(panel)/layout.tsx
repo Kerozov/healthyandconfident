@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { hasAdminSession } from "@/lib/admin/auth";
+import { getAdminSession, toPublicActor } from "@/lib/admin/auth";
 import { Sidebar } from "@/components/admin/sidebar";
 
 export default async function AdminPanelLayout({
@@ -7,8 +7,8 @@ export default async function AdminPanelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const authed = await hasAdminSession();
-  if (!authed) {
+  const session = await getAdminSession();
+  if (!session) {
     redirect("/admin/login");
   }
 
@@ -21,7 +21,7 @@ export default async function AdminPanelLayout({
         Към съдържанието
       </a>
       <div className="flex min-h-screen flex-col bg-cream-2/40 lg:flex-row">
-        <Sidebar />
+        <Sidebar actor={toPublicActor(session)} />
         <main
           id="admin-main"
           tabIndex={-1}

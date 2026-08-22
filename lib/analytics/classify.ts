@@ -157,9 +157,14 @@ export function visitPathLabel(path: string): string {
   if (rest === "/") return locale === "en" ? "Начало (EN)" : "Начало (BG)";
   if (rest === "/blog") return "Блог";
   if (rest.startsWith("/blog/")) return `Блог: ${decodeURIComponent(rest.slice(6))}`;
+  if (rest === "/programs") return "Програми";
   if (rest.startsWith("/programs/")) {
     return `Програма: ${decodeURIComponent(rest.slice(10))}`;
   }
+  if (rest === "/products") return "Продукти";
+  if (rest.startsWith("/products/")) return "Страница за продукт";
+  if (rest === "/guides") return "Ръководства";
+  if (rest.startsWith("/guides/")) return "Страница за ръководство";
   if (rest.startsWith("/checkout/")) return "Страница за покупка";
   if (rest.startsWith("/forms/")) return `Форма: ${decodeURIComponent(rest.slice(7))}`;
   if (rest === "/unsubscribe") return "Отписване";

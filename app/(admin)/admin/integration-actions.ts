@@ -15,7 +15,12 @@ export async function syncFunnelBrandAction(
   options: { full?: boolean } = {},
 ): Promise<ActionResult & Partial<FunnelBrandSyncResult>> {
   try {
-    await requireAdmin();
+    await requireAdmin("subscribers", {
+      action: "sync",
+      summary: options.full
+        ? "Пълна синхронизация с FunnelBrand"
+        : "Синхронизира контакти от FunnelBrand",
+    });
   } catch {
     return { ok: false, message: "Нямаш достъп." };
   }
@@ -32,7 +37,7 @@ export async function syncFunnelBrandAction(
 
 export async function testFunnelBrandAction(): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireAdmin("subscribers");
   } catch {
     return { ok: false, message: "Нямаш достъп." };
   }

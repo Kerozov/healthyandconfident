@@ -11,6 +11,7 @@ import type {
   SmsCampaign,
   AutomatedEmail,
   SiteProduct,
+  SiteGuide,
 } from "@/lib/supabase/types";
 import { assignableSegments } from "@/lib/segments/hierarchy";
 import { fetchAllRows } from "@/lib/admin/stats-shared";
@@ -254,4 +255,16 @@ export async function getSiteProducts(includeDisabled = false): Promise<SiteProd
   if (!includeDisabled) q = q.eq("enabled", true);
   const { data } = await q;
   return (data as SiteProduct[]) ?? [];
+}
+
+export async function getSiteGuides(includeDisabled = false): Promise<SiteGuide[]> {
+  const supabase = getAdminClient();
+  let q = supabase
+    .from("site_guides")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+  if (!includeDisabled) q = q.eq("enabled", true);
+  const { data } = await q;
+  return (data as SiteGuide[]) ?? [];
 }

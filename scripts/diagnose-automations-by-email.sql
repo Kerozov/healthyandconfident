@@ -5,7 +5,7 @@
 SELECT id, name, enabled, trigger_event, channel, segment_keys, group_ids, new_subscribers_only
 FROM public.automations
 WHERE enabled = true
-  AND trigger_event IN ('new_subscriber', 'registration')
+  AND trigger_event IN ('new_subscriber', 'registration', 'form_submit', 'segment_entry', 'purchase')
 ORDER BY sort_order;
 
 -- 2) Delivery attempts for test email

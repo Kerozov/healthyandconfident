@@ -44,14 +44,12 @@ export async function getFormTemplates(): Promise<FormRow[]> {
 
 export async function getFormTemplateBySlug(
   slug: string,
+  options?: { includeDisabled?: boolean },
 ): Promise<FormTemplateRecord | null> {
   const supabase = getAdminClient();
-  const { data } = await supabase
-    .from("form_templates")
-    .select("*")
-    .eq("slug", slug)
-    .eq("enabled", true)
-    .maybeSingle();
+  let query = supabase.from("form_templates").select("*").eq("slug", slug);
+  if (!options?.includeDisabled) query = query.eq("enabled", true);
+  const { data } = await query.maybeSingle();
 
   if (!data) return null;
   const row = data as FormTemplateRecord;

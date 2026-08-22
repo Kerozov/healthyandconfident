@@ -13,6 +13,26 @@ import { runAutomations } from "@/lib/automation/run";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+function formError(locale: string, key: "required" | "invalid" | "already" | "notFound" | "json" | "email"): string {
+  const en = locale === "en";
+  switch (key) {
+    case "required":
+      return en ? "Please fill all required fields." : "Попълни всички задължителни полета.";
+    case "invalid":
+      return en ? "This invite link is not valid." : "Линкът за формата не е валиден.";
+    case "already":
+      return en ? "This form was already submitted." : "Формата вече е попълнена с този линк.";
+    case "notFound":
+      return en ? "Form not found." : "Формата не е намерена.";
+    case "json":
+      return en ? "Invalid request." : "Невалидна заявка.";
+    case "email":
+      return en
+        ? "An email address is required."
+        : "Имейлът е задължителен.";
+  }
+}
+
 function extractEmail(
   fields: FormField[],
   answers: Record<string, unknown>,
@@ -59,10 +79,6 @@ export async function POST(
   context: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await context.params;
-  const form = await getFormTemplateBySlug(slug);
-  if (!form) {
-    return NextResponse.json({ error: "Form not found" }, { status: 404 });
-  }
 
   let body: {
     answers?: Record<string, unknown>;
@@ -72,18 +88,27 @@ export async function POST(
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: formError("bg", "json") }, { status: 400 });
+  }
+
+  const locale = body.locale === "en" ? "en" : "bg";
+  const form = await getFormTemplateBySlug(slug, { includeDisabled: true });
+  if (!form) {
+    return NextResponse.json({ error: formError(locale, "notFound") }, { status: 404 });
+  }
+  if (!form.enabled && !body.token) {
+    return NextResponse.json({ error: formError(locale, "notFound") }, { status: 404 });
   }
 
   const answers = body.answers ?? {};
   const fields = form.fields ?? [];
-  const locale = body.locale === "en" ? "en" : "bg";
 
   for (const field of fields) {
     if (!field.required || field.type === "heading") continue;
+    if (body.token && field.type === "email") continue;
     if (isBlankAnswer(answers[field.id])) {
       return NextResponse.json(
-        { error: "Please fill all required fields." },
+        { error: formError(locale, "required") },
         { status: 400 },
       );
     }
@@ -96,7 +121,7 @@ export async function POST(
   if (body.token) {
     const payload = verifyFormInviteToken(body.token);
     if (!payload || payload.f !== form.id) {
-      return NextResponse.json({ error: "Invalid link." }, { status: 403 });
+      return NextResponse.json({ error: formError(locale, "invalid") }, { status: 403 });
     }
     email = payload.e;
     subscriberId = payload.sid ?? null;
@@ -109,10 +134,17 @@ export async function POST(
       .maybeSingle();
 
     const invitation = inv as { id: string; completed_at: string | null } | null;
-    if (invitation?.completed_at) {
-      return NextResponse.json({ error: "Already submitted." }, { status: 409 });
+    if (!invitation) {
+      return NextResponse.json({ error: formError(locale, "invalid") }, { status: 403 });
     }
-    invitationId = invitation?.id ?? null;
+    if (invitation.completed_at) {
+      return NextResponse.json({ error: formError(locale, "already") }, { status: 409 });
+    }
+    invitationId = invitation.id;
+  }
+
+  if (!email || !email.includes("@")) {
+    return NextResponse.json({ error: formError(locale, "email") }, { status: 400 });
   }
 
   const supabase = getAdminClient();
@@ -169,7 +201,6 @@ export async function POST(
         .from("subscribers")
         .update({
           tags: nextTags,
-          locale,
           updated_at: new Date().toISOString(),
         })
         .eq("id", sub.id);
@@ -214,6 +245,8 @@ export async function POST(
         priorTags: sub ? priorTags : undefined,
         isNew,
         source: formSource,
+        formId: form.id,
+        formAnswers: answers as Record<string, string | string[] | boolean>,
       });
     } catch (err) {
       console.error("[form-submit] automations:", err);

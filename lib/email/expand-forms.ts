@@ -24,7 +24,7 @@ export async function expandEmailForms(
 
   const supabase = getAdminClient();
   const { data } = await supabase.from("form_templates").select("*").in("id", ids);
-  const forms = ((data as FormTemplateRecord[]) ?? []).filter((f) => f.enabled);
+  const forms = (data as FormTemplateRecord[]) ?? [];
   const byId = new Map(forms.map((form) => [form.id.toLowerCase(), form]));
   const hrefByFormId = new Map<string, string>();
   const email = recipient.email.trim().toLowerCase();
@@ -35,17 +35,23 @@ export async function expandEmailForms(
       e: email,
       sid: recipient.subscriberId ?? undefined,
     });
-    if (token) {
-      await supabase.from("form_invitations").insert({
-        form_id: form.id,
-        subscriber_id: recipient.subscriberId ?? null,
-        email,
-        token,
-      });
+    if (!token) {
+      console.error("[email-forms] invite token missing — check UNSUBSCRIBE_SECRET");
+      continue;
+    }
+    const { error } = await supabase.from("form_invitations").insert({
+      form_id: form.id,
+      subscriber_id: recipient.subscriberId ?? null,
+      email,
+      token,
+    });
+    if (error) {
+      console.error("[email-forms] invitation insert:", error.message);
+      continue;
     }
     hrefByFormId.set(
       form.id.toLowerCase(),
-      publicFormInviteUrl(form.slug, locale, form.id, email, recipient.subscriberId),
+      publicFormInviteUrl(form.slug, locale, token),
     );
   }
 
