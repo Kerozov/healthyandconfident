@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
-import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
+import type { AudienceInput, Segment, SegmentGroup, SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import {
   sendEmailCampaign,

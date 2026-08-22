@@ -89,7 +89,11 @@ function NavLinks({
           </p>
           <ul className="space-y-0.5">
             {group.screens.map((item) => {
-              const active = isActive(pathname, item.href, item.exact);
+              const active = isActive(
+                pathname,
+                item.href,
+                "exact" in item ? Boolean(item.exact) : false,
+              );
               const Icon = ICONS[item.key];
               return (
                 <li key={item.href}>

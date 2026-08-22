@@ -63,7 +63,7 @@ import {
   type FormAnswerCondition,
 } from "@/lib/automation/form-conditions";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
-import type { Automation, AutomationDelivery, SiteSectionKey } from "@/lib/supabase/types";
+import type { Automation, AutomationDelivery, SiteSectionKey, SiteProduct } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
@@ -3031,7 +3031,7 @@ export async function saveSiteProduct(input: {
     downsell_headline_en: input.downsell_headline_en?.trim() ?? "",
   };
 
-  const row: Record<string, unknown> = {
+  const row: Partial<SiteProduct> = {
     title_bg: titleBg,
     title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
@@ -3067,8 +3067,8 @@ export async function saveSiteProduct(input: {
     const sync = await syncProductPlacement(
       supabase,
       input.id,
-      row.title_bg as string,
-      row.title_en as string,
+      titleBg,
+      titleEn,
       offers,
     );
     if (!sync.ok) return sync;
@@ -3086,8 +3086,8 @@ export async function saveSiteProduct(input: {
   const sync = await syncProductPlacement(
     supabase,
     productId,
-    row.title_bg as string,
-    row.title_en as string,
+    titleBg,
+    titleEn,
     offers,
   );
   if (!sync.ok) return sync;

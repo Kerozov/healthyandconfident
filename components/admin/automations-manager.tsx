@@ -64,13 +64,6 @@ import {
 } from "@/lib/automation/subscriber-origins";
 import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
 import {
-  ALL_SUBSCRIBER_ORIGINS,
-  DEFAULT_SUBSCRIBER_ORIGINS,
-  formatSubscriberOriginsLine,
-  subscriberOriginsFromStored,
-  type SubscriberOrigin,
-} from "@/lib/automation/subscriber-origins";
-import {
   AUTOMATION_TRIGGER_META,
   AUTOMATION_TRIGGERS,
 } from "@/lib/automation/triggers";

@@ -23,70 +23,89 @@ function indexPlacements(rows: SiteCtaPlacement[]): Record<string, SiteCtaPlacem
   return Object.fromEntries(rows.map((p) => [p.key, p]));
 }
 
+/** Missing env must not crash `next build` / SSG — same pattern as `lib/blog.ts`. */
+async function withPublicClient<T>(
+  run: (client: ReturnType<typeof getPublicClient>) => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await run(getPublicClient());
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getSiteSegments(): Promise<Segment[]> {
-  const supabase = getPublicClient();
-  const { data } = await supabase.from("segments").select("*").order("name");
-  return (data as Segment[]) ?? [];
+  return withPublicClient(async (supabase) => {
+    const { data } = await supabase.from("segments").select("*").order("name");
+    return (data as Segment[]) ?? [];
+  }, []);
 }
 
 export async function getCtaPlacements(): Promise<SiteCtaPlacement[]> {
-  const supabase = getPublicClient();
-  const { data } = await supabase.from("site_cta_placements").select("*").order("key");
-  return (data as SiteCtaPlacement[]) ?? [];
+  return withPublicClient(async (supabase) => {
+    const { data } = await supabase.from("site_cta_placements").select("*").order("key");
+    return (data as SiteCtaPlacement[]) ?? [];
+  }, []);
 }
 
 export async function getSiteSections(): Promise<SiteSection[]> {
-  const supabase = getPublicClient();
-  const { data } = await supabase.from("site_sections").select("*").order("key");
-  return (data as SiteSection[]) ?? [];
+  return withPublicClient(async (supabase) => {
+    const { data } = await supabase.from("site_sections").select("*").order("key");
+    return (data as SiteSection[]) ?? [];
+  }, []);
 }
 
 export async function getSiteEvents(includeDisabled = false): Promise<SiteEvent[]> {
-  const supabase = getPublicClient();
-  let q = supabase
-    .from("site_events")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
-  if (!includeDisabled) q = q.eq("enabled", true);
-  const { data } = await q;
-  return (data as SiteEvent[]) ?? [];
+  return withPublicClient(async (supabase) => {
+    let q = supabase
+      .from("site_events")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (!includeDisabled) q = q.eq("enabled", true);
+    const { data } = await q;
+    return (data as SiteEvent[]) ?? [];
+  }, []);
 }
 
 export async function getSiteProducts(includeDisabled = false): Promise<SiteProduct[]> {
-  const supabase = getPublicClient();
-  let q = supabase
-    .from("site_products")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
-  if (!includeDisabled) q = q.eq("enabled", true);
-  const { data } = await q;
-  return (data as SiteProduct[]) ?? [];
+  return withPublicClient(async (supabase) => {
+    let q = supabase
+      .from("site_products")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (!includeDisabled) q = q.eq("enabled", true);
+    const { data } = await q;
+    return (data as SiteProduct[]) ?? [];
+  }, []);
 }
 
 export async function getSiteGuides(includeDisabled = false): Promise<SiteGuide[]> {
-  const supabase = getPublicClient();
-  let q = supabase
-    .from("site_guides")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
-  if (!includeDisabled) q = q.eq("enabled", true);
-  const { data } = await q;
-  return (data as SiteGuide[]) ?? [];
+  return withPublicClient(async (supabase) => {
+    let q = supabase
+      .from("site_guides")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (!includeDisabled) q = q.eq("enabled", true);
+    const { data } = await q;
+    return (data as SiteGuide[]) ?? [];
+  }, []);
 }
 
 export async function getSiteVideos(includeDisabled = false): Promise<SiteVideo[]> {
-  const supabase = getPublicClient();
-  let q = supabase
-    .from("site_videos")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
-  if (!includeDisabled) q = q.eq("enabled", true);
-  const { data } = await q;
-  return (data as SiteVideo[]) ?? [];
+  return withPublicClient(async (supabase) => {
+    let q = supabase
+      .from("site_videos")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (!includeDisabled) q = q.eq("enabled", true);
+    const { data } = await q;
+    return (data as SiteVideo[]) ?? [];
+  }, []);
 }
 
 export async function getPublicSiteContent(): Promise<SiteContent> {
