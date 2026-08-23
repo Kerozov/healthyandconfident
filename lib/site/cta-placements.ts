@@ -1,6 +1,11 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { productVisibleInLocale } from "@/lib/site/product-locale";
+import {
+  hasOwnCheckout,
+  stripeForLocale,
+  type StripeCheckout,
+} from "@/lib/site/locale-stripe";
 
 /** Placements where upsell/downsell popups are allowed (not hero, nav, or contact). */
 export const UPSELL_SECTION_PLACEMENT_KEYS = [
@@ -170,21 +175,65 @@ export function programPricingPlacementKey(baseKey: string, index: number): stri
   return `${baseKey}_pricing_${index}`;
 }
 
+export function placementStripeForLocale(
+  placement: SiteCtaPlacement | undefined,
+  locale: Locale,
+): StripeCheckout {
+  if (!placement) {
+    return { stripe_url: "", stripe_product_id: "", stripe_price_id: "" };
+  }
+  return stripeForLocale(placement, locale);
+}
+
+export function placementButtonHidden(
+  placement: SiteCtaPlacement | undefined,
+  locale: Locale,
+): boolean {
+  if (!placement) return false;
+  if (locale === "en") return placement.button_enabled_en === false;
+  return placement.button_enabled === false;
+}
+
+export function placementButtonHref(
+  placement: SiteCtaPlacement | undefined,
+  locale: Locale,
+): string {
+  if (!placement) return "";
+  const stripe = placementStripeForLocale(placement, locale);
+  if (hasOwnCheckout(stripe) && stripe.stripe_url) return stripe.stripe_url;
+  const enUrl = placement.button_url_en?.trim() ?? "";
+  const bgUrl = placement.button_url?.trim() ?? "";
+  if (locale === "en") return enUrl || bgUrl;
+  return bgUrl;
+}
+
+export type ResolvedPlacementButton = {
+  label: string;
+  href: string;
+  hidden: boolean;
+  stripePriceId: string;
+  stripeUrl: string;
+};
+
 /** Admin-editable button text/URL with fallback from page content. */
 export function resolvePlacementButton(
   placements: Record<string, SiteCtaPlacement>,
   key: string,
   locale: Locale,
   fallback: { label: string; href: string },
-): { label: string; href: string } {
+): ResolvedPlacementButton {
   const placement = placements[key];
+  const stripe = placementStripeForLocale(placement, locale);
   const customLabel = (
     locale === "bg" ? placement?.button_label_bg : placement?.button_label_en
   )?.trim();
-  const customHref = placement?.button_url?.trim();
+  const customHref = placementButtonHref(placement, locale);
   return {
+    hidden: placementButtonHidden(placement, locale),
     label: customLabel || fallback.label,
     href: customHref || fallback.href,
+    stripePriceId: stripe.stripe_price_id,
+    stripeUrl: stripe.stripe_url,
   };
 }
 

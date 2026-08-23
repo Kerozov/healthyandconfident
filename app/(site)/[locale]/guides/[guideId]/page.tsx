@@ -4,9 +4,12 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getSiteGuides } from "@/lib/site/content";
 import { GuideCheckoutCard } from "@/components/site/guide-checkout-card";
 import { MetaViewContent } from "@/components/site/meta-view-content";
-import { CatalogDetailShell } from "@/components/site/catalog-detail";
+import {
+  CatalogDetailShell,
+  CatalogUnavailable,
+} from "@/components/site/catalog-detail";
 import { guidePagePath, guidesListPath } from "@/lib/site/product-placement";
-import { guideVisible } from "@/lib/site/guide-catalog";
+import { guideVisibleInLocale } from "@/lib/site/guide-catalog";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +39,7 @@ export async function generateMetadata({
   return {
     title,
     description: description || undefined,
-    robots: guideVisible(guide)
+    robots: guideVisibleInLocale(guide, l)
       ? { index: true, follow: true }
       : { index: false, follow: false },
     alternates: {
@@ -71,12 +74,22 @@ export default async function GuidePage({
 
   return (
     <CatalogDetailShell backHref={listHref} backLabel={backLabel}>
-      <MetaViewContent
-        contentIds={[guide.id]}
-        contentName={l === "en" ? guide.title_en : guide.title_bg}
-        contentCategory="guide"
-      />
-      <GuideCheckoutCard guide={guide} locale={l} />
+      {!guideVisibleInLocale(guide, l) ? (
+        <CatalogUnavailable
+          locale={l}
+          backHref={listHref}
+          backLabel={backLabel}
+        />
+      ) : (
+        <>
+          <MetaViewContent
+            contentIds={[guide.id]}
+            contentName={l === "en" ? guide.title_en : guide.title_bg}
+            contentCategory="guide"
+          />
+          <GuideCheckoutCard guide={guide} locale={l} />
+        </>
+      )}
     </CatalogDetailShell>
   );
 }

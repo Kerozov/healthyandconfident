@@ -395,6 +395,8 @@ export type SiteVideo = {
   title_en: string;
   youtube_url: string;
   enabled: boolean;
+  /** When false, the video is hidden on the English site. */
+  enabled_en: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -440,13 +442,19 @@ export type SiteGuide = {
   description_bg: string;
   description_en: string;
   stripe_url: string;
+  stripe_product_id: string;
   stripe_price_id: string;
+  stripe_url_en: string;
+  stripe_product_id_en: string;
+  stripe_price_id_en: string;
   price_label_bg: string;
   price_label_en: string;
   image_url: string | null;
   /** Segment keys applied to subscriber after successful payment */
   purchase_tags: string[];
   enabled: boolean;
+  /** When false, the guide is hidden on the English site and in EN emails. */
+  enabled_en: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -474,6 +482,17 @@ export type SiteCtaPlacement = {
   button_label_en: string;
   /** Override link: Stripe, WhatsApp, #section (empty = default from page content). */
   button_url: string;
+  button_url_en: string;
+  stripe_url: string;
+  stripe_product_id: string;
+  stripe_price_id: string;
+  stripe_url_en: string;
+  stripe_product_id_en: string;
+  stripe_price_id_en: string;
+  /** When false, the button is hidden on the Bulgarian site. */
+  button_enabled: boolean;
+  /** When false, the button is hidden on the English site. */
+  button_enabled_en: boolean;
   updated_at: string;
 };
 

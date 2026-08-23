@@ -81,6 +81,34 @@ export async function startStripeCheckout(
   window.location.href = data.url;
 }
 
+export async function startPlacementCheckout(
+  placementKey: string,
+  locale: Locale,
+): Promise<void> {
+  const metaEvent = beginCheckoutTracking([placementKey]);
+  const ids = metaBrowserIds();
+
+  const res = await fetch("/api/checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      placementKey,
+      locale,
+      metaEventId: metaEvent,
+      fbp: ids.fbp,
+      fbc: ids.fbc,
+      fbclid: ids.fbclid,
+    }),
+  });
+
+  const data = (await res.json()) as { url?: string; message?: string };
+  if (!res.ok || !data.url) {
+    throw new Error(data.message ?? "Checkout failed");
+  }
+
+  window.location.href = data.url;
+}
+
 /**
  * Opens a Stripe payment link that bypasses our API. Nothing server-side sees
  * this click, so the event is mirrored to the Conversions API from here.

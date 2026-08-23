@@ -78,11 +78,11 @@ export default async function ProductPage({
 
   return (
     <CatalogDetailShell backHref={listHref} backLabel={backLabel}>
-      {l === "en" && product.enabled_en === false ? (
+      {!productVisibleInLocale(product, l) ? (
         <CatalogUnavailable
           locale={l}
           backHref={listHref}
-          backLabel="View programmes"
+          backLabel={l === "bg" ? "Към всички продукти" : "View programmes"}
         />
       ) : (
         <>

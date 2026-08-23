@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowUpRight, Loader2, ShieldCheck } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteGuide } from "@/lib/supabase/types";
-import { guideSellable } from "@/lib/site/guide-catalog";
+import { guideSellableInLocale, guideStripeForLocale } from "@/lib/site/guide-catalog";
 import { openStripeUrl, startGuideCheckout } from "@/lib/site/stripe-checkout";
 
 export function GuideCheckoutCard({
@@ -22,9 +22,10 @@ export function GuideCheckoutCard({
     locale === "bg" ? guide.description_bg : guide.description_en;
   const price = locale === "bg" ? guide.price_label_bg : guide.price_label_en;
   const cta = locale === "bg" ? "Купи сега" : "Buy now";
-  const buyable = guideSellable(guide);
-  const hasSiteCheckout = Boolean(guide.stripe_price_id?.trim());
-  const checkoutUrl = guide.stripe_url?.trim() ?? "";
+  const buyable = guideSellableInLocale(guide, locale);
+  const stripe = guideStripeForLocale(guide, locale);
+  const hasSiteCheckout = Boolean(stripe.stripe_price_id);
+  const checkoutUrl = stripe.stripe_url;
 
   function buy() {
     setError(null);

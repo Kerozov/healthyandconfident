@@ -166,6 +166,14 @@ export function ProductAdminGrid({
                     label: productCheckoutPath(product.id, "bg"),
                     href: productCheckoutPath(product.id, "bg"),
                   },
+                  ...(product.enabled_en !== false
+                    ? [
+                        {
+                          label: productCheckoutPath(product.id, "en"),
+                          href: productCheckoutPath(product.id, "en"),
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </div>

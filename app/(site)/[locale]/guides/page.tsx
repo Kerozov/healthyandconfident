@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { getSiteGuides } from "@/lib/site/content";
-import { filterGuidesForSite } from "@/lib/site/guide-catalog";
+import { filterGuidesForLocale } from "@/lib/site/guide-catalog";
 import { guidesListPath } from "@/lib/site/product-placement";
 import { CatalogIndex } from "@/components/site/catalog-index";
 import { GuidesGrid } from "@/components/site/sections/guides-grid";
@@ -43,7 +43,7 @@ export default async function GuidesIndexPage({
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
   const dict = getDictionary(l);
-  const guides = filterGuidesForSite(await getSiteGuides());
+  const guides = filterGuidesForLocale(await getSiteGuides(), l);
   const empty =
     guides.length === 0
       ? l === "bg"

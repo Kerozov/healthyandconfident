@@ -5,10 +5,11 @@ import { Mail, Plus, Trash2, User } from "lucide-react";
 import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { productSellableInLocale } from "@/lib/site/product-locale";
-import { guideSellable } from "@/lib/site/guide-catalog";
+import { guideSellableInLocale } from "@/lib/site/guide-catalog";
 import type { EmailProductLinkMode } from "@/lib/email/products-block";
 import { Input, Textarea } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
+import { StripeHrefPicker } from "@/components/admin/stripe-locale-picker";
 import { insertAtCursor } from "@/lib/email/body-buttons";
 import {
   isSafeEmailHref,
@@ -317,11 +318,18 @@ export function EmailBlockEditor({
               />
             </Row>
             <Row label="Линк">
-              <LinkInput
-                value={block.href}
-                disabled={disabled}
-                onChange={(href) => onChange({ ...block, href })}
-              />
+              <div className="space-y-3">
+                <StripeHrefPicker
+                  href={block.href}
+                  onHrefChange={(href) => onChange({ ...block, href })}
+                  disabled={disabled}
+                />
+                <LinkInput
+                  value={block.href}
+                  disabled={disabled}
+                  onChange={(href) => onChange({ ...block, href })}
+                />
+              </div>
             </Row>
           </div>
           <div className="flex flex-wrap items-end gap-4">
@@ -633,7 +641,7 @@ function CatalogOfferPicker({
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {guides.map((guide) => {
-                    const sellable = guideSellable(guide);
+                    const sellable = guideSellableInLocale(guide, ctx.locale);
                     return (
                       <PickerCard
                         key={guide.id}

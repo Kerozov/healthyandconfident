@@ -9,9 +9,10 @@ import { saveSiteGuide, deleteSiteGuide } from "@/app/(admin)/admin/actions";
 import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { GuideAdminGrid } from "@/components/admin/guide-admin-grid";
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
-import { Field, Input, Textarea, Card } from "@/components/admin/fields";
+import { Field, Input, Textarea, Card, LocaleVisibilityCheckboxes } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { PublicPathLinks } from "@/components/admin/public-path-links";
+import { StripeLocalePicker } from "@/components/admin/stripe-locale-picker";
 import { guidePagePath } from "@/lib/site/product-placement";
 
 const EMPTY_GUIDE = {
@@ -21,11 +22,14 @@ const EMPTY_GUIDE = {
   description_en: "",
   stripe_url: "",
   stripe_id: "",
+  stripe_url_en: "",
+  stripe_id_en: "",
   price_label_bg: "",
   price_label_en: "",
   image_url: "",
   purchase_tags: [] as string[],
   enabled: true,
+  enabled_en: true,
   sort_order: 0,
 };
 
@@ -121,12 +125,18 @@ export function GuidesManagerPanel({
       description_bg: guide.description_bg,
       description_en: guide.description_en,
       stripe_url: guide.stripe_url,
-      stripe_id: formatStripeIdInput({ stripe_price_id: guide.stripe_price_id }),
+      stripe_id: formatStripeIdInput(guide),
+      stripe_url_en: guide.stripe_url_en ?? "",
+      stripe_id_en: formatStripeIdInput({
+        stripe_product_id: guide.stripe_product_id_en,
+        stripe_price_id: guide.stripe_price_id_en,
+      }),
       price_label_bg: guide.price_label_bg,
       price_label_en: guide.price_label_en,
       image_url: guide.image_url ?? "",
       purchase_tags: guide.purchase_tags ?? [],
       enabled: guide.enabled,
+      enabled_en: guide.enabled_en !== false,
       sort_order: guide.sort_order,
     });
     setError(null);
@@ -173,8 +183,9 @@ export function GuidesManagerPanel({
       }
     >
       <p className="mb-4 text-sm text-ink-soft">
-        PDF ръководства — добави с <strong>Stripe Price ID</strong> или <strong>Product ID</strong>{" "}
-        за Checkout и сегменти след покупка. Payment Link е резервен без price_.
+        PDF ръководства — закачи <strong>отделен Stripe продукт или Payment Link</strong>{" "}
+        за български и за английски, както при продуктите. Ако оставиш английското
+        плащане празно, ползва се българското.
       </p>
       <SectionToggle section={guidesSection} onSaved={refresh} />
 
@@ -232,26 +243,6 @@ export function GuidesManagerPanel({
                 onChange={(e) => setForm({ ...form, description_en: e.target.value })}
               />
             </Field>
-            <Field
-              label="Stripe Price ID или Product ID"
-              hint="price_… или prod_… — задължително за сегменти след покупка. Ако има и Payment Link, сайтът ползва Checkout."
-            >
-              <Input
-                value={form.stripe_id}
-                onChange={(e) => setForm({ ...form, stripe_id: e.target.value })}
-                placeholder="price_1ABC… или prod_1ABC…"
-              />
-            </Field>
-            <Field
-              label="Payment Link (по избор)"
-              hint="buy.stripe.com — ползва се само ако няма price_/prod_."
-            >
-              <Input
-                value={form.stripe_url}
-                onChange={(e) => setForm({ ...form, stripe_url: e.target.value })}
-                placeholder="https://buy.stripe.com/..."
-              />
-            </Field>
             <ImageUploadField
               label="Корица"
               value={form.image_url}
@@ -271,6 +262,44 @@ export function GuidesManagerPanel({
               />
             </Field>
           </div>
+          <StripeLocalePicker
+            label="Плащане — български"
+            hint="Ползва се на /bg и като резерва за английски, ако там няма отделен Stripe."
+            value={{
+              stripe_id: form.stripe_id,
+              stripe_url: form.stripe_url,
+              price_label: form.price_label_bg,
+            }}
+            onChange={(next) =>
+              setForm({
+                ...form,
+                stripe_id: next.stripe_id,
+                stripe_url: next.stripe_url,
+                price_label_bg: next.price_label ?? form.price_label_bg,
+              })
+            }
+            disabled={pending}
+          />
+          {form.enabled_en && (
+            <StripeLocalePicker
+              label="Плащане — английски"
+              hint="Отделен Stripe продукт или Payment Link. Ако оставиш празно, ползва се българското плащане."
+              value={{
+                stripe_id: form.stripe_id_en,
+                stripe_url: form.stripe_url_en,
+                price_label: form.price_label_en,
+              }}
+              onChange={(next) =>
+                setForm({
+                  ...form,
+                  stripe_id_en: next.stripe_id,
+                  stripe_url_en: next.stripe_url,
+                  price_label_en: next.price_label ?? form.price_label_en,
+                })
+              }
+              disabled={pending}
+            />
+          )}
           <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
             <p className="text-sm font-semibold text-forest-800">Сегменти след покупка</p>
             <p className="text-xs text-ink-soft">
@@ -285,14 +314,15 @@ export function GuidesManagerPanel({
               disabled={pending}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={form.enabled}
-              onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-            />
-            Активно ръководство
-          </label>
+          <LocaleVisibilityCheckboxes
+            enabled={form.enabled}
+            enabledEn={form.enabled_en}
+            onEnabledChange={(enabled) => setForm({ ...form, enabled })}
+            onEnabledEnChange={(enabled_en) => setForm({ ...form, enabled_en })}
+            bgLabel="Покажи на българския сайт (/bg/guides)"
+            enLabel="Покажи на английския сайт (/en/guides и EN имейли)"
+            disabled={pending}
+          />
           <div className="flex gap-2">
             <button
               type="button"

@@ -51,8 +51,12 @@ async function loadCatalogMaps() {
 
   const guideByPrice = new Map<string, SiteGuide>();
   for (const guide of guides) {
-    const priceId = guide.stripe_price_id?.trim();
-    if (priceId) guideByPrice.set(priceId, guide);
+    for (const priceId of [
+      guide.stripe_price_id?.trim(),
+      guide.stripe_price_id_en?.trim(),
+    ]) {
+      if (priceId) guideByPrice.set(priceId, guide);
+    }
   }
 
   return { products, guides, productByPrice, productByStripeProduct, guideByPrice };
@@ -164,12 +168,26 @@ function lineFromProducts(
   return items;
 }
 
+function pickPaidGuidePriceId(
+  guide: SiteGuide,
+  byPrice: Map<string, LineAmount>,
+  localeHint: "bg" | "en",
+): string {
+  const bgPrice = guide.stripe_price_id?.trim() || "";
+  const enPrice = guide.stripe_price_id_en?.trim() || "";
+  if (bgPrice && byPrice.has(bgPrice)) return bgPrice;
+  if (enPrice && byPrice.has(enPrice)) return enPrice;
+  if (localeHint === "en" && enPrice) return enPrice;
+  return bgPrice || enPrice;
+}
+
 function lineFromGuides(
   guideIds: string[],
   guides: SiteGuide[],
   byPrice: Map<string, LineAmount>,
   fallback: LineAmount,
   singleLineOrder: boolean,
+  localeHint: "bg" | "en",
 ): ResolvedLineItem[] {
   const byId = new Map(guides.map((g) => [g.id, g]));
   const items: ResolvedLineItem[] = [];
@@ -177,13 +195,19 @@ function lineFromGuides(
   for (const id of guideIds) {
     const guide = byId.get(id);
     if (!guide) continue;
-    const stripePriceId = guide.stripe_price_id?.trim();
+    const stripePriceId = pickPaidGuidePriceId(guide, byPrice, localeHint);
     if (!stripePriceId) continue;
     const amount = resolveLineAmount(stripePriceId, byPrice, fallback, singleLineOrder);
     items.push({
       internalProductId: null,
       internalGuideId: guide.id,
-      stripeProductId: `guide:${guide.id}`,
+      stripeProductId:
+        (stripePriceId === guide.stripe_price_id_en?.trim()
+          ? guide.stripe_product_id_en?.trim()
+          : guide.stripe_product_id?.trim()) ||
+        guide.stripe_product_id?.trim() ||
+        guide.stripe_product_id_en?.trim() ||
+        `guide:${guide.id}`,
       stripePriceId,
       amountCents: amount.amountCents,
       currency: amount.currency,
@@ -235,7 +259,7 @@ export async function resolveLineItemsFromCheckoutSession(
         singleLineOrder,
         localeHint,
       ),
-      ...lineFromGuides(guideIdsFromMeta, guides, byPrice, fallback, singleLineOrder),
+      ...lineFromGuides(guideIdsFromMeta, guides, byPrice, fallback, singleLineOrder, localeHint),
     ];
   }
 

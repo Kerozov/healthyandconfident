@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { Field, Input, Select } from "@/components/admin/fields";
+import { StripeHrefPicker } from "@/components/admin/stripe-locale-picker";
 import { Segmented } from "@/components/admin/email-block-editors";
 import { productSellableInLocale } from "@/lib/site/product-locale";
 import {
@@ -246,12 +247,18 @@ export function SignatureLinksEditor({
 
             {link.kind === "url" && (
               <Field label="Адрес">
-                <Input
-                  value={link.href}
-                  onChange={(e) => update(link.id, { href: e.target.value })}
-                  placeholder="https://… или /bg#contact"
-                  className={hrefInvalid ? "border-coral-500" : undefined}
-                />
+                <div className="space-y-3">
+                  <StripeHrefPicker
+                    href={link.href}
+                    onHrefChange={(href) => update(link.id, { href })}
+                  />
+                  <Input
+                    value={link.href}
+                    onChange={(e) => update(link.id, { href: e.target.value })}
+                    placeholder="https://… или /bg#contact"
+                    className={hrefInvalid ? "border-coral-500" : undefined}
+                  />
+                </div>
                 {hrefInvalid ? (
                   <p className="mt-1 text-xs text-coral-600">
                     Линкът трябва да започва с https://, mailto:, tel: или /

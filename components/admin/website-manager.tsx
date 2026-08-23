@@ -46,7 +46,7 @@ import {
   StripeLocalePicker,
   invalidateStripeCatalogCache,
 } from "@/components/admin/stripe-locale-picker";
-import { Field, Input, Textarea, Card } from "@/components/admin/fields";
+import { Field, Input, Textarea, Card, LocaleVisibilityCheckboxes } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { cn } from "@/lib/utils";
 
@@ -149,6 +149,7 @@ const EMPTY_VIDEO = {
   title_en: "",
   youtube_url: "",
   enabled: true,
+  enabled_en: true,
   sort_order: 0,
 };
 
@@ -287,6 +288,7 @@ export function WebsiteManager({
       title_en: video.title_en,
       youtube_url: video.youtube_url,
       enabled: video.enabled,
+      enabled_en: video.enabled_en !== false,
       sort_order: video.sort_order,
     });
     setError(null);
@@ -652,7 +654,7 @@ export function WebsiteManager({
                     setProductForm({ ...productForm, enabled: e.target.checked })
                   }
                 />
-                Активен продукт (български магазин)
+                Покажи на българския сайт (магазин /bg)
               </label>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -884,7 +886,8 @@ export function WebsiteManager({
           }
         >
           <p className="mb-4 text-sm text-ink-soft">
-            Вдъхновяващи истории и ревюта — постави YouTube линк (watch, youtu.be или embed).
+            Вдъхновяващи истории и ревюта — YouTube линк и избор дали да се показва на
+            българския сайт, на английския, или и на двете.
           </p>
           <SectionToggle section={videosSection} onSaved={refresh} />
 
@@ -933,16 +936,15 @@ export function WebsiteManager({
                 </Field>
               </div>
 
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={videoForm.enabled}
-                  onChange={(e) =>
-                    setVideoForm({ ...videoForm, enabled: e.target.checked })
-                  }
-                />
-                Покажи на сайта
-              </label>
+              <LocaleVisibilityCheckboxes
+                enabled={videoForm.enabled}
+                enabledEn={videoForm.enabled_en}
+                onEnabledChange={(enabled) => setVideoForm({ ...videoForm, enabled })}
+                onEnabledEnChange={(enabled_en) =>
+                  setVideoForm({ ...videoForm, enabled_en })
+                }
+                disabled={pending}
+              />
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -980,7 +982,19 @@ export function WebsiteManager({
                       <p className="font-medium">
                         {video.title_bg || video.title_en || "Без заглавие"}
                       </p>
-                      {!video.enabled && (
+                      {video.enabled && video.enabled_en !== false ? (
+                        <span className="rounded-full bg-forest-600/10 px-2 py-0.5 text-[11px] font-semibold text-forest-700">
+                          BG + EN
+                        </span>
+                      ) : video.enabled ? (
+                        <span className="rounded-full bg-forest-600/10 px-2 py-0.5 text-[11px] font-semibold text-forest-700">
+                          само BG
+                        </span>
+                      ) : video.enabled_en !== false ? (
+                        <span className="rounded-full bg-sky-600/10 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                          само EN
+                        </span>
+                      ) : (
                         <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[11px] text-ink-soft">
                           скрито
                         </span>

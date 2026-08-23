@@ -228,20 +228,28 @@ export function ProgramLanding({
         )
       : null;
   const videoButton = content.video
-    ? {
-        // Keep page copy; only inherit admin checkout URL from the program placement when set.
+    ? resolvePlacementButton(ctaPlacements, placementKey, locale, {
         label: content.video.cta,
-        href:
-          ctaPlacements[placementKey]?.button_url?.trim() || content.video.href,
-      }
+        href: content.video.href,
+      })
     : null;
   const finalButton = content.finalCta
-    ? {
+    ? resolvePlacementButton(ctaPlacements, placementKey, locale, {
         label: content.finalCta.cta,
-        href:
-          ctaPlacements[placementKey]?.button_url?.trim() || content.finalCta.href,
-      }
+        href: content.finalCta.href,
+      })
     : null;
+  const visiblePricing = (content.pricing?.options ?? [])
+    .map((opt, i) => {
+      const pricingButton = resolvePlacementButton(
+        ctaPlacements,
+        programPricingPlacementKey(placementKey, i),
+        locale,
+        { label: opt.cta, href: opt.href ?? hero.primaryHref },
+      );
+      return { opt, i, pricingButton, href: pricingButton.href };
+    })
+    .filter((row) => !row.pricingButton.hidden);
 
   return (
     <div className="max-w-[100vw] overflow-x-clip">
@@ -334,7 +342,7 @@ export function ProgramLanding({
                 >
                   {primaryButton.label}
                 </CtaLink>
-                {secondaryButton && (
+                {secondaryButton && !secondaryButton.hidden && (
                   <CtaLink
                     placementKey={programSecondaryPlacementKey(placementKey)}
                     href={secondaryButton.href}
@@ -1036,28 +1044,19 @@ export function ProgramLanding({
             <div
               className={cn(
                 "mt-8 grid w-full min-w-0 grid-cols-1 gap-4 sm:mt-12 sm:gap-6",
-                content.pricing.options.length === 1 && "mx-auto max-w-md",
-                content.pricing.options.length === 2 &&
+                visiblePricing.length === 1 && "mx-auto max-w-md",
+                visiblePricing.length === 2 &&
                   "mx-auto max-w-3xl md:grid-cols-2",
-                content.pricing.options.length > 2 &&
+                visiblePricing.length > 2 &&
                   "md:grid-cols-2 lg:grid-cols-3",
               )}
             >
-              {content.pricing.options.map((opt, i) => {
-                const fallbackHref = opt.href ?? hero.primaryHref;
-                const pricingButton = resolvePlacementButton(
-                  ctaPlacements,
-                  programPricingPlacementKey(placementKey, i),
-                  locale,
-                  { label: opt.cta, href: fallbackHref },
-                );
-                const href = pricingButton.href;
-                return (
+              {visiblePricing.map(({ opt, i, pricingButton, href }) => (
                   <div
                     key={opt.label}
                     className={cn(
                       "flex min-w-0 max-w-full flex-col rounded-2xl border-2 bg-white p-4 shadow-lg sm:rounded-3xl sm:p-6",
-                      i === 0 && content.pricing!.options.length > 2
+                      i === 0 && visiblePricing.length > 2
                         ? "border-forest-300 md:col-span-2 lg:col-span-3"
                         : i === 0
                           ? "border-gold-400"
@@ -1088,8 +1087,7 @@ export function ProgramLanding({
                       {pricingButton.label}
                     </CtaLink>
                   </div>
-                );
-              })}
+              ))}
             </div>
 
             {content.pricing.ps && (

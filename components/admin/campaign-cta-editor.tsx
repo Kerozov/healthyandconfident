@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Loader2, MousePointerClick } from "lucide-react";
 import { updateEmailCampaignCta } from "@/app/(admin)/admin/actions";
 import { Field, Input } from "@/components/admin/fields";
+import { StripeHrefPicker } from "@/components/admin/stripe-locale-picker";
 import { cn } from "@/lib/utils";
 
 export function CampaignCtaEditor({
@@ -59,11 +60,14 @@ export function CampaignCtaEditor({
               />
             </Field>
             <Field label="Линк (дестинация)">
-              <Input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="/bg#events или https://…"
-              />
+              <div className="space-y-3">
+                <StripeHrefPicker href={url} onHrefChange={setUrl} disabled={pending} />
+                <Input
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="/bg#events или https://…"
+                />
+              </div>
             </Field>
           </div>
           <div className="flex flex-wrap items-center gap-3">

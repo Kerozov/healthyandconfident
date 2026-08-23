@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { useOfferPopup } from "@/components/site/offer-popup";
 import { trackMeta } from "@/lib/meta/client";
 import { trackSiteCheckout } from "@/lib/analytics/client";
+import { startPlacementCheckout } from "@/lib/site/stripe-checkout";
+import { resolvePlacementButton } from "@/lib/site/cta-placements";
 import { cn } from "@/lib/utils";
 import type { VariantProps } from "class-variance-authority";
 
@@ -34,18 +37,46 @@ export function CtaLink({
   target,
   rel,
 }: CtaLinkProps) {
-  const { tryOpenPlacement } = useOfferPopup();
-  const classes = cn(buttonVariants({ variant, size }), className);
+  const { tryOpenPlacement, placements, locale } = useOfferPopup();
+  const [pending, setPending] = useState(false);
+  const resolved = resolvePlacementButton(
+    placements,
+    placementKey,
+    locale,
+    { label: "", href },
+  );
 
+  if (resolved.hidden) return null;
+
+  const finalHref = resolved.href;
+  const classes = cn(buttonVariants({ variant, size }), className);
+  const label = resolved.label || children;
   const external =
-    href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:");
+    finalHref.startsWith("http") ||
+    finalHref.startsWith("tel:") ||
+    finalHref.startsWith("mailto:");
+
+  function continueHref(): string {
+    if (resolved.stripePriceId) return `placement-checkout:${placementKey}`;
+    return finalHref;
+  }
 
   function handleClick(e: React.MouseEvent) {
-    if (tryOpenPlacement(placementKey, href)) {
+    if (tryOpenPlacement(placementKey, continueHref())) {
       e.preventDefault();
       return;
     }
-    if (isStripeCheckoutUrl(href)) {
+    if (resolved.stripePriceId) {
+      e.preventDefault();
+      setPending(true);
+      void startPlacementCheckout(placementKey, locale)
+        .catch((err) => {
+          console.error("[cta] placement checkout failed", err);
+        })
+        .finally(() => setPending(false));
+      return;
+    }
+    if (isStripeCheckoutUrl(finalHref)) {
       trackSiteCheckout();
       trackMeta("InitiateCheckout", {
         contentIds: [placementKey],
@@ -55,17 +86,37 @@ export function CtaLink({
     }
   }
 
+  if (pending) {
+    return (
+      <span className={cn(classes, "pointer-events-none opacity-70")}>{label}</span>
+    );
+  }
+
+  if (resolved.stripePriceId && !resolved.stripeUrl) {
+    return (
+      <button type="button" className={classes} onClick={handleClick}>
+        {label}
+      </button>
+    );
+  }
+
   if (external) {
     return (
-      <a href={href} target={target} rel={rel} className={classes} onClick={handleClick}>
-        {children}
+      <a
+        href={finalHref}
+        target={target}
+        rel={rel}
+        className={classes}
+        onClick={handleClick}
+      >
+        {label}
       </a>
     );
   }
 
   return (
-    <Link href={href} className={classes} onClick={handleClick}>
-      {children}
+    <Link href={finalHref} className={classes} onClick={handleClick}>
+      {label}
     </Link>
   );
 }

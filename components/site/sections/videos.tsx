@@ -5,6 +5,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import { cn } from "@/lib/utils";
+import { visibleInLocale } from "@/lib/site/locale-stripe";
 
 export function VideosSection({
   dict,
@@ -18,6 +19,7 @@ export function VideosSection({
   videos: SiteVideo[];
 }) {
   const items = videos
+    .filter((video) => visibleInLocale(video.enabled, video.enabled_en, locale))
     .map((video) => ({
       video,
       embed: youtubeEmbedUrl(video.youtube_url),

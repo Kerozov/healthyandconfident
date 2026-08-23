@@ -1238,4 +1238,28 @@ create index if not exists automations_trigger_form_idx
 
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–054 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 055: per-locale Stripe + visibility for guides, videos, and site buttons
+alter table public.site_guides
+  add column if not exists stripe_product_id text not null default '',
+  add column if not exists stripe_url_en text not null default '',
+  add column if not exists stripe_product_id_en text not null default '',
+  add column if not exists stripe_price_id_en text not null default '',
+  add column if not exists enabled_en boolean not null default true;
+
+alter table public.site_videos
+  add column if not exists enabled_en boolean not null default true;
+
+alter table public.site_cta_placements
+  add column if not exists button_url_en text not null default '',
+  add column if not exists stripe_url text not null default '',
+  add column if not exists stripe_product_id text not null default '',
+  add column if not exists stripe_price_id text not null default '',
+  add column if not exists stripe_url_en text not null default '',
+  add column if not exists stripe_product_id_en text not null default '',
+  add column if not exists stripe_price_id_en text not null default '',
+  add column if not exists button_enabled boolean not null default true,
+  add column if not exists button_enabled_en boolean not null default true;
+
+notify pgrst, 'reload schema';
+
+select 'Upgrade complete (012–055 applied). Also run 007_automations.sql if not yet applied.' as result;

@@ -1,6 +1,6 @@
 import { publicSiteOrigin } from "@/lib/site";
 import { guidePagePath } from "@/lib/site/product-placement";
-import { guideSellable } from "@/lib/site/guide-catalog";
+import { guideSellableInLocale, guideStripeForLocale } from "@/lib/site/guide-catalog";
 import { renderEmailOfferCard } from "@/lib/email/offer-card";
 import type { EmailProductLinkMode } from "@/lib/email/products-block";
 import { normalizeProductLinkMode } from "@/lib/email/products-block";
@@ -40,7 +40,7 @@ export function renderEmailGuideCard(
     locale === "en" ? guide.description_en : guide.description_bg;
   const price =
     locale === "en" ? guide.price_label_en : guide.price_label_bg;
-  const paymentLink = guide.stripe_url?.trim() ?? "";
+  const paymentLink = guideStripeForLocale(guide, locale).stripe_url;
   const href =
     mode === "stripe" && paymentLink
       ? paymentLink
@@ -67,7 +67,7 @@ export function expandEmailGuideMarkers(
     new RegExp(GUIDE_MARKER_RE.source, "gi"),
     (_match, id: string, mode: string | undefined) => {
       const guide = guidesById.get(id.toLowerCase());
-      if (!guide || !guideSellable(guide)) return "";
+      if (!guide || !guideSellableInLocale(guide, locale)) return "";
       return renderEmailGuideCard(guide, locale, normalizeProductLinkMode(mode));
     },
   );

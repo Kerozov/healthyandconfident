@@ -23,6 +23,7 @@ import { isProductPlacementKey } from "@/lib/site/product-placement";
 import {
   canBundleCheckout,
   openStripeUrl,
+  startPlacementCheckout,
   startStripeCheckout,
 } from "@/lib/site/stripe-checkout";
 import { productStripeForLocale } from "@/lib/site/product-locale";
@@ -43,6 +44,8 @@ type OfferPopupContextValue = {
     continueHref: string,
     baseProduct?: SiteProduct,
   ) => boolean;
+  placements: Record<string, SiteCtaPlacement>;
+  locale: Locale;
 };
 
 const OfferPopupContext = createContext<OfferPopupContextValue | null>(null);
@@ -66,6 +69,15 @@ function navigateTo(
     if (productId) {
       void startStripeCheckout([productId], locale).catch((err) => {
         console.error("[offer-popup] site checkout failed", err);
+      });
+    }
+    return;
+  }
+  if (href.startsWith("placement-checkout:")) {
+    const key = href.slice("placement-checkout:".length).trim();
+    if (key) {
+      void startPlacementCheckout(key, locale).catch((err) => {
+        console.error("[offer-popup] placement checkout failed", err);
       });
     }
     return;
@@ -143,7 +155,10 @@ export function OfferPopupProvider({
     [placements, offersById, locale],
   );
 
-  const ctx = useMemo(() => ({ tryOpenPlacement }), [tryOpenPlacement]);
+  const ctx = useMemo(
+    () => ({ tryOpenPlacement, placements, locale }),
+    [tryOpenPlacement, placements, locale],
+  );
 
   const dismiss = useCallback(
     (andContinue = false) => {

@@ -91,7 +91,15 @@ export function GuideAdminGrid({
                 guide.enabled ? "bg-forest-600 text-white" : "bg-ink/60 text-white",
               )}
             >
-              {guide.enabled ? "Активно" : "Скрито"}
+              {guide.enabled ? "BG" : "BG скрито"}
+            </span>
+            <span
+              className={cn(
+                "absolute right-2 top-9 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                guide.enabled_en !== false ? "bg-sky-700 text-white" : "bg-ink/60 text-white",
+              )}
+            >
+              {guide.enabled_en !== false ? "EN" : "EN скрито"}
             </span>
           </div>
           <div className="flex flex-1 flex-col p-4">
@@ -113,6 +121,14 @@ export function GuideAdminGrid({
                     label: guidePagePath(guide.id, "bg"),
                     href: guidePagePath(guide.id, "bg"),
                   },
+                  ...(guide.enabled_en !== false
+                    ? [
+                        {
+                          label: guidePagePath(guide.id, "en"),
+                          href: guidePagePath(guide.id, "en"),
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </div>

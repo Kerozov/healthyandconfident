@@ -2728,6 +2728,7 @@ export async function saveSiteVideo(input: {
   title_en?: string;
   youtube_url: string;
   enabled?: boolean;
+  enabled_en?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
   await requireAdmin("website", { action: "save", summary: "Запази видео" });
@@ -2742,6 +2743,7 @@ export async function saveSiteVideo(input: {
     title_en: input.title_en?.trim() ?? "",
     youtube_url: youtubeUrl,
     enabled: input.enabled ?? true,
+    enabled_en: input.enabled_en ?? true,
     sort_order: input.sort_order ?? 0,
     updated_at: new Date().toISOString(),
   };
@@ -2776,12 +2778,18 @@ export async function saveSiteGuide(input: {
   description_en?: string;
   stripe_url?: string;
   stripe_id?: string;
+  stripe_product_id?: string;
   stripe_price_id?: string;
+  stripe_url_en?: string;
+  stripe_id_en?: string;
+  stripe_product_id_en?: string;
+  stripe_price_id_en?: string;
   price_label_bg?: string;
   price_label_en?: string;
   image_url?: string;
   purchase_tags?: string[];
   enabled?: boolean;
+  enabled_en?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
   await requireAdmin("website", { action: "save", summary: "Запази наръчник" });
@@ -2792,33 +2800,29 @@ export async function saveSiteGuide(input: {
     return { ok: false, message: "Попълни име на ръководството (BG)." };
   }
 
-  const stripeUrl = input.stripe_url?.trim() ?? "";
-  const guideStripeIdInput =
-    input.stripe_id?.trim() || input.stripe_price_id?.trim() || "";
-  const parsed = parseStripeIdInput(guideStripeIdInput);
-  if (
-    guideStripeIdInput &&
-    !parsed.stripe_price_id &&
-    !parsed.stripe_product_id
-  ) {
-    return {
-      ok: false,
-      message: `„${guideStripeIdInput}“ не е Stripe ID. Трябва да започва с price_ или prod_.`,
-    };
-  }
-  let stripePriceId = parsed.stripe_price_id;
-  try {
-    const enriched = await enrichStripePriceFromProduct(parsed);
-    stripePriceId = enriched.stripe_price_id;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Stripe lookup failed";
-    return { ok: false, message };
-  }
+  const bg = await resolveLocaleStripeIds({
+    stripe_id: input.stripe_id,
+    stripe_product_id: input.stripe_product_id,
+    stripe_price_id: input.stripe_price_id,
+    stripe_url: input.stripe_url,
+    label: "BG",
+  });
+  if (!bg.ok) return bg;
 
-  if (!stripeUrl && !stripePriceId) {
+  const en = await resolveLocaleStripeIds({
+    stripe_id: input.stripe_id_en,
+    stripe_product_id: input.stripe_product_id_en,
+    stripe_price_id: input.stripe_price_id_en,
+    stripe_url: input.stripe_url_en,
+    label: "EN",
+    optional: true,
+  });
+  if (!en.ok) return en;
+
+  if (!bg.stripe_url && !bg.stripe_price_id) {
     return {
       ok: false,
-      message: "Попълни Stripe Price/Product ID или Payment Link.",
+      message: "За българския вариант попълни Stripe продукт или Payment Link.",
     };
   }
 
@@ -2827,13 +2831,18 @@ export async function saveSiteGuide(input: {
     title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
     description_en: input.description_en?.trim() ?? "",
-    stripe_url: stripeUrl,
-    stripe_price_id: stripePriceId,
+    stripe_url: bg.stripe_url,
+    stripe_product_id: bg.stripe_product_id,
+    stripe_price_id: bg.stripe_price_id,
+    stripe_url_en: en.stripe_url,
+    stripe_product_id_en: en.stripe_product_id,
+    stripe_price_id_en: en.stripe_price_id,
     price_label_bg: input.price_label_bg?.trim() ?? "",
     price_label_en: input.price_label_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
     purchase_tags: (input.purchase_tags ?? []).filter(Boolean),
     enabled: input.enabled ?? true,
+    enabled_en: input.enabled_en ?? true,
     sort_order: input.sort_order ?? 0,
     updated_at: new Date().toISOString(),
   };
@@ -3235,8 +3244,32 @@ export async function saveCtaPlacement(input: {
   button_label_bg?: string;
   button_label_en?: string;
   button_url?: string;
+  button_url_en?: string;
+  stripe_url?: string;
+  stripe_id?: string;
+  stripe_url_en?: string;
+  stripe_id_en?: string;
+  button_enabled?: boolean;
+  button_enabled_en?: boolean;
 }): Promise<ActionResult> {
   await requireAdmin("website", { action: "save", summary: "Обнови CTA на сайта" });
+
+  const bg = await resolveLocaleStripeIds({
+    stripe_id: input.stripe_id,
+    stripe_url: input.stripe_url,
+    label: "BG",
+    optional: true,
+  });
+  if (!bg.ok) return bg;
+
+  const en = await resolveLocaleStripeIds({
+    stripe_id: input.stripe_id_en,
+    stripe_url: input.stripe_url_en,
+    label: "EN",
+    optional: true,
+  });
+  if (!en.ok) return en;
+
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("site_cta_placements")
@@ -3248,6 +3281,15 @@ export async function saveCtaPlacement(input: {
       button_label_bg: input.button_label_bg?.trim() ?? "",
       button_label_en: input.button_label_en?.trim() ?? "",
       button_url: input.button_url?.trim() ?? "",
+      button_url_en: input.button_url_en?.trim() ?? "",
+      stripe_url: bg.stripe_url,
+      stripe_product_id: bg.stripe_product_id,
+      stripe_price_id: bg.stripe_price_id,
+      stripe_url_en: en.stripe_url,
+      stripe_product_id_en: en.stripe_product_id,
+      stripe_price_id_en: en.stripe_price_id,
+      button_enabled: input.button_enabled ?? true,
+      button_enabled_en: input.button_enabled_en ?? true,
       updated_at: new Date().toISOString(),
     })
     .eq("key", input.key);

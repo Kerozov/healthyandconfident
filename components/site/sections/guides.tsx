@@ -4,6 +4,7 @@ import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { BookOpen } from "lucide-react";
 import { GuidesGrid } from "@/components/site/sections/guides-grid";
+import { filterGuidesForLocale } from "@/lib/site/guide-catalog";
 
 export function GuidesSection({
   dict,
@@ -16,7 +17,8 @@ export function GuidesSection({
   section: SiteSection;
   guides: SiteGuide[];
 }) {
-  if (guides.length === 0) return null;
+  const visible = filterGuidesForLocale(guides, locale);
+  if (visible.length === 0) return null;
 
   const title =
     locale === "bg"
@@ -36,7 +38,7 @@ export function GuidesSection({
           <p className="mt-4 text-ink-soft">{dict.guides.subtitle}</p>
         </div>
 
-        <GuidesGrid guides={guides} locale={locale} cta={dict.guides.cta} />
+        <GuidesGrid guides={visible} locale={locale} cta={dict.guides.cta} />
       </Container>
     </section>
   );

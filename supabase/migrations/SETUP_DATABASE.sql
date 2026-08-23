@@ -305,12 +305,17 @@ create table if not exists public.site_guides (
   description_bg  text not null default '',
   description_en  text not null default '',
   stripe_url      text not null,
+  stripe_product_id text not null default '',
   stripe_price_id text not null default '',
+  stripe_url_en   text not null default '',
+  stripe_product_id_en text not null default '',
+  stripe_price_id_en text not null default '',
   price_label_bg  text not null default '',
   price_label_en  text not null default '',
   image_url       text,
   purchase_tags   text[] not null default '{}',
   enabled         boolean not null default true,
+  enabled_en      boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
@@ -358,6 +363,7 @@ create table if not exists public.site_videos (
   title_en     text not null default '',
   youtube_url  text not null,
   enabled      boolean not null default true,
+  enabled_en   boolean not null default true,
   sort_order   int not null default 0,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
@@ -404,6 +410,15 @@ create table if not exists public.site_cta_placements (
   button_label_bg   text not null default '',
   button_label_en   text not null default '',
   button_url        text not null default '',
+  button_url_en     text not null default '',
+  stripe_url        text not null default '',
+  stripe_product_id text not null default '',
+  stripe_price_id   text not null default '',
+  stripe_url_en     text not null default '',
+  stripe_product_id_en text not null default '',
+  stripe_price_id_en text not null default '',
+  button_enabled    boolean not null default true,
+  button_enabled_en boolean not null default true,
   updated_at        timestamptz not null default now()
 );
 
@@ -995,12 +1010,17 @@ create table if not exists public.site_guides (
   description_bg  text not null default '',
   description_en  text not null default '',
   stripe_url      text not null,
+  stripe_product_id text not null default '',
   stripe_price_id text not null default '',
+  stripe_url_en   text not null default '',
+  stripe_product_id_en text not null default '',
+  stripe_price_id_en text not null default '',
   price_label_bg  text not null default '',
   price_label_en  text not null default '',
   image_url       text,
   purchase_tags   text[] not null default '{}',
   enabled         boolean not null default true,
+  enabled_en      boolean not null default true,
   sort_order      int not null default 0,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
@@ -1504,7 +1524,31 @@ create index if not exists automations_trigger_form_idx
 
 notify pgrst, 'reload schema';
 
-select 'Setup complete — schema up to date through 054 (form + segment automation triggers)' as result;
+-- 055: per-locale Stripe + visibility for guides, videos, and site buttons
+alter table public.site_guides
+  add column if not exists stripe_product_id text not null default '',
+  add column if not exists stripe_url_en text not null default '',
+  add column if not exists stripe_product_id_en text not null default '',
+  add column if not exists stripe_price_id_en text not null default '',
+  add column if not exists enabled_en boolean not null default true;
+
+alter table public.site_videos
+  add column if not exists enabled_en boolean not null default true;
+
+alter table public.site_cta_placements
+  add column if not exists button_url_en text not null default '',
+  add column if not exists stripe_url text not null default '',
+  add column if not exists stripe_product_id text not null default '',
+  add column if not exists stripe_price_id text not null default '',
+  add column if not exists stripe_url_en text not null default '',
+  add column if not exists stripe_product_id_en text not null default '',
+  add column if not exists stripe_price_id_en text not null default '',
+  add column if not exists button_enabled boolean not null default true,
+  add column if not exists button_enabled_en boolean not null default true;
+
+notify pgrst, 'reload schema';
+
+select 'Setup complete — schema up to date through 055 (locale Stripe on guides, videos, buttons)' as result;
 
 
 

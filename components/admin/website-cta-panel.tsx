@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Save, Check } from "lucide-react";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { saveCtaPlacement } from "@/app/(admin)/admin/actions";
-import { Field, Input } from "@/components/admin/fields";
+import { Field, Input, LocaleVisibilityCheckboxes } from "@/components/admin/fields";
+import { StripeLocalePicker } from "@/components/admin/stripe-locale-picker";
+import { formatStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
 import { isProductPlacementKey } from "@/lib/site/product-placement";
 import { cn } from "@/lib/utils";
@@ -100,6 +102,24 @@ function PlacementEditor({
     button_label_bg: placement.button_label_bg ?? "",
     button_label_en: placement.button_label_en ?? "",
     button_url: placement.button_url ?? "",
+    button_url_en: placement.button_url_en ?? "",
+    stripe_id: formatStripeIdInput(placement),
+    stripe_url:
+      (placement.stripe_url ?? "").trim() ||
+      (/buy\.stripe\.com|checkout\.stripe\.com/i.test(placement.button_url ?? "")
+        ? placement.button_url
+        : ""),
+    stripe_id_en: formatStripeIdInput({
+      stripe_product_id: placement.stripe_product_id_en,
+      stripe_price_id: placement.stripe_price_id_en,
+    }),
+    stripe_url_en:
+      (placement.stripe_url_en ?? "").trim() ||
+      (/buy\.stripe\.com|checkout\.stripe\.com/i.test(placement.button_url_en ?? "")
+        ? placement.button_url_en
+        : ""),
+    button_enabled: placement.button_enabled !== false,
+    button_enabled_en: placement.button_enabled_en !== false,
   });
 
   function save() {
@@ -114,6 +134,13 @@ function PlacementEditor({
         button_label_bg: form.button_label_bg,
         button_label_en: form.button_label_en,
         button_url: form.button_url,
+        button_url_en: form.button_url_en,
+        stripe_id: form.stripe_id,
+        stripe_url: form.stripe_url,
+        stripe_id_en: form.stripe_id_en,
+        stripe_url_en: form.stripe_url_en,
+        button_enabled: form.button_enabled,
+        button_enabled_en: form.button_enabled_en,
       });
       if (!res.ok) {
         setError(res.message || "Failed");
@@ -178,34 +205,112 @@ function PlacementEditor({
           />
         </Field>
         <div className="md:col-span-2">
-          <Field
-            label="Линк на бутона"
-            hint={
-              isPricing
-                ? "Stripe Payment Link, WhatsApp или checkout URL"
-                : placement.key === "outcomes_cta"
-                  ? "Calendly линк за консултация"
-                  : placement.key === "leadmagnet_cta"
-                    ? "Не се ползва — бутонът е от формата за имейл"
-                    : "WhatsApp, #includes, Calendly или Stripe линк"
-            }
-          >
-            <Input
-              value={form.button_url}
-              onChange={(e) => {
-                setForm({ ...form, button_url: e.target.value });
+          <LocaleVisibilityCheckboxes
+            enabled={form.button_enabled}
+            enabledEn={form.button_enabled_en}
+            onEnabledChange={(button_enabled) => {
+              setForm({ ...form, button_enabled });
+              setSaved(false);
+            }}
+            onEnabledEnChange={(button_enabled_en) => {
+              setForm({ ...form, button_enabled_en });
+              setSaved(false);
+            }}
+            bgLabel="Покажи бутона на българския сайт"
+            enLabel="Покажи бутона на английския сайт"
+            disabled={pending}
+          />
+        </div>
+        {form.button_enabled && (
+          <div className="md:col-span-2">
+            <Field
+              label="Друг линк (BG) — WhatsApp, Calendly, #секция"
+              hint={
+                isPricing
+                  ? "Ако избереш Stripe по-долу, той има предимство пред този адрес."
+                  : placement.key === "outcomes_cta"
+                    ? "Calendly линк за консултация, ако няма Stripe"
+                    : placement.key === "leadmagnet_cta"
+                      ? "Не се ползва — бутонът е от формата за имейл"
+                      : "WhatsApp, #includes, Calendly — или остави празно и ползвай Stripe"
+              }
+            >
+              <Input
+                value={form.button_url}
+                onChange={(e) => {
+                  setForm({ ...form, button_url: e.target.value });
+                  setSaved(false);
+                }}
+                placeholder={
+                  isPricing
+                    ? "https://buy.stripe.com/… (по избор)"
+                    : placement.key === "outcomes_cta"
+                      ? "https://calendly.com/…"
+                      : "https://wa.me/…"
+                }
+              />
+            </Field>
+          </div>
+        )}
+        {form.button_enabled_en && (
+          <div className="md:col-span-2">
+            <Field
+              label="Друг линк (EN)"
+              hint="Празно = българският линк. Stripe по-долу има предимство."
+            >
+              <Input
+                value={form.button_url_en}
+                onChange={(e) => {
+                  setForm({ ...form, button_url_en: e.target.value });
+                  setSaved(false);
+                }}
+                placeholder="https://…"
+              />
+            </Field>
+          </div>
+        )}
+        {form.button_enabled && (
+          <div className="md:col-span-2">
+            <StripeLocalePicker
+              label="Плащане — български"
+              hint="Избери Stripe продукт или Payment Link. Ако има цена (price_), бутонът отваря Checkout; иначе — линка."
+              value={{
+                stripe_id: form.stripe_id,
+                stripe_url: form.stripe_url,
+              }}
+              onChange={(next) => {
+                setForm({
+                  ...form,
+                  stripe_id: next.stripe_id,
+                  stripe_url: next.stripe_url,
+                });
                 setSaved(false);
               }}
-              placeholder={
-                isPricing
-                  ? "https://buy.stripe.com/…"
-                  : placement.key === "outcomes_cta"
-                    ? "https://calendly.com/…"
-                    : "https://wa.me/…"
-              }
+              disabled={pending}
             />
-          </Field>
-        </div>
+          </div>
+        )}
+        {form.button_enabled_en && (
+          <div className="md:col-span-2">
+            <StripeLocalePicker
+              label="Плащане — английски"
+              hint="Отделен Stripe продукт или линк. Празно = българското плащане."
+              value={{
+                stripe_id: form.stripe_id_en,
+                stripe_url: form.stripe_url_en,
+              }}
+              onChange={(next) => {
+                setForm({
+                  ...form,
+                  stripe_id_en: next.stripe_id,
+                  stripe_url_en: next.stripe_url,
+                });
+                setSaved(false);
+              }}
+              disabled={pending}
+            />
+          </div>
+        )}
 
         {showPopup && (
           <>
@@ -296,9 +401,9 @@ export function CtaPlacementsPanel({
   return (
     <div className="space-y-6">
       <p className="text-sm text-ink-soft">
-        Текст и линк на бутоните за <strong>програмите</strong> и статичните секции (Calendly,
-        WhatsApp). Stripe продуктите се добавят в таб „Продукти“ — не тук. Празни полета =
-        стойностите от кода на страницата.
+        Текст, Stripe продукт или Payment Link — отделно за <strong>български</strong> и{" "}
+        <strong>английски</strong>. Можеш да скриеш бутона само на единия език.
+        Празни полета = стойностите от кода на страницата.
       </p>
       {!placements.some((p) => p.key === "programs_1_secondary") && (
         <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">

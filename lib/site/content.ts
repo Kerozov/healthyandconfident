@@ -76,7 +76,7 @@ export async function getSiteProducts(includeDisabled = false): Promise<SiteProd
       .select("*")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
-    if (!includeDisabled) q = q.eq("enabled", true);
+    if (!includeDisabled) q = q.or("enabled.eq.true,enabled_en.eq.true");
     const { data } = await q;
     return (data as SiteProduct[]) ?? [];
   }, []);
@@ -89,7 +89,7 @@ export async function getSiteGuides(includeDisabled = false): Promise<SiteGuide[
       .select("*")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
-    if (!includeDisabled) q = q.eq("enabled", true);
+    if (!includeDisabled) q = q.or("enabled.eq.true,enabled_en.eq.true");
     const { data } = await q;
     return (data as SiteGuide[]) ?? [];
   }, []);
@@ -102,7 +102,7 @@ export async function getSiteVideos(includeDisabled = false): Promise<SiteVideo[
       .select("*")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
-    if (!includeDisabled) q = q.eq("enabled", true);
+    if (!includeDisabled) q = q.or("enabled.eq.true,enabled_en.eq.true");
     const { data } = await q;
     return (data as SiteVideo[]) ?? [];
   }, []);

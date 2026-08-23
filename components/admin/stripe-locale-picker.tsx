@@ -226,3 +226,116 @@ export function StripeLocalePicker({
     </div>
   );
 }
+
+/** Compact dropdowns that fill a single URL (email buttons, campaign CTA, signature). */
+export function StripeHrefPicker({
+  href,
+  onHrefChange,
+  disabled,
+}: {
+  href: string;
+  onHrefChange: (href: string) => void;
+  disabled?: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [items, setItems] = useState<StripeCatalogItem[]>(cachedCatalog?.items ?? []);
+  const [paymentLinks, setPaymentLinks] = useState<StripePaymentLinkItem[]>(
+    cachedCatalog?.paymentLinks ?? [],
+  );
+
+  useEffect(() => {
+    if (cachedCatalog) {
+      setItems(cachedCatalog.items);
+      setPaymentLinks(cachedCatalog.paymentLinks);
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const catalog = await loadCatalogOnce();
+        setItems(catalog.items);
+        setPaymentLinks(catalog.paymentLinks);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Stripe catalog failed");
+      }
+    });
+  }, []);
+
+  const selectedLinkUrl = useMemo(() => {
+    const url = href.trim();
+    return paymentLinks.some((link) => link.url === url) ? url : "";
+  }, [href, paymentLinks]);
+
+  const selectedProductId = useMemo(() => {
+    const link = paymentLinks.find((row) => row.url === href.trim());
+    return link?.stripeProductId ?? "";
+  }, [href, paymentLinks]);
+
+  const activeItems = items.filter((item) => item.active);
+
+  function pickPaymentLink(url: string) {
+    setError(null);
+    onHrefChange(url);
+  }
+
+  function pickProduct(stripeProductId: string) {
+    setError(null);
+    if (!stripeProductId) {
+      onHrefChange("");
+      return;
+    }
+    const link = paymentLinks.find((row) => row.stripeProductId === stripeProductId);
+    if (link) {
+      onHrefChange(link.url);
+      return;
+    }
+    setError(
+      "Този Stripe продукт няма Payment Link. Избери линк от менюто долу или създай линк в Stripe.",
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <Field label="Продукт от Stripe">
+        <Select
+          value={selectedProductId}
+          disabled={disabled || pending}
+          onChange={(e) => pickProduct(e.target.value)}
+        >
+          <option value="">— избери продукт —</option>
+          {activeItems.map((item) => (
+            <option key={item.stripeProductId} value={item.stripeProductId}>
+              {item.name}
+              {item.priceLabel ? ` · ${item.priceLabel}` : ""}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {paymentLinks.length > 0 && (
+        <Field label="Payment Link от Stripe">
+          <Select
+            value={selectedLinkUrl}
+            disabled={disabled || pending}
+            onChange={(e) => pickPaymentLink(e.target.value)}
+          >
+            <option value="">— избери линк —</option>
+            {paymentLinks.map((link) => (
+              <option key={link.id} value={link.url}>
+                {link.name}
+                {link.priceLabel ? ` · ${link.priceLabel}` : ""}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
+      {pending && items.length === 0 && (
+        <p className="flex items-center gap-2 text-xs text-ink-soft">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Зареждане от Stripe…
+        </p>
+      )}
+      {error && <p className="text-xs text-coral-600">{error}</p>}
+    </div>
+  );
+}

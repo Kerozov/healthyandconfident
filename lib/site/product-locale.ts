@@ -1,36 +1,24 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
+import {
+  hasOwnCheckout,
+  localeStripeBg,
+  localeStripeEnOnly,
+  stripeForLocale,
+  visibleInLocale,
+  type StripeCheckout,
+} from "@/lib/site/locale-stripe";
 
-export type ProductStripe = {
-  stripe_url: string;
-  stripe_product_id: string;
-  stripe_price_id: string;
-};
-
-function trimId(value: string | null | undefined): string {
-  return value?.trim() ?? "";
-}
-
-function hasOwnCheckout(stripe: ProductStripe): boolean {
-  return Boolean(stripe.stripe_price_id || stripe.stripe_url);
-}
+export type ProductStripe = StripeCheckout;
 
 /** BG checkout fields — the product's primary Stripe attachment. */
 export function productStripeBg(product: SiteProduct): ProductStripe {
-  return {
-    stripe_url: trimId(product.stripe_url),
-    stripe_product_id: trimId(product.stripe_product_id),
-    stripe_price_id: trimId(product.stripe_price_id),
-  };
+  return localeStripeBg(product);
 }
 
 /** EN checkout fields only (no BG fallback). */
 export function productStripeEnOnly(product: SiteProduct): ProductStripe {
-  return {
-    stripe_url: trimId(product.stripe_url_en),
-    stripe_product_id: trimId(product.stripe_product_id_en),
-    stripe_price_id: trimId(product.stripe_price_id_en),
-  };
+  return localeStripeEnOnly(product);
 }
 
 /**
@@ -43,12 +31,7 @@ export function productStripeForLocale(
   product: SiteProduct,
   locale: Locale,
 ): ProductStripe {
-  const bg = productStripeBg(product);
-  if (locale !== "en") return bg;
-
-  const en = productStripeEnOnly(product);
-  if (hasOwnCheckout(en)) return en;
-  return bg;
+  return stripeForLocale(product, locale);
 }
 
 export function productHasStripePrice(
@@ -59,7 +42,8 @@ export function productHasStripePrice(
     return Boolean(productStripeForLocale(product, locale).stripe_price_id);
   }
   return Boolean(
-    trimId(product.stripe_price_id) || trimId(product.stripe_price_id_en),
+    productStripeBg(product).stripe_price_id ||
+      productStripeEnOnly(product).stripe_price_id,
   );
 }
 
@@ -67,8 +51,7 @@ export function productHasCheckoutForLocale(
   product: SiteProduct,
   locale: Locale,
 ): boolean {
-  const stripe = productStripeForLocale(product, locale);
-  return Boolean(stripe.stripe_price_id || stripe.stripe_url);
+  return hasOwnCheckout(productStripeForLocale(product, locale));
 }
 
 /**
@@ -93,14 +76,12 @@ export function productCanBeBought(
   return productHasCheckoutForLocale(product, locale);
 }
 
-/** Shop / checkout / EN emails: hidden when the whole product or the EN version is off. */
+/** Shop / checkout / EN emails: hidden independently per language. */
 export function productVisibleInLocale(
   product: SiteProduct,
   locale: Locale,
 ): boolean {
-  if (!product.enabled) return false;
-  if (locale === "en" && product.enabled_en === false) return false;
-  return true;
+  return visibleInLocale(product.enabled, product.enabled_en, locale);
 }
 
 export function filterProductsForLocale(

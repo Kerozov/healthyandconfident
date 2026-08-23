@@ -3,11 +3,16 @@ import "server-only";
 import type { Locale } from "@/i18n/config";
 import { publicSiteOrigin } from "@/lib/site";
 import { getAdminClient } from "@/lib/supabase/admin";
-import type { SiteProduct } from "@/lib/supabase/types";
+import type { SiteCtaPlacement, SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import {
   productSellableInLocale,
   productStripeForLocale,
 } from "@/lib/site/product-locale";
+import {
+  guideSellableInLocale,
+  guideStripeForLocale,
+} from "@/lib/site/guide-catalog";
+import { placementStripeForLocale } from "@/lib/site/cta-placements";
 import { getStripe } from "@/lib/stripe/server";
 
 /** Checkout URL plus the amounts needed for ad-platform conversion events. */
@@ -62,7 +67,7 @@ export async function createGuideCheckoutSession(
 
   if (error) throw new Error(error.message);
 
-  const guides = data ?? [];
+  const guides = (data as SiteGuide[]) ?? [];
   if (guides.length !== guideIds.length) {
     throw new Error("One or more guides were not found");
   }
@@ -70,7 +75,15 @@ export async function createGuideCheckoutSession(
   const byId = new Map(guides.map((g) => [g.id, g]));
   const ordered = guideIds.map((id) => byId.get(id)!);
 
-  const priceIds = ordered.map((g) => (g.stripe_price_id as string)?.trim() ?? "");
+  if (ordered.some((g) => !guideSellableInLocale(g, locale))) {
+    throw new Error(
+      locale === "en"
+        ? "One of the guides is not available in this language."
+        : "Едно от ръководствата не е налично за този език.",
+    );
+  }
+
+  const priceIds = ordered.map((g) => guideStripeForLocale(g, locale).stripe_price_id);
   if (priceIds.some((id) => !id)) {
     throw new Error("Липсва Stripe Price ID на ръководството. Добави price_… в админ → Ръководства.");
   }
@@ -183,4 +196,59 @@ export async function createProductCheckoutSession(
   }
 
   return { url: session.url, ...sessionAmount(session, prices) };
+}
+
+export async function createPlacementCheckoutSession(
+  placementKey: string,
+  locale: Locale,
+  contactId?: string,
+  tracking?: CheckoutTracking,
+): Promise<CheckoutSessionResult> {
+  const key = placementKey.trim();
+  if (!key) throw new Error("Missing button key");
+
+  const supabase = getAdminClient();
+  const { data, error } = await supabase
+    .from("site_cta_placements")
+    .select("*")
+    .eq("key", key)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+
+  const placement = data as SiteCtaPlacement | null;
+  if (!placement) throw new Error("Button was not found");
+
+  const stripeIds = placementStripeForLocale(placement, locale);
+  const priceId = stripeIds.stripe_price_id;
+  if (!priceId) {
+    throw new Error(
+      "Липсва Stripe цена на бутона. Избери продукт от Stripe в админ → Бутони.",
+    );
+  }
+
+  const stripe = getStripe();
+  const price = await stripe.prices.retrieve(priceId);
+  const mode = price.type === "recurring" ? "subscription" : "payment";
+  const origin = publicSiteOrigin();
+
+  const session = await stripe.checkout.sessions.create({
+    mode,
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: `${origin}/${locale}?checkout=success`,
+    cancel_url: `${origin}/${locale}?checkout=cancelled`,
+    locale: locale === "bg" ? "bg" : "en",
+    metadata: {
+      placement_key: key,
+      stripe_product_ids: stripeIds.stripe_product_id,
+      locale,
+      ...(contactId ? { contact_id: contactId } : {}),
+      ...trackingMetadata(tracking),
+    },
+  });
+
+  if (!session.url) {
+    throw new Error("Stripe did not return a checkout URL");
+  }
+
+  return { url: session.url, ...sessionAmount(session, [price]) };
 }

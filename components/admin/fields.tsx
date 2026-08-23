@@ -63,6 +63,47 @@ export function Select({
   );
 }
 
+export function LocaleVisibilityCheckboxes({
+  enabled,
+  enabledEn,
+  onEnabledChange,
+  onEnabledEnChange,
+  bgLabel = "Покажи на българския сайт (/bg)",
+  enLabel = "Покажи на английския сайт (/en)",
+  disabled,
+}: {
+  enabled: boolean;
+  enabledEn: boolean;
+  onEnabledChange: (value: boolean) => void;
+  onEnabledEnChange: (value: boolean) => void;
+  bgLabel?: string;
+  enLabel?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="flex items-center gap-2 text-sm font-medium">
+        <input
+          type="checkbox"
+          checked={enabled}
+          disabled={disabled}
+          onChange={(e) => onEnabledChange(e.target.checked)}
+        />
+        {bgLabel}
+      </label>
+      <label className="flex items-center gap-2 text-sm font-medium">
+        <input
+          type="checkbox"
+          checked={enabledEn}
+          disabled={disabled}
+          onChange={(e) => onEnabledEnChange(e.target.checked)}
+        />
+        {enLabel}
+      </label>
+    </div>
+  );
+}
+
 export function Card({
   title,
   action,

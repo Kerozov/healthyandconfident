@@ -5,7 +5,7 @@ import { getAllPublishedSlugs } from "@/lib/blog";
 import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
 import { getSiteGuides, getSiteProducts } from "@/lib/site/content";
 import { filterProductsForLocale } from "@/lib/site/product-locale";
-import { filterGuidesForSite } from "@/lib/site/guide-catalog";
+import { filterGuidesForLocale } from "@/lib/site/guide-catalog";
 import {
   guidePagePath,
   guidesListPath,
@@ -21,7 +21,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getSiteProducts(),
     getSiteGuides(),
   ]);
-  const guides = filterGuidesForSite(allGuides);
 
   const staticEntries: MetadataRoute.Sitemap = [];
   for (const locale of locales) {
@@ -76,7 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
       });
     }
-    for (const guide of guides) {
+    for (const guide of filterGuidesForLocale(allGuides, locale)) {
       staticEntries.push({
         url: `${base}${guidePagePath(guide.id, locale)}`,
         lastModified: now,
