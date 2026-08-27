@@ -18,6 +18,9 @@ export function campaignCtaRedirectUrl(
   subscriberId?: string | null,
 ): string {
   const base = `${siteOrigin()}/api/go/campaign/${campaignId}`;
+  if (email.includes("{{")) {
+    return `${base}?e={{email}}&sid={{sid}}`;
+  }
   const token = createClickToken({
     s: "campaign",
     i: campaignId,

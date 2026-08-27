@@ -26,6 +26,7 @@ export async function GET(
 
   const resolved = resolveCtaTarget(target);
   const tokenRaw = url.searchParams.get("t");
+  const emailParam = url.searchParams.get("e")?.trim().toLowerCase();
   if (tokenRaw) {
     const payload = verifyClickToken(tokenRaw);
     if (payload && payload.s === "campaign" && payload.i === id) {
@@ -41,6 +42,19 @@ export async function GET(
       } catch {
         /* still redirect */
       }
+    }
+  } else if (emailParam) {
+    try {
+      await recordEmailLinkClick({
+        sourceType: "campaign",
+        sourceId: id,
+        email: emailParam,
+        subscriberId: url.searchParams.get("sid"),
+        targetUrl: resolved,
+        linkLabel: row?.cta_label?.trim() || "CTA бутон",
+      });
+    } catch {
+      /* still redirect */
     }
   }
 

@@ -8,6 +8,7 @@ import {
   expandEmailFormMarkers,
   extractFormIdsFromHtml,
 } from "@/lib/email/forms-block";
+import { publicFormUrl } from "@/lib/forms/urls";
 
 export type EmailFormRecipient = {
   email: string;
@@ -28,8 +29,16 @@ export async function expandEmailForms(
   const byId = new Map(forms.map((form) => [form.id.toLowerCase(), form]));
   const hrefByFormId = new Map<string, string>();
   const email = recipient.email.trim().toLowerCase();
+  const mergeTagged = email.includes("{{");
 
   for (const form of forms) {
+    if (mergeTagged) {
+      hrefByFormId.set(
+        form.id.toLowerCase(),
+        `${publicFormUrl(form.slug, locale)}?e={{email}}&sid={{sid}}`,
+      );
+      continue;
+    }
     const token = createFormInviteToken({
       f: form.id,
       e: email,

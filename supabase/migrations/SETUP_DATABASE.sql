@@ -517,9 +517,8 @@ create index if not exists campaign_deliveries_campaign_idx
 create index if not exists campaign_deliveries_email_idx
   on public.campaign_deliveries (email);
 
-create unique index if not exists campaign_deliveries_job_uidx
-  on public.campaign_deliveries (worker_job_id)
-  where worker_job_id is not null;
+create unique index if not exists campaign_deliveries_campaign_email_key
+  on public.campaign_deliveries (campaign_id, lower(email));
 
 create table if not exists public.email_link_clicks (
   id            uuid primary key default gen_random_uuid(),

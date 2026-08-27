@@ -26,10 +26,10 @@ export default async function PublicFormPage({
   searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ t?: string }>;
+  searchParams: Promise<{ t?: string; e?: string; sid?: string }>;
 }) {
   const { locale, slug } = await params;
-  const { t: token } = await searchParams;
+  const { t: token, e: emailParam, sid } = await searchParams;
   if (!isLocale(locale)) notFound();
 
   const l = locale as Locale;
@@ -54,6 +54,17 @@ export default async function PublicFormPage({
           .maybeSingle();
         prefilledName = (data as { name?: string } | null)?.name ?? undefined;
       }
+    }
+  } else if (emailParam && form.enabled) {
+    prefilledEmail = emailParam.trim().toLowerCase();
+    if (sid && !sid.includes("{{")) {
+      const supabase = getAdminClient();
+      const { data } = await supabase
+        .from("subscribers")
+        .select("name")
+        .eq("id", sid)
+        .maybeSingle();
+      prefilledName = (data as { name?: string } | null)?.name ?? undefined;
     }
   }
 

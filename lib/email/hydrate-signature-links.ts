@@ -72,7 +72,7 @@ export async function withSignatureFormInvites(
 ): Promise<EmailFooterConfig> {
   const links = parseSignatureLinks(config.signature_links);
   const email = recipient?.email?.trim().toLowerCase() ?? "";
-  if (!email || !signatureLinksNeedFormInvites(links)) {
+  if (!email || email.includes("{{") || !signatureLinksNeedFormInvites(links)) {
     return { ...config, signature_links: links };
   }
 

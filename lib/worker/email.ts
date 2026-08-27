@@ -18,6 +18,8 @@ type SendArgs = {
   recipients: string[];
   from?: string;
   replyTo?: string;
+  idempotencyKey?: string;
+  merge?: Record<string, Record<string, string>>;
   attachments?: {
     filename: string;
     url: string;
@@ -189,22 +191,72 @@ function getConfig() {
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const { url, key } = getConfig();
-  const res = await fetch(`${url}${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${url}${path}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      });
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Worker request failed");
+      if (attempt === 0) continue;
+      throw lastError;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return data as T;
+    }
+    lastError = new Error(
       (data as { error?: string }).error || `Worker request failed (${res.status})`,
     );
+    if (attempt === 0 && (res.status === 429 || res.status >= 500)) continue;
+    throw lastError;
   }
-  return data as T;
+
+  throw lastError ?? new Error("Worker request failed");
+}
+
+export async function lookupEmailJob(
+  idempotencyKey: string,
+): Promise<WorkerSendResult | null> {
+  const lookupKey = idempotencyKey.trim();
+  if (!lookupKey) return null;
+
+  const { url, key } = getConfig();
+  try {
+    const res = await fetch(
+      `${url}/api/v1/jobs/lookup?key=${encodeURIComponent(lookupKey)}`,
+      {
+        headers: { Authorization: `Bearer ${key}` },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => null)) as {
+      jobId?: string;
+      status?: string;
+      sent?: number;
+      failed?: number;
+    } | null;
+    if (!data?.jobId) return null;
+    return {
+      jobId: data.jobId,
+      status: data.status ?? "pending",
+      sent: data.sent,
+      failed: data.failed,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function sendEmail(args: SendArgs): Promise<WorkerSendResult> {
@@ -216,6 +268,8 @@ export async function sendEmail(args: SendArgs): Promise<WorkerSendResult> {
     from: args.from || from,
     replyTo: args.replyTo || replyTo,
     attachments: args.attachments?.length ? args.attachments : undefined,
+    idempotencyKey: args.idempotencyKey,
+    merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
   });
 }
 
@@ -255,6 +309,7 @@ export async function scheduleEmail(args: ScheduleArgs): Promise<WorkerSendResul
     sendAt: args.sendAt,
     idempotencyKey: args.idempotencyKey,
     attachments: args.attachments?.length ? args.attachments : undefined,
+    merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
   });
 }
 
