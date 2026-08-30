@@ -12,7 +12,9 @@ import {
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
 import { EmailBuilder } from "@/components/admin/email-builder";
-import { Field, Input, Textarea } from "@/components/admin/fields";
+import { Field, Input } from "@/components/admin/fields";
+import { SmsComposeFields } from "@/components/admin/sms-compose-fields";
+import { buildSmsBody, checkSmsCompose } from "@/lib/sms/compose-validation";
 import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +57,7 @@ export function CampaignComposer({
   const [showButton, setShowButton] = useState(false);
   const [sms, setSms] = useState({
     message: "",
+    link: "",
     audience: { ...EMPTY_AUDIENCE } as AudienceInput,
     scheduled_at: "",
   });
@@ -96,16 +99,22 @@ export function CampaignComposer({
   }
 
   function submitSms() {
+    const check = checkSmsCompose(sms.message, sms.link);
+    if (!check.ok) {
+      setResult({ ok: false, message: check.errors[0] });
+      return;
+    }
+
     setResult(null);
     startTransition(async () => {
       const res = await sendSmsCampaign({
-        message: sms.message,
+        message: buildSmsBody(sms.message, sms.link),
         audience: sms.audience,
         scheduled_at: sms.scheduled_at || undefined,
       });
       setResult(res);
       if (res.ok) {
-        setSms({ message: "", audience: { ...EMPTY_AUDIENCE }, scheduled_at: "" });
+        setSms({ message: "", link: "", audience: { ...EMPTY_AUDIENCE }, scheduled_at: "" });
         router.refresh();
         onClose();
       }
@@ -114,7 +123,8 @@ export function CampaignComposer({
 
   const isEmail = tab === "email";
   const emailReady = Boolean(email.subject && email.html) && workerConfigured;
-  const smsReady = Boolean(sms.message) && workerConfigured;
+  const smsCheck = checkSmsCompose(sms.message, sms.link);
+  const smsReady = smsCheck.ok && workerConfigured;
   const scheduledAt = isEmail ? email.scheduled_at : sms.scheduled_at;
 
   return (
@@ -282,20 +292,13 @@ export function CampaignComposer({
       ) : (
         <div className="grid min-w-0 gap-5 xl:grid-cols-2">
           <WorkspacePanel title="Съобщение">
-            <Field
-              label="Текст"
-              hint="Обикновен текст. Отива до абонатите с телефонен номер."
-            >
-              <Textarea
-                rows={6}
-                value={sms.message}
-                onChange={(e) => setSms({ ...sms, message: e.target.value })}
-              />
-            </Field>
-            <p className="mt-2 text-xs text-ink-soft">
-              {sms.message.length} знака ·{" "}
-              {Math.max(1, Math.ceil(sms.message.length / 160))} SMS на получател
-            </p>
+            <SmsComposeFields
+              message={sms.message}
+              link={sms.link}
+              onMessageChange={(message) => setSms({ ...sms, message })}
+              onLinkChange={(link) => setSms({ ...sms, link })}
+              messageHint="Обикновен текст. Отива до абонатите с телефонен номер."
+            />
           </WorkspacePanel>
 
           <div className="space-y-5">

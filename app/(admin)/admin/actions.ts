@@ -26,6 +26,7 @@ import {
   type RecipientRow,
 } from "@/lib/worker/email";
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
+import { checkSmsCompose } from "@/lib/sms/compose-validation";
 import { runAutomations } from "@/lib/automation/send";
 import { buildBrandedEmail } from "@/lib/email/compose";
 import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
@@ -2352,6 +2353,11 @@ export async function sendSmsCampaign(input: {
 
   if (input.scheduled_at && !scheduledAt) {
     return { ok: false, message: "Invalid schedule time." };
+  }
+
+  const smsCheck = checkSmsCompose(input.message);
+  if (!smsCheck.ok) {
+    return { ok: false, message: smsCheck.errors.join(" ") };
   }
 
   try {

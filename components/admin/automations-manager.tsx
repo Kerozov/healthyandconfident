@@ -48,6 +48,8 @@ import {
 import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
 import { AutomationFlowView, flattenAutomationsForDisplay, TRIGGER_SECTION_LABELS } from "@/components/admin/automation-flow";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { SmsComposeFields } from "@/components/admin/sms-compose-fields";
+import { buildSmsBody, checkSmsCompose, splitMessageAndLink } from "@/lib/sms/compose-validation";
 import { TabList } from "@/components/admin/ui";
 import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
 import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
@@ -450,6 +452,7 @@ export function AutomationsManager({
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>("all");
   const [viewTab, setViewTab] = useState<"list" | "flow">("flow");
   const [contentLocale, setContentLocale] = useState<"bg" | "en">("bg");
+  const [smsLinks, setSmsLinks] = useState({ bg: "", en: "" });
   /** Copied automation, waiting to be pasted somewhere in the flow. */
   const [clipboard, setClipboard] = useState<{ id: string; name: string } | null>(null);
 
@@ -489,6 +492,7 @@ export function AutomationsManager({
       channel,
       sort_order: (automations.length + 1) * 10,
     });
+    setSmsLinks({ bg: "", en: "" });
     setError(null);
     setSaved(false);
   }
@@ -527,13 +531,22 @@ export function AutomationsManager({
       name: `${parent.name} — следваща`,
       sort_order: (parent.sort_order ?? 0) + 10,
     });
+    setSmsLinks({ bg: "", en: "" });
     setError(null);
     setSaved(false);
   }
 
   function openEdit(a: AutomationRow) {
     setEditingId(a.id);
-    setForm(automationToForm(a));
+    const base = automationToForm(a);
+    const bg = splitMessageAndLink(a.sms_bg);
+    const en = splitMessageAndLink(a.sms_en);
+    setForm({
+      ...base,
+      sms_bg: bg.message,
+      sms_en: en.message,
+    });
+    setSmsLinks({ bg: bg.link, en: en.link });
     setError(null);
     setSaved(false);
   }
@@ -546,6 +559,7 @@ export function AutomationsManager({
   function closeEditor() {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setSmsLinks({ bg: "", en: "" });
     setError(null);
   }
 
@@ -584,9 +598,23 @@ export function AutomationsManager({
       setError("При „Влизане в сегмент“ избери поне един сегмент или група във „Включване“.");
       return;
     }
+    if (form.channel === "sms") {
+      const bgCheck = checkSmsCompose(form.sms_bg, smsLinks.bg);
+      const enCheck = checkSmsCompose(form.sms_en, smsLinks.en);
+      if (!bgCheck.ok) {
+        setError(`SMS BG: ${bgCheck.errors[0]}`);
+        return;
+      }
+      if (form.sms_en.trim() && !enCheck.ok) {
+        setError(`SMS EN: ${enCheck.errors[0]}`);
+        return;
+      }
+    }
     startTransition(async () => {
       const payload = {
         ...form,
+        sms_bg: buildSmsBody(form.sms_bg, smsLinks.bg),
+        sms_en: buildSmsBody(form.sms_en, smsLinks.en),
         after_automation_id: form.after_automation_id || null,
         send_date: form.send_date.trim() || null,
         trigger_form_id: form.trigger_form_id || null,
@@ -1469,21 +1497,22 @@ export function AutomationsManager({
               </WorkspacePanel>
             ) : (
               <WorkspacePanel title="Съдържание на SMS-а">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="SMS — BG" hint="{{name}}, {{email}}">
-                  <Textarea
-                    rows={4}
-                    value={form.sms_bg}
-                    onChange={(e) => setForm({ ...form, sms_bg: e.target.value })}
-                  />
-                </Field>
-                <Field label="SMS — EN" hint="{{name}}, {{email}}">
-                  <Textarea
-                    rows={4}
-                    value={form.sms_en}
-                    onChange={(e) => setForm({ ...form, sms_en: e.target.value })}
-                  />
-                </Field>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <SmsComposeFields
+                  message={form.sms_bg}
+                  link={smsLinks.bg}
+                  onMessageChange={(sms_bg) => setForm({ ...form, sms_bg })}
+                  onLinkChange={(bg) => setSmsLinks({ ...smsLinks, bg })}
+                  messageLabel="SMS — BG"
+                />
+                <SmsComposeFields
+                  message={form.sms_en}
+                  link={smsLinks.en}
+                  onMessageChange={(sms_en) => setForm({ ...form, sms_en })}
+                  onLinkChange={(en) => setSmsLinks({ ...smsLinks, en })}
+                  messageLabel="SMS — EN"
+                  messageHint="{{name}}, {{email}} — EN версията е по избор."
+                />
               </div>
               </WorkspacePanel>
             )}
