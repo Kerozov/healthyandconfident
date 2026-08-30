@@ -50,34 +50,30 @@ export function useStripeCatalog(enabled = true): {
 } {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<StripeCatalogItem[]>(
-    cachedCatalog?.items ?? [],
-  );
-  const [paymentLinks, setPaymentLinks] = useState<StripePaymentLinkItem[]>(
-    cachedCatalog?.paymentLinks ?? [],
-  );
+  // The catalogue lives in a module-level cache shared by every picker, so it
+  // is read during render. Copying it into state and syncing that copy back in
+  // an effect only produced cascading renders.
+  const [, setLoadedAt] = useState(0);
 
   useEffect(() => {
-    if (!enabled) return;
-    if (cachedCatalog) {
-      setItems(cachedCatalog.items);
-      setPaymentLinks(cachedCatalog.paymentLinks);
-      setError(null);
-      return;
-    }
+    if (!enabled || cachedCatalog) return;
     startTransition(async () => {
       try {
-        const catalog = await loadCatalogOnce();
-        setItems(catalog.items);
-        setPaymentLinks(catalog.paymentLinks);
+        await loadCatalogOnce();
         setError(null);
+        setLoadedAt(Date.now());
       } catch (err) {
         setError(err instanceof Error ? err.message : "Stripe catalog failed");
       }
     });
   }, [enabled]);
 
-  return { items, paymentLinks, pending, error };
+  return {
+    items: cachedCatalog?.items ?? [],
+    paymentLinks: cachedCatalog?.paymentLinks ?? [],
+    pending,
+    error,
+  };
 }
 
 export function StripeLocalePicker({
@@ -93,30 +89,7 @@ export function StripeLocalePicker({
   onChange: (next: StripeLocaleValue) => void;
   disabled?: boolean;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<StripeCatalogItem[]>(cachedCatalog?.items ?? []);
-  const [paymentLinks, setPaymentLinks] = useState<StripePaymentLinkItem[]>(
-    cachedCatalog?.paymentLinks ?? [],
-  );
-
-  useEffect(() => {
-    if (cachedCatalog) {
-      setItems(cachedCatalog.items);
-      setPaymentLinks(cachedCatalog.paymentLinks);
-      return;
-    }
-    startTransition(async () => {
-      try {
-        const catalog = await loadCatalogOnce();
-        setItems(catalog.items);
-        setPaymentLinks(catalog.paymentLinks);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Stripe catalog failed");
-      }
-    });
-  }, []);
+  const { items, paymentLinks, pending, error } = useStripeCatalog();
 
   const selectedProductId = useMemo(() => {
     const id = value.stripe_id.trim();
@@ -275,30 +248,8 @@ export function StripeHrefPicker({
   onHrefChange: (href: string) => void;
   disabled?: boolean;
 }) {
-  const [pending, startTransition] = useTransition();
+  const { items, paymentLinks, pending, error: catalogError } = useStripeCatalog();
   const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<StripeCatalogItem[]>(cachedCatalog?.items ?? []);
-  const [paymentLinks, setPaymentLinks] = useState<StripePaymentLinkItem[]>(
-    cachedCatalog?.paymentLinks ?? [],
-  );
-
-  useEffect(() => {
-    if (cachedCatalog) {
-      setItems(cachedCatalog.items);
-      setPaymentLinks(cachedCatalog.paymentLinks);
-      return;
-    }
-    startTransition(async () => {
-      try {
-        const catalog = await loadCatalogOnce();
-        setItems(catalog.items);
-        setPaymentLinks(catalog.paymentLinks);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Stripe catalog failed");
-      }
-    });
-  }, []);
 
   const selectedLinkUrl = useMemo(() => {
     const url = href.trim();
@@ -373,7 +324,9 @@ export function StripeHrefPicker({
           Зареждане от Stripe…
         </p>
       )}
-      {error && <p className="text-xs text-coral-600">{error}</p>}
+      {(error || catalogError) && (
+        <p className="text-xs text-coral-600">{error || catalogError}</p>
+      )}
     </div>
   );
 }

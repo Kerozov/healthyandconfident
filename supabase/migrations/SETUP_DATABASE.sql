@@ -1547,7 +1547,92 @@ alter table public.site_cta_placements
 
 notify pgrst, 'reload schema';
 
-select 'Setup complete — schema up to date through 055 (locale Stripe on guides, videos, buttons)' as result;
+
+-- 056: one campaign is one worker job with many recipients
+drop index if exists public.campaign_deliveries_job_uidx;
+
+delete from public.campaign_deliveries d
+using public.campaign_deliveries keep
+where d.campaign_id = keep.campaign_id
+  and lower(d.email) = lower(keep.email)
+  and d.ctid > keep.ctid;
+
+create unique index if not exists campaign_deliveries_campaign_email_key
+  on public.campaign_deliveries (campaign_id, lower(email));
+
+-- 057: the 21-day challenge button + placement names that match the site
+insert into public.site_cta_placements (key, label_bg, label_en) values
+  ('challenge_21_cta', '21-дневно предизвикателство — бутон', '21-day challenge — button')
+on conflict (key) do nothing;
+
+update public.site_cta_placements set
+  label_bg = 'Лято – стройна и спокойна — главен бутон',
+  label_en = 'Summer — slim and calm — primary button'
+where key = 'programs_0';
+
+update public.site_cta_placements set
+  label_bg = 'Лято – стройна и спокойна — втори бутон горе',
+  label_en = 'Summer — slim and calm — secondary button'
+where key = 'programs_0_secondary';
+
+update public.site_cta_placements set
+  label_bg = 'Лято – стройна и спокойна — цена „Летен пакет“ (€36)',
+  label_en = 'Summer — slim and calm — “Summer package” price (€36)'
+where key = 'programs_0_pricing_0';
+
+update public.site_cta_placements set
+  label_bg = 'Живей без резистентност — главен бутон',
+  label_en = 'Live Without Resistance — primary button'
+where key = 'programs_1';
+
+update public.site_cta_placements set
+  label_bg = 'Живей без резистентност — втори бутон горе',
+  label_en = 'Live Without Resistance — secondary button'
+where key = 'programs_1_secondary';
+
+update public.site_cta_placements set
+  label_bg = 'Живей без резистентност — цена „Месечни вноски“ (3 × 180 €)',
+  label_en = 'Live Without Resistance — monthly instalments (3 × €180)'
+where key = 'programs_1_pricing_0';
+
+update public.site_cta_placements set
+  label_bg = 'Живей без резистентност — цена „Еднократно днес“ (480 €)',
+  label_en = 'Live Without Resistance — one-off payment (€480)'
+where key = 'programs_1_pricing_1';
+
+update public.site_cta_placements set
+  label_bg = 'Препрограмирай апетита — главен бутон',
+  label_en = 'Reprogram Your Appetite — primary button'
+where key = 'programs_2';
+
+update public.site_cta_placements set
+  label_bg = 'Препрограмирай апетита — втори бутон горе',
+  label_en = 'Reprogram Your Appetite — secondary button'
+where key = 'programs_2_secondary';
+
+update public.site_cta_placements set
+  label_bg = 'Препрограмирай апетита — цена „Месечен достъп“ (€38/месец)',
+  label_en = 'Reprogram Your Appetite — monthly access (€38/month)'
+where key = 'programs_2_pricing_0';
+
+update public.site_cta_placements set
+  label_bg = 'Препрограмирай апетита — цена „Вариант 1“ (28 €/месец)',
+  label_en = 'Reprogram Your Appetite — plan 1 (€28/month)'
+where key = 'programs_2_pricing_1';
+
+update public.site_cta_placements set
+  label_bg = 'Препрограмирай апетита — цена „Вариант 2“ (30 €/месец)',
+  label_en = 'Reprogram Your Appetite — plan 2 (€30/month)'
+where key = 'programs_2_pricing_2';
+
+update public.site_cta_placements set
+  label_bg = 'Секция „Резултати“ — бутон',
+  label_en = 'Outcomes section — button'
+where key = 'outcomes_cta';
+
+notify pgrst, 'reload schema';
+
+select 'Setup complete — schema up to date through 057 (campaign delivery key, site button rows)' as result;
 
 
 

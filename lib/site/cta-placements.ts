@@ -237,40 +237,10 @@ export function resolvePlacementButton(
   };
 }
 
-/** Human-readable labels for admin (also applied via migration 017). */
-export const SPEAKING_PLACEMENT_LABELS: Record<
-  string,
-  { label_bg: string; label_en: string }
-> = {
-  programs_0: {
-    label_bg: "Програми — картичка „Гарнитури“ (€3)",
-    label_en: "Programs — “Side dishes” card (€3)",
-  },
-  programs_1: {
-    label_bg: "Живей без резистентност — „Включи се днес“ (горен бутон)",
-    label_en: "Live Without Resistance — “Join today” (hero primary)",
-  },
-  programs_2: {
-    label_bg: "Програма „Препрограмирай апетита“ — бутон „Научи повече“",
-    label_en: "Program “Reprogram Your Appetite” — “Learn more” button",
-  },
-  about_cta: {
-    label_bg: "Секция „За мен“ — бутон „Работи с мен“",
-    label_en: "About section — “Work with me” button",
-  },
-  outcomes_cta: {
-    label_bg: "Секция „Резултати“ — бутон „Виж програмите“",
-    label_en: "Outcomes section — “See the programs” button",
-  },
-  leadmagnet_cta: {
-    label_bg: "Безплатно 2-дневно меню — popup след запис на имейл",
-    label_en: "Free 2-day menu — popup after email signup",
-  },
-  challenge_21_cta: {
-    label_bg: "21-дневно предизвикателство — бутон „Вземи днес“",
-    label_en: "21-day challenge — “Get it today” button",
-  },
-};
+/**
+ * Admin-facing names for the buttons live in `lib/site/button-catalog.ts`,
+ * next to the knowledge of where each key is actually rendered.
+ */
 
 export function productPlacementLabel(title_bg: string, title_en: string) {
   return {

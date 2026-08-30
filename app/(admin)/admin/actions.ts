@@ -63,7 +63,7 @@ import {
   type FormAnswerCondition,
 } from "@/lib/automation/form-conditions";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
-import type { Automation, AutomationDelivery, SiteSectionKey, SiteProduct } from "@/lib/supabase/types";
+import type { Automation, AutomationDelivery, SiteCtaPlacement, SiteSectionKey, SiteProduct } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
@@ -3266,44 +3266,64 @@ export async function saveCtaPlacement(input: {
 }): Promise<ActionResult> {
   await requireAdmin("website", { action: "save", summary: "Обнови CTA на сайта" });
 
-  const bg = await resolveLocaleStripeIds({
-    stripe_id: input.stripe_id,
-    stripe_url: input.stripe_url,
-    label: "BG",
-    optional: true,
-  });
-  if (!bg.ok) return bg;
+  // Only what the caller sent is written. The buttons screen and the offer
+  // screen edit different halves of the same row, and blanking the half you are
+  // not looking at used to silently drop the other one's settings.
+  const patch: Partial<SiteCtaPlacement> = { updated_at: new Date().toISOString() };
 
-  const en = await resolveLocaleStripeIds({
-    stripe_id: input.stripe_id_en,
-    stripe_url: input.stripe_url_en,
-    label: "EN",
-    optional: true,
-  });
-  if (!en.ok) return en;
+  if (input.offer_id !== undefined) patch.offer_id = input.offer_id || null;
+  if (input.offer_headline_bg !== undefined) {
+    patch.offer_headline_bg = input.offer_headline_bg.trim();
+  }
+  if (input.offer_headline_en !== undefined) {
+    patch.offer_headline_en = input.offer_headline_en.trim();
+  }
+  if (input.offer_enabled !== undefined) patch.offer_enabled = input.offer_enabled;
+  if (input.button_label_bg !== undefined) {
+    patch.button_label_bg = input.button_label_bg.trim();
+  }
+  if (input.button_label_en !== undefined) {
+    patch.button_label_en = input.button_label_en.trim();
+  }
+  if (input.button_url !== undefined) patch.button_url = input.button_url.trim();
+  if (input.button_url_en !== undefined) {
+    patch.button_url_en = input.button_url_en.trim();
+  }
+  if (input.button_enabled !== undefined) patch.button_enabled = input.button_enabled;
+  if (input.button_enabled_en !== undefined) {
+    patch.button_enabled_en = input.button_enabled_en;
+  }
+
+  if (input.stripe_id !== undefined || input.stripe_url !== undefined) {
+    const bg = await resolveLocaleStripeIds({
+      stripe_id: input.stripe_id,
+      stripe_url: input.stripe_url,
+      label: "BG",
+      optional: true,
+    });
+    if (!bg.ok) return bg;
+    patch.stripe_url = bg.stripe_url;
+    patch.stripe_product_id = bg.stripe_product_id;
+    patch.stripe_price_id = bg.stripe_price_id;
+  }
+
+  if (input.stripe_id_en !== undefined || input.stripe_url_en !== undefined) {
+    const en = await resolveLocaleStripeIds({
+      stripe_id: input.stripe_id_en,
+      stripe_url: input.stripe_url_en,
+      label: "EN",
+      optional: true,
+    });
+    if (!en.ok) return en;
+    patch.stripe_url_en = en.stripe_url;
+    patch.stripe_product_id_en = en.stripe_product_id;
+    patch.stripe_price_id_en = en.stripe_price_id;
+  }
 
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("site_cta_placements")
-    .update({
-      offer_id: input.offer_id || null,
-      offer_headline_bg: input.offer_headline_bg?.trim() ?? "",
-      offer_headline_en: input.offer_headline_en?.trim() ?? "",
-      offer_enabled: input.offer_enabled ?? false,
-      button_label_bg: input.button_label_bg?.trim() ?? "",
-      button_label_en: input.button_label_en?.trim() ?? "",
-      button_url: input.button_url?.trim() ?? "",
-      button_url_en: input.button_url_en?.trim() ?? "",
-      stripe_url: bg.stripe_url,
-      stripe_product_id: bg.stripe_product_id,
-      stripe_price_id: bg.stripe_price_id,
-      stripe_url_en: en.stripe_url,
-      stripe_product_id_en: en.stripe_product_id,
-      stripe_price_id_en: en.stripe_price_id,
-      button_enabled: input.button_enabled ?? true,
-      button_enabled_en: input.button_enabled_en ?? true,
-      updated_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq("key", input.key);
   if (error) return { ok: false, message: error.message };
   revalidateSitePaths();
