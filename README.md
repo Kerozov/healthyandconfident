@@ -15,7 +15,7 @@ bun install
 cp .env.example .env
 ```
 
-1. Run `supabase/migrations/SETUP_DATABASE.sql` in the Supabase SQL editor
+1. Run `supabase/scripts/SETUP_DATABASE.sql` in the Supabase SQL editor (fresh DB)
 2. Set env vars (see `.env.example`)
 3. In `notification-worker`: tenant seed with matching `NOTIFICATION_WORKER_API_KEY`
 4. `bun run dev` → `/bg`, `/en`, admin at `/admin/login`
@@ -25,11 +25,30 @@ bun run verify:worker   # test worker auth
 bun run verify:email    # email block serialisation round-trip
 ```
 
-`SETUP_DATABASE.sql` is the only file you need — it creates a fresh schema and,
-at the end, brings an existing database up to date with every migration. It is
-idempotent, so re-run it after pulling changes.
-`RUN_PENDING_MIGRATIONS.sql` does the upgrade half on its own and stays for
-projects that were already following it.
+`supabase/scripts/SETUP_DATABASE.sql` is the only file you need for a manual
+setup — it creates a fresh schema and, at the end, brings an existing database
+up to date with every migration. It is idempotent, so re-run it after pulling
+changes. `supabase/scripts/RUN_PENDING_MIGRATIONS.sql` does the upgrade half on
+its own for projects that were already following it.
+
+## Supabase CI migrations
+
+On push to `main`, when files under `supabase/migrations/` change, GitHub
+Actions runs `supabase db push` against production. The workflow baselines every
+migration up to `057` (already applied manually) and only runs new ones such as
+`058_ci_test.sql` and anything after.
+
+Add these **repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Where to get it |
+|--------|-----------------|
+| `SUPABASE_ACCESS_TOKEN` | [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens) |
+| `SUPABASE_PROJECT_ID` | Project → Settings → General → Reference ID |
+| `SUPABASE_DB_PASSWORD` | Project → Settings → Database → Database password |
+
+After the secrets are set, merge to `main` — the first run should apply only
+`058_ci_test.sql` (a no-op notice). Future schema changes: add
+`059_your_change.sql`, push to `main`, CI applies it automatically.
 
 ## FunnelBrand contact sync
 

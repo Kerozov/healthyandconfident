@@ -777,7 +777,7 @@ export function CtaPlacementsPanel({
       {missing.length > 0 && (
         <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
           Липсват {missing.length} бутона в базата ({missing.map((m) => m.key).join(", ")}).
-          Пусни <code className="text-xs">RUN_PENDING_MIGRATIONS.sql</code> в Supabase SQL
+          Пусни <code className="text-xs">supabase/scripts/RUN_PENDING_MIGRATIONS.sql</code> в Supabase SQL
           Editor и презареди страницата.
         </p>
       )}

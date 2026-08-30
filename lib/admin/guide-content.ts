@@ -343,7 +343,7 @@ export const ADMIN_GUIDE: GuideSection[] = [
     steps: [
       {
         title: "Пусни таблицата веднъж",
-        text: "В Supabase SQL editor изпълни 050_site_visits.sql (или целия SETUP_DATABASE.sql). Без нея числата остават нула.",
+        text: "В Supabase SQL editor изпълни 050_site_visits.sql (или целия supabase/scripts/SETUP_DATABASE.sql). Без нея числата остават нула.",
       },
       {
         title: "Гледай хората, не само кликовете",

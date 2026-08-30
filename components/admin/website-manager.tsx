@@ -404,9 +404,9 @@ export function WebsiteManager({
           <p className="font-semibold text-coral-700">Първо пусни миграцията в Supabase</p>
           <p className="mt-1 text-ink-soft">
             Изпълни{" "}
-            <code className="text-xs">supabase/migrations/RUN_PENDING_MIGRATIONS.sql</code>{" "}
+            <code className="text-xs">supabase/scripts/RUN_PENDING_MIGRATIONS.sql</code>{" "}
             или целия{" "}
-            <code className="text-xs">SETUP_DATABASE.sql</code> в Supabase SQL Editor.
+            <code className="text-xs">supabase/scripts/SETUP_DATABASE.sql</code> в Supabase SQL Editor.
           </p>
           {dbError && <p className="mt-2 font-mono text-xs text-coral-600">{dbError}</p>}
         </div>

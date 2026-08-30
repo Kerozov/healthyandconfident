@@ -21,7 +21,8 @@ export default async function AdminTeamPage() {
       {overview.tableReady ? null : (
         <Alert variant="warning" className="mb-6">
           Пусни миграция <code>052_admin_users_and_audit.sql</code> (или целия{" "}
-          <code>SETUP_DATABASE.sql</code> / <code>RUN_PENDING_MIGRATIONS.sql</code>) в
+          <code>supabase/scripts/SETUP_DATABASE.sql</code> /{" "}
+          <code>supabase/scripts/RUN_PENDING_MIGRATIONS.sql</code>) в
           Supabase, за да се записват профилите и журналa.
         </Alert>
       )}

@@ -90,7 +90,7 @@ export default async function AdminDashboard() {
       {session?.role === "owner" && team && !team.tableReady ? (
         <Alert variant="warning" className="mb-6">
           Пусни SQL миграцията за профили и журнал (<code>052_admin_users_and_audit.sql</code>{" "}
-          или <code>RUN_PENDING_MIGRATIONS.sql</code>), за да се записват екипът и промените.
+          или <code>supabase/scripts/RUN_PENDING_MIGRATIONS.sql</code>), за да се записват екипът и промените.
         </Alert>
       ) : null}
 
