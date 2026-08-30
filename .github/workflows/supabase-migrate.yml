@@ -27,6 +27,17 @@ jobs:
       - name: Baseline pre-CI migrations
         run: |
           set -euo pipefail
+          cat > /tmp/ensure_migrations_table.sql <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS supabase_migrations;
+
+          CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations (
+            version text PRIMARY KEY,
+            name text,
+            statements text[]
+          );
+          SQL
+          supabase db query --linked -f /tmp/ensure_migrations_table.sql
+
           {
             echo "INSERT INTO supabase_migrations.schema_migrations (version, name, statements)"
             echo "VALUES"
