@@ -55,7 +55,7 @@ export function Navbar({
   const other: Locale = locale === "bg" ? "en" : "bg";
   const switchHref = pathname.replace(/^\/(bg|en)/, `/${other}`) || `/${other}`;
   const freeMenuLabel = locale === "bg" ? "Безплатно меню" : "Free menu";
-  const shortCta = locale === "bg" ? "Безплатен разговор" : "Free call";
+  const shortCta = locale === "bg" ? "Програми" : "Programs";
 
   return (
     <>
@@ -128,7 +128,7 @@ export function Navbar({
               {freeMenuLabel}
             </OpenMenuButton>
             <Button
-              href={`/${locale}#contact`}
+              href={`/${locale}#programs`}
               size="sm"
               variant="primary"
               className="rounded-full px-3 text-xs xl:px-5 xl:text-sm"
@@ -183,7 +183,7 @@ export function Navbar({
                   {freeMenuLabel}
                 </OpenMenuButton>
                 <Link
-                  href={`/${locale}#contact`}
+                  href={`/${locale}#programs`}
                   onClick={() => setOpen(false)}
                   className={cn(
                     buttonVariants({ size: "sm", variant: "primary" }),

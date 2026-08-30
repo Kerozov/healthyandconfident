@@ -252,3 +252,103 @@ export async function createPlacementCheckoutSession(
 
   return { url: session.url, ...sessionAmount(session, [price]) };
 }
+
+function stripeDefaultPriceId(product: {
+  default_price?: string | { id: string } | null;
+}): string | null {
+  const dp = product.default_price;
+  if (!dp) return null;
+  return typeof dp === "string" ? dp : dp.id;
+}
+
+async function findSiteProductIdForStripeProduct(
+  stripeProductId: string,
+): Promise<string | null> {
+  const supabase = getAdminClient();
+  const [{ data: bg }, { data: en }] = await Promise.all([
+    supabase
+      .from("site_products")
+      .select("id")
+      .eq("stripe_product_id", stripeProductId)
+      .maybeSingle(),
+    supabase
+      .from("site_products")
+      .select("id")
+      .eq("stripe_product_id_en", stripeProductId)
+      .maybeSingle(),
+  ]);
+  return (
+    (bg as { id: string } | null)?.id ?? (en as { id: string } | null)?.id ?? null
+  );
+}
+
+/**
+ * Checkout for a Stripe catalog product that may not exist as a site_products
+ * row. Used by email cards that pick a product directly from Stripe.
+ */
+export async function createStripeCatalogCheckoutSession(
+  stripeProductId: string,
+  locale: Locale,
+  contactId?: string,
+  tracking?: CheckoutTracking,
+): Promise<CheckoutSessionResult> {
+  const prodId = stripeProductId.trim();
+  if (!prodId.startsWith("prod_")) {
+    throw new Error("Invalid Stripe product");
+  }
+
+  const stripe = getStripe();
+  const product = await stripe.products.retrieve(prodId, {
+    expand: ["default_price"],
+  });
+  if (!product.active) {
+    throw new Error(
+      locale === "en"
+        ? "This product is no longer available."
+        : "Този продукт вече не е наличен.",
+    );
+  }
+
+  let priceId = stripeDefaultPriceId(product);
+  if (!priceId) {
+    const prices = await stripe.prices.list({
+      product: prodId,
+      active: true,
+      limit: 1,
+    });
+    priceId = prices.data[0]?.id ?? null;
+  }
+  if (!priceId) {
+    throw new Error(
+      locale === "en"
+        ? "This Stripe product has no price."
+        : "Този Stripe продукт няма цена.",
+    );
+  }
+
+  const price = await stripe.prices.retrieve(priceId);
+  const mode = price.type === "recurring" ? "subscription" : "payment";
+  const origin = publicSiteOrigin();
+  const linkedSiteProductId = await findSiteProductIdForStripeProduct(prodId);
+
+  const session = await stripe.checkout.sessions.create({
+    mode,
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: `${origin}/${locale}?checkout=success`,
+    cancel_url: `${origin}/${locale}?checkout=cancelled`,
+    locale: locale === "bg" ? "bg" : "en",
+    metadata: {
+      stripe_product_ids: prodId,
+      locale,
+      ...(linkedSiteProductId ? { product_ids: linkedSiteProductId } : {}),
+      ...(contactId ? { contact_id: contactId } : {}),
+      ...trackingMetadata(tracking),
+    },
+  });
+
+  if (!session.url) {
+    throw new Error("Stripe did not return a checkout URL");
+  }
+
+  return { url: session.url, ...sessionAmount(session, [price]) };
+}

@@ -31,3 +31,8 @@ export function isValidStripeIdInput(value: string): boolean {
   const v = value.trim();
   return v.startsWith("price_") || v.startsWith("prod_");
 }
+
+/** Stripe Product id (`prod_…`) — used in email markers and checkout links. */
+export function isStripeProductId(value: string): boolean {
+  return /^prod_[A-Za-z0-9]+$/.test(value.trim());
+}

@@ -109,7 +109,7 @@ export function Outcomes({ dict, locale }: { dict: Dictionary; locale: Locale })
 
           <CtaLink
             placementKey="outcomes_cta"
-            href={`/${locale}#contact`}
+            href={`/${locale}#programs`}
             variant="primary"
             size="lg"
             className="mt-8 px-8"

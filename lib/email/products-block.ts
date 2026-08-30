@@ -5,6 +5,8 @@ import {
   productStripeForLocale,
 } from "@/lib/site/product-locale";
 import { renderEmailOfferCard } from "@/lib/email/offer-card";
+import { isStripeProductId } from "@/lib/stripe/parse-stripe-id";
+import type { StripeCatalogRow } from "@/lib/stripe/catalog-types";
 import type { SiteProduct } from "@/lib/supabase/types";
 
 /**
@@ -14,16 +16,28 @@ import type { SiteProduct } from "@/lib/supabase/types";
  * downsell configured for that product before handing over to Stripe — the
  * only path that also records the purchase against the subscriber.
  * `stripe` jumps straight to the product's Payment Link, skipping all of it.
+ *
+ * Markers may also store a Stripe Product id (`prod_…`) instead of a site
+ * UUID — those always check out through Stripe and never hit the site page.
  */
 export type EmailProductLinkMode = "site" | "stripe";
 
-const PRODUCT_MARKER_RE =
-  /<!--\s*hc-email-product:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?::(site|stripe))?\s*-->/gi;
+/** Site UUID or Stripe `prod_…` id captured from an email product marker. */
+export const EMAIL_PRODUCT_ID_PATTERN =
+  "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|prod_[A-Za-z0-9]+)";
+
+const PRODUCT_MARKER_RE = new RegExp(
+  `<!--\\s*hc-email-product:${EMAIL_PRODUCT_ID_PATTERN}(?::(site|stripe))?\\s*-->`,
+  "gi",
+);
 
 export function productEmailMarker(
   productId: string,
   mode: EmailProductLinkMode = "site",
 ): string {
+  if (isStripeProductId(productId)) {
+    return `<!-- hc-email-product:${productId.trim()} -->`;
+  }
   return mode === "stripe"
     ? `<!-- hc-email-product:${productId}:stripe -->`
     : `<!-- hc-email-product:${productId} -->`;
@@ -46,9 +60,27 @@ export function normalizeProductLinkMode(
 export function extractProductIdsFromHtml(html: string): string[] {
   const ids = new Set<string>();
   for (const match of html.matchAll(new RegExp(PRODUCT_MARKER_RE.source, "gi"))) {
-    if (match[1]) ids.add(match[1].toLowerCase());
+    const id = match[1];
+    if (id && !isStripeProductId(id)) ids.add(id.toLowerCase());
   }
   return [...ids];
+}
+
+export function extractStripeProductIdsFromHtml(html: string): string[] {
+  const ids = new Set<string>();
+  for (const match of html.matchAll(new RegExp(PRODUCT_MARKER_RE.source, "gi"))) {
+    const id = match[1];
+    if (id && isStripeProductId(id)) ids.add(id);
+  }
+  return [...ids];
+}
+
+/** Click-time checkout for a Stripe catalog product (session is created on visit). */
+export function stripeCatalogCheckoutUrl(
+  stripeProductId: string,
+  locale: "bg" | "en",
+): string {
+  return `${publicSiteOrigin()}/api/go/stripe/${encodeURIComponent(stripeProductId.trim())}?locale=${locale}`;
 }
 
 function productCtaLabel(product: SiteProduct, locale: "bg" | "en"): string {
@@ -85,14 +117,35 @@ export function renderEmailProductCard(
   });
 }
 
+export function renderEmailStripeProductCard(
+  product: StripeCatalogRow,
+  locale: "bg" | "en",
+): string {
+  if (!product.active) return "";
+  return renderEmailOfferCard({
+    title: product.name,
+    description: product.description ?? "",
+    price: product.priceLabel,
+    imageUrl: product.imageUrl,
+    href: stripeCatalogCheckoutUrl(product.stripeProductId, locale),
+    cta: locale === "en" ? "Buy now" : "Купи сега",
+  });
+}
+
 export function expandEmailProductMarkers(
   html: string,
   productsById: Map<string, SiteProduct>,
   locale: "bg" | "en",
+  stripeById: Map<string, StripeCatalogRow> = new Map(),
 ): string {
   return html.replace(
     new RegExp(PRODUCT_MARKER_RE.source, "gi"),
     (_match, id: string, mode: string | undefined) => {
+      if (isStripeProductId(id)) {
+        const stripeProduct = stripeById.get(id);
+        if (!stripeProduct) return "";
+        return renderEmailStripeProductCard(stripeProduct, locale);
+      }
       const product = productsById.get(id.toLowerCase());
       if (!product || !productSellableInLocale(product, locale)) return "";
       return renderEmailProductCard(product, locale, normalizeProductLinkMode(mode));

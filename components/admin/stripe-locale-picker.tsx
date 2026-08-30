@@ -42,6 +42,44 @@ export function invalidateStripeCatalogCache() {
   cachedCatalog = null;
 }
 
+export function useStripeCatalog(enabled = true): {
+  items: StripeCatalogItem[];
+  paymentLinks: StripePaymentLinkItem[];
+  pending: boolean;
+  error: string | null;
+} {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [items, setItems] = useState<StripeCatalogItem[]>(
+    cachedCatalog?.items ?? [],
+  );
+  const [paymentLinks, setPaymentLinks] = useState<StripePaymentLinkItem[]>(
+    cachedCatalog?.paymentLinks ?? [],
+  );
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (cachedCatalog) {
+      setItems(cachedCatalog.items);
+      setPaymentLinks(cachedCatalog.paymentLinks);
+      setError(null);
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const catalog = await loadCatalogOnce();
+        setItems(catalog.items);
+        setPaymentLinks(catalog.paymentLinks);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Stripe catalog failed");
+      }
+    });
+  }, [enabled]);
+
+  return { items, paymentLinks, pending, error };
+}
+
 export function StripeLocalePicker({
   label,
   hint,

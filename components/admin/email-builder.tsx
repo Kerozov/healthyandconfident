@@ -31,6 +31,8 @@ import {
   EmailBlockEditor,
   type BlockEditorContext,
 } from "@/components/admin/email-block-editors";
+import { useStripeCatalog } from "@/components/admin/stripe-locale-picker";
+import { isStripeProductId } from "@/lib/stripe/parse-stripe-id";
 import {
   createEmailBlock,
   duplicateEmailBlock,
@@ -161,7 +163,20 @@ export function EmailBuilder({
     cancelDrag();
   }
 
-  const ctx: BlockEditorContext = { locale, products, guides, forms, disabled };
+  const stripeCatalog = useStripeCatalog(
+    blocks.some(
+      (block) =>
+        block.type === "product" && isStripeProductId(block.productId),
+    ),
+  );
+  const ctx: BlockEditorContext = {
+    locale,
+    products,
+    guides,
+    forms,
+    stripeItems: stripeCatalog.items,
+    disabled,
+  };
   const emptyCount = blocks.filter(isEmptyEmailBlock).length;
 
   return (
@@ -523,15 +538,35 @@ function BlockGlance({
   }
 
   if (block.type === "product") {
-    const product = ctx.products.find(
-      (p) => p.id.toLowerCase() === block.productId.toLowerCase(),
-    );
+    const stripe = isStripeProductId(block.productId);
+    const siteProduct = stripe
+      ? null
+      : ctx.products.find(
+          (p) => p.id.toLowerCase() === block.productId.toLowerCase(),
+        );
+    const stripeProduct = stripe
+      ? ctx.stripeItems?.find((item) => item.stripeProductId === block.productId)
+      : null;
+    const title = stripeProduct
+      ? stripeProduct.name
+      : siteProduct
+        ? (ctx.locale === "en" ? siteProduct.title_en : siteProduct.title_bg) ||
+          siteProduct.title_bg
+        : stripe
+          ? "Продукт от Stripe"
+          : "Не е избран продукт";
+    const thumbnail = stripeProduct?.imageUrl || siteProduct?.image_url || "";
     return (
-      <span className="truncate text-sm text-ink">
-        {product
-          ? (ctx.locale === "en" ? product.title_en : product.title_bg) ||
-            product.title_bg
-          : "Не е избран продукт"}
+      <span className="flex min-w-0 items-center gap-2">
+        {thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnail}
+            alt=""
+            className="h-8 w-8 shrink-0 rounded object-cover"
+          />
+        ) : null}
+        <span className="truncate text-sm text-ink">{title}</span>
       </span>
     );
   }

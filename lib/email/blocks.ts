@@ -17,10 +17,12 @@
  */
 
 import {
+  EMAIL_PRODUCT_ID_PATTERN,
   normalizeProductLinkMode,
   productEmailMarker,
   type EmailProductLinkMode,
 } from "@/lib/email/products-block";
+import { isStripeProductId } from "@/lib/stripe/parse-stripe-id";
 import { guideEmailMarker } from "@/lib/email/guides-block";
 
 export type EmailBlockAlign = "left" | "center" | "right";
@@ -438,8 +440,10 @@ export function serializeEmailBlocks(blocks: EmailBlock[]): string {
 const MARKER_SPLIT_RE =
   /(<!--\s*hc-email-(?:btn|product|form|guide):[\s\S]*?-->)/gi;
 const BTN_MARKER_RE = /^<!--\s*hc-email-btn:([^|]+)\|([^>]+?)\s*-->$/i;
-const PRODUCT_MARKER_RE =
-  /^<!--\s*hc-email-product:([0-9a-f-]{36})(?::(site|stripe))?\s*-->$/i;
+const PRODUCT_MARKER_RE = new RegExp(
+  `^<!--\\s*hc-email-product:${EMAIL_PRODUCT_ID_PATTERN}(?::(site|stripe))?\\s*-->$`,
+  "i",
+);
 const GUIDE_MARKER_RE =
   /^<!--\s*hc-email-guide:([0-9a-f-]{36})(?::(site|stripe))?\s*-->$/i;
 const FORM_MARKER_RE = /^<!--\s*hc-email-form:([0-9a-f-]{36})\s*-->$/i;
@@ -466,11 +470,14 @@ function parseLegacyMarker(chunk: string): EmailBlock | null {
   }
   const product = PRODUCT_MARKER_RE.exec(chunk);
   if (product) {
+    const productId = product[1];
     return {
       id: newEmailBlockId(),
       type: "product",
-      productId: product[1],
-      linkMode: normalizeProductLinkMode(product[2]),
+      productId,
+      linkMode: isStripeProductId(productId)
+        ? "stripe"
+        : normalizeProductLinkMode(product[2]),
     };
   }
   const guide = GUIDE_MARKER_RE.exec(chunk);
@@ -887,7 +894,10 @@ export function emailBlockSummary(block: EmailBlock): string {
     case "divider":
       return "Тънка линия";
     case "product":
-      return block.productId ? "Продуктова карта" : "Не е избран продукт";
+      if (!block.productId) return "Не е избран продукт";
+      return isStripeProductId(block.productId)
+        ? "Продукт от Stripe"
+        : "Продуктова карта";
     case "guide":
       return block.guideId ? "Карта с наръчник" : "Не е избран наръчник";
     case "form":

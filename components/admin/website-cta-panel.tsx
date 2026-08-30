@@ -8,7 +8,7 @@ import { saveCtaPlacement } from "@/app/(admin)/admin/actions";
 import { Field, Input, LocaleVisibilityCheckboxes } from "@/components/admin/fields";
 import { StripeLocalePicker } from "@/components/admin/stripe-locale-picker";
 import { formatStripeIdInput } from "@/lib/stripe/parse-stripe-id";
-import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
+import { DEFAULT_OFFER_HEADLINE, SPEAKING_PLACEMENT_LABELS } from "@/lib/site/cta-placements";
 import { isProductPlacementKey } from "@/lib/site/product-placement";
 import { cn } from "@/lib/utils";
 
@@ -159,7 +159,9 @@ function PlacementEditor({
     <div className="rounded-xl border border-ink/10 bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-medium">{placement.label_bg}</p>
+          <p className="font-medium">
+            {SPEAKING_PLACEMENT_LABELS[placement.key]?.label_bg ?? placement.label_bg}
+          </p>
           <p className="text-xs text-ink-soft">{placement.key}</p>
         </div>
         {showPopup && (
@@ -224,15 +226,15 @@ function PlacementEditor({
         {form.button_enabled && (
           <div className="md:col-span-2">
             <Field
-              label="Друг линк (BG) — WhatsApp, Calendly, #секция"
+              label="Друг линк (BG) — Stripe, #секция, WhatsApp"
               hint={
                 isPricing
                   ? "Ако избереш Stripe по-долу, той има предимство пред този адрес."
                   : placement.key === "outcomes_cta"
-                    ? "Calendly линк за консултация, ако няма Stripe"
+                    ? "Празно = секция Програми на началната страница. Или Stripe / друг линк."
                     : placement.key === "leadmagnet_cta"
                       ? "Не се ползва — бутонът е от формата за имейл"
-                      : "WhatsApp, #includes, Calendly — или остави празно и ползвай Stripe"
+                      : "WhatsApp, #programs, Stripe — или остави празно"
               }
             >
               <Input
@@ -245,7 +247,7 @@ function PlacementEditor({
                   isPricing
                     ? "https://buy.stripe.com/… (по избор)"
                     : placement.key === "outcomes_cta"
-                      ? "https://calendly.com/…"
+                      ? "/bg#programs"
                       : "https://wa.me/…"
                 }
               />
@@ -431,7 +433,7 @@ export function CtaPlacementsPanel({
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-ink">Статични секции на сайта</h3>
           <p className="text-xs text-ink-soft">
-            „Резултати“ → Calendly за консултация. „Безплатно меню“ → без Stripe плащане.
+            „Резултати“ → програмите (ако няма Stripe). „Безплатно меню“ → без Stripe плащане.
           </p>
           {staticPlacements.map((p) => (
             <PlacementEditor

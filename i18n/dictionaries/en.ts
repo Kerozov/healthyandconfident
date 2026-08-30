@@ -4,7 +4,7 @@ export const en: Dictionary = {
   meta: {
     title: "Vessie Nay | Holistic Nutritionist & Type 2 Diabetes Practitioner",
     description:
-      "Vessie Nay — Holistic Nutritionist (B.Med.Sc. Hons) & NHS Type 2 Diabetes Practitioner. Lasting weight loss, blood-sugar balance and diabetes remission through food, mindset and real support. 1:1 and group programs online.",
+      "Vessie Nay — Holistic Nutritionist (B.Med.Sc. Hons) & NHS Type 2 Diabetes Practitioner. Lasting weight loss, blood-sugar balance and diabetes remission through food, mindset and real support. Group programs online.",
     keywords: [
       "holistic nutritionist",
       "type 2 diabetes remission",
@@ -32,7 +32,7 @@ export const en: Dictionary = {
       { label: "Blog", href: "/en/blog" },
       { label: "Contact", href: "#contact" },
     ],
-    cta: "Book a free call",
+    cta: "See the programs",
   },
   hero: {
     eyebrow: "Holistic Nutritionist · NHS Diabetes Practitioner",
@@ -108,7 +108,7 @@ export const en: Dictionary = {
   },
   method: {
     title: "A whole-person method that actually lasts",
-    subtitle: "Three pillars, delivered 1:1 and in small groups, online or face to face.",
+    subtitle: "Three pillars — through structured online programs, with group support.",
     pillars: [
       {
         title: "The right food & supplements",
@@ -148,7 +148,7 @@ export const en: Dictionary = {
         badge: "Most popular",
         title: "Live Without Resistance",
         duration: "3 months",
-        price: "1:1 & group",
+        price: "group program",
         description:
           "Lose 5–15 kg sustainably and tackle insulin resistance with full support.",
         features: [
@@ -214,7 +214,7 @@ export const en: Dictionary = {
       "Confidence back — and your favourite clothes fitting again",
       "Personal support from a certified specialist",
     ],
-    cta: "Book a free call",
+    cta: "See the programs",
     awardsTitle: "Recognition & credibility",
     clientsTitle: "Happy, confident clients",
     clientsSubtitle:
@@ -333,8 +333,8 @@ export const en: Dictionary = {
         a: "Yes — my approach is built around lasting blood-sugar balance and diabetes remission, drawing on my work as an NHS Diabetes Practitioner with hundreds of patients.",
       },
       {
-        q: "How are sessions delivered?",
-        a: "1:1 and small group sessions online over Zoom, or face to face — from the comfort of your home.",
+        q: "How do the programs work?",
+        a: "Online — with menus, structure and support. Live Without Resistance includes weekly group Zoom sessions from home. There are no 1:1 consultations — pick the program that fits you.",
       },
       {
         q: "Do I need to spend hours cooking?",
@@ -355,10 +355,10 @@ export const en: Dictionary = {
   contact: {
     title: "Let's do it together",
     subtitle:
-      "Ask a question or book a free call. I'll help you get slimmer, happier and confident — you deserve it. ❤",
+      "See the programs or send me a message. I'll help you get slimmer, happier and confident — you deserve it. ❤",
     emailLabel: "Email",
     phoneLabel: "Mobile (Viber / WhatsApp)",
-    cta: "Book a free call",
+    cta: "See the programs",
   },
   events: {
     eyebrow: "Events",
@@ -436,6 +436,145 @@ export const en: Dictionary = {
         ],
       },
     ],
+    legalPrivacy: "Privacy",
+    legalTerms: "Terms",
+    legalSupport: "Support",
+  },
+  legal: {
+    updatedLabel: "Last updated",
+    updatedDate: "29 August 2026",
+    privacy: {
+      title: "Privacy policy",
+      description:
+        "How Healthy & Confident collects, uses and protects personal data on the website, in emails, at checkout and in Zoom meetings.",
+      sections: [
+        {
+          heading: "Who we are",
+          paragraphs: [
+            "healthyandconfident.co.uk is run by Vessie Nay, a holistic nutritionist working in the United Kingdom and Bulgaria. For privacy questions: vessie@healthyandconfident.co.uk.",
+          ],
+        },
+        {
+          heading: "What we collect",
+          paragraphs: [
+            "Name, email and phone when you sign up for a guide, form, programme or purchase.",
+            "Form answers, audience tags and contact history (emails, purchases, Zoom attendance).",
+            "Site-visit data (page, device, traffic source) and advertising events (Meta Pixel) when enabled.",
+            "Payments are processed by Stripe. We do not store card numbers. Stripe sends us order status, email and amount.",
+          ],
+        },
+        {
+          heading: "Zoom meetings",
+          paragraphs: [
+            "If you join our Zoom meeting with an email we already hold as a contact, we receive join and leave events (and meeting start/end). We use them for the live button on the site and to record attendance.",
+            "We do not store Zoom passwords and we do not call the Zoom API with your data beyond these webhook events.",
+          ],
+        },
+        {
+          heading: "Why we use it",
+          paragraphs: [
+            "To send materials, reminders and programme information you asked for.",
+            "To process payment, product access and follow-up support.",
+            "To improve the site and, if enabled, to measure ads. Personal data sent to Meta is hashed where applicable.",
+          ],
+        },
+        {
+          heading: "Who we share it with",
+          paragraphs: [
+            "Service providers needed to run the service: hosting, database (Supabase), payments (Stripe), email/SMS sending, Zoom for meeting events, and Meta if the pixel is active.",
+            "We do not sell contact lists.",
+          ],
+        },
+        {
+          heading: "Your rights",
+          paragraphs: [
+            "Under UK GDPR you can request access, correction, deletion, restriction, portability or object to processing, and you can unsubscribe from marketing emails via the link in every email.",
+            "You may complain to the UK Information Commissioner’s Office (ICO). To exercise your rights, email vessie@healthyandconfident.co.uk.",
+          ],
+        },
+        {
+          heading: "Retention",
+          paragraphs: [
+            "We keep data while you have an active subscription, purchase or a legitimate interest (e.g. accounting), or until you ask us to delete it, unless the law requires a longer period.",
+          ],
+        },
+      ],
+    },
+    terms: {
+      title: "Terms of use",
+      description:
+        "Terms for using the Healthy & Confident website, programmes, purchases and Zoom meetings.",
+      sections: [
+        {
+          heading: "The service",
+          paragraphs: [
+            "The site offers information, nutrition and lifestyle programmes, guides and related meetings. Content is educational. It is not a medical diagnosis, treatment or a substitute for advice from a doctor.",
+          ],
+        },
+        {
+          heading: "Communication",
+          paragraphs: [
+            "By leaving your email or buying a product you agree to receive related messages (confirmations, access, reminders). You can stop marketing emails at any time via Unsubscribe.",
+          ],
+        },
+        {
+          heading: "Payments",
+          paragraphs: [
+            "Payments are processed by Stripe. Prices are shown on the product or programme page. After a successful purchase you receive confirmation at the email you provided.",
+            "For invoices, access or refunds: vessie@healthyandconfident.co.uk.",
+          ],
+        },
+        {
+          heading: "Zoom",
+          paragraphs: [
+            "Some meetings take place on Zoom. The join link appears on the site or in email. You must follow Zoom’s rules and must not record or share the meeting without permission.",
+          ],
+        },
+        {
+          heading: "Intellectual property",
+          paragraphs: [
+            "Texts, recipes, videos and programme materials are for personal use. Do not resell them or publish them as your own.",
+          ],
+        },
+        {
+          heading: "Governing law",
+          paragraphs: [
+            "These terms are governed by the laws of England and Wales. If any part is invalid, the rest still applies.",
+          ],
+        },
+      ],
+    },
+    support: {
+      title: "Support",
+      description:
+        "How to reach Healthy & Confident about programmes, payments, emails and Zoom meetings.",
+      sections: [
+        {
+          heading: "How to contact us",
+          paragraphs: [
+            "Email or Viber / WhatsApp is fastest. Include what happened and the email you used to sign up or pay.",
+          ],
+        },
+        {
+          heading: "Programmes and access",
+          paragraphs: [
+            "If you did not receive access after payment, check spam and write to us from the email used in the Stripe order.",
+          ],
+        },
+        {
+          heading: "Emails",
+          paragraphs: [
+            "To stop the newsletter, use Unsubscribe at the bottom of the email. If the link fails, write to us and we will remove you manually.",
+          ],
+        },
+        {
+          heading: "Zoom meetings",
+          paragraphs: [
+            "The join link is on the site (the live button while a meeting is running) or in the email we sent. If you cannot join, send a screenshot of the error and the meeting time.",
+          ],
+        },
+      ],
+    },
   },
   popup: {
     defaultTitle: "FREE: Tame Your Cravings",

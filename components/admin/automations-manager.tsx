@@ -1438,7 +1438,7 @@ export function AutomationsManager({
                         onChange={(e) =>
                           setForm({ ...form, cta_label_en: e.target.value })
                         }
-                        placeholder="Book a free call"
+                        placeholder="See the programs"
                       />
                     </Field>
                     <Field label="Main end button (link)">

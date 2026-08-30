@@ -93,7 +93,7 @@ export default async function HomePage({
       )}
       <FreeMenuBanner dict={dict} locale={l} />
       <Faq dict={dict} />
-      <Contact dict={dict} />
+      <Contact dict={dict} locale={l} />
     </>
   );
 }

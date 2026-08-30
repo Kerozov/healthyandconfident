@@ -5,6 +5,8 @@ import {
   type EmailBlock,
 } from "@/lib/email/blocks";
 import { normalizeEmailBodyHtml } from "@/lib/email/normalize-body";
+import { expandEmailProductMarkers } from "@/lib/email/products-block";
+import type { StripeCatalogRow } from "@/lib/stripe/catalog-types";
 
 let failures = 0;
 function check(name: string, cond: boolean, extra?: unknown) {
@@ -156,6 +158,51 @@ check(
   stripeBack[0].type === "product" && stripeBack[0].linkMode === "stripe",
   stripeBack[0].type,
 );
+
+const stripeCatalogProduct = serializeEmailBlocks([
+  { ...createEmailBlock("product"), type: "product", productId: "prod_NvuNFvHqKOwTcn", linkMode: "stripe" } as EmailBlock,
+]);
+check(
+  "stripe catalog product marker uses prod_ id",
+  stripeCatalogProduct.includes("hc-email-product:prod_NvuNFvHqKOwTcn"),
+  stripeCatalogProduct,
+);
+check(
+  "stripe catalog product marker has no site/stripe suffix",
+  stripeCatalogProduct.includes("<!-- hc-email-product:prod_NvuNFvHqKOwTcn -->"),
+  stripeCatalogProduct,
+);
+const stripeCatalogBack = parseEmailBlocks(stripeCatalogProduct);
+check(
+  "stripe catalog product parses back",
+  stripeCatalogBack[0].type === "product" &&
+    stripeCatalogBack[0].productId === "prod_NvuNFvHqKOwTcn" &&
+    stripeCatalogBack[0].linkMode === "stripe",
+  stripeCatalogBack[0],
+);
+
+const stripeCardHtml = expandEmailProductMarkers(
+  "<!-- hc-email-product:prod_NvuNFvHqKOwTcn -->",
+  new Map(),
+  "bg",
+  new Map<string, StripeCatalogRow>([
+    [
+      "prod_NvuNFvHqKOwTcn",
+      {
+        stripeProductId: "prod_NvuNFvHqKOwTcn",
+        stripePriceId: "price_x",
+        name: "Stripe Offer",
+        description: "Desc",
+        imageUrl: "https://files.stripe.com/pic.png",
+        priceLabel: "€49",
+        active: true,
+      },
+    ],
+  ]),
+);
+check("stripe catalog card uses Stripe image", stripeCardHtml.includes("https://files.stripe.com/pic.png"));
+check("stripe catalog card uses Stripe name", stripeCardHtml.includes("Stripe Offer"));
+check("stripe catalog card links to go/stripe", stripeCardHtml.includes("/api/go/stripe/prod_NvuNFvHqKOwTcn"));
 
 /* 10. hand-authored styling is never silently dropped ------------------- */
 const styled = parseEmailBlocks('<p style="color:red">важно</p>');

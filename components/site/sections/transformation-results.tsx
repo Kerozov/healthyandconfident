@@ -75,7 +75,7 @@ export function TransformationResults({
               ))}
             </ul>
 
-            <Button href={`/${locale}#contact`} variant="primary" size="lg" className="mt-8 w-full sm:w-auto">
+            <Button href={`/${locale}#programs`} variant="primary" size="lg" className="mt-8 w-full sm:w-auto">
               {results.cta}
             </Button>
           </div>

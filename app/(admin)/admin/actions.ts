@@ -3135,7 +3135,7 @@ export async function fetchStripeCatalog(): Promise<
     paymentLinks?: StripePaymentLinkItem[];
   }
 > {
-  await requireAdmin("website");
+  await requireAdmin(["website", "campaigns", "automations", "forms"] as const);
   try {
     const { items, paymentLinks } = await getStripeCatalogForAdmin();
     return { ok: true, items, paymentLinks };

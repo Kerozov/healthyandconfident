@@ -9,6 +9,7 @@ import { expandEmailFormMarkers } from "@/lib/email/forms-block";
 import { normalizeEmailBodyHtml } from "@/lib/email/normalize-body";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
+import { useStripeCatalog } from "@/components/admin/stripe-locale-picker";
 import { cn } from "@/lib/utils";
 
 export function EmailTemplatePreview({
@@ -35,11 +36,16 @@ export function EmailTemplatePreview({
 }) {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
 
+  const stripeCatalog = useStripeCatalog(bodyHtml.includes("prod_"));
+
   const srcDoc = useMemo(() => {
     const label = ctaLabel.trim();
     const href = ctaUrl.trim();
     const productsById = new Map(
       products.map((product) => [product.id.toLowerCase(), product]),
+    );
+    const stripeById = new Map(
+      stripeCatalog.items.map((item) => [item.stripeProductId, item]),
     );
     const guidesById = new Map(
       guides.map((guide) => [guide.id.toLowerCase(), guide]),
@@ -51,7 +57,12 @@ export function EmailTemplatePreview({
     let expandedBody = normalizeEmailBodyHtml(
       bodyHtml.trim() || "Съдържание на имейла…",
     );
-    expandedBody = expandEmailProductMarkers(expandedBody, productsById, locale);
+    expandedBody = expandEmailProductMarkers(
+      expandedBody,
+      productsById,
+      locale,
+      stripeById,
+    );
     expandedBody = expandEmailGuideMarkers(expandedBody, guidesById, locale);
     expandedBody = expandEmailFormMarkers(
       expandedBody,
@@ -66,7 +77,17 @@ export function EmailTemplatePreview({
       unsubscribeHref: `/${locale}/unsubscribe?token=example`,
       heroImageUrl: heroImageUrl.trim() || null,
     });
-  }, [bodyHtml, ctaLabel, ctaUrl, locale, products, guides, forms, heroImageUrl]);
+  }, [
+    bodyHtml,
+    ctaLabel,
+    ctaUrl,
+    locale,
+    products,
+    guides,
+    forms,
+    heroImageUrl,
+    stripeCatalog.items,
+  ]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-ink/10 bg-ink/5">

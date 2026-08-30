@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import { Mail, Plus, Trash2, User } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Loader2, Mail, Plus, Trash2, User } from "lucide-react";
 import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { productSellableInLocale } from "@/lib/site/product-locale";
@@ -9,7 +9,12 @@ import { guideSellableInLocale } from "@/lib/site/guide-catalog";
 import type { EmailProductLinkMode } from "@/lib/email/products-block";
 import { Input, Textarea } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
-import { StripeHrefPicker } from "@/components/admin/stripe-locale-picker";
+import {
+  StripeHrefPicker,
+  useStripeCatalog,
+} from "@/components/admin/stripe-locale-picker";
+import { isStripeProductId } from "@/lib/stripe/parse-stripe-id";
+import type { StripeCatalogItem } from "@/lib/admin/stripe-product-types";
 import { insertAtCursor } from "@/lib/email/body-buttons";
 import {
   isSafeEmailHref,
@@ -29,6 +34,7 @@ export type BlockEditorContext = {
   products: SiteProduct[];
   guides: SiteGuide[];
   forms: FormTemplateRecord[];
+  stripeItems?: StripeCatalogItem[];
   disabled?: boolean;
 };
 
@@ -557,6 +563,12 @@ function CatalogOfferPicker({
 }) {
   const selectedId =
     block.type === "product" ? block.productId : block.guideId;
+  const stripeSelected = isStripeProductId(selectedId);
+  const [source, setSource] = useState<"site" | "stripe">(
+    stripeSelected ? "stripe" : "site",
+  );
+  const [query, setQuery] = useState("");
+  const stripeCatalog = useStripeCatalog(source === "stripe" || stripeSelected);
   const linkMode = block.linkMode;
   const products = [...ctx.products].sort(
     (a, b) =>
@@ -567,8 +579,46 @@ function CatalogOfferPicker({
       a.sort_order - b.sort_order || a.title_bg.localeCompare(b.title_bg, "bg"),
   );
 
+  const stripeItems = useMemo(() => {
+    const active = stripeCatalog.items.filter((item) => item.active);
+    const selected = stripeSelected
+      ? stripeCatalog.items.find((item) => item.stripeProductId === selectedId)
+      : null;
+    const list =
+      selected && !selected.active ? [selected, ...active] : active;
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        (item.priceLabel && item.priceLabel.toLowerCase().includes(q)),
+    );
+  }, [stripeCatalog.items, query, selectedId, stripeSelected]);
+
   function setLinkMode(next: EmailProductLinkMode) {
     onChange({ ...block, linkMode: next });
+  }
+
+  function pickSource(next: "site" | "stripe") {
+    setSource(next);
+    setQuery("");
+    if (next === "stripe") {
+      onChange({
+        id: block.id,
+        type: "product",
+        productId: stripeSelected ? selectedId : "",
+        linkMode: "stripe",
+      });
+      return;
+    }
+    if (block.type === "product" && stripeSelected) {
+      onChange({
+        id: block.id,
+        type: "product",
+        productId: "",
+        linkMode: "site",
+      });
+    }
   }
 
   function pickProduct(productId: string) {
@@ -577,6 +627,15 @@ function CatalogOfferPicker({
       type: "product",
       productId,
       linkMode,
+    });
+  }
+
+  function pickStripeProduct(stripeProductId: string) {
+    onChange({
+      id: block.id,
+      type: "product",
+      productId: stripeProductId,
+      linkMode: "stripe",
     });
   }
 
@@ -591,115 +650,193 @@ function CatalogOfferPicker({
 
   return (
     <div className="space-y-3">
-      <Row label="Продукт или наръчник — картата се попълва с актуалната цена при изпращане">
-        {products.length === 0 && guides.length === 0 ? (
-          <p className="text-sm text-ink-soft">
-            Няма продукти или ръководства — създай ги в Admin → Website.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {products.length > 0 && (
-              <div>
-                <p className="mb-1.5 text-[11px] font-semibold text-ink-soft">
-                  Продукти
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {products.map((product) => {
-                    const sellable = canSellProduct(product, ctx.locale);
-                    return (
-                      <PickerCard
-                        key={product.id}
-                        selected={
-                          block.type === "product" &&
-                          selectedId.toLowerCase() === product.id.toLowerCase()
-                        }
-                        disabled={disabled || !sellable}
-                        onClick={() => pickProduct(product.id)}
-                        thumbnail={product.image_url ?? ""}
-                        title={
-                          (ctx.locale === "en"
-                            ? product.title_en
-                            : product.title_bg) || product.title_bg
-                        }
-                        note={
-                          sellable
-                            ? ctx.locale === "en"
-                              ? product.price_label_en
-                              : product.price_label_bg
-                            : "няма Stripe цена — добави я в Website → Продукти"
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {guides.length > 0 && (
-              <div>
-                <p className="mb-1.5 text-[11px] font-semibold text-ink-soft">
-                  Ръководства
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {guides.map((guide) => {
-                    const sellable = guideSellableInLocale(guide, ctx.locale);
-                    return (
-                      <PickerCard
-                        key={guide.id}
-                        selected={
-                          block.type === "guide" &&
-                          selectedId.toLowerCase() === guide.id.toLowerCase()
-                        }
-                        disabled={disabled || !sellable}
-                        onClick={() => pickGuide(guide.id)}
-                        thumbnail={guide.image_url ?? ""}
-                        emoji="📘"
-                        title={
-                          (ctx.locale === "en"
-                            ? guide.title_en
-                            : guide.title_bg) || guide.title_bg
-                        }
-                        note={
-                          sellable
-                            ? ctx.locale === "en"
-                              ? guide.price_label_en
-                              : guide.price_label_bg
-                            : "няма Stripe цена — добави я в Website → Ръководства"
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </Row>
-
-      <Row label="Накъде води бутонът">
+      <Row label="Откъде е продуктът">
         <Segmented
-          value={linkMode}
+          value={source}
           disabled={disabled}
-          onChange={setLinkMode}
+          onChange={pickSource}
           options={[
-            { value: "site", label: "Към сайта (с оферта)" },
-            { value: "stripe", label: "Право към Stripe" },
+            { value: "site", label: "Продукт от сайта" },
+            { value: "stripe", label: "Продукт от Stripe" },
           ]}
         />
       </Row>
-      <p className="text-xs leading-relaxed text-ink-soft">
-        {linkMode === "site" ? (
-          <>
-            Отваря страницата на продукта или наръчника в сайта. За продукти там
-            се показва допълнителната оферта (upsell) и покупката се записва към
-            абоната.
-          </>
-        ) : (
-          <>
-            Води директно към Stripe Payment Link. <strong>Офертата не се
-            показва</strong> и покупката може да не се свърже с абоната.
-          </>
-        )}
-      </p>
+
+      {source === "site" ? (
+        <Row label="Продукт или наръчник — картата се попълва с актуалната цена при изпращане">
+          {products.length === 0 && guides.length === 0 ? (
+            <p className="text-sm text-ink-soft">
+              Няма продукти или ръководства — създай ги в Admin → Website.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {products.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold text-ink-soft">
+                    Продукти
+                  </p>
+                  <div className="grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2">
+                    {products.map((product) => {
+                      const sellable = canSellProduct(product, ctx.locale);
+                      return (
+                        <PickerCard
+                          key={product.id}
+                          selected={
+                            block.type === "product" &&
+                            selectedId.toLowerCase() === product.id.toLowerCase()
+                          }
+                          disabled={disabled || !sellable}
+                          onClick={() => pickProduct(product.id)}
+                          thumbnail={product.image_url ?? ""}
+                          title={
+                            (ctx.locale === "en"
+                              ? product.title_en
+                              : product.title_bg) || product.title_bg
+                          }
+                          note={
+                            sellable
+                              ? ctx.locale === "en"
+                                ? product.price_label_en
+                                : product.price_label_bg
+                              : "няма Stripe цена — добави я в Website → Продукти"
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {guides.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold text-ink-soft">
+                    Ръководства
+                  </p>
+                  <div className="grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2">
+                    {guides.map((guide) => {
+                      const sellable = guideSellableInLocale(guide, ctx.locale);
+                      return (
+                        <PickerCard
+                          key={guide.id}
+                          selected={
+                            block.type === "guide" &&
+                            selectedId.toLowerCase() === guide.id.toLowerCase()
+                          }
+                          disabled={disabled || !sellable}
+                          onClick={() => pickGuide(guide.id)}
+                          thumbnail={guide.image_url ?? ""}
+                          emoji="📘"
+                          title={
+                            (ctx.locale === "en"
+                              ? guide.title_en
+                              : guide.title_bg) || guide.title_bg
+                          }
+                          note={
+                            sellable
+                              ? ctx.locale === "en"
+                                ? guide.price_label_en
+                                : guide.price_label_bg
+                              : "няма Stripe цена — добави я в Website → Ръководства"
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Row>
+      ) : (
+        <Row label="Продукт от Stripe — име, цена и снимка идват от Stripe">
+          {stripeCatalog.pending && stripeCatalog.items.length === 0 ? (
+            <p className="flex items-center gap-2 text-sm text-ink-soft">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Зареждане от Stripe…
+            </p>
+          ) : stripeCatalog.error && stripeCatalog.items.length === 0 ? (
+            <p className="text-sm text-coral-600">{stripeCatalog.error}</p>
+          ) : stripeCatalog.items.length === 0 ? (
+            <p className="text-sm text-ink-soft">
+              Няма продукти в Stripe — създай ги в Stripe Dashboard.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <Input
+                value={query}
+                disabled={disabled}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Търси по име…"
+              />
+              {stripeItems.length === 0 ? (
+                <p className="text-sm text-ink-soft">Няма съвпадение.</p>
+              ) : (
+                <div className="grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2">
+                  {stripeItems.map((item) => (
+                    <PickerCard
+                      key={item.stripeProductId}
+                      selected={
+                        block.type === "product" &&
+                        selectedId === item.stripeProductId
+                      }
+                      disabled={disabled || !item.active}
+                      onClick={() => pickStripeProduct(item.stripeProductId)}
+                      thumbnail={item.imageUrl ?? ""}
+                      title={item.name}
+                      note={
+                        [
+                          item.priceLabel,
+                          !item.active ? "архивиран" : "",
+                          item.linkedProductTitle
+                            ? `в сайта: ${item.linkedProductTitle}`
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </Row>
+      )}
+
+      {source === "site" && (
+        <>
+          <Row label="Накъде води бутонът">
+            <Segmented
+              value={linkMode}
+              disabled={disabled}
+              onChange={setLinkMode}
+              options={[
+                { value: "site", label: "Към сайта (с оферта)" },
+                { value: "stripe", label: "Право към Stripe" },
+              ]}
+            />
+          </Row>
+          <p className="text-xs leading-relaxed text-ink-soft">
+            {linkMode === "site" ? (
+              <>
+                Отваря страницата на продукта или наръчника в сайта. За продукти
+                там се показва допълнителната оферта (upsell) и покупката се
+                записва към абоната.
+              </>
+            ) : (
+              <>
+                Води директно към Stripe Payment Link. <strong>Офертата не
+                се показва</strong> и покупката може да не се свърже с абоната.
+              </>
+            )}
+          </p>
+        </>
+      )}
+      {source === "stripe" && (
+        <p className="text-xs leading-relaxed text-ink-soft">
+          Картата в имейла ползва снимката, името и цената от Stripe. Бутонът
+          отваря директно плащане.
+        </p>
+      )}
     </div>
   );
 }

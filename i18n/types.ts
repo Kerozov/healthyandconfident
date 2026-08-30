@@ -38,6 +38,17 @@ export type GoogleReview = {
 
 export type FaqItem = { q: string; a: string };
 
+export type LegalSection = {
+  heading: string;
+  paragraphs: string[];
+};
+
+export type LegalPageCopy = {
+  title: string;
+  description: string;
+  sections: LegalSection[];
+};
+
 export type Dictionary = {
   meta: {
     title: string;
@@ -209,6 +220,16 @@ export type Dictionary = {
     tagline: string;
     rights: string;
     columns: { title: string; links: NavItem[] }[];
+    legalPrivacy: string;
+    legalTerms: string;
+    legalSupport: string;
+  };
+  legal: {
+    updatedLabel: string;
+    updatedDate: string;
+    privacy: LegalPageCopy;
+    terms: LegalPageCopy;
+    support: LegalPageCopy;
   };
   popup: {
     defaultTitle: string;

@@ -259,8 +259,8 @@ export const SPEAKING_PLACEMENT_LABELS: Record<
     label_en: "About section — “Work with me” button",
   },
   outcomes_cta: {
-    label_bg: "Секция „Резултати“ — бутон „Запиши безплатен разговор“",
-    label_en: "Outcomes section — “Book a free call” button",
+    label_bg: "Секция „Резултати“ — бутон „Виж програмите“",
+    label_en: "Outcomes section — “See the programs” button",
   },
   leadmagnet_cta: {
     label_bg: "Безплатно 2-дневно меню — popup след запис на имейл",

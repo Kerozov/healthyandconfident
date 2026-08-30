@@ -58,6 +58,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly",
         priority: 0.8,
       },
+      {
+        url: `${base}/${locale}/privacy`,
+        lastModified: now,
+        changeFrequency: "yearly",
+        priority: 0.3,
+      },
+      {
+        url: `${base}/${locale}/terms`,
+        lastModified: now,
+        changeFrequency: "yearly",
+        priority: 0.3,
+      },
+      {
+        url: `${base}/${locale}/support`,
+        lastModified: now,
+        changeFrequency: "yearly",
+        priority: 0.4,
+      },
     );
     for (const slug of PROGRAM_LANDING_SLUGS) {
       staticEntries.push({

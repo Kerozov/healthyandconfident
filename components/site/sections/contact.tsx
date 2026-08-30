@@ -1,4 +1,5 @@
-import { Mail, Phone, MessageCircle, CalendarHeart } from "lucide-react";
+import { Mail, Phone, MessageCircle } from "lucide-react";
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,10 @@ import { siteConfig } from "@/lib/site";
 
 export function Contact({
   dict,
+  locale,
 }: {
   dict: Dictionary;
+  locale: Locale;
 }) {
   const { contact } = dict;
   return (
@@ -24,14 +27,12 @@ export function Contact({
             </h2>
             <p className="mt-4 max-w-md text-slate-300">{contact.subtitle}</p>
             <Button
-              href={siteConfig.whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/${locale}#programs`}
               size="lg"
               variant="forest"
               className="mt-6 w-full px-8 sm:mt-8 sm:w-auto"
             >
-              <CalendarHeart className="h-5 w-5" /> {contact.cta}
+              {contact.cta}
             </Button>
           </div>
 

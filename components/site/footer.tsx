@@ -79,9 +79,26 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           <p>
             © {new Date().getFullYear()} {siteConfig.brand}. {dict.footer.rights}
           </p>
-          <p>
-            {siteConfig.brand} · {siteConfig.tagline}
-          </p>
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <Link
+              href={`/${locale}/privacy`}
+              className="transition-colors hover:text-gold-400"
+            >
+              {dict.footer.legalPrivacy}
+            </Link>
+            <Link
+              href={`/${locale}/terms`}
+              className="transition-colors hover:text-gold-400"
+            >
+              {dict.footer.legalTerms}
+            </Link>
+            <Link
+              href={`/${locale}/support`}
+              className="transition-colors hover:text-gold-400"
+            >
+              {dict.footer.legalSupport}
+            </Link>
+          </nav>
         </div>
       </Container>
     </footer>
