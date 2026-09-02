@@ -153,8 +153,10 @@ export type Dictionary = {
   contact: {
     title: string;
     subtitle: string;
-    emailLabel: string;
+    messengerLabel: string;
+    messengerText: string;
     phoneLabel: string;
+    whatsappLabel: string;
     cta: string;
   };
   events: {

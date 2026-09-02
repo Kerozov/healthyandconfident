@@ -17,6 +17,7 @@ import type {
   SiteGuide,
   SiteVideo,
   SiteCtaPlacement,
+  SiteContactConfig,
   SiteVisit,
   AdminUser,
   AdminAuditLog,
@@ -103,6 +104,7 @@ export type Database = {
       contact_events: TableShape<ContactEvent>;
       site_videos: TableShape<SiteVideo>;
       site_cta_placements: TableShape<SiteCtaPlacement>;
+      site_contact_config: TableShape<SiteContactConfig>;
       zoom_live_config: TableShape<ZoomLiveConfig>;
       zoom_webhook_log: TableShape<ZoomWebhookLog>;
       zoom_session_events: TableShape<ZoomSessionEvent>;

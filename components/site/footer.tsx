@@ -1,11 +1,22 @@
 import Link from "next/link";
-import { Leaf, Mail, Phone, MessageCircle } from "lucide-react";
+import { Leaf, Phone, MessageCircle } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
+import type { SiteContactConfig } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/lib/site";
+import { MessengerIcon } from "@/components/site/messenger-widget";
 
-export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+export function Footer({
+  locale,
+  dict,
+  contactConfig,
+}: {
+  locale: Locale;
+  dict: Dictionary;
+  contactConfig: SiteContactConfig;
+}) {
+  const { contact } = dict;
   return (
     <footer className="bg-slate-800 text-slate-200">
       <Container className="py-12 sm:py-16">
@@ -32,24 +43,26 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
             </p>
             <div className="mt-6 space-y-3 text-sm">
               <a
-                href={`mailto:${siteConfig.email}`}
-                className="flex items-center gap-3 text-slate-300 transition-colors hover:text-gold-400"
-              >
-                <Mail className="h-4 w-4" /> {siteConfig.email}
-              </a>
-              <a
-                href={siteConfig.phoneHref}
-                className="flex items-center gap-3 text-slate-300 transition-colors hover:text-gold-400"
-              >
-                <Phone className="h-4 w-4" /> {siteConfig.phone}
-              </a>
-              <a
-                href={siteConfig.whatsapp}
+                href={contactConfig.messenger_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 text-slate-300 transition-colors hover:text-gold-400"
               >
-                <MessageCircle className="h-4 w-4" /> Viber / WhatsApp
+                <MessengerIcon className="h-4 w-4 shrink-0" /> {contact.messengerText}
+              </a>
+              <a
+                href={contactConfig.phoneHref}
+                className="flex items-center gap-3 text-slate-300 transition-colors hover:text-gold-400"
+              >
+                <Phone className="h-4 w-4" /> {contactConfig.phone}
+              </a>
+              <a
+                href={contactConfig.whatsapp_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 text-slate-300 transition-colors hover:text-gold-400"
+              >
+                <MessageCircle className="h-4 w-4" /> {contact.whatsappLabel}
               </a>
             </div>
           </div>

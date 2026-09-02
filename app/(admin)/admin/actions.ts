@@ -233,6 +233,43 @@ export async function savePopup(input: {
   return { ok: true };
 }
 
+// ── Site contact links ────────────────────────────────────────
+export async function saveSiteContactConfig(input: {
+  messenger_url: string;
+  messenger_enabled: boolean;
+  email: string;
+  phone: string;
+  phone_href: string;
+  whatsapp_url: string;
+}): Promise<ActionResult> {
+  await requireAdmin("website", { action: "save", summary: "Обнови контакти на сайта" });
+  const supabase = getAdminClient();
+  const { data: existing } = await supabase
+    .from("site_contact_config")
+    .select("id")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const payload = {
+    messenger_url: input.messenger_url.trim(),
+    messenger_enabled: input.messenger_enabled,
+    email: input.email.trim(),
+    phone: input.phone.trim(),
+    phone_href: input.phone_href.trim(),
+    whatsapp_url: input.whatsapp_url.trim(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = existing?.id
+    ? await supabase.from("site_contact_config").update(payload).eq("id", existing.id)
+    : await supabase.from("site_contact_config").insert(payload);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 // ── Email footer ──────────────────────────────────────────────
 export async function saveEmailFooter(input: {
   locale: "bg" | "en";
@@ -989,11 +1026,17 @@ export async function importSubscribers(input: {
   rows: {
     email: string;
     name?: string;
+    first_name?: string;
+    last_name?: string;
     phone?: string;
+    facebook_url?: string;
     locale?: "bg" | "en";
     status?: "subscribed" | "unsubscribed";
     segments?: string[];
+    source?: string;
     notes?: string;
+    consent?: boolean;
+    created_at?: string;
   }[];
   mergeSegments?: boolean;
 }): Promise<
@@ -1022,26 +1065,47 @@ export async function importSubscribers(input: {
     );
 
     try {
-      const { data: existing } = await supabase
+      const { data: existingRow } = await supabase
         .from("subscribers")
-        .select("id, tags")
+        .select("id, tags, source, consent, created_at")
         .eq("email", email)
         .maybeSingle();
+      const existing = existingRow as {
+        id: string;
+        tags: string[];
+        source: string;
+        consent: boolean;
+        created_at: string;
+      } | null;
 
       const mergedTags = existing && mergeSegments
         ? Array.from(new Set([...(existing.tags as string[]), ...tags]))
         : tags;
 
+      const name =
+        row.name?.trim() ||
+        [row.first_name?.trim(), row.last_name?.trim()]
+          .filter(Boolean)
+          .join(" ") ||
+        null;
+
       const payload = {
         email,
-        name: row.name?.trim() || null,
+        name,
+        first_name: row.first_name?.trim() || null,
+        last_name: row.last_name?.trim() || null,
         phone: row.phone?.trim() || null,
-        locale: row.locale === "en" ? "en" : "bg",
-        status: row.status === "unsubscribed" ? "unsubscribed" : "subscribed",
-        source: "import",
+        facebook_url: row.facebook_url?.trim() || null,
+        locale: (row.locale === "en" ? "en" : "bg") as "bg" | "en",
+        status: (row.status === "unsubscribed"
+          ? "unsubscribed"
+          : "subscribed") as "subscribed" | "unsubscribed",
+        source: row.source?.trim() || existing?.source || "import",
         tags: mergedTags,
         notes: row.notes?.trim() || null,
-      } as const;
+        consent: row.consent ?? existing?.consent ?? true,
+        ...( !existing && row.created_at ? { created_at: row.created_at } : {}),
+      };
 
       const { error } = await supabase
         .from("subscribers")

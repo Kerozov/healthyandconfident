@@ -1,16 +1,19 @@
-import { Mail, Phone, MessageCircle } from "lucide-react";
+import { Phone, MessageCircle } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/types";
+import type { SiteContactConfig } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
-import { siteConfig } from "@/lib/site";
+import { MessengerIcon } from "@/components/site/messenger-widget";
 
 export function Contact({
   dict,
   locale,
+  contactConfig,
 }: {
   dict: Dictionary;
   locale: Locale;
+  contactConfig: SiteContactConfig;
 }) {
   const { contact } = dict;
   return (
@@ -38,23 +41,25 @@ export function Contact({
 
           <div className="space-y-4">
             <a
-              href={`mailto:${siteConfig.email}`}
+              href={contactConfig.messenger_url}
+              target="_blank"
+              rel="noopener noreferrer"
               className="group flex items-center gap-4 rounded-xl border border-slate-600/50 bg-slate-700/30 p-5 transition-colors hover:bg-slate-700/50"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700/60 text-gold-400">
-                <Mail className="h-6 w-6" />
+              <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700/60">
+                <MessengerIcon className="h-7 w-7" />
               </span>
               <div>
                 <p className="text-xs uppercase tracking-wider text-slate-400">
-                  {contact.emailLabel}
+                  {contact.messengerLabel}
                 </p>
                 <p className="font-medium text-white transition-colors group-hover:text-gold-400">
-                  {siteConfig.email}
+                  {contact.messengerText}
                 </p>
               </div>
             </a>
             <a
-              href={siteConfig.phoneHref}
+              href={contactConfig.phoneHref}
               className="group flex items-center gap-4 rounded-xl border border-slate-600/50 bg-slate-700/30 p-5 transition-colors hover:bg-slate-700/50"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700/60 text-gold-400">
@@ -65,12 +70,12 @@ export function Contact({
                   {contact.phoneLabel}
                 </p>
                 <p className="font-medium text-white transition-colors group-hover:text-gold-400">
-                  {siteConfig.phone}
+                  {contactConfig.phone}
                 </p>
               </div>
             </a>
             <a
-              href={siteConfig.whatsapp}
+              href={contactConfig.whatsapp_url}
               target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-4 rounded-xl border border-slate-600/50 bg-slate-700/30 p-5 transition-colors hover:bg-slate-700/50"
@@ -80,10 +85,10 @@ export function Contact({
               </span>
               <div>
                 <p className="text-xs uppercase tracking-wider text-slate-400">
-                  Viber / WhatsApp
+                  {contact.whatsappLabel}
                 </p>
                 <p className="font-medium text-white transition-colors group-hover:text-gold-400">
-                  {siteConfig.phone}
+                  {contactConfig.phone}
                 </p>
               </div>
             </a>

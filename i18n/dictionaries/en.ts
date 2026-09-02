@@ -356,8 +356,10 @@ export const en: Dictionary = {
     title: "Let's do it together",
     subtitle:
       "See the programs or send me a message. I'll help you get slimmer, happier and confident — you deserve it. ❤",
-    emailLabel: "Email",
+    messengerLabel: "Messenger",
+    messengerText: "Message us",
     phoneLabel: "Mobile (Viber / WhatsApp)",
+    whatsappLabel: "Viber / WhatsApp",
     cta: "See the programs",
   },
   events: {

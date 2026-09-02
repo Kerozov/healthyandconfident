@@ -385,9 +385,11 @@ export function SubscribersManager({
 
       <Card title="Import from Excel / CSV">
         <p className="mb-4 text-sm text-ink-soft">
-          Upload <code className="text-xs">.xlsx</code> or <code className="text-xs">.csv</code>.
-          Required column: <strong>email</strong>. Optional: name, phone, locale, status,
-          segments (comma-separated keys or names).
+          Upload <code className="text-xs">.xlsx</code> or <code className="text-xs">.csv</code>{" "}
+          (comma or semicolon). Required: <strong>email</strong> (or{" "}
+          <strong>Subscriber</strong> from Mailchimp exports). Optional: name, first_name,
+          last_name, phone, facebook_url, locale, status, tags/segments, source, notes, consent,
+          created_at.
         </p>
 
         <Field

@@ -822,6 +822,7 @@ export function WebsiteTabs({
     { id: "events", label: "Събития" },
     { id: "videos", label: "Видеа" },
     { id: "buttons", label: "Бутони" },
+    { id: "contacts", label: "Контакти" },
   ];
 
   return (

@@ -540,3 +540,14 @@ export type AdminAuditLog = {
   entity_id: string | null;
   created_at: string;
 };
+
+export type SiteContactConfig = {
+  id: string;
+  messenger_url: string;
+  messenger_enabled: boolean;
+  email: string;
+  phone: string;
+  phone_href: string;
+  whatsapp_url: string;
+  updated_at: string;
+};

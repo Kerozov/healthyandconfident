@@ -355,8 +355,10 @@ export const bg: Dictionary = {
     title: "Да го направим заедно",
     subtitle:
       "Виж програмите или ми пиши. Ще ти помогна да си по-стройна, по-щастлива и уверена — заслужаваш го. ❤",
-    emailLabel: "Имейл",
+    messengerLabel: "Messenger",
+    messengerText: "пиши ни",
     phoneLabel: "Мобилен (Viber / WhatsApp)",
+    whatsappLabel: "Viber / WhatsApp",
     cta: "Виж програмите",
   },
   events: {

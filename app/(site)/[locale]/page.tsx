@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { getPublicSiteContent } from "@/lib/site/content";
+import { getSiteContactConfig } from "@/lib/site/contact-config";
 import { Hero } from "@/components/site/sections/hero";
 import { SuccessProof } from "@/components/site/sections/success-proof";
 import { Marquee } from "@/components/site/sections/marquee";
@@ -34,7 +35,11 @@ export default async function HomePage({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
-  const [dict, site] = await Promise.all([getDictionary(l), getPublicSiteContent()]);
+  const [dict, site, contactConfig] = await Promise.all([
+    getDictionary(l),
+    getPublicSiteContent(),
+    getSiteContactConfig(),
+  ]);
   const eventsSection = site.sections.events;
   const productsSection = site.sections.products;
   const guidesSection = site.sections.guides;
@@ -93,7 +98,7 @@ export default async function HomePage({
       )}
       <FreeMenuBanner dict={dict} locale={l} />
       <Faq dict={dict} />
-      <Contact dict={dict} locale={l} />
+      <Contact dict={dict} locale={l} contactConfig={contactConfig} />
     </>
   );
 }

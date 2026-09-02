@@ -21,6 +21,7 @@ import type {
   SiteGuide,
   SiteSection,
   SiteVideo,
+  SiteContactConfig,
 } from "@/lib/supabase/types";
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
@@ -39,6 +40,7 @@ import {
   deleteSiteProduct,
 } from "@/app/(admin)/admin/actions";
 import { GuidesManagerPanel } from "@/components/admin/guides-manager";
+import { SiteContactPanel } from "@/components/admin/site-contact-panel";
 import { ProductAdminGrid } from "@/components/admin/product-admin-grid";
 import { ProductOfferEditor } from "@/components/admin/product-offer-editor";
 import { StripeCatalogPanel } from "@/components/admin/stripe-catalog-panel";
@@ -189,6 +191,7 @@ export function WebsiteManager({
   guides,
   videos,
   ctaPlacements,
+  contactConfig,
   segments,
   groups,
   dbReady = true,
@@ -200,6 +203,7 @@ export function WebsiteManager({
   guides: SiteGuide[];
   videos: SiteVideo[];
   ctaPlacements: SiteCtaPlacement[];
+  contactConfig: SiteContactConfig;
   segments: Segment[];
   groups: SegmentGroup[];
   dbReady?: boolean;
@@ -1032,6 +1036,8 @@ export function WebsiteManager({
           <CtaPlacementsPanel placements={ctaPlacements} offers={products} />
         </Card>
       )}
+
+      {tab === "contacts" && <SiteContactPanel config={contactConfig} />}
 
       {error && <p className="text-sm text-coral-600">{error}</p>}
     </div>

@@ -6,6 +6,7 @@ import { geistSans, fraunces } from "@/app/fonts";
 import { locales, isLocale, localeHtmlLang, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { getPublicSiteContent } from "@/lib/site/content";
+import { getSiteContactConfig } from "@/lib/site/contact-config";
 import {
   getMetaPixelConfig,
   getMetaPixelPublicConfig,
@@ -15,6 +16,7 @@ import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { MetaPixel } from "@/components/site/meta-pixel";
 import { SiteHeader } from "@/components/site/site-header";
 import { Footer } from "@/components/site/footer";
+import { MessengerWidget } from "@/components/site/messenger-widget";
 import { Popup } from "@/components/site/popup";
 import { CheckoutNotice } from "@/components/site/checkout-notice";
 import { SiteAnalytics } from "@/components/site/site-analytics";
@@ -88,9 +90,10 @@ export default async function SiteLayout({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
-  const [dict, site, metaPixel] = await Promise.all([
+  const [dict, site, contactConfig, metaPixel] = await Promise.all([
     getDictionary(l),
     getPublicSiteContent(),
+    getSiteContactConfig(),
     getMetaPixelPublicConfig(),
   ]);
 
@@ -118,7 +121,13 @@ export default async function SiteLayout({
             <HashScroll />
             <SiteHeader locale={l} items={dict.nav.items} cta={dict.nav.cta} />
             <main>{children}</main>
-            <Footer locale={l} dict={dict} />
+            <Footer locale={l} dict={dict} contactConfig={contactConfig} />
+            {contactConfig.messenger_enabled && contactConfig.messenger_url.trim() && (
+              <MessengerWidget
+                url={contactConfig.messenger_url}
+                label={dict.contact.messengerText}
+              />
+            )}
             <Popup locale={l} />
             <Suspense fallback={null}>
               <CheckoutNotice locale={l} />
