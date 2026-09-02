@@ -47,7 +47,11 @@ async function fetchContactConfig(
 }
 
 export const getSiteContactConfig = cache(async (): Promise<SiteContactConfig> => {
-  return fetchContactConfig(getPublicClient());
+  try {
+    return await fetchContactConfig(getPublicClient());
+  } catch {
+    return DEFAULT_SITE_CONTACT;
+  }
 });
 
 export async function getAdminSiteContactConfig(): Promise<SiteContactConfig> {

@@ -51,7 +51,7 @@ export function Footer({
                 <MessengerIcon className="h-4 w-4 shrink-0" /> {contact.messengerText}
               </a>
               <a
-                href={contactConfig.phoneHref}
+                href={contactConfig.phone_href}
                 className="flex items-center gap-3 text-slate-300 transition-colors hover:text-gold-400"
               >
                 <Phone className="h-4 w-4" /> {contactConfig.phone}

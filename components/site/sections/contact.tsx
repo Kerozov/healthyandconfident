@@ -59,7 +59,7 @@ export function Contact({
               </div>
             </a>
             <a
-              href={contactConfig.phoneHref}
+              href={contactConfig.phone_href}
               className="group flex items-center gap-4 rounded-xl border border-slate-600/50 bg-slate-700/30 p-5 transition-colors hover:bg-slate-700/50"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700/60 text-gold-400">
