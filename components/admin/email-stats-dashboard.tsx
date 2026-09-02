@@ -104,6 +104,7 @@ export function EmailStatsDashboard({ stats }: { stats: EmailStatsOverview }) {
         aria-label="Изглед на статистиката"
         active={tab}
         onChange={setTab}
+        contentId="email-stats-panel"
         tabs={[
           { id: "overview", label: "Общо" },
           { id: "campaigns", label: "Кампании", count: stats.campaigns.length },
@@ -113,6 +114,7 @@ export function EmailStatsDashboard({ stats }: { stats: EmailStatsOverview }) {
         ]}
       />
 
+      <div id="email-stats-panel">
       {tab === "overview" && (
         <div className="space-y-6">
           <Card title="Активност по дни">
@@ -429,6 +431,8 @@ export function EmailStatsDashboard({ stats }: { stats: EmailStatsOverview }) {
           </Card>
         </div>
       )}
+
+      </div>
     </div>
   );
 }

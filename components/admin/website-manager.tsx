@@ -418,6 +418,7 @@ export function WebsiteManager({
 
       <WebsiteTabs tab={tab} onChange={setTab} />
 
+      <div id="website-manager-panel">
       {tab === "products" && (
         <Card
           title="Продукти в магазина"
@@ -1038,6 +1039,8 @@ export function WebsiteManager({
       )}
 
       {tab === "contacts" && <SiteContactPanel config={contactConfig} />}
+
+      </div>
 
       {error && <p className="text-sm text-coral-600">{error}</p>}
     </div>

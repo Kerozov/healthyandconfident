@@ -1,5 +1,10 @@
 import * as XLSX from "xlsx";
-import type { Locale, Segment } from "@/lib/supabase/types";
+import type { Locale } from "@/i18n/config";
+import {
+  applyEnglishRecipientTag,
+  inferLocaleFromLocation,
+} from "@/i18n/subscriber-locale";
+import type { Segment } from "@/lib/supabase/types";
 import { slugify } from "@/lib/utils";
 
 /** Columns accepted on import (and written on export). */
@@ -87,7 +92,9 @@ const HEADER_ALIASES: Record<string, string> = {
   notes: "notes",
   note: "notes",
   бележки: "notes",
-  location: "notes",
+  location: "location",
+  country: "location",
+  държава: "location",
   consent: "consent",
   created_at: "created_at",
   created: "created_at",
@@ -182,6 +189,21 @@ function parseTimestamp(value: string): string | undefined {
   return undefined;
 }
 
+function composeNotes(row: Record<string, string>): string | undefined {
+  const parts = [row.notes, row.location]
+    .map((part) => part?.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+function resolveImportLocale(row: Record<string, string>): Locale {
+  return (
+    parseLocale(row.locale ?? "") ??
+    inferLocaleFromLocation(row.location) ??
+    "bg"
+  );
+}
+
 function composeName(row: Record<string, string>): string | undefined {
   const direct = row.name?.trim();
   if (direct) return direct;
@@ -218,8 +240,12 @@ export function parseImportRows(
     }
 
     const fromFile = resolveSegmentTokens(row.tags ?? "", segments);
-    const segmentKeys = Array.from(
-      new Set([...fromFile, ...(fromFile.length === 0 ? defaults : [])]),
+    const locale = resolveImportLocale(row);
+    const segmentKeys = applyEnglishRecipientTag(
+      Array.from(
+        new Set([...fromFile, ...(fromFile.length === 0 ? defaults : [])]),
+      ),
+      locale,
     );
 
     const createdAt = parseTimestamp(row.created_at ?? row.subscribed ?? "");
@@ -231,11 +257,11 @@ export function parseImportRows(
       last_name: row.last_name || undefined,
       phone: row.phone || undefined,
       facebook_url: row.facebook_url || undefined,
-      locale: parseLocale(row.locale ?? "") ?? "bg",
+      locale,
       status: parseStatus(row.status ?? "") ?? "subscribed",
       segments: segmentKeys,
       source: row.source || undefined,
-      notes: row.notes || undefined,
+      notes: composeNotes(row),
       consent: parseConsent(row.consent ?? ""),
       created_at: createdAt,
     });

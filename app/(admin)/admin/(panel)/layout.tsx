@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSession, toPublicActor } from "@/lib/admin/auth";
-import { Sidebar } from "@/components/admin/sidebar";
+import { AdminPanelShell } from "@/components/admin/admin-panel-shell";
 
 export default async function AdminPanelLayout({
   children,
@@ -20,16 +20,7 @@ export default async function AdminPanelLayout({
       >
         Към съдържанието
       </a>
-      <div className="flex min-h-screen flex-col bg-cream-2/40 lg:flex-row">
-        <Sidebar actor={toPublicActor(session)} />
-        <main
-          id="admin-main"
-          tabIndex={-1}
-          className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-10"
-        >
-          {children}
-        </main>
-      </div>
+      <AdminPanelShell actor={toPublicActor(session)}>{children}</AdminPanelShell>
     </>
   );
 }

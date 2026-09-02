@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, XCircle } from "lucide-react";
+import { AdminNavLink } from "@/components/admin/admin-navigation";
 import type { Contact, ContactEvent, ContactWorkerJob } from "@/lib/contacts/types";
 import type { JobEngagement } from "@/lib/admin/contacts-data";
 import type { PersonEmailItem } from "@/lib/admin/person-email";
@@ -95,12 +95,13 @@ export function ContactDetailView({
 
   return (
     <div className="space-y-8">
-      <Link
+      <AdminNavLink
         href="/admin/contacts"
+        showSpinner={false}
         className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink"
       >
         <ArrowLeft className="h-4 w-4" /> Назад към контакти
-      </Link>
+      </AdminNavLink>
 
       {note && (
         <p className="rounded-lg bg-cream px-4 py-2 text-sm text-ink-soft">{note}</p>

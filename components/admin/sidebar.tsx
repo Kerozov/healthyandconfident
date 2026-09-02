@@ -26,6 +26,7 @@ import {
   BookOpen,
   Eye,
   Shield,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,10 @@ import {
 } from "@/lib/admin/screens";
 import type { AdminActorPublic } from "@/lib/admin/actor-types";
 import { AccountPasswordForm } from "@/components/admin/account-password-form";
+import {
+  AdminNavLink,
+  useAdminNavigate,
+} from "@/components/admin/admin-navigation";
 
 const ICONS: Record<AdminScreenKey, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
@@ -75,6 +80,7 @@ function NavLinks({
   onNavigate?: () => void;
   className?: string;
 }) {
+  const { pendingHref } = useAdminNavigate();
   const groups = ADMIN_SCREEN_GROUPS.map((group) => ({
     ...group,
     screens: group.screens.filter((screen) => canSeeScreen(actor, screen.key)),
@@ -94,23 +100,30 @@ function NavLinks({
                 item.href,
                 "exact" in item ? Boolean(item.exact) : false,
               );
+              const pending = pendingHref === item.href;
               const Icon = ICONS[item.key];
               return (
                 <li key={item.href}>
-                  <Link
+                  <AdminNavLink
                     href={item.href}
-                    onClick={onNavigate}
-                    aria-current={active ? "page" : undefined}
+                    active={active}
+                    showSpinner={false}
+                    onNavigate={onNavigate}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35",
                       active
                         ? "bg-forest-600 text-cream shadow-sm"
                         : "text-ink-soft hover:bg-ink/5 hover:text-ink",
+                      pending && "cursor-wait opacity-70",
                     )}
                   >
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                    {pending ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                    ) : (
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                    )}
                     {item.label}
-                  </Link>
+                  </AdminNavLink>
                 </li>
               );
             })}
@@ -125,20 +138,26 @@ function NavLinks({
           </p>
           <ul className="space-y-0.5">
             <li>
-              <Link
+              <AdminNavLink
                 href="/admin/team"
-                onClick={onNavigate}
-                aria-current={pathname.startsWith("/admin/team") ? "page" : undefined}
+                active={pathname.startsWith("/admin/team")}
+                showSpinner={false}
+                onNavigate={onNavigate}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35",
                   pathname.startsWith("/admin/team")
                     ? "bg-forest-600 text-cream shadow-sm"
                     : "text-ink-soft hover:bg-ink/5 hover:text-ink",
+                  pendingHref === "/admin/team" && "cursor-wait opacity-70",
                 )}
               >
-                <Shield className="h-4 w-4 shrink-0" aria-hidden />
+                {pendingHref === "/admin/team" ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <Shield className="h-4 w-4 shrink-0" aria-hidden />
+                )}
                 Профили и промени
-              </Link>
+              </AdminNavLink>
             </li>
           </ul>
         </div>
@@ -151,6 +170,7 @@ export function Sidebar({ actor }: { actor: AdminActorPublic }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const { pendingHref } = useAdminNavigate();
 
   useEffect(() => {
     if (!open) return;
@@ -200,12 +220,21 @@ export function Sidebar({ actor }: { actor: AdminActorPublic }) {
   return (
     <div className="lg:flex lg:min-h-screen lg:shrink-0 lg:flex-col">
       <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-ink/10 bg-white px-4 lg:hidden">
-        <Link href="/admin" className="flex items-center gap-2 font-display text-base font-semibold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-forest-600 text-cream">
-            <Leaf className="h-4 w-4" aria-hidden />
-          </span>
+        <AdminNavLink
+          href="/admin"
+          active={pathname === "/admin"}
+          showSpinner={false}
+          className="flex items-center gap-2 font-display text-base font-semibold"
+        >
+          {pendingHref === "/admin" ? (
+            <Loader2 className="h-4 w-4 animate-spin text-forest-600" aria-hidden />
+          ) : (
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-forest-600 text-cream">
+              <Leaf className="h-4 w-4" aria-hidden />
+            </span>
+          )}
           Админ
-        </Link>
+        </AdminNavLink>
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -234,12 +263,21 @@ export function Sidebar({ actor }: { actor: AdminActorPublic }) {
         aria-label="Админ навигация"
       >
         <div className="hidden items-center justify-between gap-2 px-5 py-5 lg:flex">
-          <Link href="/admin" className="flex min-w-0 items-center gap-2 font-display text-lg font-semibold">
+          <AdminNavLink
+            href="/admin"
+            active={pathname === "/admin"}
+            showSpinner={false}
+            className="flex min-w-0 items-center gap-2 font-display text-lg font-semibold"
+          >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest-600 text-cream">
-              <Leaf className="h-4 w-4" aria-hidden />
+              {pendingHref === "/admin" ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Leaf className="h-4 w-4" aria-hidden />
+              )}
             </span>
             <span className="truncate">Healthy &amp; Confident</span>
-          </Link>
+          </AdminNavLink>
         </div>
 
         <div className="flex items-center justify-between border-b border-ink/10 px-4 py-3 lg:hidden">

@@ -53,6 +53,7 @@ import { publicFormUrl, siteOrigin } from "@/lib/forms/urls";
 import { formatDate } from "@/lib/utils";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
 import { cn } from "@/lib/utils";
+import { TabList } from "@/components/admin/tab-list";
 
 const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
   { value: "text", label: "Текст" },
@@ -323,30 +324,21 @@ export function FormsManager({
 
       {editingId && (
         <Card title={editingId === "new" ? "Нова форма" : `Редакция: ${form.name}`}>
-          <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-ink/15 bg-cream-2/30 p-1">
-            {(
-              [
-                ["content", "Съдържание"],
-                ["fields", "Въпроси"],
-                ["email", "Имейл"],
-                ["preview", "Преглед"],
-                ...(editingId !== "new" ? [["send", "Изпрати"]] : []),
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setTab(key as EditorTab)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-xs font-semibold",
-                  tab === key ? "bg-forest-600 text-cream" : "text-ink-soft hover:bg-white",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <TabList
+            aria-label="Редакция на форма"
+            active={tab}
+            onChange={(id) => setTab(id as EditorTab)}
+            contentId="form-editor-panel"
+            tabs={[
+              { id: "content", label: "Съдържание" },
+              { id: "fields", label: "Въпроси" },
+              { id: "email", label: "Имейл" },
+              { id: "preview", label: "Преглед" },
+              ...(editingId !== "new" ? [{ id: "send", label: "Изпрати" }] : []),
+            ]}
+          />
 
+          <div id="form-editor-panel">
           {tab === "content" && (
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Име (админ)">
@@ -853,6 +845,8 @@ export function FormsManager({
               </button>
             </div>
           )}
+
+          </div>
 
           {error && <p className="mt-4 text-sm text-coral-600">{error}</p>}
 

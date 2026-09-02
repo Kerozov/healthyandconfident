@@ -2,6 +2,8 @@ import Link from "next/link";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+export { TabList } from "@/components/admin/tab-list";
+
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60",
   {
@@ -173,56 +175,6 @@ export function DataTable({
   return (
     <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
       <div className="overflow-x-auto">{children}</div>
-    </div>
-  );
-}
-
-export function TabList({
-  tabs,
-  active,
-  onChange,
-  "aria-label": ariaLabel,
-}: {
-  tabs: { id: string; label: string; icon?: React.ReactNode; count?: number }[];
-  active: string;
-  onChange: (id: string) => void;
-  "aria-label"?: string;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label={ariaLabel}
-      className="inline-flex max-w-full flex-wrap gap-1 rounded-2xl border border-ink/10 bg-white p-1"
-    >
-      {tabs.map((tab) => {
-        const selected = active === tab.id;
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            onClick={() => onChange(tab.id)}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35",
-              selected ? "bg-forest-600 text-cream" : "text-ink-soft hover:bg-ink/5 hover:text-ink",
-            )}
-          >
-            {tab.icon}
-            {tab.label}
-            {typeof tab.count === "number" && (
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-xs",
-                  selected ? "bg-white/20" : "bg-ink/5",
-                )}
-              >
-                {tab.count}
-              </span>
-            )}
-          </button>
-        );
-      })}
     </div>
   );
 }

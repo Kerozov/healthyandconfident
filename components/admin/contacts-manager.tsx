@@ -1,11 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import type { ContactListRow } from "@/lib/contacts/types";
 import { formatMeetingLabel } from "@/lib/admin/zoom-display";
 import { formatDate } from "@/lib/utils";
+import {
+  AdminNavLink,
+  useAdminNavigate,
+} from "@/components/admin/admin-navigation";
 
 const PAYMENT_LABELS: Record<string, string> = {
   unpaid: "Неплатил",
@@ -21,7 +24,8 @@ export function ContactsManager({
   meetingOptions?: { meetingId: string; participantCount: number }[];
   activeMeetingId?: string | null;
 }) {
-  const router = useRouter();
+  const { navigate, pendingHref } = useAdminNavigate();
+  const filterPending = pendingHref?.startsWith("/admin/contacts") ?? false;
   const [paymentFilter, setPaymentFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [reminderFilter, setReminderFilter] = useState<"all" | "yes" | "no">("all");
   const [zoomFilter, setZoomFilter] = useState<"all" | "yes" | "no">("all");
@@ -49,15 +53,21 @@ export function ContactsManager({
           Филтър по среща:{" "}
           <span className="font-mono">{formatMeetingLabel(activeMeetingId)}</span>
           {" · "}
-          <Link href="/admin/contacts" className="font-medium underline">
+          <AdminNavLink href="/admin/contacts" className="font-medium underline">
             Изчисти
-          </Link>
+          </AdminNavLink>
           {" · "}
-          <Link href="/admin/zoom" className="font-medium underline">
+          <AdminNavLink href="/admin/zoom" className="font-medium underline">
             Zoom статистика
-          </Link>
+          </AdminNavLink>
         </p>
       )}
+      {filterPending ? (
+        <p className="inline-flex items-center gap-2 text-sm text-ink-soft">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          Зареждане…
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-3">
         <select
           value={paymentFilter}
@@ -79,11 +89,14 @@ export function ContactsManager({
         </select>
         <select
           value={activeMeetingId ?? ""}
+          disabled={filterPending}
           onChange={(e) => {
             const id = e.target.value;
-            router.push(id ? `/admin/contacts?meeting=${encodeURIComponent(id)}` : "/admin/contacts");
+            navigate(
+              id ? `/admin/contacts?meeting=${encodeURIComponent(id)}` : "/admin/contacts",
+            );
           }}
-          className="min-w-[180px] rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm"
+          className="min-w-[180px] rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm disabled:cursor-wait disabled:opacity-60"
         >
           <option value="">Всички срещи</option>
           {meetingOptions.map((m) => (
@@ -125,12 +138,13 @@ export function ContactsManager({
             {filtered.map((c) => (
               <tr key={c.id} className="border-b border-ink/5 hover:bg-cream/30">
                 <td className="px-4 py-3">
-                  <Link
+                  <AdminNavLink
                     href={`/admin/contacts/${c.id}`}
+                    showSpinner={false}
                     className="font-medium text-forest-700 hover:underline"
                   >
                     {c.email}
-                  </Link>
+                  </AdminNavLink>
                   {c.name && (
                     <p className="text-xs text-ink-soft">{c.name}</p>
                   )}

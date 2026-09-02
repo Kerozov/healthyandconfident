@@ -28,6 +28,8 @@ import {
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
 import { checkSmsCompose } from "@/lib/sms/compose-validation";
 import { runAutomations } from "@/lib/automation/send";
+import { applyEnglishRecipientTag } from "@/i18n/subscriber-locale";
+import { ensureSubscriberSegmentKeys } from "@/lib/segments/ensure";
 import { buildBrandedEmail } from "@/lib/email/compose";
 import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
 import { footerConfigFromRow } from "@/lib/email/footer-defaults";
@@ -957,12 +959,17 @@ export async function addSubscriber(input: {
   await requireAdmin("subscribers", { action: "create", summary: "Добави абонат" });
   const supabase = getAdminClient();
   const email = input.email.trim().toLowerCase();
-  const tags = Array.from(
-    new Set([
-      "manual",
-      ...(input.tags ?? []).map((t) => t.trim()).filter(Boolean),
-    ]),
+  const locale = input.locale;
+  const tags = applyEnglishRecipientTag(
+    Array.from(
+      new Set([
+        "manual",
+        ...(input.tags ?? []).map((t) => t.trim()).filter(Boolean),
+      ]),
+    ),
+    locale,
   );
+  await ensureSubscriberSegmentKeys(tags);
 
   const { data: existing } = await supabase
     .from("subscribers")
@@ -970,16 +977,19 @@ export async function addSubscriber(input: {
     .eq("email", email)
     .maybeSingle();
 
-  const mergedTags = existing
-    ? Array.from(new Set([...(existing.tags as string[]), ...tags]))
-    : tags;
+  const mergedTags = applyEnglishRecipientTag(
+    existing
+      ? Array.from(new Set([...(existing.tags as string[]), ...tags]))
+      : tags,
+    locale,
+  );
 
   const { error } = await supabase.from("subscribers").upsert(
     {
       email,
       name: input.name || null,
       phone: input.phone || null,
-      locale: input.locale,
+      locale,
       source: "manual",
       tags: mergedTags,
       status: "subscribed",
@@ -1051,6 +1061,10 @@ export async function importSubscribers(input: {
   const supabase = getAdminClient();
   const mergeSegments = input.mergeSegments !== false;
 
+  await ensureSubscriberSegmentKeys(
+    input.rows.flatMap((row) => row.segments ?? []).filter(Boolean),
+  );
+
   let created = 0;
   let updated = 0;
   let failed = 0;
@@ -1063,6 +1077,7 @@ export async function importSubscribers(input: {
     const tags = Array.from(
       new Set((row.segments ?? []).map((t) => t.trim()).filter(Boolean)),
     );
+    const locale = (row.locale === "en" ? "en" : "bg") as "bg" | "en";
 
     try {
       const { data: existingRow } = await supabase
@@ -1078,9 +1093,12 @@ export async function importSubscribers(input: {
         created_at: string;
       } | null;
 
-      const mergedTags = existing && mergeSegments
-        ? Array.from(new Set([...(existing.tags as string[]), ...tags]))
-        : tags;
+      const mergedTags = applyEnglishRecipientTag(
+        existing && mergeSegments
+          ? Array.from(new Set([...(existing.tags as string[]), ...tags]))
+          : tags,
+        locale,
+      );
 
       const name =
         row.name?.trim() ||
@@ -1096,7 +1114,7 @@ export async function importSubscribers(input: {
         last_name: row.last_name?.trim() || null,
         phone: row.phone?.trim() || null,
         facebook_url: row.facebook_url?.trim() || null,
-        locale: (row.locale === "en" ? "en" : "bg") as "bg" | "en",
+        locale,
         status: (row.status === "unsubscribed"
           ? "unsubscribed"
           : "subscribed") as "subscribed" | "unsubscribed",
@@ -1268,23 +1286,55 @@ export async function updateSubscriber(input: {
 }
 
 export async function deleteSubscriber(id: string): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "delete", summary: "Изтри абонат" });
-  const supabase = getAdminClient();
-  const { data: row } = await supabase
-    .from("subscribers")
-    .select("email")
-    .eq("id", id)
-    .maybeSingle();
-  if (row?.email) {
-    const { cancelAllScheduledMailForSubscriber } = await import(
-      "@/lib/automation/cancel"
-    );
-    await cancelAllScheduledMailForSubscriber(row.email as string);
+  return deleteSubscribers([id]);
+}
+
+export async function deleteSubscribers(
+  ids: string[],
+): Promise<ActionResult & { deleted?: number }> {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (unique.length === 0) {
+    return { ok: false, message: "No subscribers selected." };
   }
-  const { error } = await supabase.from("subscribers").delete().eq("id", id);
+
+  await requireAdmin("subscribers", {
+    action: "delete",
+    summary: `Изтри ${unique.length} абонат(а)`,
+  });
+
+  const supabase = getAdminClient();
+  const { data: rows, error: loadError } = await supabase
+    .from("subscribers")
+    .select("id, email")
+    .in("id", unique);
+
+  if (loadError) return { ok: false, message: loadError.message };
+
+  const subscribers = (rows as { id: string; email: string }[] | null) ?? [];
+  if (subscribers.length === 0) {
+    return { ok: false, message: "Selected subscribers were not found." };
+  }
+
+  const { cancelAllScheduledMailForSubscriber } = await import(
+    "@/lib/automation/cancel"
+  );
+
+  for (const row of subscribers) {
+    await cancelAllScheduledMailForSubscriber(row.email);
+  }
+
+  const { error } = await supabase
+    .from("subscribers")
+    .delete()
+    .in(
+      "id",
+      subscribers.map((row) => row.id),
+    );
+
   if (error) return { ok: false, message: error.message };
+
   revalidatePath("/admin/subscribers");
-  return { ok: true };
+  return { ok: true, deleted: subscribers.length };
 }
 
 // ── Segment groups ──────────────────────────────────────────

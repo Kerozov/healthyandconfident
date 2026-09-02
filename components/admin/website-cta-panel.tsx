@@ -15,6 +15,7 @@ import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-st
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
 import { SITE_BUTTON_GROUPS, type SiteButtonSpec } from "@/lib/site/button-catalog";
 import { cn } from "@/lib/utils";
+import { TabList } from "@/components/admin/tab-list";
 
 /** Where a button sends the visitor. One choice instead of four competing fields. */
 type LinkMode = "default" | "stripe" | "link";
@@ -826,22 +827,14 @@ export function WebsiteTabs({
   ];
 
   return (
-    <div className="mb-6 flex flex-wrap gap-2 rounded-xl border border-ink/10 bg-cream-2/30 p-1">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => onChange(t.id)}
-          className={cn(
-            "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
-            tab === t.id
-              ? "bg-forest-600 text-cream shadow-sm"
-              : "text-ink-soft hover:bg-ink/5",
-          )}
-        >
-          {t.label}
-        </button>
-      ))}
+    <div className="mb-6">
+      <TabList
+        aria-label="Секции на сайта"
+        active={tab}
+        onChange={onChange}
+        contentId="website-manager-panel"
+        tabs={tabs}
+      />
     </div>
   );
 }

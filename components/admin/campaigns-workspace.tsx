@@ -39,6 +39,7 @@ export function CampaignsWorkspace({
           aria-label="Тип кампания"
           active={tab}
           onChange={(id) => setTab(id as "email" | "sms")}
+          contentId="campaigns-workspace-panel"
           tabs={[
             {
               id: "email",
@@ -87,7 +88,7 @@ export function CampaignsWorkspace({
         />
       )}
 
-      <div className="mt-8" role="tabpanel">
+      <div id="campaigns-workspace-panel" className="mt-8" role="tabpanel">
         {tab === "email" ? (
           <CampaignsTable campaigns={emailCampaigns} />
         ) : (

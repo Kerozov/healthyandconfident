@@ -1,13 +1,12 @@
-import Link from "next/link";
+import { DashboardStatCard } from "@/components/admin/dashboard-stat-card";
+import { getDashboardStats, getDashboardHighlights } from "@/lib/admin/data";
 import {
   Users,
   FileText,
   BarChart3,
   CreditCard,
-  ArrowUpRight,
   Eye,
 } from "lucide-react";
-import { getDashboardStats, getDashboardHighlights } from "@/lib/admin/data";
 import { formatMoney, formatNumber, formatPercent } from "@/lib/money";
 import { formatDate } from "@/lib/utils";
 import { PageHeader, Badge, DataTable, Alert } from "@/components/admin/ui";
@@ -17,6 +16,7 @@ import { getAdminSession, sessionCanAccess } from "@/lib/admin/auth";
 import { getTeamOverview } from "@/lib/admin/team";
 import { formatAdminWhen } from "@/lib/admin/format-time";
 import type { AdminScreenKey } from "@/lib/admin/screens";
+import { AdminTextLink } from "@/components/admin/admin-text-link";
 
 export const dynamic = "force-dynamic";
 
@@ -97,24 +97,14 @@ export default async function AdminDashboard() {
       {cards.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {cards.map((c) => (
-            <Link
+            <DashboardStatCard
               key={c.label}
               href={c.href}
-              className="group rounded-2xl border border-ink/10 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-forest-200 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35"
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-forest-50 text-forest-600">
-                  <c.icon className="h-5 w-5" aria-hidden />
-                </span>
-                <ArrowUpRight
-                  className="h-4 w-4 text-ink-soft/40 transition-colors group-hover:text-coral-500"
-                  aria-hidden
-                />
-              </div>
-              <p className="mt-4 font-display text-4xl font-semibold text-ink">{c.value}</p>
-              <p className="text-sm font-medium text-ink">{c.label}</p>
-              <p className="text-xs text-ink-soft">{c.sub}</p>
-            </Link>
+              label={c.label}
+              value={c.value}
+              sub={c.sub}
+              icon={c.icon}
+            />
           ))}
         </div>
       ) : (
@@ -128,12 +118,12 @@ export default async function AdminDashboard() {
           <Card
             title="Екип — последна работа"
             action={
-              <Link
+              <AdminTextLink
                 href="/admin/team"
                 className="text-sm font-medium text-coral-600 hover:underline"
               >
                 Профили и права
-              </Link>
+              </AdminTextLink>
             }
           >
             {others.length === 0 ? (
@@ -179,12 +169,12 @@ export default async function AdminDashboard() {
         <section className="mt-10">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="font-display text-xl font-semibold text-ink">Скорошни кампании</h2>
-            <Link
+            <AdminTextLink
               href="/admin/campaigns"
               className="text-sm font-medium text-coral-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35"
             >
               Виж всички
-            </Link>
+            </AdminTextLink>
           </div>
 
           <DataTable

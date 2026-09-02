@@ -7,6 +7,7 @@ import {
   fullNameFromParts,
   healthSelectionFromAnswerKey,
 } from "@/lib/site/health-tags";
+import { applyEnglishRecipientTag } from "@/i18n/subscriber-locale";
 import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
 import type { Locale } from "@/lib/supabase/types";
 
@@ -115,6 +116,7 @@ export async function POST(req: Request) {
       incomingOther,
       healthSegment,
     );
+    const tagsWithLocale = applyEnglishRecipientTag(finalTags, mailLocale);
 
     const profilePatch = {
       ...(firstName ? { first_name: firstName } : {}),
@@ -128,7 +130,8 @@ export async function POST(req: Request) {
       await supabase
         .from("subscribers")
         .update({
-          tags: finalTags,
+          tags: tagsWithLocale,
+          locale,
           status: "subscribed",
           consent: true,
           ...profilePatch,
@@ -146,7 +149,7 @@ export async function POST(req: Request) {
           phone: body.phone?.trim() || null,
           locale,
           source,
-          tags: finalTags,
+          tags: tagsWithLocale,
           consent: true,
         })
         .select("id")
@@ -176,7 +179,7 @@ export async function POST(req: Request) {
         const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
           "@/lib/automation/cancel"
         );
-        await cancelIneligibleAutomationDeliveriesForSubscriber(email, finalTags);
+        await cancelIneligibleAutomationDeliveriesForSubscriber(email, tagsWithLocale);
       } catch (err) {
         console.error("[subscribe] cancel ineligible automations:", err);
       }
@@ -192,7 +195,7 @@ export async function POST(req: Request) {
         phone: body.phone?.trim() || null,
         locale: mailLocale,
         subscriberId: subscriberId ?? null,
-        tags: finalTags,
+        tags: tagsWithLocale,
         priorTags: isNew ? undefined : priorTags,
         isNew,
         source,
@@ -228,7 +231,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      tags: finalTags,
+      tags: tagsWithLocale,
       interest: healthSegment,
       automation: automationReport,
     });

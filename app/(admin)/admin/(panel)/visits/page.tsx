@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { getVisitStats } from "@/lib/admin/visit-stats";
 import { parseStatsPeriod } from "@/lib/admin/stats-periods";
 import { VisitStatsDashboard } from "@/components/admin/visit-stats-dashboard";
-import { PeriodFilter } from "@/components/admin/period-filter";
+import { StatsToolbar } from "@/components/admin/stats-toolbar";
 import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function AdminVisitsPage({
         description="Колко човека влизат в сайта, откъде идват, кои страници гледат и колко стигат до записване и плащане."
       >
         <Suspense fallback={null}>
-          <PeriodFilter active={period} />
+          <StatsToolbar active={period} />
         </Suspense>
       </PageHeader>
       <VisitStatsDashboard stats={stats} />

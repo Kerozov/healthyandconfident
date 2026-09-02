@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, Pencil } from "lucide-react";
 import { getPosts } from "@/lib/admin/data";
 import { formatDate } from "@/lib/utils";
+import { PageHeaderActions } from "@/components/admin/page-header-actions";
 import { DeletePostButton } from "@/components/admin/delete-post-button";
 import { PublishPostButton } from "@/components/admin/publish-post-button";
 import { AdminButton, PageHeader, Badge, DataTable } from "@/components/admin/ui";
@@ -17,9 +18,11 @@ export default async function AdminBlogList() {
         title="Блог"
         description={`${posts.length} статии · BG & EN`}
         actions={
-          <AdminButton href="/admin/blog/new">
-            <Plus className="h-4 w-4" aria-hidden /> Нова статия
-          </AdminButton>
+          <PageHeaderActions>
+            <AdminButton href="/admin/blog/new">
+              <Plus className="h-4 w-4" aria-hidden /> Нова статия
+            </AdminButton>
+          </PageHeaderActions>
         }
       />
 

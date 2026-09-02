@@ -109,6 +109,7 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
         aria-label="Изглед на плащанията"
         active={tab}
         onChange={setTab}
+        contentId="payment-stats-panel"
         tabs={[
           { id: "overview", label: "Общо" },
           { id: "products", label: "Продукти", count: stats.products.length },
@@ -117,6 +118,7 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
         ]}
       />
 
+      <div id="payment-stats-panel">
       {tab === "overview" && (
         <div className="space-y-6">
           <Card title="Оборот по дни">
@@ -369,6 +371,8 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
           )}
         </DataTable>
       )}
+
+      </div>
     </div>
   );
 }

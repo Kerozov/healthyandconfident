@@ -24,6 +24,7 @@ import {
   addSubscriber,
   updateSubscriber,
   deleteSubscriber,
+  deleteSubscribers,
   importSubscribers,
   getSubscriberEngagementReport,
 } from "@/app/(admin)/admin/actions";
@@ -96,6 +97,7 @@ export function SubscribersManager({
     { line: number; reason: string }[]
   >([]);
   const [importNote, setImportNote] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [statsEmail, setStatsEmail] = useState<string | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsDetail, setStatsDetail] = useState<{
@@ -130,6 +132,78 @@ export function SubscribersManager({
       return true;
     });
   }, [subscribers, statusFilter, tagFilter, search, segments, groups]);
+
+  const selectedInView = useMemo(
+    () => filtered.filter((s) => selectedIds.has(s.id)),
+    [filtered, selectedIds],
+  );
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((s) => selectedIds.has(s.id));
+
+  const someFilteredSelected =
+    filtered.some((s) => selectedIds.has(s.id)) && !allFilteredSelected;
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllFiltered() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const s of filtered) next.add(s.id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelectAllFiltered() {
+    if (allFilteredSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const s of filtered) next.delete(s.id);
+        return next;
+      });
+      return;
+    }
+    selectAllFiltered();
+  }
+
+  function removeSelected() {
+    const targets = selectedInView;
+    if (targets.length === 0) return;
+    const preview = targets
+      .slice(0, 5)
+      .map((s) => s.email)
+      .join("\n");
+    const more =
+      targets.length > 5 ? `\n…и още ${targets.length - 5}` : "";
+    if (
+      !confirm(
+        `Изтриване на ${targets.length} абонат(а)?\n\n${preview}${more}`,
+      )
+    ) {
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await deleteSubscribers(targets.map((s) => s.id));
+      if (!res.ok) {
+        setError(res.message || "Delete failed");
+        return;
+      }
+      clearSelection();
+      router.refresh();
+    });
+  }
 
   const segmentKeySet = useMemo(
     () => new Set(assignableSegments(segments).map((s) => s.key)),
@@ -389,7 +463,8 @@ export function SubscribersManager({
           (comma or semicolon). Required: <strong>email</strong> (or{" "}
           <strong>Subscriber</strong> from Mailchimp exports). Optional: name, first_name,
           last_name, phone, facebook_url, locale, status, tags/segments, source, notes, consent,
-          created_at.
+          created_at. Mailchimp <strong>LOCATION</strong> (e.g. United States) sets locale to{" "}
+          <code className="text-xs">en</code> and adds the <code className="text-xs">en</code> tag.
         </p>
 
         <Field
@@ -603,6 +678,28 @@ export function SubscribersManager({
             <span className="pb-2.5 text-sm text-ink-soft">
               {filtered.length} result{filtered.length === 1 ? "" : "s"}
             </span>
+            {filtered.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={selectAllFiltered}
+                  disabled={pending || allFilteredSelected}
+                  className="inline-flex h-11 items-center rounded-full border border-ink/15 px-5 text-sm font-semibold hover:bg-ink/5 disabled:opacity-50"
+                >
+                  Избери всички ({filtered.length})
+                </button>
+                {selectedIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    disabled={pending}
+                    className="inline-flex h-11 items-center rounded-full border border-ink/15 px-5 text-sm font-semibold hover:bg-ink/5 disabled:opacity-50"
+                  >
+                    Изчисти избора ({selectedIds.size})
+                  </button>
+                )}
+              </>
+            )}
             <button
               onClick={() => exportSubscribersExcel(filtered)}
               className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-semibold hover:bg-ink/5"
@@ -618,10 +715,43 @@ export function SubscribersManager({
           </div>
         </div>
 
+        {selectedInView.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-coral-200 bg-coral-500/10 px-4 py-3">
+            <span className="text-sm font-medium text-coral-800">
+              Избрани: {selectedInView.length}
+              {selectedInView.length !== selectedIds.size
+                ? ` (от ${selectedIds.size} общо)`
+                : ""}
+            </span>
+            <button
+              type="button"
+              onClick={removeSelected}
+              disabled={pending}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-coral-600 px-4 text-sm font-semibold text-white hover:bg-coral-700 disabled:opacity-60"
+            >
+              <Trash2 className="h-4 w-4" />
+              Изтри избраните
+            </button>
+          </div>
+        )}
+
         <div className="mt-5 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
+                <th className="w-10 py-2 pr-2">
+                  <input
+                    type="checkbox"
+                    aria-label="Избери всички от филтъра"
+                    checked={allFilteredSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someFilteredSelected;
+                    }}
+                    onChange={toggleSelectAllFiltered}
+                    disabled={pending || filtered.length === 0}
+                    className="h-4 w-4 rounded border-ink/20"
+                  />
+                </th>
                 <th className="py-2 pr-4">Email</th>
                 <th className="py-2 pr-4">Name</th>
                 <th className="py-2 pr-4">Phone</th>
@@ -646,6 +776,16 @@ export function SubscribersManager({
                 return (
                   <Fragment key={s.id}>
                     <tr className="border-b border-ink/5">
+                      <td className="py-3 pr-2">
+                        <input
+                          type="checkbox"
+                          aria-label={`Избери ${s.email}`}
+                          checked={selectedIds.has(s.id)}
+                          onChange={() => toggleSelected(s.id)}
+                          disabled={pending}
+                          className="h-4 w-4 rounded border-ink/20"
+                        />
+                      </td>
                       <td className="py-3 pr-4 font-medium">{s.email}</td>
                       <td className="py-3 pr-4 text-ink-soft">
                         {[s.first_name, s.last_name].filter(Boolean).join(" ") || s.name || "—"}
@@ -817,7 +957,7 @@ export function SubscribersManager({
                     </tr>
                     {isStatsOpen && (
                       <tr className="border-b border-ink/5 bg-cream-2/30">
-                        <td colSpan={13} className="px-4 py-4">
+                        <td colSpan={14} className="px-4 py-4">
                           {statsLoading ? (
                             <p className="flex items-center gap-2 text-sm text-ink-soft">
                               <Loader2 className="h-4 w-4 animate-spin" /> Зареждане…

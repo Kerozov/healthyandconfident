@@ -859,7 +859,11 @@ export function AutomationsManager({
       <TabList
         aria-label="Изглед на автоматизациите"
         active={viewTab}
-        onChange={(id) => setViewTab(id as "list" | "flow")}
+        onChange={(id) => {
+          if (editingId) closeEditor();
+          setViewTab(id as "list" | "flow");
+        }}
+        contentId="automations-view-panel"
         tabs={[
           {
             id: "flow",
@@ -1521,7 +1525,7 @@ export function AutomationsManager({
         </WorkspaceEditor>
       )}
 
-      <div className="min-w-0 overflow-x-auto">
+      <div id="automations-view-panel" className="min-w-0 overflow-x-auto">
       {viewTab === "flow" ? (
         <Card title="Схема" className="min-w-0">
           <AutomationFlowView

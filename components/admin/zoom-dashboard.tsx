@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { AdminNavLink } from "@/components/admin/admin-navigation";
 import { formatDate, cn } from "@/lib/utils";
 import { formatMeetingLabel } from "@/lib/admin/zoom-display";
 import type {
@@ -239,12 +239,13 @@ function MeetingParticipantsPanel({
               : ""}
           </p>
         </div>
-        <Link
+        <AdminNavLink
           href={`/admin/contacts?meeting=${encodeURIComponent(summary.meetingId)}`}
+          showSpinner={false}
           className="rounded-lg bg-forest-600 px-4 py-2 text-sm font-semibold text-white hover:bg-forest-700"
         >
           Контакти от срещата
-        </Link>
+        </AdminNavLink>
       </div>
 
       {participants.length === 0 ? (
@@ -268,12 +269,13 @@ function MeetingParticipantsPanel({
                   <td className="py-2.5 pr-3 text-ink-soft">{i + 1}</td>
                   <td className="py-2.5 pr-3">
                     {p.contactId ? (
-                      <Link
+                      <AdminNavLink
                         href={`/admin/contacts/${p.contactId}`}
+                        showSpinner={false}
                         className="font-medium text-forest-700 hover:underline"
                       >
                         {p.email}
-                      </Link>
+                      </AdminNavLink>
                     ) : (
                       <span className="font-medium">{p.email}</span>
                     )}
@@ -306,12 +308,13 @@ function AttendeeMeetingsPanel({ attendee }: { attendee: ZoomAttendeeSummary }) 
         <strong>{attendee.meetings.length}</strong> срещи
       </p>
       {attendee.contactId && (
-        <Link
+        <AdminNavLink
           href={`/admin/contacts/${attendee.contactId}`}
+          showSpinner={false}
           className="mt-2 inline-block text-sm font-medium text-forest-700 hover:underline"
         >
           Отвори профила в контакти →
-        </Link>
+        </AdminNavLink>
       )}
 
       {attendee.meetings.length === 0 ? (
