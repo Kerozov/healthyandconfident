@@ -24,7 +24,6 @@ import {
   addSubscriber,
   updateSubscriber,
   deleteSubscriber,
-  deleteSubscribers,
   importSubscribers,
   getSubscriberEngagementReport,
 } from "@/app/(admin)/admin/actions";
@@ -77,7 +76,7 @@ export function SubscribersManager({
     total: number;
   } | null>(null);
 
-  const DELETE_CLIENT_BATCH = 75;
+  const DELETE_CLIENT_BATCH = 40;
 
   const [add, setAdd] = useState({
     email: "",
@@ -215,20 +214,39 @@ export function SubscribersManager({
     try {
       for (let i = 0; i < batches.length; i += 1) {
         const batch = batches[i];
-        const res = await deleteSubscribers(batch, {
-          revalidate: i === batches.length - 1,
+        const res = await fetch("/api/admin/subscribers/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: batch }),
         });
-        if (!res.ok) {
-          const message = res.message || "Изтриването неуспешно";
+
+        let data: { ok?: boolean; deleted?: number; message?: string } = {};
+        try {
+          data = (await res.json()) as typeof data;
+        } catch {
+          data = {};
+        }
+
+        if (!res.ok || !data.ok) {
+          const message =
+            data.message ||
+            (res.status === 401 || res.status === 403
+              ? "Няма достъп / сесията е изтекла. Презареди и влез отново."
+              : `Изтриването неуспешно (HTTP ${res.status})`);
           setError(
             totalDeleted > 0
               ? `${message} (изтрити ${totalDeleted} от ${ids.length})`
               : message,
           );
           window.alert(message);
+          if (totalDeleted > 0) {
+            clearSelection();
+            router.refresh();
+          }
           return;
         }
-        totalDeleted += res.deleted ?? batch.length;
+
+        totalDeleted += data.deleted ?? batch.length;
         setDeleteProgress({
           done: Math.min(totalDeleted, ids.length),
           total: ids.length,
@@ -247,6 +265,10 @@ export function SubscribersManager({
           : message,
       );
       window.alert(message);
+      if (totalDeleted > 0) {
+        clearSelection();
+        router.refresh();
+      }
     } finally {
       setBulkDeleting(false);
       setDeleteProgress(null);
