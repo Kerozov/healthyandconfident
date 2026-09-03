@@ -9,6 +9,7 @@ import { getFunnelBrandSyncStatus } from "@/lib/integrations/funnel-brand-sync";
 import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 export default async function AdminSubscribersPage() {
   const [subscribers, segments, groups, subscriberTags, funnelBrandStatus] =

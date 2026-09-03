@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin/auth";
+import { AdminAccessError, requireAdmin } from "@/lib/admin/auth";
 import { productPlacementKey } from "@/lib/site/product-placement";
 import { productPlacementLabel } from "@/lib/site/cta-placements";
 import { parseStripeIdInput } from "@/lib/stripe/parse-stripe-id";
@@ -57,6 +57,7 @@ import {
 } from "@/lib/campaign/sync-deliveries";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { deriveNewSubscribersOnly } from "@/lib/automation/subscriber-origins";
+import { chunkArray } from "@/lib/utils";
 import {
   normalizeAutomationTrigger,
   formSlugFromSource,
@@ -1291,49 +1292,64 @@ export async function deleteSubscriber(id: string): Promise<ActionResult> {
 
 export async function deleteSubscribers(
   ids: string[],
+  options?: { revalidate?: boolean },
 ): Promise<ActionResult & { deleted?: number }> {
   const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
   if (unique.length === 0) {
-    return { ok: false, message: "No subscribers selected." };
+    return { ok: false, message: "Няма избрани абонати." };
   }
 
-  await requireAdmin("subscribers", {
-    action: "delete",
-    summary: `Изтри ${unique.length} абонат(а)`,
-  });
+  try {
+    await requireAdmin("subscribers", {
+      action: "delete",
+      summary: `Изтри ${unique.length} абонат(а)`,
+    });
+  } catch (err) {
+    const message =
+      err instanceof AdminAccessError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : "Няма достъп за изтриване.";
+    return { ok: false, message };
+  }
 
+  const ID_CHUNK = 150;
   const supabase = getAdminClient();
-  const { data: rows, error: loadError } = await supabase
-    .from("subscribers")
-    .select("id, email")
-    .in("id", unique);
+  const subscribers: { id: string; email: string }[] = [];
 
-  if (loadError) return { ok: false, message: loadError.message };
+  for (const batch of chunkArray(unique, ID_CHUNK)) {
+    const { data: rows, error: loadError } = await supabase
+      .from("subscribers")
+      .select("id, email")
+      .in("id", batch);
 
-  const subscribers = (rows as { id: string; email: string }[] | null) ?? [];
-  if (subscribers.length === 0) {
-    return { ok: false, message: "Selected subscribers were not found." };
+    if (loadError) return { ok: false, message: loadError.message };
+    subscribers.push(
+      ...((rows as { id: string; email: string }[] | null) ?? []),
+    );
   }
 
-  const { cancelAllScheduledMailForSubscriber } = await import(
+  if (subscribers.length === 0) {
+    return { ok: false, message: "Избраните абонати не са намерени в базата." };
+  }
+
+  const { markScheduledMailCanceledForEmails } = await import(
     "@/lib/automation/cancel"
   );
+  await markScheduledMailCanceledForEmails(subscribers.map((row) => row.email));
 
-  for (const row of subscribers) {
-    await cancelAllScheduledMailForSubscriber(row.email);
+  for (const batch of chunkArray(
+    subscribers.map((row) => row.id),
+    ID_CHUNK,
+  )) {
+    const { error } = await supabase.from("subscribers").delete().in("id", batch);
+    if (error) return { ok: false, message: error.message };
   }
 
-  const { error } = await supabase
-    .from("subscribers")
-    .delete()
-    .in(
-      "id",
-      subscribers.map((row) => row.id),
-    );
-
-  if (error) return { ok: false, message: error.message };
-
-  revalidatePath("/admin/subscribers");
+  if (options?.revalidate !== false) {
+    revalidatePath("/admin/subscribers");
+  }
   return { ok: true, deleted: subscribers.length };
 }
 

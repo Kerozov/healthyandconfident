@@ -14,6 +14,13 @@ export function formatDate(date: string | Date, locale: string) {
   }).format(d);
 }
 
+/** Split arrays for PostgREST `.in()` filters (URL length limit). */
+export function chunkArray<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
 export function slugify(input: string) {
   const map: Record<string, string> = {
     а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ж: "zh", з: "z",

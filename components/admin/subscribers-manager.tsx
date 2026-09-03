@@ -38,7 +38,7 @@ import {
   parseSubscriberFile,
   type ImportSubscriberRow,
 } from "@/lib/admin/import-subscribers";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, chunkArray } from "@/lib/utils";
 import {
   ALL_HEALTH_TAG_KEYS,
   applyHealthSelectionToTags,
@@ -70,6 +70,14 @@ export function SubscribersManager({
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [successNote, setSuccessNote] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+
+  const DELETE_CLIENT_BATCH = 75;
 
   const [add, setAdd] = useState({
     email: "",
@@ -177,9 +185,9 @@ export function SubscribersManager({
     selectAllFiltered();
   }
 
-  function removeSelected() {
+  async function removeSelected() {
     const targets = selectedInView;
-    if (targets.length === 0) return;
+    if (targets.length === 0 || bulkDeleting) return;
     const preview = targets
       .slice(0, 5)
       .map((s) => s.email)
@@ -194,15 +202,55 @@ export function SubscribersManager({
       return;
     }
 
-    startTransition(async () => {
-      const res = await deleteSubscribers(targets.map((s) => s.id));
-      if (!res.ok) {
-        setError(res.message || "Delete failed");
-        return;
+    const ids = targets.map((s) => s.id);
+    const batches = chunkArray(ids, DELETE_CLIENT_BATCH);
+
+    setError(null);
+    setSuccessNote(null);
+    setBulkDeleting(true);
+    setDeleteProgress({ done: 0, total: ids.length });
+
+    let totalDeleted = 0;
+
+    try {
+      for (let i = 0; i < batches.length; i += 1) {
+        const batch = batches[i];
+        const res = await deleteSubscribers(batch, {
+          revalidate: i === batches.length - 1,
+        });
+        if (!res.ok) {
+          const message = res.message || "Изтриването неуспешно";
+          setError(
+            totalDeleted > 0
+              ? `${message} (изтрити ${totalDeleted} от ${ids.length})`
+              : message,
+          );
+          window.alert(message);
+          return;
+        }
+        totalDeleted += res.deleted ?? batch.length;
+        setDeleteProgress({
+          done: Math.min(totalDeleted, ids.length),
+          total: ids.length,
+        });
       }
+
+      setSuccessNote(`Изтрити ${totalDeleted} абонат(а).`);
       clearSelection();
       router.refresh();
-    });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Изтриването неуспешно";
+      setError(
+        totalDeleted > 0
+          ? `${message} (изтрити ${totalDeleted} от ${ids.length})`
+          : message,
+      );
+      window.alert(message);
+    } finally {
+      setBulkDeleting(false);
+      setDeleteProgress(null);
+    }
   }
 
   const segmentKeySet = useMemo(
@@ -716,22 +764,36 @@ export function SubscribersManager({
         </div>
 
         {selectedInView.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-coral-200 bg-coral-500/10 px-4 py-3">
-            <span className="text-sm font-medium text-coral-800">
-              Избрани: {selectedInView.length}
-              {selectedInView.length !== selectedIds.size
-                ? ` (от ${selectedIds.size} общо)`
-                : ""}
-            </span>
-            <button
-              type="button"
-              onClick={removeSelected}
-              disabled={pending}
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-coral-600 px-4 text-sm font-semibold text-white hover:bg-coral-700 disabled:opacity-60"
-            >
-              <Trash2 className="h-4 w-4" />
-              Изтри избраните
-            </button>
+          <div className="mt-4 rounded-xl border border-coral-200 bg-coral-500/10 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-coral-800">
+                Избрани: {selectedInView.length}
+                {selectedInView.length !== selectedIds.size
+                  ? ` (от ${selectedIds.size} общо)`
+                  : ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => void removeSelected()}
+                disabled={pending || bulkDeleting}
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-coral-600 px-4 text-sm font-semibold text-white hover:bg-coral-700 disabled:opacity-60"
+              >
+                {bulkDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                {bulkDeleting && deleteProgress
+                  ? `Изтриване ${deleteProgress.done}/${deleteProgress.total}…`
+                  : bulkDeleting
+                    ? "Изтриване…"
+                    : "Изтри избраните"}
+              </button>
+            </div>
+            {error && <p className="mt-2 text-sm text-coral-700">{error}</p>}
+            {successNote && (
+              <p className="mt-2 text-sm font-medium text-forest-700">{successNote}</p>
+            )}
           </div>
         )}
 

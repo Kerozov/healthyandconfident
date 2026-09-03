@@ -160,6 +160,131 @@ export async function cancelIneligibleAutomationDeliveriesForSubscriber(
   return { canceled, checked: rows.length, failed };
 }
 
+const EMAIL_BATCH = 150;
+
+/**
+ * Fast path for bulk delete — mark queued deliveries canceled in the DB only.
+ * Avoids per-job worker HTTP calls that can time out when deleting hundreds of rows.
+ */
+export async function markScheduledMailCanceledForEmails(
+  emails: string[],
+): Promise<void> {
+  const normalized = [
+    ...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean)),
+  ];
+  if (normalized.length === 0) return;
+
+  const supabase = getAdminClient();
+
+  for (let i = 0; i < normalized.length; i += EMAIL_BATCH) {
+    const batch = normalized.slice(i, i + EMAIL_BATCH);
+
+    const { data: contactRows } = await supabase
+      .from("contacts")
+      .select("id")
+      .in("email", batch);
+    const contactIds =
+      (contactRows as { id: string }[] | null)?.map((row) => row.id) ?? [];
+
+    await Promise.all([
+      supabase
+        .from("automation_deliveries")
+        .update({ status: "canceled" })
+        .in("email", batch)
+        .eq("status", "scheduled"),
+      supabase
+        .from("campaign_deliveries")
+        .update({ status: "canceled" })
+        .in("email", batch)
+        .eq("status", "scheduled"),
+      contactIds.length > 0
+        ? supabase
+            .from("contact_worker_jobs")
+            .update({ status: "canceled" })
+            .in("contact_id", contactIds)
+            .eq("status", "pending")
+        : Promise.resolve({ error: null }),
+    ]);
+  }
+}
+
+/** Bulk cancel queued mail before deleting many subscribers at once. */
+export async function cancelAllScheduledMailForSubscribers(
+  emails: string[],
+): Promise<{ failed: number }> {
+  const normalized = [
+    ...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean)),
+  ];
+  if (normalized.length === 0) return { failed: 0 };
+
+  if (normalized.length > 5) {
+    await markScheduledMailCanceledForEmails(normalized);
+    return { failed: 0 };
+  }
+
+  let failed = 0;
+  const supabase = getAdminClient();
+
+  for (let i = 0; i < normalized.length; i += EMAIL_BATCH) {
+    const batch = normalized.slice(i, i + EMAIL_BATCH);
+
+    const [{ data: autoRows }, { data: campRows }, { data: contactRows }] =
+      await Promise.all([
+        supabase
+          .from("automation_deliveries")
+          .select("id, worker_job_id, channel")
+          .in("email", batch)
+          .eq("status", "scheduled"),
+        supabase
+          .from("campaign_deliveries")
+          .select("id, worker_job_id")
+          .in("email", batch)
+          .eq("status", "scheduled"),
+        supabase.from("contacts").select("id").in("email", batch),
+      ]);
+
+    const auto =
+      (autoRows as { id: string; worker_job_id: string | null; channel: string }[] | null) ??
+      [];
+    const camp =
+      (campRows as { id: string; worker_job_id: string | null }[] | null) ?? [];
+
+    for (const row of auto) {
+      const ok = await cancelWorkerJob(row.worker_job_id, row.channel);
+      if (!ok) failed += 1;
+    }
+    for (const row of camp) {
+      const ok = await cancelWorkerJob(row.worker_job_id, "email");
+      if (!ok) failed += 1;
+    }
+
+    if (auto.length > 0) {
+      await supabase
+        .from("automation_deliveries")
+        .update({ status: "canceled" })
+        .in("email", batch)
+        .eq("status", "scheduled");
+    }
+    if (camp.length > 0) {
+      await supabase
+        .from("campaign_deliveries")
+        .update({ status: "canceled" })
+        .in("email", batch)
+        .eq("status", "scheduled");
+    }
+
+    const contacts = (contactRows as { id: string }[] | null) ?? [];
+    if (contacts.length > 0) {
+      const { cancelContactReminders } = await import("@/lib/notification-worker");
+      for (const contact of contacts) {
+        await cancelContactReminders(contact.id);
+      }
+    }
+  }
+
+  return { failed };
+}
+
 /** Cancel every pending worker job for this address (unsubscribe, admin opt-out). */
 export async function cancelAllScheduledAutomationDeliveriesForSubscriber(
   email: string,
