@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
+import { chunkArray } from "@/lib/utils";
 import type { Contact, ContactEvent } from "@/lib/contacts/types";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
 import type { FormField } from "@/lib/forms/types";
@@ -52,30 +53,39 @@ export async function getContactSummariesForEmails(
   emails: string[],
 ): Promise<Map<string, ContactSummary>> {
   const map = new Map<string, ContactSummary>();
-  const normalized = emails.map((e) => e.trim().toLowerCase()).filter(Boolean);
+  const normalized = [
+    ...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean)),
+  ];
   for (const email of normalized) {
     map.set(email, { ...EMPTY_CONTACT });
   }
   if (normalized.length === 0) return map;
 
   const supabase = getAdminClient();
-  const { data } = await supabase
-    .from("contacts")
-    .select(
-      "id, email, payment_status, paid_at, zoom_attended, zoom_total_minutes, zoom_last_joined_at, zoom_last_left_at",
-    )
-    .in("email", normalized);
+  for (const batch of chunkArray(normalized, 100)) {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select(
+        "id, email, payment_status, paid_at, zoom_attended, zoom_total_minutes, zoom_last_joined_at, zoom_last_left_at",
+      )
+      .in("email", batch);
 
-  for (const row of (data as Contact[] | null) ?? []) {
-    map.set(row.email.toLowerCase(), {
-      contactId: row.id,
-      paymentStatus: row.payment_status,
-      paidAt: row.paid_at,
-      zoomAttended: row.zoom_attended,
-      zoomTotalMinutes: row.zoom_total_minutes ?? 0,
-      zoomLastJoinedAt: row.zoom_last_joined_at,
-      zoomLastLeftAt: row.zoom_last_left_at,
-    });
+    if (error) {
+      console.error("[contacts] summaries:", error.message);
+      continue;
+    }
+
+    for (const row of (data as Contact[] | null) ?? []) {
+      map.set(row.email.toLowerCase(), {
+        contactId: row.id,
+        paymentStatus: row.payment_status,
+        paidAt: row.paid_at,
+        zoomAttended: row.zoom_attended,
+        zoomTotalMinutes: row.zoom_total_minutes ?? 0,
+        zoomLastJoinedAt: row.zoom_last_joined_at,
+        zoomLastLeftAt: row.zoom_last_left_at,
+      });
+    }
   }
 
   return map;

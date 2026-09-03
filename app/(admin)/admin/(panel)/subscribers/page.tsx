@@ -1,6 +1,8 @@
 import { getSubscribers, getSegments, getSegmentGroups, getSubscriberTags } from "@/lib/admin/data";
-import { getEngagementSummaryForEmails } from "@/lib/admin/engagement";
-import { getContactSummariesForEmails } from "@/lib/admin/person-profile";
+import {
+  getContactSummariesForEmails,
+  type ContactSummary,
+} from "@/lib/admin/person-profile";
 import { SubscribersManager } from "@/components/admin/subscribers-manager";
 import { SegmentsManager } from "@/components/admin/segments-manager";
 import { GroupsManager } from "@/components/admin/groups-manager";
@@ -9,7 +11,7 @@ import { getFunnelBrandSyncStatus } from "@/lib/integrations/funnel-brand-sync";
 import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export default async function AdminSubscribersPage() {
   const [subscribers, segments, groups, subscriberTags, funnelBrandStatus] =
@@ -21,14 +23,20 @@ export default async function AdminSubscribersPage() {
       getFunnelBrandSyncStatus(),
     ]);
 
-  const [engagementByEmail, contactByEmail] = await Promise.all([
-    getEngagementSummaryForEmails(subscribers.map((s) => s.email)).then((map) =>
-      Object.fromEntries(map),
-    ),
-    getContactSummariesForEmails(subscribers.map((s) => s.email)).then((map) =>
-      Object.fromEntries(map),
-    ),
-  ]);
+  // Contact payment/zoom only — chunked. Bulk engagement for every email
+  // times out on large lists (Vercel ERROR page). Per-person stats still load
+  // via the 📊 button.
+  let contactByEmail: Record<string, ContactSummary> = {};
+  try {
+    contactByEmail = Object.fromEntries(
+      await getContactSummariesForEmails(subscribers.map((s) => s.email)),
+    );
+  } catch (err) {
+    console.error(
+      "[admin/subscribers] contact summaries:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   return (
     <div>
@@ -45,7 +53,7 @@ export default async function AdminSubscribersPage() {
           segments={segments}
           groups={groups}
           subscriberTags={subscriberTags}
-          engagementByEmail={engagementByEmail}
+          engagementByEmail={{}}
           contactByEmail={contactByEmail}
         />
       </div>
