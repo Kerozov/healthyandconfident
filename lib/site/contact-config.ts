@@ -22,11 +22,15 @@ function fromRow(row: SiteContactConfig | null): SiteContactConfig {
   return {
     ...DEFAULT_SITE_CONTACT,
     ...row,
-    messenger_url: row.messenger_url.trim() || DEFAULT_SITE_CONTACT.messenger_url,
-    email: row.email.trim() || DEFAULT_SITE_CONTACT.email,
-    phone: row.phone.trim() || DEFAULT_SITE_CONTACT.phone,
-    phone_href: row.phone_href.trim() || DEFAULT_SITE_CONTACT.phone_href,
-    whatsapp_url: row.whatsapp_url.trim() || DEFAULT_SITE_CONTACT.whatsapp_url,
+    messenger_url:
+      (row.messenger_url ?? "").trim() || DEFAULT_SITE_CONTACT.messenger_url,
+    email: (row.email ?? "").trim() || DEFAULT_SITE_CONTACT.email,
+    phone: (row.phone ?? "").trim() || DEFAULT_SITE_CONTACT.phone,
+    phone_href:
+      (row.phone_href ?? "").trim() || DEFAULT_SITE_CONTACT.phone_href,
+    whatsapp_url:
+      (row.whatsapp_url ?? "").trim() || DEFAULT_SITE_CONTACT.whatsapp_url,
+    messenger_enabled: row.messenger_enabled ?? true,
   };
 }
 
