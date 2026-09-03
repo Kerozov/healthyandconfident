@@ -1,8 +1,4 @@
-import { getSubscribers, getSegments, getSegmentGroups, getSubscriberTags } from "@/lib/admin/data";
-import {
-  getContactSummariesForEmails,
-  type ContactSummary,
-} from "@/lib/admin/person-profile";
+import { getSubscribers, getSegments, getSegmentGroups } from "@/lib/admin/data";
 import { SubscribersManager } from "@/components/admin/subscribers-manager";
 import { SegmentsManager } from "@/components/admin/segments-manager";
 import { GroupsManager } from "@/components/admin/groups-manager";
@@ -14,29 +10,18 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export default async function AdminSubscribersPage() {
-  const [subscribers, segments, groups, subscriberTags, funnelBrandStatus] =
-    await Promise.all([
-      getSubscribers(),
-      getSegments(),
-      getSegmentGroups(),
-      getSubscriberTags(),
-      getFunnelBrandSyncStatus(),
-    ]);
+  const [subscribers, segments, groups, funnelBrandStatus] = await Promise.all([
+    getSubscribers(),
+    getSegments(),
+    getSegmentGroups(),
+    getFunnelBrandSyncStatus(),
+  ]);
 
-  // Contact payment/zoom only — chunked. Bulk engagement for every email
-  // times out on large lists (Vercel ERROR page). Per-person stats still load
-  // via the 📊 button.
-  let contactByEmail: Record<string, ContactSummary> = {};
-  try {
-    contactByEmail = Object.fromEntries(
-      await getContactSummariesForEmails(subscribers.map((s) => s.email)),
-    );
-  } catch (err) {
-    console.error(
-      "[admin/subscribers] contact summaries:",
-      err instanceof Error ? err.message : err,
-    );
-  }
+  const subscriberTags = [
+    ...new Set(
+      subscribers.flatMap((s) => s.tags ?? []).filter((t) => t && t !== "all"),
+    ),
+  ].sort();
 
   return (
     <div>
@@ -54,7 +39,7 @@ export default async function AdminSubscribersPage() {
           groups={groups}
           subscriberTags={subscriberTags}
           engagementByEmail={{}}
-          contactByEmail={contactByEmail}
+          contactByEmail={{}}
         />
       </div>
     </div>

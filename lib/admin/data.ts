@@ -18,24 +18,32 @@ import { fetchAllRows } from "@/lib/admin/stats-shared";
 
 export async function getDashboardStats() {
   const supabase = getAdminClient();
-  const [subs, posts, campaigns] = await Promise.all([
-    supabase.from("subscribers").select("id, status", { count: "exact", head: false }),
-    supabase.from("blog_posts").select("id, status", { count: "exact", head: false }),
-    supabase
-      .from("email_campaigns")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(5),
-  ]);
-
-  const subscribers = (subs.data as { status: string }[]) ?? [];
-  const allPosts = (posts.data as { status: string }[]) ?? [];
+  const [totalSubs, activeSubs, totalPosts, publishedPosts, campaigns] =
+    await Promise.all([
+      supabase
+        .from("subscribers")
+        .select("id", { count: "exact", head: true }),
+      supabase
+        .from("subscribers")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "subscribed"),
+      supabase.from("blog_posts").select("id", { count: "exact", head: true }),
+      supabase
+        .from("blog_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "published"),
+      supabase
+        .from("email_campaigns")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
 
   return {
-    totalSubscribers: subscribers.length,
-    activeSubscribers: subscribers.filter((s) => s.status === "subscribed").length,
-    totalPosts: allPosts.length,
-    publishedPosts: allPosts.filter((p) => p.status === "published").length,
+    totalSubscribers: totalSubs.count ?? 0,
+    activeSubscribers: activeSubs.count ?? 0,
+    totalPosts: totalPosts.count ?? 0,
+    publishedPosts: publishedPosts.count ?? 0,
     recentCampaigns: (campaigns.data as EmailCampaign[]) ?? [],
   };
 }
@@ -60,13 +68,32 @@ export async function getDashboardHighlights(): Promise<DashboardHighlights> {
   const supabase = getAdminClient();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [purchases, campaignSent, campaignOpened, autoSent, autoOpened] =
-    await Promise.all([
+  const empty: DashboardHighlights = {
+    revenueCents: 0,
+    currency: "GBP",
+    orders: 0,
+    emailsSent: 0,
+    emailsOpened: 0,
+    openRate: 0,
+    visitors: 0,
+    pageviews: 0,
+  };
+
+  try {
+    const [
+      purchases,
+      campaignSent,
+      campaignOpened,
+      autoSent,
+      autoOpened,
+      pageviews,
+    ] = await Promise.all([
       supabase
         .from("subscriber_purchases")
         .select("stripe_session_id, order_total_cents, amount_cents, currency")
         .eq("payment_status", "paid")
-        .gte("purchased_at", since),
+        .gte("purchased_at", since)
+        .limit(2000),
       supabase
         .from("campaign_deliveries")
         .select("id", { count: "exact", head: true })
@@ -91,57 +118,63 @@ export async function getDashboardHighlights(): Promise<DashboardHighlights> {
         .eq("channel", "email")
         .not("opened_at", "is", null)
         .gte("sent_at", since),
+      // Counts only — never pull every visit row (that timed out the admin).
+      supabase
+        .from("site_visits")
+        .select("id", { count: "exact", head: true })
+        .eq("event", "pageview")
+        .gte("created_at", since),
     ]);
 
-  const visitRows = await fetchAllRows<{ visitor_id: string }>((from, to) =>
-    supabase
-      .from("site_visits")
-      .select("visitor_id")
-      .eq("event", "pageview")
-      .gte("created_at", since)
-      .range(from, to),
-  );
+    const rows =
+      (purchases.data as {
+        stripe_session_id: string | null;
+        order_total_cents: number | null;
+        amount_cents: number | null;
+        currency: string | null;
+      }[] | null) ?? [];
 
-  const rows =
-    (purchases.data as {
-      stripe_session_id: string | null;
-      order_total_cents: number | null;
-      amount_cents: number | null;
-      currency: string | null;
-    }[] | null) ?? [];
+    const orderTotals = new Map<string, { cents: number; currency: string }>();
+    for (const row of rows) {
+      const key = row.stripe_session_id ?? `row-${orderTotals.size}`;
+      const cents = row.order_total_cents ?? row.amount_cents ?? 0;
+      const existing = orderTotals.get(key);
+      orderTotals.set(key, {
+        cents: Math.max(existing?.cents ?? 0, cents),
+        currency: (row.currency ?? existing?.currency ?? "gbp").toUpperCase(),
+      });
+    }
 
-  // One Stripe session = one order; the total repeats on every line.
-  const orderTotals = new Map<string, { cents: number; currency: string }>();
-  for (const row of rows) {
-    const key = row.stripe_session_id ?? crypto.randomUUID();
-    const cents = row.order_total_cents ?? row.amount_cents ?? 0;
-    const existing = orderTotals.get(key);
-    orderTotals.set(key, {
-      cents: Math.max(existing?.cents ?? 0, cents),
-      currency: (row.currency ?? existing?.currency ?? "gbp").toUpperCase(),
-    });
+    const currency = orderTotals.size
+      ? [...orderTotals.values()][0].currency
+      : "GBP";
+    const inCurrency = [...orderTotals.values()].filter(
+      (o) => o.currency === currency,
+    );
+
+    const emailsSent = (campaignSent.count ?? 0) + (autoSent.count ?? 0);
+    const emailsOpened = (campaignOpened.count ?? 0) + (autoOpened.count ?? 0);
+
+    return {
+      revenueCents: inCurrency.reduce((sum, o) => sum + o.cents, 0),
+      currency,
+      orders: inCurrency.length,
+      emailsSent,
+      emailsOpened,
+      openRate: emailsSent
+        ? Math.round((emailsOpened / emailsSent) * 1000) / 10
+        : 0,
+      // Exact unique visitors need a distinct query; pageview count is enough here.
+      pageviews: pageviews.count ?? 0,
+      visitors: pageviews.count ?? 0,
+    };
+  } catch (err) {
+    console.error(
+      "[dashboard] highlights:",
+      err instanceof Error ? err.message : err,
+    );
+    return empty;
   }
-
-  const currency = orderTotals.size
-    ? [...orderTotals.values()][0].currency
-    : "GBP";
-  const inCurrency = [...orderTotals.values()].filter((o) => o.currency === currency);
-
-  const emailsSent = (campaignSent.count ?? 0) + (autoSent.count ?? 0);
-  const emailsOpened = (campaignOpened.count ?? 0) + (autoOpened.count ?? 0);
-
-  return {
-    revenueCents: inCurrency.reduce((sum, o) => sum + o.cents, 0),
-    currency,
-    orders: inCurrency.length,
-    emailsSent,
-    emailsOpened,
-    openRate: emailsSent
-      ? Math.round((emailsOpened / emailsSent) * 1000) / 10
-      : 0,
-    pageviews: visitRows.length,
-    visitors: new Set(visitRows.map((r) => r.visitor_id)).size,
-  };
 }
 
 export async function getPosts(): Promise<BlogPost[]> {
@@ -165,13 +198,23 @@ export async function getSubscribers(filter?: {
   locale?: string;
 }): Promise<Subscriber[]> {
   const supabase = getAdminClient();
-  let q = supabase.from("subscribers").select("*").order("created_at", { ascending: false });
-  if (filter?.status)
-    q = q.eq("status", filter.status as Subscriber["status"]);
-  if (filter?.locale) q = q.eq("locale", filter.locale as Subscriber["locale"]);
-  if (filter?.tag && filter.tag !== "all") q = q.contains("tags", [filter.tag]);
-  const { data } = await q;
-  return (data as Subscriber[]) ?? [];
+  return fetchAllRows<Subscriber>(
+    (from, to) => {
+      let q = supabase
+        .from("subscribers")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(from, to);
+      if (filter?.status)
+        q = q.eq("status", filter.status as Subscriber["status"]);
+      if (filter?.locale)
+        q = q.eq("locale", filter.locale as Subscriber["locale"]);
+      if (filter?.tag && filter.tag !== "all")
+        q = q.contains("tags", [filter.tag]);
+      return q;
+    },
+    { pageSize: 500, maxPages: 20 },
+  );
 }
 
 export async function getSegmentGroups(): Promise<SegmentGroup[]> {

@@ -19,17 +19,49 @@ import type { AdminScreenKey } from "@/lib/admin/screens";
 import { AdminTextLink } from "@/components/admin/admin-text-link";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export default async function AdminDashboard() {
   const session = await getAdminSession();
   const can = (screen: AdminScreenKey) =>
     Boolean(session && sessionCanAccess(session, screen));
 
-  const [stats, highlights, team] = await Promise.all([
-    getDashboardStats(),
-    getDashboardHighlights(),
-    session?.role === "owner" ? getTeamOverview() : Promise.resolve(null),
-  ]);
+  let stats: Awaited<ReturnType<typeof getDashboardStats>>;
+  let highlights: Awaited<ReturnType<typeof getDashboardHighlights>>;
+  let team: Awaited<ReturnType<typeof getTeamOverview>> | null = null;
+
+  try {
+    const loaded = await Promise.all([
+      getDashboardStats(),
+      getDashboardHighlights(),
+      session?.role === "owner" ? getTeamOverview() : Promise.resolve(null),
+    ]);
+    stats = loaded[0];
+    highlights = loaded[1];
+    team = loaded[2];
+  } catch (err) {
+    console.error(
+      "[admin/dashboard]",
+      err instanceof Error ? err.message : err,
+    );
+    stats = {
+      totalSubscribers: 0,
+      activeSubscribers: 0,
+      totalPosts: 0,
+      publishedPosts: 0,
+      recentCampaigns: [],
+    };
+    highlights = {
+      revenueCents: 0,
+      currency: "GBP",
+      orders: 0,
+      emailsSent: 0,
+      emailsOpened: 0,
+      openRate: 0,
+      visitors: 0,
+      pageviews: 0,
+    };
+  }
 
   const cards = [
     {

@@ -7,7 +7,15 @@ export default async function AdminPanelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getAdminSession();
+  let session = null;
+  try {
+    session = await getAdminSession();
+  } catch (err) {
+    console.error(
+      "[admin/layout] session:",
+      err instanceof Error ? err.message : err,
+    );
+  }
   if (!session) {
     redirect("/admin/login");
   }
