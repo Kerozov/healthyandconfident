@@ -298,6 +298,7 @@ async function loadDeliveries(since: string | null): Promise<{
         "campaign_id, email, status, recipient_status, opened_at, delivered_at, click_count, sent_at",
       )
       .order("sent_at", { ascending: false })
+      .order("id", { ascending: false })
       .range(from, to);
     if (since) q = q.gte("sent_at", since);
     return q;
@@ -320,6 +321,7 @@ async function loadDeliveries(since: string | null): Promise<{
         "automation_id, email, channel, status, recipient_status, opened_at, delivered_at, click_count, sent_at",
       )
       .order("sent_at", { ascending: false })
+      .order("id", { ascending: false })
       .range(from, to);
     if (since) q = q.gte("sent_at", since);
     return q;
@@ -552,6 +554,7 @@ export async function getEmailStats(
           .from("email_link_clicks")
           .select("source_type, source_id, email, link_label, target_url, clicked_at")
           .order("clicked_at", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, to);
         if (range.since) q = q.gte("clicked_at", range.since);
         return q;
@@ -566,6 +569,7 @@ export async function getEmailStats(
         supabase
           .from("subscribers")
           .select("id, email, name, status, created_at")
+          .order("id", { ascending: true })
           .range(from, to),
       ),
     ]);

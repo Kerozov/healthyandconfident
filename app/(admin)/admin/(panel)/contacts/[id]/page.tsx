@@ -8,6 +8,8 @@ import { getContactZoomMeetings } from "@/lib/admin/zoom-stats";
 import { ContactDetailView } from "@/components/admin/contact-detail";
 
 export const dynamic = "force-dynamic";
+// Aggregates a large table — the platform default (seconds) cuts the report off.
+export const maxDuration = 60;
 
 export default async function AdminContactDetailPage({
   params,

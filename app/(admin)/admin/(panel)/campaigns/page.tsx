@@ -13,6 +13,8 @@ import { CampaignsWorkspace } from "@/components/admin/campaigns-workspace";
 import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
+// Aggregates a large table — the platform default (seconds) cuts the report off.
+export const maxDuration = 60;
 
 export default async function AdminCampaignsPage() {
   const [emailCampaigns, smsCampaigns, segments, groups, products, guides, forms, subscriberTags] =

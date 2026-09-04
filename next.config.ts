@@ -26,6 +26,12 @@ const zoomOwaspHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Server actions default to a 1 MB body. Subscriber imports are batched
+    // through /api/admin/subscribers/import instead, but the admin still posts
+    // long campaign and blog HTML through actions, and 1 MB is tight for those.
+    serverActions: { bodySizeLimit: "4mb" },
+  },
   images: {
     // Next 16 only optimises qualities listed here — 82 is what the site asks
     // for, and without it every photo falls back to an unoptimised response.

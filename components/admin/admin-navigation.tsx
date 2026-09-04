@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useState,
   useTransition,
 } from "react";
@@ -38,16 +37,17 @@ export function AdminNavigationProvider({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [requestedHref, setRequestedHref] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (!pending) setPendingHref(null);
-  }, [pathname, pending]);
+  // The spinner belongs to the in-flight transition, so derive it rather than
+  // clearing it from an effect — that left the spinner up for an extra frame
+  // (and forever, if the navigation resolved to the page we were already on).
+  const pendingHref = pending ? requestedHref : null;
 
   const navigate = useCallback(
     (href: string) => {
-      setPendingHref(href);
+      setRequestedHref(href);
       startTransition(() => {
         if (typeof window !== "undefined") {
           const target = new URL(href, window.location.origin);

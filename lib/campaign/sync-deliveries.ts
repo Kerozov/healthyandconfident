@@ -3,6 +3,8 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { getJobReport } from "@/lib/worker/email";
 import type { CampaignDelivery } from "@/lib/supabase/types";
+import { campaignClickTotal } from "@/lib/campaign/click-total";
+import { fetchAllRows } from "@/lib/admin/stats-shared";
 
 type CampaignDeliveryRow = {
   id: string;
@@ -84,15 +86,7 @@ export async function syncCampaignDeliveries(campaignId: string): Promise<number
     synced += 1;
   }
 
-  const { data: clickRows } = await supabase
-    .from("campaign_deliveries")
-    .select("click_count")
-    .eq("campaign_id", campaignId);
-
-  const clickedCount = ((clickRows as { click_count: number }[] | null) ?? []).reduce(
-    (sum, r) => sum + (r.click_count ?? 0),
-    0,
-  );
+  const clickedCount = await campaignClickTotal(campaignId);
 
   await supabase
     .from("email_campaigns")
@@ -106,13 +100,21 @@ export async function getCampaignClickCountsByEmail(
   campaignId: string,
 ): Promise<Map<string, number>> {
   const supabase = getAdminClient();
-  const { data } = await supabase
-    .from("campaign_deliveries")
-    .select("email, click_count")
-    .eq("campaign_id", campaignId);
+  // Paged — one response stops at 1000 deliveries, which left later recipients
+  // showing zero clicks in the per-person report.
+  const rows = await fetchAllRows<{ email: string; click_count: number | null }>(
+    (from, to) =>
+      supabase
+        .from("campaign_deliveries")
+        .select("email, click_count")
+        .eq("campaign_id", campaignId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    { pageSize: 1000, maxPages: 200 },
+  );
 
   const map = new Map<string, number>();
-  for (const row of (data as { email: string; click_count: number }[] | null) ?? []) {
+  for (const row of rows) {
     map.set(row.email.toLowerCase(), row.click_count ?? 0);
   }
   return map;

@@ -6,6 +6,8 @@ import { AutomationDiagnostics } from "@/components/admin/automation-diagnostics
 import { Alert, PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
+// Aggregates a large table — the platform default (seconds) cuts the report off.
+export const maxDuration = 60;
 
 export default async function AdminAutomationsPage() {
   const [automations, segments, groups, products, guides, forms] = await Promise.all([

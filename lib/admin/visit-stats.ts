@@ -175,6 +175,7 @@ export async function getVisitStats(period: StatsPeriod): Promise<VisitStatsOver
           "created_at, event, visitor_id, session_id, path, locale, referrer_host, utm_source, utm_campaign, source, device",
         )
         .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(from, to);
       if (fetchSince) q = q.gte("created_at", fetchSince);
       return q;
@@ -185,6 +186,7 @@ export async function getVisitStats(period: StatsPeriod): Promise<VisitStatsOver
         .select("stripe_session_id, purchased_at")
         .eq("payment_status", "paid")
         .order("purchased_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(from, to);
       if (fetchSince) q = q.gte("purchased_at", fetchSince);
       return q;

@@ -164,6 +164,7 @@ export async function getEngagementSummaryForEmails(
           .select("email, status, opened_at, click_count, recipient_status")
           .eq("channel", "email")
           .in("email", batch)
+          .order("id", { ascending: true })
           .range(from, to),
       ),
       fetchAllRows<DeliveryStatRow>((from, to) =>
@@ -171,6 +172,7 @@ export async function getEngagementSummaryForEmails(
           .from("campaign_deliveries")
           .select("email, status, opened_at, click_count, recipient_status")
           .in("email", batch)
+          .order("id", { ascending: true })
           .range(from, to),
       ),
     ]);

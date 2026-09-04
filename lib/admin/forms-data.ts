@@ -18,20 +18,31 @@ export async function getFormTemplates(): Promise<FormRow[]> {
   const forms = (data as FormTemplateRecord[]) ?? [];
   if (forms.length === 0) return [];
 
-  const ids = forms.map((f) => f.id);
-  const [{ data: subs }, { data: invs }] = await Promise.all([
-    supabase.from("form_submissions").select("form_id").in("form_id", ids),
-    supabase.from("form_invitations").select("form_id").in("form_id", ids),
-  ]);
+  // Counted in the database, one head request per form. Reading the rows back
+  // and counting them here stopped at PostgREST's 1000-row cap, so a popular
+  // form showed a total that quietly stopped growing.
+  const counts = await Promise.all(
+    forms.map(async (form) => {
+      const [subs, invs] = await Promise.all([
+        supabase
+          .from("form_submissions")
+          .select("id", { count: "exact", head: true })
+          .eq("form_id", form.id),
+        supabase
+          .from("form_invitations")
+          .select("id", { count: "exact", head: true })
+          .eq("form_id", form.id),
+      ]);
+      return {
+        id: form.id,
+        submissions: subs.count ?? 0,
+        invitations: invs.count ?? 0,
+      };
+    }),
+  );
 
-  const subCount = new Map<string, number>();
-  for (const row of (subs as { form_id: string }[] | null) ?? []) {
-    subCount.set(row.form_id, (subCount.get(row.form_id) ?? 0) + 1);
-  }
-  const invCount = new Map<string, number>();
-  for (const row of (invs as { form_id: string }[] | null) ?? []) {
-    invCount.set(row.form_id, (invCount.get(row.form_id) ?? 0) + 1);
-  }
+  const subCount = new Map(counts.map((c) => [c.id, c.submissions]));
+  const invCount = new Map(counts.map((c) => [c.id, c.invitations]));
 
   return forms.map((f) => ({
     ...f,

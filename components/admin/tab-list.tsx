@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,9 +22,14 @@ export function TabList({
   const panelId = contentId ?? `tab-panel-${fallbackId}`;
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Clear the switching spinner as soon as the new tab is the active one.
+  // Adjusting during render (rather than in an effect) means the spinner and
+  // the new panel appear in the same paint instead of one frame apart.
+  const [renderedActive, setRenderedActive] = useState(active);
+  if (renderedActive !== active) {
+    setRenderedActive(active);
     setSwitchingTo(null);
-  }, [active]);
+  }
 
   function select(id: string) {
     if (id === active) {

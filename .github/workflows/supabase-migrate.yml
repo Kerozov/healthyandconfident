@@ -44,10 +44,15 @@ jobs:
             first=true
             for f in supabase/migrations/[0-9]*_*.sql; do
               base=$(basename "$f" .sql)
-              case "$base" in
-                058_ci_test) continue ;;
-              esac
               version="${base%%_*}"
+              # Only migrations that predate this workflow were applied by hand:
+              # 001-057 plus the four-digit 0132/0142 in-betweens. Everything from
+              # 058 on must reach the database through `db push` — pre-recording a
+              # new file here would mark it applied and silently skip it.
+              case "$version" in
+                0[0-4][0-9]|05[0-7]|0[0-9][0-9][0-9]) ;;
+                *) continue ;;
+              esac
               name="${base#*_}"
               if [ "$first" = true ]; then
                 printf "  ('%s', '%s', ARRAY[]::text[])" "$version" "$name"

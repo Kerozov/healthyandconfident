@@ -6,6 +6,8 @@ import { ZoomLiveSettings } from "@/components/admin/zoom-live-settings";
 import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
+// Aggregates a large table — the platform default (seconds) cuts the report off.
+export const maxDuration = 60;
 
 export default async function AdminZoomPage() {
   const [overview, liveConfig] = await Promise.all([

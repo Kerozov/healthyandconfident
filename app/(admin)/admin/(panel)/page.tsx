@@ -1,110 +1,52 @@
-import { DashboardStatCard } from "@/components/admin/dashboard-stat-card";
-import { getDashboardStats, getDashboardHighlights } from "@/lib/admin/data";
-import {
-  Users,
-  FileText,
-  BarChart3,
-  CreditCard,
-  Eye,
-} from "lucide-react";
-import { formatMoney, formatNumber, formatPercent } from "@/lib/money";
-import { formatDate } from "@/lib/utils";
-import { PageHeader, Badge, DataTable, Alert } from "@/components/admin/ui";
-import { Card } from "@/components/admin/fields";
-import { AuditActivityList } from "@/components/admin/audit-activity-list";
 import { getAdminSession, sessionCanAccess } from "@/lib/admin/auth";
 import { getTeamOverview } from "@/lib/admin/team";
-import { formatAdminWhen } from "@/lib/admin/format-time";
-import type { AdminScreenKey } from "@/lib/admin/screens";
+import { PageHeader, Alert } from "@/components/admin/ui";
+import { Card } from "@/components/admin/fields";
+import { AuditActivityList } from "@/components/admin/audit-activity-list";
 import { AdminTextLink } from "@/components/admin/admin-text-link";
+import { formatAdminWhen } from "@/lib/admin/format-time";
+import {
+  DashboardOverviewPanel,
+  type DashboardAccess,
+} from "@/components/admin/dashboard-overview";
+import type { AdminScreenKey } from "@/lib/admin/screens";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
+/**
+ * The home screen renders from the session alone — every number and chart is
+ * fetched by the client from /api/admin/dashboard. A slow or failing report can
+ * no longer take the whole page down with it, and the refresh button re-runs
+ * just the report.
+ */
 export default async function AdminDashboard() {
   const session = await getAdminSession();
   const can = (screen: AdminScreenKey) =>
     Boolean(session && sessionCanAccess(session, screen));
 
-  let stats: Awaited<ReturnType<typeof getDashboardStats>>;
-  let highlights: Awaited<ReturnType<typeof getDashboardHighlights>>;
+  const access: DashboardAccess = {
+    visits: can("visits"),
+    payments: can("payments"),
+    engagement: can("engagement"),
+    subscribers: can("subscribers"),
+    blog: can("blog"),
+    campaigns: can("campaigns"),
+  };
+
+  const anyAccess = Object.values(access).some(Boolean);
+
   let team: Awaited<ReturnType<typeof getTeamOverview>> | null = null;
-
-  try {
-    const loaded = await Promise.all([
-      getDashboardStats(),
-      getDashboardHighlights(),
-      session?.role === "owner" ? getTeamOverview() : Promise.resolve(null),
-    ]);
-    stats = loaded[0];
-    highlights = loaded[1];
-    team = loaded[2];
-  } catch (err) {
-    console.error(
-      "[admin/dashboard]",
-      err instanceof Error ? err.message : err,
-    );
-    stats = {
-      totalSubscribers: 0,
-      activeSubscribers: 0,
-      totalPosts: 0,
-      publishedPosts: 0,
-      recentCampaigns: [],
-    };
-    highlights = {
-      revenueCents: 0,
-      currency: "GBP",
-      orders: 0,
-      emailsSent: 0,
-      emailsOpened: 0,
-      openRate: 0,
-      visitors: 0,
-      pageviews: 0,
-    };
+  if (session?.role === "owner") {
+    try {
+      team = await getTeamOverview();
+    } catch (err) {
+      console.error(
+        "[admin/dashboard] team:",
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
-
-  const cards = [
-    {
-      screen: "visits" as const,
-      label: "Посетители (30 дни)",
-      value: formatNumber(highlights.visitors),
-      sub: `${formatNumber(highlights.pageviews)} отворени страници`,
-      icon: Eye,
-      href: "/admin/visits",
-    },
-    {
-      screen: "payments" as const,
-      label: "Оборот (30 дни)",
-      value: formatMoney(highlights.revenueCents, highlights.currency),
-      sub: `${formatNumber(highlights.orders)} поръчки`,
-      icon: CreditCard,
-      href: "/admin/payments",
-    },
-    {
-      screen: "engagement" as const,
-      label: "Изпратени имейли (30 дни)",
-      value: formatNumber(highlights.emailsSent),
-      sub: `${formatPercent(highlights.openRate)} отваряемост`,
-      icon: BarChart3,
-      href: "/admin/engagement",
-    },
-    {
-      screen: "subscribers" as const,
-      label: "Активни абонати",
-      value: formatNumber(stats.activeSubscribers),
-      sub: `${formatNumber(stats.totalSubscribers)} общо`,
-      icon: Users,
-      href: "/admin/subscribers",
-    },
-    {
-      screen: "blog" as const,
-      label: "Публикувани статии",
-      value: formatNumber(stats.publishedPosts),
-      sub: `${formatNumber(stats.totalPosts)} общо`,
-      icon: FileText,
-      href: "/admin/blog",
-    },
-  ].filter((c) => can(c.screen));
 
   const others = (team?.profiles ?? []).filter((p) => p.role !== "owner");
 
@@ -126,19 +68,8 @@ export default async function AdminDashboard() {
         </Alert>
       ) : null}
 
-      {cards.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          {cards.map((c) => (
-            <DashboardStatCard
-              key={c.label}
-              href={c.href}
-              label={c.label}
-              value={c.value}
-              sub={c.sub}
-              icon={c.icon}
-            />
-          ))}
-        </div>
+      {anyAccess ? (
+        <DashboardOverviewPanel access={access} />
       ) : (
         <p className="rounded-2xl border border-ink/10 bg-white p-6 text-sm text-ink-soft">
           Нямаш достъп до обобщените числа. Отвори разрешените екрани от менюто вляво.
@@ -194,55 +125,6 @@ export default async function AdminDashboard() {
               empty="Все още няма записани действия."
             />
           </Card>
-        </section>
-      ) : null}
-
-      {can("campaigns") ? (
-        <section className="mt-10">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold text-ink">Скорошни кампании</h2>
-            <AdminTextLink
-              href="/admin/campaigns"
-              className="text-sm font-medium text-coral-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-500/35"
-            >
-              Виж всички
-            </AdminTextLink>
-          </div>
-
-          <DataTable
-            empty={
-              stats.recentCampaigns.length === 0 ? (
-                <p>Все още няма кампании.</p>
-              ) : undefined
-            }
-          >
-            {stats.recentCampaigns.length > 0 && (
-              <table className="w-full min-w-[36rem] text-sm">
-                <thead>
-                  <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft">
-                    <th className="p-4 font-semibold">Тема</th>
-                    <th className="p-4 font-semibold">Сегмент</th>
-                    <th className="p-4 font-semibold">Получатели</th>
-                    <th className="p-4 font-semibold">Статус</th>
-                    <th className="p-4 font-semibold">Дата</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.recentCampaigns.map((c) => (
-                    <tr key={c.id} className="border-b border-ink/5 last:border-0">
-                      <td className="p-4 font-medium text-ink">{c.subject}</td>
-                      <td className="p-4 text-ink-soft">{c.segment_tag}</td>
-                      <td className="p-4 text-ink-soft">{c.recipients_count}</td>
-                      <td className="p-4">
-                        <Badge tone="success">{c.status}</Badge>
-                      </td>
-                      <td className="p-4 text-ink-soft">{formatDate(c.created_at, "bg")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </DataTable>
         </section>
       ) : null}
     </div>

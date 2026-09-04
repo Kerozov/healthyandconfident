@@ -68,6 +68,14 @@ type SubscriberPurchase = {
   purchased_at: string;
 };
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 type TableShape<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -116,7 +124,18 @@ export type Database = {
       admin_audit_log: TableShape<AdminAuditLog>;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      /** Migration 060 — the whole admin dashboard aggregated in one call. */
+      admin_dashboard_overview: {
+        Args: { p_days: number };
+        Returns: Json;
+      };
+      /** Migration 061 — SUM(click_count) for one campaign, without paging. */
+      campaign_click_total: {
+        Args: { p_campaign_id: string };
+        Returns: number;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

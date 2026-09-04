@@ -368,27 +368,60 @@ export async function cancelAllScheduledMailForSubscriber(
   };
 }
 
-/** Cancel all pending worker jobs for an automation and mark deliveries canceled. */
+/**
+ * Cancel all pending worker jobs for an automation and mark deliveries canceled.
+ *
+ * Walks the queue with keyset paging on `id`. A single response stops at
+ * PostgREST's 1000-row cap, so turning off a busy automation used to leave every
+ * delivery past the first thousand scheduled — and they still went out. Offset
+ * paging would not do either: cancelling removes rows from the filter as we go,
+ * and a row the worker refuses to cancel keeps its `scheduled` status, so
+ * re-reading the first page forever is a live-lock. `id` only ever moves
+ * forward.
+ */
 export async function cancelAutomationScheduledJobs(
   automationId: string,
 ): Promise<{ canceled: number }> {
   const supabase = getAdminClient();
-  const { data } = await supabase
-    .from("automation_deliveries")
-    .select("id, worker_job_id, channel")
-    .eq("automation_id", automationId)
-    .eq("status", "scheduled")
-    .not("worker_job_id", "is", null);
+  const PAGE = 500;
 
   let canceled = 0;
+  let after: string | null = null;
 
-  for (const row of data ?? []) {
-    const ok = await cancelDeliveryRow({
-      id: row.id as string,
-      worker_job_id: row.worker_job_id as string | null,
-      channel: row.channel as string,
-    });
-    if (ok) canceled += 1;
+  for (let page = 0; page < 400; page += 1) {
+    let q = supabase
+      .from("automation_deliveries")
+      .select("id, worker_job_id, channel")
+      .eq("automation_id", automationId)
+      .eq("status", "scheduled")
+      .not("worker_job_id", "is", null)
+      .order("id", { ascending: true })
+      .limit(PAGE);
+    if (after) q = q.gt("id", after);
+
+    const { data, error } = await q;
+    if (error) {
+      console.error("[automation] cancel scheduled:", error.message);
+      break;
+    }
+
+    const rows =
+      (data as
+        | { id: string; worker_job_id: string | null; channel: string }[]
+        | null) ?? [];
+    if (rows.length === 0) break;
+
+    for (const row of rows) {
+      const ok = await cancelDeliveryRow({
+        id: row.id,
+        worker_job_id: row.worker_job_id,
+        channel: row.channel,
+      });
+      if (ok) canceled += 1;
+    }
+
+    after = rows[rows.length - 1].id;
+    if (rows.length < PAGE) break;
   }
 
   return { canceled };

@@ -157,7 +157,9 @@ async function loadZoomLeftRowsLegacy(): Promise<RawRow[]> {
     .order("created_at", { ascending: false })
     .limit(500);
 
-  return (data as RawRow[]) ?? [];
+  // The embed resolves through the contact_id FK at runtime; our hand-written
+  // Database type declares no relationships, so the cast goes via `unknown`.
+  return (data as unknown as RawRow[]) ?? [];
 }
 
 export async function getZoomOverview(): Promise<ZoomOverview> {

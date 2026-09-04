@@ -198,6 +198,7 @@ export async function getPaymentStats(
             "email, subscriber_id, product_id, stripe_product_id, stripe_session_id, payment_status, amount_cents, order_total_cents, currency, purchased_at",
           )
           .order("purchased_at", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, to),
       ),
       supabase.from("site_products").select("id, title_bg, title_en"),
@@ -212,6 +213,7 @@ export async function getPaymentStats(
         supabase
           .from("subscribers")
           .select("id, email, name, source, created_at")
+          .order("id", { ascending: true })
           .range(from, to),
       ),
       fetchAllRows<{ contact_id: string; created_at: string }>((from, to) => {
@@ -219,6 +221,7 @@ export async function getPaymentStats(
           .from("contact_events")
           .select("contact_id, created_at")
           .eq("event_type", "checkout_started")
+          .order("id", { ascending: true })
           .range(from, to);
         if (range.since) q = q.gte("created_at", range.since);
         return q;

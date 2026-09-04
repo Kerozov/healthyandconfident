@@ -24,7 +24,6 @@ import {
   addSubscriber,
   updateSubscriber,
   deleteSubscriber,
-  importSubscribers,
   getSubscriberEngagementReport,
 } from "@/app/(admin)/admin/actions";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
@@ -77,6 +76,8 @@ export function SubscribersManager({
   } | null>(null);
 
   const DELETE_CLIENT_BATCH = 40;
+  /** Matches IMPORT_BATCH_SIZE on the server. */
+  const IMPORT_CLIENT_BATCH = 50;
 
   const [add, setAdd] = useState({
     email: "",
@@ -104,6 +105,11 @@ export function SubscribersManager({
     { line: number; reason: string }[]
   >([]);
   const [importNote, setImportNote] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [statsEmail, setStatsEmail] = useState<string | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -406,21 +412,93 @@ export function SubscribersManager({
     }
   }
 
-  function runImport() {
+  /**
+   * Posts the parsed rows in batches.
+   *
+   * A single server action caps the request body at 1 MB, which is what made
+   * bigger spreadsheets fail with a "file too large" error. Batching keeps every
+   * request small and gives the import a progress bar instead of a long freeze.
+   */
+  async function runImport() {
     if (!importPreview?.length) return;
+
+    const rows = importPreview;
+    const batches = chunkArray(rows, IMPORT_CLIENT_BATCH);
+
     setImportNote(null);
-    startTransition(async () => {
-      const res = await importSubscribers({
-        rows: importPreview,
-        mergeSegments: true,
-      });
-      setImportNote(res.message ?? (res.ok ? "Done." : "Import failed."));
-      if (res.ok) {
-        setImportPreview(null);
-        setImportSkipped([]);
-        router.refresh();
+    setImporting(true);
+    setImportProgress({ done: 0, total: rows.length });
+
+    let created = 0;
+    let updated = 0;
+    let failed = 0;
+    let firstError: string | null = null;
+    let processed = 0;
+
+    try {
+      for (const batch of batches) {
+        const res = await fetch("/api/admin/subscribers/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: batch, mergeSegments: true }),
+        });
+
+        let data: {
+          ok?: boolean;
+          created?: number;
+          updated?: number;
+          failed?: number;
+          errors?: string[];
+          message?: string;
+        } = {};
+        try {
+          data = (await res.json()) as typeof data;
+        } catch {
+          data = {};
+        }
+
+        created += data.created ?? 0;
+        updated += data.updated ?? 0;
+        failed += data.failed ?? 0;
+        if (!firstError) firstError = data.errors?.[0] ?? null;
+
+        if (!res.ok || !data.ok) {
+          const message =
+            data.message ||
+            (res.status === 401 || res.status === 403
+              ? "Няма достъп / сесията е изтекла. Презареди и влез отново."
+              : `Импортът спря (HTTP ${res.status}).`);
+          setImportNote(
+            `${message} Записани ${created + updated} от ${rows.length} реда — пусни файла отново, за да продължиш.`,
+          );
+          router.refresh();
+          return;
+        }
+
+        processed += batch.length;
+        setImportProgress({ done: processed, total: rows.length });
       }
-    });
+
+      const total = created + updated;
+      setImportNote(
+        `Импортирани ${total} абонат(а): ${created} нови, ${updated} обновени` +
+          (failed ? `, ${failed} с грешка${firstError ? ` (${firstError})` : ""}` : "") +
+          ".",
+      );
+      setImportPreview(null);
+      setImportSkipped([]);
+      router.refresh();
+    } catch (err) {
+      setImportNote(
+        `${err instanceof Error ? err.message : "Импортът не беше завършен."} Записани ${
+          created + updated
+        } от ${rows.length} реда.`,
+      );
+      router.refresh();
+    } finally {
+      setImporting(false);
+      setImportProgress(null);
+    }
   }
 
   return (
@@ -535,6 +613,7 @@ export function SubscribersManager({
           last_name, phone, facebook_url, locale, status, tags/segments, source, notes, consent,
           created_at. Mailchimp <strong>LOCATION</strong> (e.g. United States) sets locale to{" "}
           <code className="text-xs">en</code> and adds the <code className="text-xs">en</code> tag.
+          Големи файлове минават на части — няма ограничение за размера.
         </p>
 
         <Field
@@ -558,7 +637,7 @@ export function SubscribersManager({
               type="file"
               accept=".xlsx,.xls,.csv"
               className="sr-only"
-              disabled={pending}
+              disabled={pending || importing}
               onChange={(e) => {
                 void handleImportFile(e.target.files?.[0] ?? null);
                 e.target.value = "";
@@ -575,17 +654,45 @@ export function SubscribersManager({
           {importPreview && importPreview.length > 0 && (
             <button
               type="button"
-              onClick={runImport}
-              disabled={pending}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
+              onClick={() => void runImport()}
+              disabled={pending || importing}
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:cursor-wait disabled:opacity-60"
             >
-              <Upload className="h-4 w-4" />
+              {importing ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
               Import {importPreview.length} row{importPreview.length === 1 ? "" : "s"}
             </button>
           )}
         </div>
 
-        {importPreview && importPreview.length > 0 && (
+        {importProgress && (
+          <div className="mt-4" role="status" aria-live="polite">
+            <div className="flex items-baseline justify-between gap-3 text-sm text-ink-soft">
+              <span>Импортиране…</span>
+              <span className="[font-variant-numeric:tabular-nums]">
+                {importProgress.done} / {importProgress.total}
+              </span>
+            </div>
+            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-forest-100">
+              <div
+                className="h-full rounded-full bg-forest-600 transition-[width]"
+                style={{
+                  width: `${Math.round(
+                    (importProgress.done / Math.max(1, importProgress.total)) * 100,
+                  )}%`,
+                }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-ink-soft">
+              Не затваряй страницата, докато лентата не стигне до края.
+            </p>
+          </div>
+        )}
+
+        {importPreview && importPreview.length > 0 && !importProgress && (
           <p className="mt-3 text-sm text-forest-600">
             Ready: {importPreview.length} subscriber
             {importPreview.length === 1 ? "" : "s"}

@@ -30,6 +30,9 @@ import { checkSmsCompose } from "@/lib/sms/compose-validation";
 import { runAutomations } from "@/lib/automation/send";
 import { applyEnglishRecipientTag } from "@/i18n/subscriber-locale";
 import { ensureSubscriberSegmentKeys } from "@/lib/segments/ensure";
+import { fetchAllRows } from "@/lib/admin/stats-shared";
+import { importSubscriberBatch } from "@/lib/admin/import-run";
+import type { ImportSubscriberRow } from "@/lib/admin/import-subscribers";
 import { buildBrandedEmail } from "@/lib/email/compose";
 import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
 import { footerConfigFromRow } from "@/lib/email/footer-defaults";
@@ -67,7 +70,7 @@ import {
 } from "@/lib/automation/form-conditions";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
 import type { Automation, AutomationDelivery, SiteCtaPlacement, SiteSectionKey, SiteProduct } from "@/lib/supabase/types";
-import { slugify } from "@/lib/utils";
+import { slugify, chunkArray } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { expandAudienceKeys, isDescendantGroup } from "@/lib/segments/hierarchy";
@@ -885,17 +888,22 @@ export async function resendAutomationToNonOpeners(
     };
   }
 
-  const { data: subs } = await supabase
-    .from("subscribers")
-    .select("email, locale, name")
-    .in("email", emails);
+  // Chunked for the same reason as the filter above, and indexed by e-mail — a
+  // linear `find` per recipient was quadratic over a few thousand non-openers.
+  const localeByEmail = new Map<string, string>();
+  for (const batch of chunkArray(emails, 200)) {
+    const { data: subs } = await supabase
+      .from("subscribers")
+      .select("email, locale, name")
+      .in("email", batch);
+    for (const sub of (subs as { email: string; locale: string }[] | null) ?? []) {
+      localeByEmail.set(sub.email.trim().toLowerCase(), sub.locale);
+    }
+  }
 
   const byLocale = new Map<"bg" | "en", string[]>();
   for (const email of emails) {
-    const sub = (subs as { email: string; locale: string }[] | null)?.find(
-      (s) => s.email === email,
-    );
-    const locale = sub?.locale === "en" ? "en" : "bg";
+    const locale = localeByEmail.get(email) === "en" ? "en" : "bg";
     const list = byLocale.get(locale) ?? [];
     list.push(email);
     byLocale.set(locale, list);
@@ -1033,21 +1041,7 @@ export async function addSubscriber(input: {
 }
 
 export async function importSubscribers(input: {
-  rows: {
-    email: string;
-    name?: string;
-    first_name?: string;
-    last_name?: string;
-    phone?: string;
-    facebook_url?: string;
-    locale?: "bg" | "en";
-    status?: "subscribed" | "unsubscribed";
-    segments?: string[];
-    source?: string;
-    notes?: string;
-    consent?: boolean;
-    created_at?: string;
-  }[];
+  rows: ImportSubscriberRow[];
   mergeSegments?: boolean;
 }): Promise<
   ActionResult & {
@@ -1058,150 +1052,36 @@ export async function importSubscribers(input: {
   }
 > {
   await requireAdmin("subscribers", { action: "import", summary: "Импортира абонати" });
-  const supabase = getAdminClient();
-  const mergeSegments = input.mergeSegments !== false;
 
-  await ensureSubscriberSegmentKeys(
-    input.rows.flatMap((row) => row.segments ?? []).filter(Boolean),
-  );
-
-  let created = 0;
-  let updated = 0;
-  let failed = 0;
-  const errors: string[] = [];
-
-  for (const row of input.rows) {
-    const email = row.email.trim().toLowerCase();
-    if (!email) continue;
-
-    const tags = Array.from(
-      new Set((row.segments ?? []).map((t) => t.trim()).filter(Boolean)),
-    );
-    const locale = (row.locale === "en" ? "en" : "bg") as "bg" | "en";
-
-    try {
-      const { data: existingRow } = await supabase
-        .from("subscribers")
-        .select("id, tags, source, consent, created_at")
-        .eq("email", email)
-        .maybeSingle();
-      const existing = existingRow as {
-        id: string;
-        tags: string[];
-        source: string;
-        consent: boolean;
-        created_at: string;
-      } | null;
-
-      const mergedTags = applyEnglishRecipientTag(
-        existing && mergeSegments
-          ? Array.from(new Set([...(existing.tags as string[]), ...tags]))
-          : tags,
-        locale,
-      );
-
-      const name =
-        row.name?.trim() ||
-        [row.first_name?.trim(), row.last_name?.trim()]
-          .filter(Boolean)
-          .join(" ") ||
-        null;
-
-      const payload = {
-        email,
-        name,
-        first_name: row.first_name?.trim() || null,
-        last_name: row.last_name?.trim() || null,
-        phone: row.phone?.trim() || null,
-        facebook_url: row.facebook_url?.trim() || null,
-        locale,
-        status: (row.status === "unsubscribed"
-          ? "unsubscribed"
-          : "subscribed") as "subscribed" | "unsubscribed",
-        source: row.source?.trim() || existing?.source || "import",
-        tags: mergedTags,
-        notes: row.notes?.trim() || null,
-        consent: row.consent ?? existing?.consent ?? true,
-        ...( !existing && row.created_at ? { created_at: row.created_at } : {}),
-      };
-
-      const { error } = await supabase
-        .from("subscribers")
-        .upsert(payload, { onConflict: "email" });
-
-      if (error) {
-        failed += 1;
-        if (errors.length < 5) errors.push(`${email}: ${error.message}`);
-        continue;
-      }
-
-      if (existing) updated += 1;
-      else created += 1;
-
-      if (payload.status === "subscribed") {
-        const isNew = !existing;
-        const { data: row } = await supabase
-          .from("subscribers")
-          .select("id")
-          .eq("email", email)
-          .maybeSingle();
-
-        if (!isNew) {
-          const { cancelIneligibleAutomationDeliveriesForSubscriber } =
-            await import("@/lib/automation/cancel");
-          await cancelIneligibleAutomationDeliveriesForSubscriber(
-            email,
-            mergedTags,
-          );
-        }
-
-        void runAutomations({
-          email,
-          name: payload.name,
-          phone: payload.phone,
-          locale: payload.locale,
-          subscriberId: (row as { id: string } | null)?.id ?? null,
-          tags: mergedTags,
-          priorTags: existing ? ((existing.tags as string[]) ?? []) : undefined,
-          isNew,
-          source: "import",
-        });
-      } else if (existing) {
-        const { cancelAllScheduledMailForSubscriber } =
-          await import("@/lib/automation/cancel");
-        await cancelAllScheduledMailForSubscriber(email);
-      }
-    } catch (err) {
-      failed += 1;
-      if (errors.length < 5) {
-        errors.push(
-          `${email}: ${err instanceof Error ? err.message : "Import failed"}`,
-        );
-      }
-    }
-  }
+  // Large files go through /api/admin/subscribers/import in batches — a server
+  // action body is capped at 1 MB. This path stays for small, in-place imports.
+  const result = await importSubscriberBatch(input.rows, {
+    mergeSegments: input.mergeSegments !== false,
+  });
 
   revalidatePath("/admin/subscribers");
 
-  const total = created + updated;
-  if (total === 0 && failed > 0) {
+  const total = result.created + result.updated;
+  if (total === 0 && result.failed > 0) {
     return {
       ok: false,
-      message: errors[0] ?? "Import failed.",
-      created,
-      updated,
-      failed,
-      errors,
+      message: result.message ?? "Import failed.",
+      created: result.created,
+      updated: result.updated,
+      failed: result.failed,
+      errors: result.errors,
     };
   }
 
   return {
     ok: true,
-    message: `Imported ${total} subscriber(s): ${created} new, ${updated} updated${failed ? `, ${failed} failed` : ""}.`,
-    created,
-    updated,
-    failed,
-    errors: errors.length ? errors : undefined,
+    message: `Imported ${total} subscriber(s): ${result.created} new, ${result.updated} updated${
+      result.failed ? `, ${result.failed} failed` : ""
+    }.`,
+    created: result.created,
+    updated: result.updated,
+    failed: result.failed,
+    errors: result.errors.length ? result.errors : undefined,
   };
 }
 
@@ -1544,16 +1424,42 @@ function uniqueNormalized(values: string[]): string[] {
   return [...new Set(values.map((value) => value.trim().toLowerCase()).filter(Boolean))];
 }
 
+type AudienceRow = { email: string; phone: string | null };
+
+/**
+ * Every subscribed recipient matching the filter.
+ *
+ * PostgREST caps a single response at 1000 rows, so a plain `select()` here
+ * silently addressed only the first thousand people — campaigns and SMS blasts
+ * reached a fraction of the list and the preview under-reported it. Paging with
+ * a unique `email` sort keeps the page boundaries stable; `created_at` is not
+ * unique (a bulk import writes one timestamp for the whole batch) and would let
+ * rows repeat or vanish between pages.
+ */
+async function loadAudienceRows(
+  locale: "bg" | "en" | undefined,
+  overlapTags: string[] | null,
+): Promise<AudienceRow[]> {
+  const supabase = getAdminClient();
+  return fetchAllRows<AudienceRow>(
+    (from, to) => {
+      let q = supabase
+        .from("subscribers")
+        .select("email, phone")
+        .eq("status", "subscribed")
+        .order("email", { ascending: true })
+        .range(from, to);
+      if (locale) q = q.eq("locale", locale);
+      if (overlapTags) q = q.overlaps("tags", overlapTags);
+      return q;
+    },
+    { pageSize: 1000, maxPages: 200 },
+  );
+}
+
 async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> {
   const supabase = getAdminClient();
   const locale = input.locale || undefined;
-
-  let q = supabase
-    .from("subscribers")
-    .select("email, phone")
-    .eq("status", "subscribed");
-
-  if (locale) q = q.eq("locale", locale);
 
   if (input.mode === "tags") {
     const tags = (input.tags ?? []).map((t) => t.trim()).filter(Boolean);
@@ -1566,9 +1472,7 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
         target_tags: [],
       };
     }
-    q = q.overlaps("tags", tags);
-    const { data } = await q;
-    const rows = (data as { email: string; phone: string | null }[]) ?? [];
+    const rows = await loadAudienceRows(locale, tags);
     return {
       emails: uniqueNormalized(rows.map((r) => r.email)),
       phones: uniqueNormalized(rows.map((r) => r.phone || "")),
@@ -1583,8 +1487,7 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
   const hasSelection = segmentKeys.length > 0 || groupIds.length > 0;
 
   if (!hasSelection && (input.segment_key || "all") === "all") {
-    const { data } = await q;
-    const rows = (data as { email: string; phone: string | null }[]) ?? [];
+    const rows = await loadAudienceRows(locale, null);
     return {
       emails: uniqueNormalized(rows.map((r) => r.email)),
       phones: uniqueNormalized(rows.map((r) => r.phone || "")),
@@ -1619,9 +1522,7 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
   ];
   const includesGroups = groupIds.length > 0;
 
-  q = q.overlaps("tags", filtered);
-  const { data } = await q;
-  const rows = (data as { email: string; phone: string | null }[]) ?? [];
+  const rows = await loadAudienceRows(locale, filtered);
   return {
     emails: uniqueNormalized(rows.map((r) => r.email)),
     phones: uniqueNormalized(rows.map((r) => r.phone || "")),

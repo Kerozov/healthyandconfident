@@ -32,14 +32,68 @@ function meetingIdFrom(body: ZoomWebhookBody): string {
  * Zoom meeting webhook.
  * Events: meeting/webinar started/ended + participant joined/left.
  */
+/**
+ * Zoom signs every delivery: `v0:<timestamp>:<raw body>` HMAC-SHA256, compared
+ * against the `x-zm-signature` header.
+ *
+ * Without this check anyone who learned the URL could POST fake
+ * `participant_joined` events and mark contacts as having attended. Verification
+ * is skipped only when no secret is configured, so an install that never set
+ * ZOOM_WEBHOOK_SECRET keeps working exactly as before — it just says so in the
+ * logs.
+ */
+async function signatureValid(
+  req: Request,
+  rawBody: string,
+  secret: string,
+): Promise<boolean> {
+  const signature = req.headers.get("x-zm-signature");
+  const timestamp = req.headers.get("x-zm-request-timestamp");
+  if (!signature || !timestamp) return false;
+
+  // Reject replays of a capture older than 5 minutes.
+  const age = Math.abs(Date.now() / 1000 - Number(timestamp));
+  if (!Number.isFinite(age) || age > 300) return false;
+
+  const crypto = await import("crypto");
+  const expected =
+    "v0=" +
+    crypto
+      .createHmac("sha256", secret)
+      .update(`v0:${timestamp}:${rawBody}`)
+      .digest("hex");
+
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signature);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 export async function POST(req: Request) {
   const secret = process.env.ZOOM_WEBHOOK_SECRET?.trim();
+
+  const rawBody = await req.text();
   let body: ZoomWebhookBody;
 
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody) as ZoomWebhookBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (secret) {
+    // The URL-validation handshake is signed too, but Zoom sends it before the
+    // endpoint is trusted, so it is checked below on its own terms.
+    if (
+      body.event !== "endpoint.url_validation" &&
+      !(await signatureValid(req, rawBody, secret))
+    ) {
+      console.warn("[zoom/webhook] rejected: bad or missing signature");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+  } else {
+    console.warn(
+      "[zoom/webhook] ZOOM_WEBHOOK_SECRET is not set — events are accepted unverified.",
+    );
   }
 
   if (body.event === "endpoint.url_validation" && secret) {

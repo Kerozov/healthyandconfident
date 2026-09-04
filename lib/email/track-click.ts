@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { ClickSourceType } from "@/lib/email/click-token";
+import { campaignClickTotal } from "@/lib/campaign/click-total";
 
 export async function recordEmailLinkClick(input: {
   sourceType: ClickSourceType;
@@ -68,15 +69,7 @@ export async function recordEmailLinkClick(input: {
       .eq("id", delivery.id);
   }
 
-  const { data: agg } = await supabase
-    .from("campaign_deliveries")
-    .select("click_count")
-    .eq("campaign_id", input.sourceId);
-
-  const clickedCount = ((agg as { click_count: number }[] | null) ?? []).reduce(
-    (sum, row) => sum + (row.click_count ?? 0),
-    0,
-  );
+  const clickedCount = await campaignClickTotal(input.sourceId);
 
   await supabase
     .from("email_campaigns")
