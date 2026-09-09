@@ -10,6 +10,7 @@ import {
   CONTACT_LINK_ICON_OPTIONS,
   CONTACT_LINK_LIMIT,
   newContactLink,
+  normalizeContactHref,
   parseContactLinks,
   type ContactLinkIcon,
   type SiteContactLink,
@@ -35,26 +36,54 @@ export function SiteContactPanel({ config }: { config: SiteContactConfig }) {
     setSaved(false);
   }
 
-  function setLinks(next: SiteContactLink[]) {
-    set("extra_links", next);
+  // Always derive from the latest state: a link edit that lands before the
+  // previous re-render must not overwrite a reorder, an add or another link.
+  function updateLinks(fn: (links: SiteContactLink[]) => SiteContactLink[]) {
+    setForm((prev) => ({ ...prev, extra_links: fn(prev.extra_links) }));
+    setSaved(false);
   }
 
   function updateLink(id: string, patch: Partial<SiteContactLink>) {
-    setLinks(
-      form.extra_links.map((link) => (link.id === id ? { ...link, ...patch } : link)),
+    updateLinks((links) =>
+      links.map((link) => (link.id === id ? { ...link, ...patch } : link)),
     );
   }
 
-  function moveLink(index: number, delta: number) {
-    const target = index + delta;
-    if (target < 0 || target >= form.extra_links.length) return;
-    const next = [...form.extra_links];
-    [next[index], next[target]] = [next[target], next[index]];
-    setLinks(next);
+  function addLink() {
+    updateLinks((links) =>
+      links.length >= CONTACT_LINK_LIMIT ? links : [...links, newContactLink()],
+    );
+  }
+
+  function removeLink(id: string) {
+    updateLinks((links) => links.filter((link) => link.id !== id));
+  }
+
+  function moveLink(id: string, delta: number) {
+    updateLinks((links) => {
+      const index = links.findIndex((link) => link.id === id);
+      const target = index + delta;
+      if (index < 0 || target < 0 || target >= links.length) return links;
+      const next = [...links];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   function save() {
     setError(null);
+    // A link with a name but no usable address is dropped on write — say so
+    // instead of reporting "Запазено" over a link that silently disappears.
+    const invalid = form.extra_links.find(
+      (link) =>
+        (link.label || link.text || link.href) && !normalizeContactHref(link.href),
+    );
+    if (invalid) {
+      setError(
+        `Линкът „${invalid.label || invalid.text || "без име"}“ няма валиден адрес.`,
+      );
+      return;
+    }
     startTransition(async () => {
       const res = await saveSiteContactConfig(form);
       if (!res.ok) {
@@ -136,7 +165,7 @@ export function SiteContactPanel({ config }: { config: SiteContactConfig }) {
             </div>
             <button
               type="button"
-              onClick={() => setLinks([...form.extra_links, newContactLink()])}
+              onClick={addLink}
               disabled={form.extra_links.length >= CONTACT_LINK_LIMIT}
               className="inline-flex h-9 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium text-ink hover:bg-ink/5 disabled:opacity-50"
             >
@@ -162,7 +191,7 @@ export function SiteContactPanel({ config }: { config: SiteContactConfig }) {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => moveLink(index, -1)}
+                        onClick={() => moveLink(link.id, -1)}
                         disabled={index === 0}
                         aria-label="Нагоре"
                         className="rounded-lg p-1.5 text-ink-soft hover:bg-ink/5 disabled:opacity-30"
@@ -171,7 +200,7 @@ export function SiteContactPanel({ config }: { config: SiteContactConfig }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => moveLink(index, 1)}
+                        onClick={() => moveLink(link.id, 1)}
                         disabled={index === form.extra_links.length - 1}
                         aria-label="Надолу"
                         className="rounded-lg p-1.5 text-ink-soft hover:bg-ink/5 disabled:opacity-30"
@@ -180,9 +209,7 @@ export function SiteContactPanel({ config }: { config: SiteContactConfig }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() =>
-                          setLinks(form.extra_links.filter((l) => l.id !== link.id))
-                        }
+                        onClick={() => removeLink(link.id)}
                         aria-label="Изтрий"
                         className="rounded-lg p-1.5 text-red-600 hover:bg-red-50"
                       >
