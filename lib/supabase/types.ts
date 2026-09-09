@@ -1,4 +1,5 @@
 import type { EmailSignatureLink } from "@/lib/email/signature-links";
+import type { SiteContactLink } from "@/lib/site/contact-links";
 
 export type Locale = "bg" | "en";
 
@@ -549,5 +550,6 @@ export type SiteContactConfig = {
   phone: string;
   phone_href: string;
   whatsapp_url: string;
+  extra_links: SiteContactLink[];
   updated_at: string;
 };

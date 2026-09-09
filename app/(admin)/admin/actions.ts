@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { AdminAccessError, requireAdmin } from "@/lib/admin/auth";
 import { productPlacementKey } from "@/lib/site/product-placement";
+import {
+  serializeContactLinks,
+  type SiteContactLink,
+} from "@/lib/site/contact-links";
 import { productPlacementLabel } from "@/lib/site/cta-placements";
 import { parseStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { enrichStripePriceFromProduct } from "@/lib/stripe/sync-product";
@@ -246,6 +250,7 @@ export async function saveSiteContactConfig(input: {
   phone: string;
   phone_href: string;
   whatsapp_url: string;
+  extra_links?: SiteContactLink[];
 }): Promise<ActionResult> {
   await requireAdmin("website", { action: "save", summary: "Обнови контакти на сайта" });
   const supabase = getAdminClient();
@@ -263,6 +268,7 @@ export async function saveSiteContactConfig(input: {
     phone: input.phone.trim(),
     phone_href: input.phone_href.trim(),
     whatsapp_url: input.whatsapp_url.trim(),
+    extra_links: serializeContactLinks(input.extra_links ?? []),
     updated_at: new Date().toISOString(),
   };
 

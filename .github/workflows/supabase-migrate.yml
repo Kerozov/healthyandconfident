@@ -69,3 +69,38 @@ jobs:
 
       - name: Apply pending migrations
         run: supabase db push --yes
+
+      # A migration that is recorded but never ran is invisible: the workflow
+      # goes green while the schema is unchanged. Fail the push instead.
+      - name: Verify every migration is applied
+        run: |
+          set -euo pipefail
+          {
+            echo "do \$\$"
+            echo "declare missing text;"
+            echo "begin"
+            echo "  select string_agg(l.version, ', ' order by l.version) into missing"
+            echo "  from (values"
+            first=true
+            for f in supabase/migrations/[0-9]*_*.sql; do
+              base=$(basename "$f" .sql)
+              version="${base%%_*}"
+              if [ "$first" = true ]; then
+                printf "    ('%s')" "$version"
+                first=false
+              else
+                printf ",\n    ('%s')" "$version"
+              fi
+            done
+            echo
+            echo "  ) as l(version)"
+            echo "  left join supabase_migrations.schema_migrations m on m.version = l.version"
+            echo "  where m.version is null;"
+            echo "  if missing is not null then"
+            echo "    raise exception 'Migrations never reached the database: %', missing;"
+            echo "  end if;"
+            echo "end"
+            echo "\$\$;"
+          } > /tmp/verify.sql
+          cat /tmp/verify.sql
+          supabase db query --linked -f /tmp/verify.sql

@@ -5,6 +5,11 @@ import type { SiteContactConfig } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { MessengerIcon } from "@/components/site/messenger-widget";
+import { ContactLinkIconGlyph } from "@/components/site/contact-link-icon";
+import {
+  isExternalContactHref,
+  visibleContactLinks,
+} from "@/lib/site/contact-links";
 
 export function Contact({
   dict,
@@ -16,6 +21,7 @@ export function Contact({
   contactConfig: SiteContactConfig;
 }) {
   const { contact } = dict;
+  const extraLinks = visibleContactLinks(contactConfig.extra_links);
   return (
     <section
       id="contact"
@@ -92,6 +98,33 @@ export function Contact({
                 </p>
               </div>
             </a>
+
+            {extraLinks.map((link) => {
+              const external = isExternalContactHref(link.href);
+              return (
+                <a
+                  key={link.id}
+                  href={link.href}
+                  target={external ? "_blank" : undefined}
+                  rel={external ? "noopener noreferrer" : undefined}
+                  className="group flex items-center gap-4 rounded-xl border border-slate-600/50 bg-slate-700/30 p-5 transition-colors hover:bg-slate-700/50"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700/60 text-gold-400">
+                    <ContactLinkIconGlyph name={link.icon} className="h-6 w-6" />
+                  </span>
+                  <div>
+                    {link.label && (
+                      <p className="text-xs uppercase tracking-wider text-slate-400">
+                        {link.label}
+                      </p>
+                    )}
+                    <p className="font-medium text-white transition-colors group-hover:text-gold-400">
+                      {link.text || link.label}
+                    </p>
+                  </div>
+                </a>
+              );
+            })}
           </div>
         </div>
       </Container>

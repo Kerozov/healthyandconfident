@@ -6,6 +6,11 @@ import type { SiteContactConfig } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/lib/site";
 import { MessengerIcon } from "@/components/site/messenger-widget";
+import { ContactLinkIconGlyph } from "@/components/site/contact-link-icon";
+import {
+  isExternalContactHref,
+  visibleContactLinks,
+} from "@/lib/site/contact-links";
 
 export function Footer({
   locale,
@@ -17,6 +22,7 @@ export function Footer({
   contactConfig: SiteContactConfig;
 }) {
   const { contact } = dict;
+  const extraLinks = visibleContactLinks(contactConfig.extra_links);
   return (
     <footer className="bg-slate-800 text-slate-200">
       <Container className="py-12 sm:py-16">
@@ -64,6 +70,21 @@ export function Footer({
               >
                 <MessageCircle className="h-4 w-4" /> {contact.whatsappLabel}
               </a>
+              {extraLinks.map((link) => {
+                const external = isExternalContactHref(link.href);
+                return (
+                  <a
+                    key={link.id}
+                    href={link.href}
+                    target={external ? "_blank" : undefined}
+                    rel={external ? "noopener noreferrer" : undefined}
+                    className="flex items-center gap-3 text-slate-300 transition-colors hover:text-gold-400"
+                  >
+                    <ContactLinkIconGlyph name={link.icon} className="h-4 w-4 shrink-0" />{" "}
+                    {link.text || link.label}
+                  </a>
+                );
+              })}
             </div>
           </div>
 

@@ -5,6 +5,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { getPublicClient } from "@/lib/supabase/public";
 import type { SiteContactConfig } from "@/lib/supabase/types";
 import { siteConfig } from "@/lib/site";
+import { parseContactLinks } from "@/lib/site/contact-links";
 
 export const DEFAULT_SITE_CONTACT: SiteContactConfig = {
   id: "00000000-0000-0000-0000-000000000000",
@@ -14,6 +15,7 @@ export const DEFAULT_SITE_CONTACT: SiteContactConfig = {
   phone: siteConfig.phone,
   phone_href: siteConfig.phoneHref,
   whatsapp_url: siteConfig.whatsapp,
+  extra_links: [],
   updated_at: new Date(0).toISOString(),
 };
 
@@ -31,6 +33,7 @@ function fromRow(row: SiteContactConfig | null): SiteContactConfig {
     whatsapp_url:
       (row.whatsapp_url ?? "").trim() || DEFAULT_SITE_CONTACT.whatsapp_url,
     messenger_enabled: row.messenger_enabled ?? true,
+    extra_links: parseContactLinks(row.extra_links),
   };
 }
 
