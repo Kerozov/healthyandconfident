@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -39,10 +40,13 @@ export function useMenuPopup(): MenuPopupContextValue {
 export function MenuPopupProvider({
   locale,
   copy,
+  segmentTag,
   children,
 }: {
   locale: Locale;
   copy: MenuPopupCopy;
+  /** Admin-configured "Save to segment" from /admin/popup — additional tag on top of `free-menu`. */
+  segmentTag?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -51,6 +55,11 @@ export function MenuPopupProvider({
   const { tryOpenPlacement } = useOfferPopup();
 
   const storageKey = `hc_popup_${locale}`;
+
+  const baseTags = useMemo(() => {
+    const extra = (segmentTag ?? "").trim();
+    return extra && extra !== "all" ? ["free-menu", extra] : ["free-menu"];
+  }, [segmentTag]);
 
   const openMenuPopup = useCallback(
     (nextSource = "menu-popup") => {
@@ -143,7 +152,7 @@ export function MenuPopupProvider({
                 <SubscribeForm
                   locale={locale}
                   source={source}
-                  baseTags={["free-menu"]}
+                  baseTags={baseTags}
                   consent={copy.consent}
                   success={copy.success}
                   buttonLabel={copy.button}

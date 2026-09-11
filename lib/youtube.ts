@@ -36,3 +36,28 @@ export function youtubeEmbedUrl(url: string): string | null {
   if (!id) return null;
   return `https://www.youtube-nocookie.com/embed/${id}`;
 }
+
+export function youtubeThumbnailUrl(
+  videoId: string,
+  quality: "maxresdefault" | "hqdefault" = "maxresdefault",
+): string {
+  return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+}
+
+/**
+ * Resolves the best available YouTube thumbnail for a video url/id.
+ * Not every video has a maxres thumbnail — YouTube serves a 120x90 grey
+ * placeholder for those instead of a 404, so we probe the real image size
+ * client-side and fall back to hqdefault (always present) when it's missing.
+ */
+export function resolveYoutubeThumbnail(videoId: string): Promise<string> {
+  return new Promise((resolve) => {
+    const probe = new Image();
+    probe.onload = () => {
+      const isPlaceholder = probe.naturalWidth <= 120 && probe.naturalHeight <= 90;
+      resolve(youtubeThumbnailUrl(videoId, isPlaceholder ? "hqdefault" : "maxresdefault"));
+    };
+    probe.onerror = () => resolve(youtubeThumbnailUrl(videoId, "hqdefault"));
+    probe.src = youtubeThumbnailUrl(videoId, "maxresdefault");
+  });
+}

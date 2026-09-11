@@ -27,6 +27,7 @@ import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { EmailAttachmentPicker } from "@/components/admin/email-attachment-picker";
+import { parseYoutubeVideoId, resolveYoutubeThumbnail } from "@/lib/youtube";
 import {
   EmailBlockEditor,
   type BlockEditorContext,
@@ -106,6 +107,9 @@ export function EmailBuilder({
   const [paletteAt, setPaletteAt] = useState<number | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubePending, setYoutubePending] = useState(false);
+  const [youtubeError, setYoutubeError] = useState<string | null>(null);
   const emitted = useRef(value);
 
   // The body is owned by the parent form, so re-parse only when it changes
@@ -145,6 +149,24 @@ export function EmailBuilder({
     const next = [...blocks];
     next.splice(index + 1, 0, duplicateEmailBlock(blocks[index]));
     commit(next);
+  }
+
+  async function applyYoutubeThumbnail() {
+    if (!onHeroImageChange) return;
+    const videoId = parseYoutubeVideoId(youtubeUrl);
+    if (!videoId) {
+      setYoutubeError("Невалиден YouTube линк.");
+      return;
+    }
+    setYoutubeError(null);
+    setYoutubePending(true);
+    try {
+      const url = await resolveYoutubeThumbnail(videoId);
+      onHeroImageChange(url);
+      setYoutubeUrl("");
+    } finally {
+      setYoutubePending(false);
+    }
   }
 
   function cancelDrag() {
@@ -192,6 +214,46 @@ export function EmailBuilder({
             previewFit="contain"
             className={disabled ? "pointer-events-none opacity-60" : undefined}
           />
+
+          <div className="mt-3 border-t border-ink/10 pt-3">
+            <label className="mb-1.5 block text-sm font-medium text-ink">
+              Или от YouTube линк
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="url"
+                inputMode="url"
+                placeholder="https://youtube.com/watch?v=…"
+                value={youtubeUrl}
+                disabled={disabled || youtubePending}
+                onChange={(e) => {
+                  setYoutubeUrl(e.target.value);
+                  setYoutubeError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void applyYoutubeThumbnail();
+                  }
+                }}
+                className="min-w-0 flex-1 rounded-xl border border-ink/15 bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-soft/50 focus:border-forest-400 focus:ring-2 focus:ring-forest-400/20"
+              />
+              <button
+                type="button"
+                disabled={disabled || youtubePending || !youtubeUrl.trim()}
+                onClick={() => void applyYoutubeThumbnail()}
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-ink/15 bg-white px-4 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
+              >
+                {youtubePending ? "Зареждане…" : "Вземи кадър"}
+              </button>
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">
+              Взима кадъра (thumbnail) на видеото и го слага като банер отгоре.
+            </p>
+            {youtubeError && (
+              <p className="mt-1.5 text-xs text-coral-600">{youtubeError}</p>
+            )}
+          </div>
         </div>
       )}
 

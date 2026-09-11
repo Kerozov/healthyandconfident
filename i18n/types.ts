@@ -157,6 +157,7 @@ export type Dictionary = {
     messengerText: string;
     phoneLabel: string;
     whatsappLabel: string;
+    whatsappText: string;
     cta: string;
   };
   events: {

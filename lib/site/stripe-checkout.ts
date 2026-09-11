@@ -31,6 +31,7 @@ function beginCheckoutTracking(contentIds: string[]): string {
 export async function startGuideCheckout(guideId: string, locale: Locale): Promise<void> {
   const metaEvent = beginCheckoutTracking([guideId]);
   const ids = metaBrowserIds();
+  const tab = window.open("", "_blank", "noopener,noreferrer");
 
   const res = await fetch("/api/checkout", {
     method: "POST",
@@ -47,10 +48,15 @@ export async function startGuideCheckout(guideId: string, locale: Locale): Promi
 
   const data = (await res.json()) as { url?: string; message?: string };
   if (!res.ok || !data.url) {
+    tab?.close();
     throw new Error(data.message ?? "Checkout failed");
   }
 
-  window.location.href = data.url;
+  if (tab) {
+    tab.location.href = data.url;
+  } else {
+    window.location.href = data.url;
+  }
 }
 
 export async function startStripeCheckout(
@@ -59,6 +65,7 @@ export async function startStripeCheckout(
 ): Promise<void> {
   const metaEvent = beginCheckoutTracking(productIds);
   const ids = metaBrowserIds();
+  const tab = window.open("", "_blank", "noopener,noreferrer");
 
   const res = await fetch("/api/checkout", {
     method: "POST",
@@ -75,10 +82,15 @@ export async function startStripeCheckout(
 
   const data = (await res.json()) as { url?: string; message?: string };
   if (!res.ok || !data.url) {
+    tab?.close();
     throw new Error(data.message ?? "Checkout failed");
   }
 
-  window.location.href = data.url;
+  if (tab) {
+    tab.location.href = data.url;
+  } else {
+    window.location.href = data.url;
+  }
 }
 
 export async function startPlacementCheckout(
@@ -87,6 +99,7 @@ export async function startPlacementCheckout(
 ): Promise<void> {
   const metaEvent = beginCheckoutTracking([placementKey]);
   const ids = metaBrowserIds();
+  const tab = window.open("", "_blank", "noopener,noreferrer");
 
   const res = await fetch("/api/checkout", {
     method: "POST",
@@ -103,10 +116,15 @@ export async function startPlacementCheckout(
 
   const data = (await res.json()) as { url?: string; message?: string };
   if (!res.ok || !data.url) {
+    tab?.close();
     throw new Error(data.message ?? "Checkout failed");
   }
 
-  window.location.href = data.url;
+  if (tab) {
+    tab.location.href = data.url;
+  } else {
+    window.location.href = data.url;
+  }
 }
 
 /**

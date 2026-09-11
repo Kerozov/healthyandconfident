@@ -360,6 +360,7 @@ export const en: Dictionary = {
     messengerText: "Message us",
     phoneLabel: "Mobile (Viber / WhatsApp)",
     whatsappLabel: "Viber / WhatsApp",
+    whatsappText: "Message us",
     cta: "See the programs",
   },
   events: {

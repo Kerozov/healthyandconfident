@@ -94,7 +94,7 @@ export function Contact({
                   {contact.whatsappLabel}
                 </p>
                 <p className="font-medium text-white transition-colors group-hover:text-gold-400">
-                  {contactConfig.phone}
+                  {contact.whatsappText}
                 </p>
               </div>
             </a>

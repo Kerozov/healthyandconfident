@@ -23,6 +23,7 @@ import { SiteAnalytics } from "@/components/site/site-analytics";
 import { MenuPopupProvider } from "@/components/site/menu-popup";
 import { HashScroll } from "@/components/site/hash-scroll";
 import { OfferPopupProvider } from "@/components/site/offer-popup";
+import { getPopupSegmentTag } from "@/lib/site/popup-config";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -90,11 +91,12 @@ export default async function SiteLayout({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
-  const [dict, site, contactConfig, metaPixel] = await Promise.all([
+  const [dict, site, contactConfig, metaPixel, popupSegmentTag] = await Promise.all([
     getDictionary(l),
     getPublicSiteContent(),
     getSiteContactConfig(),
     getMetaPixelPublicConfig(),
+    getPopupSegmentTag(l),
   ]);
 
   return (
@@ -117,6 +119,7 @@ export default async function SiteLayout({
               consent: dict.leadMagnet.consent,
               success: dict.leadMagnet.success,
             }}
+            segmentTag={popupSegmentTag}
           >
             <HashScroll />
             <SiteHeader locale={l} items={dict.nav.items} cta={dict.nav.cta} />

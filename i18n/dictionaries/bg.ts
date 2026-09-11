@@ -359,6 +359,7 @@ export const bg: Dictionary = {
     messengerText: "пиши ни",
     phoneLabel: "Мобилен (Viber / WhatsApp)",
     whatsappLabel: "Viber / WhatsApp",
+    whatsappText: "пиши ни",
     cta: "Виж програмите",
   },
   events: {
