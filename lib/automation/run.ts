@@ -466,6 +466,7 @@ async function scheduleAutomation(
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
     heroImageUrl,
     recipient: { email, subscriberId: ctx.subscriberId },
+    includeSignature: automation.signature_enabled !== false,
   });
 
   const res = await scheduleEmail({
@@ -591,6 +592,7 @@ async function sendAutomationNow(
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
     heroImageUrl,
     recipient: { email, subscriberId: ctx.subscriberId },
+    includeSignature: automation.signature_enabled !== false,
   });
 
   const res = await sendEmail({ subject, html, recipients: [email], attachments });

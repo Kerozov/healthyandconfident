@@ -83,6 +83,7 @@ export async function prepareEmailAutomationJob(
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
     heroImageUrl,
     recipient: { email, subscriberId: ctx.subscriberId },
+    includeSignature: automation.signature_enabled !== false,
   });
 
   const sendAt = computeAutomationSendAt(automation);

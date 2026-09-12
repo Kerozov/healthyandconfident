@@ -51,6 +51,7 @@ export function CampaignComposer({
     attachment_path: "",
     attachment_filename: "",
     hero_image_url: "",
+    signature_enabled: true,
     audience: { ...EMPTY_AUDIENCE } as AudienceInput,
     scheduled_at: "",
   });
@@ -77,6 +78,7 @@ export function CampaignComposer({
         attachment_path: email.attachment_path || undefined,
         attachment_filename: email.attachment_filename || undefined,
         hero_image_url: email.hero_image_url || undefined,
+        signature_enabled: email.signature_enabled,
       });
       setResult(res);
       if (res.ok) {
@@ -88,6 +90,7 @@ export function CampaignComposer({
           attachment_path: "",
           attachment_filename: "",
           hero_image_url: "",
+          signature_enabled: true,
           audience: { ...EMPTY_AUDIENCE },
           scheduled_at: "",
         });
@@ -245,6 +248,27 @@ export function CampaignComposer({
                   </div>
                 </div>
               )}
+            </WorkspacePanel>
+
+            <WorkspacePanel title="Подпис">
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={email.signature_enabled}
+                  onChange={(e) =>
+                    setEmail({ ...email, signature_enabled: e.target.checked })
+                  }
+                  className="h-4 w-4 rounded border-ink/20 text-coral-500 focus:ring-coral-500"
+                />
+                <span className="text-sm font-medium text-ink">
+                  Включи личния подпис в края на имейла
+                </span>
+              </label>
+              <p className="mt-2 text-xs text-ink-soft/80">
+                Изключи, ако тази кампания не трябва да показва подписа от
+                „Email подпис“ настройките — останалата част от футъра се
+                показва както обикновено.
+              </p>
             </WorkspacePanel>
 
             <WorkspacePanel title="Аудитория">

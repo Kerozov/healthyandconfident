@@ -185,6 +185,8 @@ export type Automation = {
   hero_image_url_en: string | null;
   sms_bg: string;
   sms_en: string;
+  /** Include the global email signature block for this automation's sends. */
+  signature_enabled: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -281,6 +283,8 @@ export type EmailCampaign = {
   attachment_path: string | null;
   attachment_filename: string | null;
   hero_image_url: string | null;
+  /** Include the global email signature block in this campaign's send. */
+  signature_enabled: boolean;
 };
 
 export type AudienceMode = "segment" | "tags";

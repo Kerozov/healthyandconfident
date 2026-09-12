@@ -16,6 +16,8 @@ export async function buildBrandedEmail(input: {
   footerConfig?: EmailFooterConfig | null;
   heroImageUrl?: string | null;
   recipient?: { email: string; subscriberId?: string | null };
+  /** Force the signature block off for this send, regardless of the global setting. */
+  includeSignature?: boolean;
 }): Promise<string> {
   const locale = input.locale ?? "bg";
   const body = input.vars
@@ -32,11 +34,14 @@ export async function buildBrandedEmail(input: {
   const recipient =
     input.recipient ??
     (input.vars?.email ? { email: input.vars.email } : undefined);
-  const footerConfig = await withSignatureFormInvites(
+  let footerConfig = await withSignatureFormInvites(
     baseFooter,
     locale,
     recipient,
   );
+  if (input.includeSignature === false) {
+    footerConfig = { ...footerConfig, signature_enabled: false };
+  }
 
   return composeBrandedEmail({
     bodyHtml: body,

@@ -373,6 +373,7 @@ const EMPTY_FORM = {
   hero_image_url_en: "",
   sms_bg: "",
   sms_en: "",
+  signature_enabled: true,
   sort_order: 0,
 };
 
@@ -417,6 +418,7 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
     hero_image_url_en: a.hero_image_url_en ?? "",
     sms_bg: a.sms_bg,
     sms_en: a.sms_en,
+    signature_enabled: a.signature_enabled,
     sort_order: a.sort_order,
   };
 }
@@ -1366,6 +1368,20 @@ export function AutomationsManager({
                     </button>
                   ))}
                 </div>
+
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={form.signature_enabled}
+                    onChange={(e) =>
+                      setForm({ ...form, signature_enabled: e.target.checked })
+                    }
+                    className="h-4 w-4 rounded border-ink/20 text-coral-500 focus:ring-coral-500"
+                  />
+                  <span className="text-sm font-medium text-ink">
+                    Включи личния подпис в края на имейла
+                  </span>
+                </label>
 
                 {contentLocale === "bg" ? (
                   <div className="grid min-w-0 gap-4 xl:grid-cols-2 2xl:grid-cols-1">
