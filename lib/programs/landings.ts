@@ -177,7 +177,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       title: "Want health news and recipes? Sign up:",
       placeholder: "Your email",
       button: "Yes, I want!",
-      consent: "I agree to receive marketing emails with tips, offers and helpful content. You can unsubscribe at any time.",
+      consent: "I agree to receive emails with tips, recipes and helpful content. You can unsubscribe at any time.",
       success: "Thank you! Check your inbox.",
       error: "Something went wrong.",
     },
