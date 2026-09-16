@@ -87,7 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
     for (const product of filterProductsForLocale(allProducts, locale)) {
       staticEntries.push({
-        url: `${base}${productCheckoutPath(product.id, locale)}`,
+        url: `${base}${productCheckoutPath(product, locale)}`,
         lastModified: now,
         changeFrequency: "weekly",
         priority: 0.7,
@@ -95,7 +95,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
     for (const guide of filterGuidesForLocale(allGuides, locale)) {
       staticEntries.push({
-        url: `${base}${guidePagePath(guide.id, locale)}`,
+        url: `${base}${guidePagePath(guide, locale)}`,
         lastModified: now,
         changeFrequency: "weekly",
         priority: 0.7,

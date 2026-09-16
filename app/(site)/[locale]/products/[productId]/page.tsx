@@ -13,13 +13,24 @@ import {
   productsListPath,
 } from "@/lib/site/product-placement";
 import { productVisibleInLocale } from "@/lib/site/product-locale";
+import { safeDecodeRef } from "@/lib/site/share-links";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-async function findProduct(productId: string) {
+/**
+ * The segment may be the product's slug or its id — every link we ever
+ * published carries the id, so both have to resolve. A slug is never a uuid,
+ * so matching slugs first cannot shadow a row addressed by id.
+ */
+async function findProduct(ref: string) {
   const products = await getSiteProducts(true);
-  return products.find((p) => p.id.toLowerCase() === productId.toLowerCase()) ?? null;
+  const wanted = safeDecodeRef(ref).toLowerCase();
+  return (
+    products.find((p) => (p.slug?.trim().toLowerCase() ?? "") === wanted) ??
+    products.find((p) => p.id.toLowerCase() === wanted) ??
+    null
+  );
 }
 
 export async function generateMetadata({
@@ -38,7 +49,7 @@ export async function generateMetadata({
     l === "en" ? product.description_en : product.description_bg;
   const visible = productVisibleInLocale(product, l);
   const origin = publicSiteOrigin();
-  const path = productCheckoutPath(product.id, l);
+  const path = productCheckoutPath(product, l);
 
   return {
     title,

@@ -24,7 +24,12 @@ import type {
 import { stripePriceSummary } from "@/lib/stripe/catalog-types";
 import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { DEFAULT_OFFER_HEADLINE, placementTarget } from "@/lib/site/cta-placements";
-import { SITE_BUTTON_GROUPS, type SiteButtonSpec } from "@/lib/site/button-catalog";
+import {
+  SITE_BUTTON_GROUPS,
+  siteButtonPath,
+  type SiteButtonSpec,
+} from "@/lib/site/button-catalog";
+import { CtaPreviewFrame } from "@/components/admin/cta-preview-frame";
 import { cn } from "@/lib/utils";
 import { TabList } from "@/components/admin/tab-list";
 
@@ -345,31 +350,21 @@ function SaveButton({
   );
 }
 
-/** The one thing an admin opening a row needs first: which button is this. */
-function WhereIsIt({ spec, path }: { spec: SiteButtonSpec; path?: string }) {
+/** Where a row without a button of its own — the popup offer — is shown. */
+function WhereIsIt({ spec }: { spec: SiteButtonSpec }) {
   return (
     <div className="rounded-xl border border-forest-600/20 bg-forest-600/[0.06] px-4 py-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-forest-700">
-        Къде е този бутон на сайта
+        Къде се показва
       </p>
       <ul className="mt-2 space-y-1 text-sm text-ink">
         {spec.spots.map((spot) => (
-          <li key={spot} className="flex gap-2">
+          <li key={spot.where} className="flex gap-2">
             <span className="text-forest-600">•</span>
-            <span>{spot}</span>
+            <span>{spot.where}</span>
           </li>
         ))}
       </ul>
-      {path && (
-        <a
-          href={path}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-forest-700 underline underline-offset-2"
-        >
-          Отвори страницата <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      )}
     </div>
   );
 }
@@ -377,7 +372,6 @@ function WhereIsIt({ spec, path }: { spec: SiteButtonSpec; path?: string }) {
 function ButtonEditor({
   placement,
   spec,
-  path,
   items,
   paymentLinks,
   catalogPending,
@@ -386,7 +380,6 @@ function ButtonEditor({
 }: {
   placement: SiteCtaPlacement;
   spec: SiteButtonSpec;
-  path?: string;
   items: StripeCatalogItem[];
   paymentLinks: StripePaymentLinkItem[];
   catalogPending: boolean;
@@ -396,6 +389,8 @@ function ButtonEditor({
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumped after every save so the preview reloads with the new settings.
+  const [savedAt, setSavedAt] = useState(0);
 
   const initialStripeEn = stripeEn(placement);
   const initialUrlEn = (placement.button_url_en ?? "").trim();
@@ -477,13 +472,22 @@ function ButtonEditor({
         return;
       }
       setSaved(true);
+      setSavedAt((n) => n + 1);
       onSaved();
     });
   }
 
   return (
     <div className="space-y-4 border-t border-ink/10 bg-cream-2/20 px-4 py-4">
-      <WhereIsIt spec={spec} path={path} />
+      <CtaPreviewFrame
+        ctaKey={placement.key}
+        spots={spec.spots}
+        labels={{
+          bg: form.label_bg.trim() || spec.defaultLabel || null,
+          en: form.en_override ? form.label_en.trim() || null : null,
+        }}
+        reloadToken={savedAt}
+      />
 
       <VisibilityToggles
         bg={form.enabled}
@@ -764,7 +768,6 @@ function TargetBadge({
 function PlacementRow({
   placement,
   spec,
-  path,
   offers,
   items,
   paymentLinks,
@@ -776,7 +779,6 @@ function PlacementRow({
 }: {
   placement: SiteCtaPlacement;
   spec: SiteButtonSpec;
-  path?: string;
   offers: SiteProduct[];
   items: StripeCatalogItem[];
   paymentLinks: StripePaymentLinkItem[];
@@ -827,9 +829,9 @@ function PlacementRow({
             )}
           </span>
           <span className="mt-0.5 block truncate text-xs text-ink-soft">
-            {isOffer ? spec.spots[0] : label ? `Пише „${label}“ · ${spec.spots[0]}` : spec.spots[0]}
+            {label ? `Пише „${label}“ · ${spec.spots[0].where}` : spec.spots[0].where}
             {!isOffer && spec.spots.length > 1
-              ? ` (+ още ${spec.spots.length - 1})`
+              ? ` (+ още ${spec.spots.length - 1} място)`
               : ""}
           </span>
         </span>
@@ -847,7 +849,6 @@ function PlacementRow({
           <ButtonEditor
             placement={placement}
             spec={spec}
-            path={path}
             items={items}
             paymentLinks={paymentLinks}
             catalogPending={catalogPending}
@@ -905,8 +906,10 @@ export function CtaPlacementsPanel({
       <div className="rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink-soft">
         <p>
           Всеки ред е един бутон на сайта, подреден по страницата, на която стои.
-          Отвори го, за да видиш точно къде се показва и да смениш текста, продукта
-          за плащане и езиците.
+          Отвори го и отгоре виждаш{" "}
+          <strong className="text-ink">самата страница с осветен бутон</strong> —
+          този, който редактираш. Под нея сменяш текста, продукта за плащане и
+          езиците.
         </p>
         <p className="mt-2">
           Бутон с избран продукт отваря{" "}
@@ -927,14 +930,14 @@ export function CtaPlacementsPanel({
         <div key={group.id} className="space-y-2">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="text-sm font-semibold text-ink">{group.title}</h3>
-            {group.path && (
+            {group.path !== undefined && (
               <a
-                href={group.path}
+                href={siteButtonPath("bg", group.path)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-ink-soft underline underline-offset-2 hover:text-ink"
               >
-                {group.path} <ExternalLink className="h-3 w-3" />
+                {siteButtonPath("bg", group.path)} <ExternalLink className="h-3 w-3" />
               </a>
             )}
             {group.note && <p className="text-xs text-ink-soft">{group.note}</p>}
@@ -943,7 +946,6 @@ export function CtaPlacementsPanel({
             <PlacementRow
               key={spec.key}
               spec={spec}
-              path={group.path}
               placement={placement}
               offers={offers}
               items={catalog.items}
@@ -970,6 +972,7 @@ export function WebsiteTabs({
 }) {
   const tabs = [
     { id: "products", label: "Продукти" },
+    { id: "programs", label: "Програми" },
     { id: "guides", label: "Ръководства" },
     { id: "events", label: "Събития" },
     { id: "videos", label: "Видеа" },

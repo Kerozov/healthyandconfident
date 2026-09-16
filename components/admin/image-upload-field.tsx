@@ -2,7 +2,11 @@
 
 import { useRef, useState, useTransition } from "react";
 import { ImagePlus, Loader2, Trash2 } from "lucide-react";
-import { uploadSiteImage } from "@/app/(admin)/admin/actions";
+import { createSiteImageUpload } from "@/app/(admin)/admin/actions";
+import {
+  putToSignedUrl,
+  uploadErrorText,
+} from "@/lib/admin/upload-to-storage";
 import type { MediaFolder } from "@/lib/media/folders";
 import { Field } from "@/components/admin/fields";
 import { cn } from "@/lib/utils";
@@ -36,17 +40,30 @@ export function ImageUploadField({
 
   function uploadFile(file: File) {
     setError(null);
-    const formData = new FormData();
-    formData.set("file", file);
-    formData.set("folder", folder);
 
     startTransition(async () => {
-      const res = await uploadSiteImage(formData);
-      if (!res.ok || !res.url) {
-        setError(res.message || "Качването неуспешно.");
-        return;
+      try {
+        // The file never crosses the Server Action boundary — only its name,
+        // type and size do, so the 4 MB body limit cannot bite.
+        const res = await createSiteImageUpload(
+          { name: file.name, type: file.type, size: file.size },
+          folder,
+        );
+        if (!res.ok || !res.ticket) {
+          setError(res.message || "Качването неуспешно.");
+          return;
+        }
+
+        const put = await putToSignedUrl(res.ticket.uploadUrl, file);
+        if (!put.ok) {
+          setError(put.message);
+          return;
+        }
+
+        onChange(res.ticket.publicUrl);
+      } catch (err) {
+        setError(uploadErrorText(err));
       }
-      onChange(res.url);
     });
   }
 

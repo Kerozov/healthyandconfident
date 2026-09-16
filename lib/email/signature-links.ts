@@ -162,7 +162,7 @@ export function signatureLinkHref(
       }
       if (link.href) return absoluteHref(link.href);
     }
-    return productCheckoutUrl(link.productId, locale);
+    return productCheckoutUrl(product ?? link.productId, locale);
   }
 
   if (link.kind === "form" && link.formId) {

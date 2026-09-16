@@ -15,13 +15,13 @@ export default function AdminPanelError({
   }, [error]);
 
   return (
-    <div className="mx-auto max-w-lg rounded-2xl border border-coral-200 bg-white p-8 text-center shadow-sm">
-      <h1 className="font-display text-2xl font-semibold text-ink">
-        Админ панелът не се зареди
+    <div className="mx-auto max-w-lg rounded-2xl border border-coral-300 bg-white p-8 text-center shadow-sm">
+      <h1 className="font-display text-2xl font-semibold text-coral-700">
+        Заявката не мина
       </h1>
       <p className="mt-3 text-sm text-ink-soft">
-        Сървърната заявка е прекъсната (често при голям списък абонати). Опитай
-        отново или отвори директно Абонати.
+        Сървърната заявка е прекъсната (често при голям списък абонати или бавна
+        база). <strong>Не си излязъл от профила</strong> — опитай отново.
       </p>
       {error.digest ? (
         <p className="mt-2 font-mono text-xs text-ink-soft/70">

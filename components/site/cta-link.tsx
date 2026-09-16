@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { useOfferPopup } from "@/components/site/offer-popup";
+import { useIsCtaPreview } from "@/components/site/cta-preview";
 import { trackMeta } from "@/lib/meta/client";
 import { trackSiteCheckout } from "@/lib/analytics/client";
 import {
@@ -46,6 +47,7 @@ export function CtaLink({
   rel,
 }: CtaLinkProps) {
   const { tryOpenPlacement, placements, locale } = useOfferPopup();
+  const previewing = useIsCtaPreview();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const resolved = resolvePlacementButton(
@@ -55,9 +57,21 @@ export function CtaLink({
     { label: "", href },
   );
 
-  if (resolved.hidden) return null;
+  // A switched-off button still has a place on the page, and the admin preview
+  // is the one context where showing that place beats hiding it.
+  if (resolved.hidden && !previewing) return null;
+  const switchedOff = resolved.hidden;
 
-  const classes = cn(buttonVariants({ variant, size }), className);
+  // The key is on the element itself so the admin preview can find this exact
+  // button in the rendered page without knowing anything about the layout.
+  const marker: Record<string, string> = { "data-cta-key": placementKey };
+  if (switchedOff) marker["data-cta-hidden"] = "true";
+
+  const classes = cn(
+    buttonVariants({ variant, size }),
+    className,
+    switchedOff && "pointer-events-none opacity-40 outline-dashed outline-2 outline-offset-2",
+  );
   const label = resolved.label || children;
   const btnTarget = resolved.target;
   const isPayment = targetIsPayment(btnTarget);
@@ -118,12 +132,14 @@ export function CtaLink({
   const button = (() => {
     if (pending) {
       return (
-        <span className={cn(classes, "pointer-events-none opacity-70")}>{label}</span>
+        <span {...marker} className={cn(classes, "pointer-events-none opacity-70")}>
+          {label}
+        </span>
       );
     }
     if (isPayment) {
       return (
-        <button type="button" className={classes} onClick={handleClick}>
+        <button {...marker} type="button" className={classes} onClick={handleClick}>
           {label}
         </button>
       );
@@ -131,6 +147,7 @@ export function CtaLink({
     if (external) {
       return (
         <a
+          {...marker}
           href={linkHref}
           target={target}
           rel={rel}
@@ -142,7 +159,7 @@ export function CtaLink({
       );
     }
     return (
-      <Link href={linkHref} className={classes} onClick={handleClick}>
+      <Link {...marker} href={linkHref} className={classes} onClick={handleClick}>
         {label}
       </Link>
     );

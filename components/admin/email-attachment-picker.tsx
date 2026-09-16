@@ -2,7 +2,11 @@
 
 import { useRef, useState, useTransition } from "react";
 import { FileText, Loader2, Trash2, Upload } from "lucide-react";
-import { uploadEmailAttachment } from "@/app/(admin)/admin/actions";
+import { createEmailAttachmentUpload } from "@/app/(admin)/admin/actions";
+import {
+  putToSignedUrl,
+  uploadErrorText,
+} from "@/lib/admin/upload-to-storage";
 import { cn } from "@/lib/utils";
 
 export function EmailAttachmentPicker({
@@ -25,15 +29,31 @@ export function EmailAttachmentPicker({
   function pick(file: File | null) {
     if (!file) return;
     setError(null);
-    const fd = new FormData();
-    fd.set("file", file);
+
     startTransition(async () => {
-      const res = await uploadEmailAttachment(fd);
-      if (!res.ok || !res.path || !res.filename) {
-        setError(res.message ?? "Качването не успя.");
-        return;
+      try {
+        // Only the descriptor goes through the Server Action; the PDF itself
+        // goes browser → Storage, so size is capped by the bucket, not by Next.
+        const res = await createEmailAttachmentUpload({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+        });
+        if (!res.ok || !res.ticket) {
+          setError(res.message ?? "Качването не успя.");
+          return;
+        }
+
+        const put = await putToSignedUrl(res.ticket.uploadUrl, file);
+        if (!put.ok) {
+          setError(put.message);
+          return;
+        }
+
+        onChange(res.ticket.path, res.ticket.filename);
+      } catch (err) {
+        setError(uploadErrorText(err));
       }
-      onChange(res.path, res.filename);
     });
   }
 

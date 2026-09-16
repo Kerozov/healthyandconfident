@@ -10,13 +10,24 @@ import {
 } from "@/components/site/catalog-detail";
 import { guidePagePath, guidesListPath } from "@/lib/site/product-placement";
 import { guideVisibleInLocale } from "@/lib/site/guide-catalog";
+import { safeDecodeRef } from "@/lib/site/share-links";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-async function findGuide(guideId: string) {
+/**
+ * The segment may be the guide's slug or its id — every link we ever published
+ * carries the id, so both have to resolve. A slug is never a uuid, so matching
+ * slugs first cannot shadow a row addressed by id.
+ */
+async function findGuide(ref: string) {
   const guides = await getSiteGuides(true);
-  return guides.find((g) => g.id.toLowerCase() === guideId.toLowerCase()) ?? null;
+  const wanted = safeDecodeRef(ref).toLowerCase();
+  return (
+    guides.find((g) => (g.slug?.trim().toLowerCase() ?? "") === wanted) ??
+    guides.find((g) => g.id.toLowerCase() === wanted) ??
+    null
+  );
 }
 
 export async function generateMetadata({
@@ -34,7 +45,7 @@ export async function generateMetadata({
   const description =
     l === "en" ? guide.description_en : guide.description_bg;
   const origin = publicSiteOrigin();
-  const path = guidePagePath(guide.id, l);
+  const path = guidePagePath(guide, l);
 
   return {
     title,

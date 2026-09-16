@@ -45,10 +45,10 @@ export function productEmailMarker(
 
 /** Absolute form of the product page — emails need the full origin. */
 export function productCheckoutUrl(
-  productId: string,
+  product: string | { id: string; slug?: string | null },
   locale: "bg" | "en",
 ): string {
-  return `${publicSiteOrigin()}${productCheckoutPath(productId, locale)}`;
+  return `${publicSiteOrigin()}${productCheckoutPath(product, locale)}`;
 }
 
 export function normalizeProductLinkMode(
@@ -105,7 +105,7 @@ export function renderEmailProductCard(
   const href =
     mode === "stripe" && paymentLink
       ? paymentLink
-      : productCheckoutUrl(product.id, locale);
+      : productCheckoutUrl(product, locale);
 
   return renderEmailOfferCard({
     title,

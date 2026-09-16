@@ -1,4 +1,14 @@
-import type { SiteEvent, SiteProduct, SiteSection, SiteSectionKey, SiteCtaPlacement, Segment, SiteVideo, SiteGuide } from "@/lib/supabase/types";
+import type {
+  SiteEvent,
+  SiteProduct,
+  SiteProgramCard,
+  SiteSection,
+  SiteSectionKey,
+  SiteCtaPlacement,
+  Segment,
+  SiteVideo,
+  SiteGuide,
+} from "@/lib/supabase/types";
 
 export type SiteContent = {
   sections: Record<string, SiteSection>;
@@ -6,6 +16,7 @@ export type SiteContent = {
   products: SiteProduct[];
   guides: SiteGuide[];
   videos: SiteVideo[];
+  programCards: SiteProgramCard[];
   offersById: Record<string, SiteProduct>;
   ctaPlacements: Record<string, SiteCtaPlacement>;
   segments: Segment[];
@@ -33,6 +44,14 @@ export const DEFAULT_SITE_SECTIONS: Record<SiteSectionKey, SiteSection> = {
     enabled: false,
     title_bg: "Вдъхновяващи истории",
     title_en: "Inspiring stories",
+    updated_at: new Date().toISOString(),
+  },
+  programs: {
+    key: "programs",
+    // The section has always been on the page; a missing row must not hide it.
+    enabled: true,
+    title_bg: "",
+    title_en: "",
     updated_at: new Date().toISOString(),
   },
   guides: {

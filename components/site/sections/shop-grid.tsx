@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
-import { productCheckoutPath } from "@/lib/site/product-placement";
+import { productButtonHref } from "@/lib/site/share-links";
 
 export function ShopProductGrid({
   products,
@@ -29,7 +29,7 @@ export function ShopProductGrid({
         return (
           <Link
             key={product.id}
-            href={productCheckoutPath(product.id, locale)}
+            href={productButtonHref(product, locale)}
             className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
           >
             <div className="flex min-h-[168px] items-center justify-center overflow-hidden bg-cream-2 sm:min-h-[200px]">

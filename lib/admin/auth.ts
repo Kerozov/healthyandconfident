@@ -18,6 +18,13 @@ import type { AdminActorPublic } from "@/lib/admin/actor-types";
 
 const ADMIN_COOKIE = "hc_admin";
 const SEEN_THROTTLE_MS = 2 * 60 * 1000;
+/**
+ * A hanging Supabase used to hang the whole panel — no answer, no error, ever.
+ * Every session query is capped, and postgrest's own retry (1s/2s/4s backoff,
+ * three attempts) is switched off so the wait stays predictable: the retry
+ * below owns it instead.
+ */
+const SESSION_QUERY_TIMEOUT_MS = 4000;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -25,6 +32,21 @@ export class AdminAccessError extends Error {
   constructor(message = "Нямаш достъп до тази функция.") {
     super(message);
     this.name = "AdminAccessError";
+  }
+}
+
+/**
+ * The session could not be *resolved* — Supabase timed out, refused the
+ * connection or answered 5xx. This is NOT a signed-out user, so callers must
+ * show an error instead of redirecting to the login screen.
+ */
+export class AdminSessionUnavailableError extends Error {
+  readonly detail: string;
+
+  constructor(detail = "") {
+    super("Връзката с базата се разпадна за момент.");
+    this.name = "AdminSessionUnavailableError";
+    this.detail = detail;
   }
 }
 
@@ -103,6 +125,8 @@ async function selectOwner(): Promise<AdminUser | null> {
       .from("admin_users")
       .select("*")
       .eq("role", "owner")
+      .retry(false)
+      .abortSignal(AbortSignal.timeout(SESSION_QUERY_TIMEOUT_MS))
       .maybeSingle();
     if (error || !data) {
       if (tablesMissing(error)) return null;
@@ -129,6 +153,8 @@ export async function ensureOwnerRow(): Promise<AdminUser | null> {
         active: true,
       })
       .select("*")
+      .retry(false)
+      .abortSignal(AbortSignal.timeout(SESSION_QUERY_TIMEOUT_MS))
       .single();
     if (!error && data) return data as AdminUser;
     return selectOwner();
@@ -137,19 +163,36 @@ export async function ensureOwnerRow(): Promise<AdminUser | null> {
   }
 }
 
+/**
+ * A failed lookup is not a missing user. Swallowing the error and returning
+ * `null` made every Supabase hiccup look like a signed-out session, which
+ * bounced team members to /admin/login in the middle of a save. Only a
+ * genuinely absent row returns `null`; transient failures retry once and then
+ * throw so the caller can show an error and keep the user logged in.
+ */
 async function loadUserById(id: string): Promise<AdminUser | null> {
   if (!isUuid(id)) return null;
-  try {
-    const { data, error } = await getAdminClient()
-      .from("admin_users")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-    if (error || !data) return null;
-    return data as AdminUser;
-  } catch {
-    return null;
+
+  let detail = "";
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 200));
+    try {
+      const { data, error } = await getAdminClient()
+        .from("admin_users")
+        .select("*")
+        .eq("id", id)
+        .retry(false)
+      .abortSignal(AbortSignal.timeout(SESSION_QUERY_TIMEOUT_MS))
+        .maybeSingle();
+      if (!error) return (data as AdminUser | null) ?? null;
+      if (tablesMissing(error)) return null;
+      detail = error.message;
+    } catch (err) {
+      detail = err instanceof Error ? err.message : String(err);
+    }
   }
+
+  throw new AdminSessionUnavailableError(detail);
 }
 
 async function loadUserByUsername(username: string): Promise<AdminUser | null> {
@@ -158,6 +201,8 @@ async function loadUserByUsername(username: string): Promise<AdminUser | null> {
       .from("admin_users")
       .select("*")
       .eq("username", username)
+      .retry(false)
+      .abortSignal(AbortSignal.timeout(SESSION_QUERY_TIMEOUT_MS))
       .maybeSingle();
     if (error || !data) return null;
     return data as AdminUser;
@@ -173,7 +218,9 @@ async function touchLastSeen(user: AdminUser): Promise<void> {
     await getAdminClient()
       .from("admin_users")
       .update({ last_seen_at: new Date().toISOString() })
-      .eq("id", user.id);
+      .eq("id", user.id)
+      .retry(false)
+      .abortSignal(AbortSignal.timeout(SESSION_QUERY_TIMEOUT_MS));
   } catch {
     /* ignore */
   }
@@ -185,7 +232,9 @@ async function markLogin(user: AdminUser): Promise<void> {
     await getAdminClient()
       .from("admin_users")
       .update({ last_login_at: now, last_seen_at: now })
-      .eq("id", user.id);
+      .eq("id", user.id)
+      .retry(false)
+      .abortSignal(AbortSignal.timeout(SESSION_QUERY_TIMEOUT_MS));
   } catch {
     /* ignore */
   }

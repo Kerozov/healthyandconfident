@@ -327,7 +327,7 @@ export type SmsCampaign = {
   created_at: string;
 };
 
-export type SiteSectionKey = "events" | "products" | "videos" | "guides";
+export type SiteSectionKey = "events" | "products" | "videos" | "guides" | "programs";
 
 export type SiteSection = {
   key: SiteSectionKey;
@@ -411,6 +411,16 @@ export type OfferType = "upsell" | "downsell";
 
 export type SiteProduct = {
   id: string;
+  /**
+   * Readable piece of the product's own URL — `/bg/products/<slug>`. Optional
+   * on the type: the column arrives with migration 067, and a row without one
+   * is addressed by its id instead.
+   */
+  slug?: string | null;
+  /** Where this product's cards and buttons lead. See `CatalogLinkMode`. */
+  link_mode?: string | null;
+  /** Target for `link_mode = "custom"`. */
+  link_url?: string | null;
   title_bg: string;
   title_en: string;
   description_bg: string;
@@ -440,8 +450,56 @@ export type SiteProduct = {
   updated_at: string;
 };
 
+/**
+ * One card in the home page section „Програми“.
+ *
+ * `placement_key` is the `site_cta_placements` key of the card's button, so a
+ * card keeps the Stripe wiring and the upsell offer already configured for it
+ * under „Бутони“. New cards get the next free `programs_<n>`.
+ */
+export type SiteProgramCard = {
+  id: string;
+  placement_key: string;
+  badge_bg: string;
+  badge_en: string;
+  title_bg: string;
+  title_en: string;
+  duration_bg: string;
+  duration_en: string;
+  price_bg: string;
+  price_en: string;
+  description_bg: string;
+  description_en: string;
+  features_bg: string[];
+  features_en: string[];
+  cta_label_bg: string;
+  cta_label_en: string;
+  /** Our own path („/programs/…“, „#contact“) or an external https link. */
+  href: string;
+  href_en: string;
+  image_url: string | null;
+  /** Renders the card outlined and slightly larger — one per section. */
+  highlight: boolean;
+  enabled: boolean;
+  /** When false, the card is hidden on the English site. */
+  enabled_en: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type SiteGuide = {
   id: string;
+  /**
+   * Readable piece of the guide's own URL — `/bg/guides/<slug>`. Optional on
+   * the type: the column arrives with migration 067, and a row without one is
+   * addressed by its id instead.
+   */
+  slug?: string | null;
+  /** Where this guide's cards and buttons lead. See `CatalogLinkMode`. */
+  link_mode?: string | null;
+  /** Target for `link_mode = "custom"`. */
+  link_url?: string | null;
   title_bg: string;
   title_en: string;
   description_bg: string;

@@ -29,6 +29,9 @@ export function isUpsellSectionPlacement(key: string): boolean {
   return (
     key.startsWith("product_") ||
     (UPSELL_SECTION_PLACEMENT_KEYS as readonly string[]).includes(key) ||
+    // Programme cards are added in the admin, so the list above cannot name
+    // every card button — any `programs_<n>` is one.
+    /^programs_\d+$/.test(key) ||
     /^programs_\d+_(secondary|pricing_\d+)$/.test(key)
   );
 }

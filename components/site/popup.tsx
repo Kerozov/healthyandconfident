@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Locale } from "@/i18n/config";
 import { useMenuPopup } from "@/components/site/menu-popup";
+import { isCtaPreviewPage } from "@/lib/site/cta-preview";
 
 /** Auto-opens the menu signup popup after delay (admin config). */
 export function Popup({ locale }: { locale: Locale }) {
@@ -12,6 +13,8 @@ export function Popup({ locale }: { locale: Locale }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // A popup over the button preview would hide the very thing being shown.
+    if (isCtaPreviewPage()) return;
     if (localStorage.getItem(storageKey)) return;
     if (scheduledRef.current) return;
 

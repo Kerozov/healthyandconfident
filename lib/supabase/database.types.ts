@@ -15,6 +15,7 @@ import type {
   SiteEvent,
   SiteProduct,
   SiteGuide,
+  SiteProgramCard,
   SiteVideo,
   SiteCtaPlacement,
   SiteContactConfig,
@@ -106,6 +107,7 @@ export type Database = {
       site_events: TableShape<SiteEvent>;
       site_products: TableShape<SiteProduct>;
       site_guides: TableShape<SiteGuide>;
+      site_program_cards: TableShape<SiteProgramCard>;
       subscriber_purchases: TableShape<SubscriberPurchase>;
       contacts: TableShape<Contact>;
       contact_worker_jobs: TableShape<ContactWorkerJob>;

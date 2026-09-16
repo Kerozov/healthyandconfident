@@ -34,12 +34,17 @@ function toPublic(user: AdminUser): AdminProfilePublic {
   };
 }
 
+/** Without this a hanging database left the dashboard streaming forever. */
+const TEAM_QUERY_TIMEOUT_MS = 6000;
+
 export async function getTeamOverview(): Promise<TeamOverview> {
   try {
     const { data, error } = await getAdminClient()
       .from("admin_users")
       .select("*")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .retry(false)
+      .abortSignal(AbortSignal.timeout(TEAM_QUERY_TIMEOUT_MS));
 
     if (error) {
       return { tableReady: !tablesMissing(error), profiles: [], feed: [] };

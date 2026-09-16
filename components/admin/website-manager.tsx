@@ -8,7 +8,6 @@ import {
   Trash2,
   Save,
   X,
-  Check,
   Calendar,
   Play,
 } from "lucide-react";
@@ -18,6 +17,7 @@ import type {
   SiteCtaPlacement,
   SiteEvent,
   SiteProduct,
+  SiteProgramCard,
   SiteGuide,
   SiteSection,
   SiteVideo,
@@ -26,12 +26,17 @@ import type {
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
-import { productPlacementKey, productCheckoutPath } from "@/lib/site/product-placement";
-import { PublicPathLinks } from "@/components/admin/public-path-links";
+import { productPlacementKey } from "@/lib/site/product-placement";
+import { CatalogLinkEditor } from "@/components/admin/catalog-link-editor";
+import { CopyButton } from "@/components/admin/share-links";
+import {
+  catalogShareLinks,
+  normalizeCatalogLinkMode,
+  type CatalogLinkMode,
+} from "@/lib/site/share-links";
 import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { CtaPlacementsPanel, WebsiteTabs } from "@/components/admin/website-cta-panel";
 import {
-  saveSiteSection,
   saveSiteEvent,
   deleteSiteEvent,
   saveSiteVideo,
@@ -40,6 +45,8 @@ import {
   deleteSiteProduct,
 } from "@/app/(admin)/admin/actions";
 import { GuidesManagerPanel } from "@/components/admin/guides-manager";
+import { ProgramCardsPanel } from "@/components/admin/program-cards-panel";
+import { SectionToggle } from "@/components/admin/section-toggle";
 import { SiteContactPanel } from "@/components/admin/site-contact-panel";
 import { ProductAdminGrid } from "@/components/admin/product-admin-grid";
 import { ProductOfferEditor } from "@/components/admin/product-offer-editor";
@@ -50,85 +57,6 @@ import {
 } from "@/components/admin/stripe-locale-picker";
 import { Field, Input, Textarea, Card, LocaleVisibilityCheckboxes } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
-import { cn } from "@/lib/utils";
-
-function SectionToggle({
-  section,
-  onSaved,
-}: {
-  section: SiteSection;
-  onSaved: () => void;
-}) {
-  const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
-    enabled: section.enabled,
-    title_bg: section.title_bg,
-    title_en: section.title_en,
-  });
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  function save() {
-    setError(null);
-    startTransition(async () => {
-      const res = await saveSiteSection({ key: section.key, ...form });
-      if (!res.ok) {
-        setError(res.message || "Failed");
-        return;
-      }
-      setSaved(true);
-      onSaved();
-    });
-  }
-
-  return (
-    <div className="mb-6 rounded-xl border border-ink/10 bg-cream-2/30 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={form.enabled}
-            onChange={(e) => {
-              setForm({ ...form, enabled: e.target.checked });
-              setSaved(false);
-            }}
-          />
-          Покажи секцията на сайта
-        </label>
-        <button
-          type="button"
-          onClick={save}
-          disabled={pending}
-          className="inline-flex h-9 items-center gap-2 rounded-full bg-forest-600 px-4 text-xs font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
-        >
-          {saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-          Запази видимост
-        </button>
-      </div>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field label="Заглавие секция — BG">
-          <Input
-            value={form.title_bg}
-            onChange={(e) => {
-              setForm({ ...form, title_bg: e.target.value });
-              setSaved(false);
-            }}
-          />
-        </Field>
-        <Field label="Заглавие секция — EN">
-          <Input
-            value={form.title_en}
-            onChange={(e) => {
-              setForm({ ...form, title_en: e.target.value });
-              setSaved(false);
-            }}
-          />
-        </Field>
-      </div>
-      {error && <p className="mt-2 text-sm text-coral-600">{error}</p>}
-    </div>
-  );
-}
 
 const EMPTY_EVENT = {
   title_bg: "",
@@ -182,6 +110,9 @@ const EMPTY_PRODUCT = {
   purchase_tags: [] as string[],
   enabled: true,
   enabled_en: true,
+  slug: "",
+  link_mode: "page" as CatalogLinkMode,
+  link_url: "",
 };
 
 export function WebsiteManager({
@@ -190,6 +121,7 @@ export function WebsiteManager({
   products,
   guides,
   videos,
+  programCards,
   ctaPlacements,
   contactConfig,
   segments,
@@ -202,6 +134,7 @@ export function WebsiteManager({
   products: SiteProduct[];
   guides: SiteGuide[];
   videos: SiteVideo[];
+  programCards: SiteProgramCard[];
   ctaPlacements: SiteCtaPlacement[];
   contactConfig: SiteContactConfig;
   segments: Segment[];
@@ -219,6 +152,14 @@ export function WebsiteManager({
   const [eventForm, setEventForm] = useState(EMPTY_EVENT);
   const [videoForm, setVideoForm] = useState(EMPTY_VIDEO);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
+
+  // The links panel shows the product as it is saved right now — the form may
+  // hold a slug that has not been written yet, and a link that does not resolve
+  // is worse than no link.
+  const editingProduct =
+    editingProductId && editingProductId !== "new"
+      ? (products.find((p) => p.id === editingProductId) ?? null)
+      : null;
 
   const eventsSection = sections.events ?? DEFAULT_SITE_SECTIONS.events;
   const productsSection = sections.products ?? DEFAULT_SITE_SECTIONS.products;
@@ -361,6 +302,9 @@ export function WebsiteManager({
       purchase_tags: product.purchase_tags ?? [],
       enabled: product.enabled,
       enabled_en: product.enabled_en !== false,
+      slug: product.slug?.trim() ?? "",
+      link_mode: normalizeCatalogLinkMode(product.link_mode),
+      link_url: product.link_url ?? "",
     });
     setError(null);
   }
@@ -505,22 +449,6 @@ export function WebsiteManager({
                   onChange={(url) => setProductForm({ ...productForm, image_url: url })}
                   folder="products"
                 />
-                {editingProductId !== "new" && (
-                  <Field label="Публични линкове">
-                    <PublicPathLinks
-                      paths={[
-                        {
-                          label: productCheckoutPath(editingProductId, "bg"),
-                          href: productCheckoutPath(editingProductId, "bg"),
-                        },
-                        {
-                          label: productCheckoutPath(editingProductId, "en"),
-                          href: productCheckoutPath(editingProductId, "en"),
-                        },
-                      ]}
-                    />
-                  </Field>
-                )}
                 <Field label="Цена — BG">
                   <Input
                     value={productForm.price_label_bg}
@@ -575,6 +503,26 @@ export function WebsiteManager({
                   />
                 </Field>
               </div>
+
+              <CatalogLinkEditor
+                kind="product"
+                title={productForm.title_bg}
+                slug={productForm.slug}
+                onSlugChange={(slug) => setProductForm({ ...productForm, slug })}
+                linkMode={productForm.link_mode}
+                onLinkModeChange={(link_mode) =>
+                  setProductForm({ ...productForm, link_mode })
+                }
+                linkUrl={productForm.link_url}
+                onLinkUrlChange={(link_url) =>
+                  setProductForm({ ...productForm, link_url })
+                }
+                links={
+                  editingProduct ? catalogShareLinks("product", editingProduct) : []
+                }
+                saved={editingProductId !== "new"}
+                disabled={pending}
+              />
 
               <StripeLocalePicker
                 label="Плащане — български"
@@ -695,6 +643,14 @@ export function WebsiteManager({
             />
           </div>
         </Card>
+      )}
+
+      {tab === "programs" && (
+        <ProgramCardsPanel
+          cards={programCards}
+          section={sections.programs ?? DEFAULT_SITE_SECTIONS.programs}
+          placements={ctaPlacements}
+        />
       )}
 
       {tab === "guides" && (
@@ -849,7 +805,18 @@ export function WebsiteManager({
                       <Calendar className="h-4 w-4 text-forest-600" />
                       <p className="font-medium">{event.title_bg}</p>
                     </div>
-                    <p className="mt-1 text-xs text-ink-soft">{event.url}</p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <p className="truncate text-xs text-ink-soft">{event.url}</p>
+                      {event.url && (
+                        <CopyButton
+                          value={event.url}
+                          title="Копирай линка на събитието"
+                          className="px-1.5 py-0.5"
+                        >
+                          <span className="sr-only">Копирай</span>
+                        </CopyButton>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-1">
                     <button
@@ -1005,7 +972,18 @@ export function WebsiteManager({
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 truncate text-xs text-ink-soft">{video.youtube_url}</p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <p className="truncate text-xs text-ink-soft">{video.youtube_url}</p>
+                      {video.youtube_url && (
+                        <CopyButton
+                          value={video.youtube_url}
+                          title="Копирай линка на видеото"
+                          className="px-1.5 py-0.5"
+                        >
+                          <span className="sr-only">Копирай</span>
+                        </CopyButton>
+                      )}
+                    </div>
                   </div>
                   <div className="flex shrink-0 gap-1">
                     <button

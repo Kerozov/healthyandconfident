@@ -18,7 +18,7 @@ export default async function AdminWebsitePage() {
     <div>
       <PageHeader
         title="Уебсайт"
-        description="Продукти, ръководства, събития, видеа. Тук се задават и офертите (upsell / downsell), които важат навсякъде — в магазина и в имейлите."
+        description="Продукти, програми, ръководства, събития, видеа. Тук се задават и офертите (upsell / downsell), които важат навсякъде — в магазина и в имейлите."
       />
 
       <WebsiteManager
@@ -27,6 +27,7 @@ export default async function AdminWebsitePage() {
           products={content.products}
           guides={content.guides}
           videos={content.videos}
+          programCards={content.programCards}
           ctaPlacements={Object.values(content.ctaPlacements)}
           contactConfig={contactConfig}
           segments={segments}

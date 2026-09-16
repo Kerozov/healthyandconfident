@@ -53,13 +53,18 @@ export function logAdminChange(actor: AuditActor, entry: AdminAuditInput): void 
   void insertAdminAudit(actor, entry);
 }
 
+/** Same reason as the team query: never let the feed hold the page open. */
+const AUDIT_QUERY_TIMEOUT_MS = 6000;
+
 export async function listRecentAdminAudit(limit = 40): Promise<AdminAuditLog[]> {
   try {
     const { data, error } = await getAdminClient()
       .from("admin_audit_log")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(limit)
+      .retry(false)
+      .abortSignal(AbortSignal.timeout(AUDIT_QUERY_TIMEOUT_MS));
     if (error || !data) return [];
     return data as AdminAuditLog[];
   } catch {

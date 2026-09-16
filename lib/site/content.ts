@@ -10,6 +10,7 @@ import type {
   Segment,
   SiteVideo,
   SiteGuide,
+  SiteProgramCard,
 } from "@/lib/supabase/types";
 import { mergeSiteSections, type SiteContent } from "@/lib/site/defaults";
 
@@ -108,16 +109,31 @@ export async function getSiteVideos(includeDisabled = false): Promise<SiteVideo[
   }, []);
 }
 
+export async function getSiteProgramCards(includeDisabled = false): Promise<SiteProgramCard[]> {
+  return withPublicClient(async (supabase) => {
+    let q = supabase
+      .from("site_program_cards")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (!includeDisabled) q = q.or("enabled.eq.true,enabled_en.eq.true");
+    const { data } = await q;
+    return (data as SiteProgramCard[]) ?? [];
+  }, []);
+}
+
 export async function getPublicSiteContent(): Promise<SiteContent> {
-  const [sections, events, products, guides, videos, placements, segments] = await Promise.all([
-    getSiteSections(),
-    getSiteEvents(),
-    getSiteProducts(),
-    getSiteGuides(),
-    getSiteVideos(),
-    getCtaPlacements(),
-    getSiteSegments(),
-  ]);
+  const [sections, events, products, guides, videos, programCards, placements, segments] =
+    await Promise.all([
+      getSiteSections(),
+      getSiteEvents(),
+      getSiteProducts(),
+      getSiteGuides(),
+      getSiteVideos(),
+      getSiteProgramCards(),
+      getCtaPlacements(),
+      getSiteSegments(),
+    ]);
 
   const sectionMap = mergeSiteSections(sections);
   const offersById = indexOffers(products);
@@ -128,6 +144,9 @@ export async function getPublicSiteContent(): Promise<SiteContent> {
     products: sectionMap.products?.enabled ? products : [],
     guides: sectionMap.guides?.enabled ? guides : [],
     videos: sectionMap.videos?.enabled ? videos : [],
+    // The Programs section falls back to the dictionary when the table is
+    // empty, so its own toggle is read by the page, not applied here.
+    programCards,
     offersById,
     ctaPlacements: indexPlacements(placements),
     segments,
@@ -137,32 +156,45 @@ export async function getPublicSiteContent(): Promise<SiteContent> {
 
 export async function getAdminSiteContent(): Promise<SiteContent> {
   const supabase = getAdminClient();
-  const [sectionsRes, eventsRes, productsRes, guidesRes, videosRes, placementsRes, segmentsRes] =
-    await Promise.all([
-      supabase.from("site_sections").select("*").order("key"),
-      supabase
-        .from("site_events")
-        .select("*")
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("site_products")
-        .select("*")
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("site_guides")
-        .select("*")
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("site_videos")
-        .select("*")
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
-      supabase.from("site_cta_placements").select("*").order("key"),
-      supabase.from("segments").select("*").order("name"),
-    ]);
+  const [
+    sectionsRes,
+    eventsRes,
+    productsRes,
+    guidesRes,
+    videosRes,
+    programCardsRes,
+    placementsRes,
+    segmentsRes,
+  ] = await Promise.all([
+    supabase.from("site_sections").select("*").order("key"),
+    supabase
+      .from("site_events")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("site_products")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("site_guides")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("site_videos")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("site_program_cards")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+    supabase.from("site_cta_placements").select("*").order("key"),
+    supabase.from("segments").select("*").order("name"),
+  ]);
 
   const dbError =
     sectionsRes.error?.message ??
@@ -170,6 +202,7 @@ export async function getAdminSiteContent(): Promise<SiteContent> {
     productsRes.error?.message ??
     guidesRes.error?.message ??
     videosRes.error?.message ??
+    programCardsRes.error?.message ??
     placementsRes.error?.message ??
     segmentsRes.error?.message;
 
@@ -181,6 +214,7 @@ export async function getAdminSiteContent(): Promise<SiteContent> {
     products,
     guides: (guidesRes.data as SiteGuide[]) ?? [],
     videos: (videosRes.data as SiteVideo[]) ?? [],
+    programCards: (programCardsRes.data as SiteProgramCard[]) ?? [],
     offersById: indexOffers(products),
     ctaPlacements: indexPlacements((placementsRes.data as SiteCtaPlacement[]) ?? []),
     segments: (segmentsRes.data as Segment[]) ?? [],

@@ -11,9 +11,13 @@ import { GuideAdminGrid } from "@/components/admin/guide-admin-grid";
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import { Field, Input, Textarea, Card, LocaleVisibilityCheckboxes } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
-import { PublicPathLinks } from "@/components/admin/public-path-links";
+import { CatalogLinkEditor } from "@/components/admin/catalog-link-editor";
 import { StripeLocalePicker } from "@/components/admin/stripe-locale-picker";
-import { guidePagePath } from "@/lib/site/product-placement";
+import {
+  catalogShareLinks,
+  normalizeCatalogLinkMode,
+  type CatalogLinkMode,
+} from "@/lib/site/share-links";
 
 const EMPTY_GUIDE = {
   title_bg: "",
@@ -31,6 +35,9 @@ const EMPTY_GUIDE = {
   enabled: true,
   enabled_en: true,
   sort_order: 0,
+  slug: "",
+  link_mode: "page" as CatalogLinkMode,
+  link_url: "",
 };
 
 function SectionToggle({
@@ -106,6 +113,13 @@ export function GuidesManagerPanel({
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [form, setForm] = useState(EMPTY_GUIDE);
   const guidesSection = section ?? DEFAULT_SITE_SECTIONS.guides;
+  // The links panel shows the row as it is saved right now — the form may hold
+  // a slug that has not been written yet, and a link that does not resolve is
+  // worse than no link.
+  const editingGuide =
+    editingId && editingId !== "new"
+      ? (guides.find((g) => g.id === editingId) ?? null)
+      : null;
 
   function refresh() {
     router.refresh();
@@ -138,6 +152,9 @@ export function GuidesManagerPanel({
       enabled: guide.enabled,
       enabled_en: guide.enabled_en !== false,
       sort_order: guide.sort_order,
+      slug: guide.slug?.trim() ?? "",
+      link_mode: normalizeCatalogLinkMode(guide.link_mode),
+      link_url: guide.link_url ?? "",
     });
     setError(null);
   }
@@ -213,22 +230,6 @@ export function GuidesManagerPanel({
                 onChange={(e) => setForm({ ...form, title_en: e.target.value })}
               />
             </Field>
-            {editingId !== "new" && (
-              <Field label="Публични линкове">
-                <PublicPathLinks
-                  paths={[
-                    {
-                      label: guidePagePath(editingId, "bg"),
-                      href: guidePagePath(editingId, "bg"),
-                    },
-                    {
-                      label: guidePagePath(editingId, "en"),
-                      href: guidePagePath(editingId, "en"),
-                    },
-                  ]}
-                />
-              </Field>
-            )}
             <Field label="Описание — BG">
               <Textarea
                 rows={3}
@@ -262,6 +263,19 @@ export function GuidesManagerPanel({
               />
             </Field>
           </div>
+          <CatalogLinkEditor
+            kind="guide"
+            title={form.title_bg}
+            slug={form.slug}
+            onSlugChange={(slug) => setForm({ ...form, slug })}
+            linkMode={form.link_mode}
+            onLinkModeChange={(link_mode) => setForm({ ...form, link_mode })}
+            linkUrl={form.link_url}
+            onLinkUrlChange={(link_url) => setForm({ ...form, link_url })}
+            links={editingGuide ? catalogShareLinks("guide", editingGuide) : []}
+            saved={editingId !== "new"}
+            disabled={pending}
+          />
           <StripeLocalePicker
             label="Плащане — български"
             hint="Ползва се на /bg и като резерва за английски, ако там няма отделен Stripe."

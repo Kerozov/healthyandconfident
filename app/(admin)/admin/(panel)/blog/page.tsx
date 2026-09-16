@@ -6,6 +6,8 @@ import { PageHeaderActions } from "@/components/admin/page-header-actions";
 import { DeletePostButton } from "@/components/admin/delete-post-button";
 import { PublishPostButton } from "@/components/admin/publish-post-button";
 import { AdminButton, PageHeader, Badge, DataTable } from "@/components/admin/ui";
+import { CopyButton } from "@/components/admin/share-links";
+import { absoluteSiteUrl } from "@/lib/site/share-links";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +47,22 @@ export default async function AdminBlogList() {
                 <tr key={p.id} className="border-b border-ink/5 last:border-0">
                   <td className="p-4">
                     <span className="font-medium">{p.title}</span>
-                    <span className="block text-xs text-ink-soft/60">/{p.slug}</span>
+                    <span className="mt-1 flex items-center gap-1.5">
+                      <a
+                        href={`/${p.locale}/blog/${p.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate font-mono text-xs text-forest-700 hover:underline"
+                      >
+                        /{p.locale}/blog/{p.slug}
+                      </a>
+                      <CopyButton
+                        value={absoluteSiteUrl(`/${p.locale}/blog/${p.slug}`)}
+                        className="px-1.5 py-0.5"
+                      >
+                        <span className="sr-only">Копирай линка</span>
+                      </CopyButton>
+                    </span>
                   </td>
                   <td className="p-4">
                     <Badge tone="forest">{p.locale}</Badge>

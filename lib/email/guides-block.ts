@@ -18,8 +18,11 @@ export function guideEmailMarker(
     : `<!-- hc-email-guide:${guideId} -->`;
 }
 
-export function guidePageUrl(guideId: string, locale: "bg" | "en"): string {
-  return `${publicSiteOrigin()}${guidePagePath(guideId, locale)}`;
+export function guidePageUrl(
+  guide: string | { id: string; slug?: string | null },
+  locale: "bg" | "en",
+): string {
+  return `${publicSiteOrigin()}${guidePagePath(guide, locale)}`;
 }
 
 export function extractGuideIdsFromHtml(html: string): string[] {
@@ -44,7 +47,7 @@ export function renderEmailGuideCard(
   const href =
     mode === "stripe" && paymentLink
       ? paymentLink
-      : guidePageUrl(guide.id, locale);
+      : guidePageUrl(guide, locale);
   const cta =
     locale === "en" ? "View guide" : "Виж ръководството";
 

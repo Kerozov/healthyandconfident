@@ -56,7 +56,12 @@ export default async function HomePage({
       <FoodShowcase dict={dict} locale={l} />
       <Problems dict={dict} />
       <Method dict={dict} locale={l} />
-      <Programs dict={dict} locale={l} />
+      <Programs
+        dict={dict}
+        locale={l}
+        section={site.sections.programs}
+        cards={site.programCards}
+      />
       <BioCommunityBanner dict={dict} locale={l} />
       <TransformationResults dict={dict} locale={l} />
       <Outcomes dict={dict} locale={l} />

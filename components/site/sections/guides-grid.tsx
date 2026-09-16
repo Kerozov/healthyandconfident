@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteGuide } from "@/lib/supabase/types";
-import { guidePagePath } from "@/lib/site/product-placement";
+import { guideButtonHref } from "@/lib/site/share-links";
 
 function GuideCardImage({ src, alt }: { src: string; alt: string }) {
   return (
@@ -40,7 +40,7 @@ export function GuidesGrid({
         return (
           <Link
             key={guide.id}
-            href={guidePagePath(guide.id, locale)}
+            href={guideButtonHref(guide, locale)}
             className="group flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
           >
             {guide.image_url ? (

@@ -9,7 +9,9 @@
     "start": "next start",
     "lint": "eslint",
     "verify:worker": "bun scripts/verify-worker.ts",
-    "verify:email": "bun scripts/verify-email-blocks.ts"
+    "verify:email": "bun scripts/verify-email-blocks.ts",
+    "verify:upload": "bun scripts/verify-upload.ts",
+    "backfill:slugs": "bun scripts/backfill-catalog-slugs.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

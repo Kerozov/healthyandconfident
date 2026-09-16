@@ -8,8 +8,8 @@ import {
   productStripeBg,
   productStripeEnOnly,
 } from "@/lib/site/product-locale";
-import { productCheckoutPath } from "@/lib/site/product-placement";
-import { PublicPathLinks } from "@/components/admin/public-path-links";
+import { catalogShareLinks, normalizeCatalogLinkMode } from "@/lib/site/share-links";
+import { ShareLinkChips } from "@/components/admin/share-links";
 import { cn } from "@/lib/utils";
 
 function stripeSetupProblem(product: SiteProduct): string | null {
@@ -159,23 +159,15 @@ export function ProductAdminGrid({
                 {product.enabled_en !== false ? "EN активен" : "EN изключен"}
               </span>
             </div>
-            <div className="mt-1.5">
-              <PublicPathLinks
-                paths={[
-                  {
-                    label: productCheckoutPath(product.id, "bg"),
-                    href: productCheckoutPath(product.id, "bg"),
-                  },
-                  ...(product.enabled_en !== false
-                    ? [
-                        {
-                          label: productCheckoutPath(product.id, "en"),
-                          href: productCheckoutPath(product.id, "en"),
-                        },
-                      ]
-                    : []),
-                ]}
-              />
+            <div className="mt-1.5 space-y-1.5">
+              {normalizeCatalogLinkMode(product.link_mode) !== "page" && (
+                <span className="inline-flex rounded-full bg-gold-400/25 px-2 py-0.5 text-[10px] font-semibold text-forest-900">
+                  {normalizeCatalogLinkMode(product.link_mode) === "direct"
+                    ? "бутонът води директно към плащането"
+                    : "бутонът води към собствен линк"}
+                </span>
+              )}
+              <ShareLinkChips links={catalogShareLinks("product", product)} />
             </div>
             {stripeSetupProblem(product) && (
               <p className="mt-1.5 flex items-start gap-1.5 text-[11px] font-medium leading-snug text-amber-900">

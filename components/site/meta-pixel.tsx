@@ -5,6 +5,7 @@ import Script from "next/script";
 import { usePathname } from "next/navigation";
 import type { MetaPixelPublicConfig } from "@/lib/meta/types";
 import { persistMetaClickId, trackMetaPageView } from "@/lib/meta/client";
+import { isCtaPreviewPage } from "@/lib/site/cta-preview";
 
 /**
  * Meta Pixel loader. `fbq('init')` runs in the inline script; PageView is fired
@@ -32,6 +33,7 @@ export function MetaPixel({ config }: { config: MetaPixelPublicConfig }) {
 
   useEffect(() => {
     if (!config.enabled || !config.trackPageView) return;
+    if (isCtaPreviewPage()) return;
     if (lastPath.current === pathname) return;
     lastPath.current = pathname;
 

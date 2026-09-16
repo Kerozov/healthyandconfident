@@ -22,6 +22,7 @@ import { CheckoutNotice } from "@/components/site/checkout-notice";
 import { SiteAnalytics } from "@/components/site/site-analytics";
 import { MenuPopupProvider } from "@/components/site/menu-popup";
 import { HashScroll } from "@/components/site/hash-scroll";
+import { CtaPreviewHighlighter } from "@/components/site/cta-preview";
 import { OfferPopupProvider } from "@/components/site/offer-popup";
 import { getPopupSegmentTag } from "@/lib/site/popup-config";
 
@@ -139,6 +140,8 @@ export default async function SiteLayout({
               <SiteAnalytics />
             </Suspense>
             <MetaPixel config={metaPixel} />
+            {/* Inert unless the admin opened this page to point at a button. */}
+            <CtaPreviewHighlighter />
           </MenuPopupProvider>
         </OfferPopupProvider>
       </body>

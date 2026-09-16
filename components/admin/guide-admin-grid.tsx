@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { GripVertical, Pencil, Trash2, BookOpen } from "lucide-react";
 import type { SiteGuide } from "@/lib/supabase/types";
 import { reorderSiteGuides } from "@/app/(admin)/admin/actions";
-import { guidePagePath } from "@/lib/site/product-placement";
-import { PublicPathLinks } from "@/components/admin/public-path-links";
+import { catalogShareLinks, normalizeCatalogLinkMode } from "@/lib/site/share-links";
+import { ShareLinkChips } from "@/components/admin/share-links";
 import { cn } from "@/lib/utils";
 
 export function GuideAdminGrid({
@@ -114,23 +114,15 @@ export function GuideAdminGrid({
                 {guide.description_bg}
               </p>
             )}
-            <div className="mt-3">
-              <PublicPathLinks
-                paths={[
-                  {
-                    label: guidePagePath(guide.id, "bg"),
-                    href: guidePagePath(guide.id, "bg"),
-                  },
-                  ...(guide.enabled_en !== false
-                    ? [
-                        {
-                          label: guidePagePath(guide.id, "en"),
-                          href: guidePagePath(guide.id, "en"),
-                        },
-                      ]
-                    : []),
-                ]}
-              />
+            <div className="mt-3 space-y-1.5">
+              {normalizeCatalogLinkMode(guide.link_mode) !== "page" && (
+                <span className="inline-flex rounded-full bg-gold-400/25 px-2 py-0.5 text-[10px] font-semibold text-forest-900">
+                  {normalizeCatalogLinkMode(guide.link_mode) === "direct"
+                    ? "бутонът води директно към плащането"
+                    : "бутонът води към собствен линк"}
+                </span>
+              )}
+              <ShareLinkChips links={catalogShareLinks("guide", guide)} />
             </div>
             <div className="mt-4 flex gap-1">
               <button

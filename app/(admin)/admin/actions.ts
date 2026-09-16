@@ -1,13 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { AdminAccessError, requireAdmin } from "@/lib/admin/auth";
+import {
+  AdminAccessError,
+  AdminSessionUnavailableError,
+  requireAdmin,
+} from "@/lib/admin/auth";
 import { productPlacementKey } from "@/lib/site/product-placement";
+import {
+  catalogSlug,
+  normalizeCatalogLinkMode,
+  normalizeCustomLinkUrl,
+  uniqueCatalogSlug,
+  type CatalogLinkMode,
+} from "@/lib/site/share-links";
 import {
   serializeContactLinks,
   type SiteContactLink,
 } from "@/lib/site/contact-links";
 import { productPlacementLabel } from "@/lib/site/cta-placements";
+import {
+  nextProgramPlacementKey,
+  programCardPlacementLabel,
+} from "@/lib/site/program-cards";
 import { parseStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { enrichStripePriceFromProduct } from "@/lib/stripe/sync-product";
 import {
@@ -73,12 +88,23 @@ import {
   type FormAnswerCondition,
 } from "@/lib/automation/form-conditions";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
-import type { Automation, AutomationDelivery, SiteCtaPlacement, SiteSectionKey, SiteProduct } from "@/lib/supabase/types";
+import type {
+  Automation,
+  AutomationDelivery,
+  SiteCtaPlacement,
+  SiteSectionKey,
+  SiteProduct,
+} from "@/lib/supabase/types";
 import { slugify, chunkArray } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { expandAudienceKeys, isDescendantGroup } from "@/lib/segments/hierarchy";
-import { uploadMediaImage, uploadEmailPdf } from "@/lib/supabase/media";
+import {
+  createImageUploadTicket,
+  createPdfUploadTicket,
+  type MediaUploadDescriptor,
+  type MediaUploadTicket,
+} from "@/lib/supabase/media";
 import { MEDIA_FOLDERS, type MediaFolder } from "@/lib/media/folders";
 import { parseYoutubeVideoId } from "@/lib/youtube";
 import {
@@ -96,6 +122,42 @@ import { sendMetaEvent } from "@/lib/meta/capi";
 import { publicSiteOrigin } from "@/lib/site";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string; slug?: string };
+
+/**
+ * `requireAdmin`, but as a red message instead of a thrown error.
+ *
+ * A throw out of a Server Action blanks the whole panel through the error
+ * boundary, and a session that failed to load used to read as "signed out".
+ * Actions that the user triggers by hand should say what went wrong and leave
+ * them exactly where they are.
+ */
+async function guardAction(
+  screen?: Parameters<typeof requireAdmin>[0],
+  audit?: Parameters<typeof requireAdmin>[1],
+): Promise<ActionResult> {
+  try {
+    await requireAdmin(screen, audit);
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof AdminSessionUnavailableError) {
+      return {
+        ok: false,
+        message:
+          "Връзката с базата се разпадна. Опитай пак — не си излязъл от профила.",
+      };
+    }
+    if (err instanceof AdminAccessError) {
+      return {
+        ok: false,
+        message:
+          err.message === "UNAUTHORIZED"
+            ? "Сесията не можа да се потвърди. Презареди страницата."
+            : err.message,
+      };
+    }
+    throw err;
+  }
+}
 
 function readingMinutes(content: string) {
   const words = content.trim().split(/\s+/).length;
@@ -117,7 +179,8 @@ export async function savePost(input: {
   status: "draft" | "published";
   featured?: boolean;
 }): Promise<ActionResult> {
-  await requireAdmin("blog", { action: "save", summary: "Запази статия" });
+  const guard = await guardAction("blog", { action: "save", summary: "Запази статия" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const tags = (input.tags || "")
@@ -167,7 +230,8 @@ export async function savePost(input: {
 }
 
 export async function publishPost(id: string): Promise<ActionResult> {
-  await requireAdmin("blog", { action: "publish", summary: "Публикува статия" });
+  const guard = await guardAction("blog", { action: "publish", summary: "Публикува статия" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { data: row, error: loadError } = await supabase
     .from("blog_posts")
@@ -202,7 +266,8 @@ export async function publishPost(id: string): Promise<ActionResult> {
 }
 
 export async function deletePost(id: string, locale: string): Promise<ActionResult> {
-  await requireAdmin("blog", { action: "delete", summary: "Изтри статия" });
+  const guard = await guardAction("blog", { action: "delete", summary: "Изтри статия" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("blog_posts").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -222,7 +287,8 @@ export async function savePopup(input: {
   segment_tag: string;
   delay_seconds: number;
 }): Promise<ActionResult> {
-  await requireAdmin("popup", { action: "save", summary: "Обнови popup" });
+  const guard = await guardAction("popup", { action: "save", summary: "Обнови popup" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("popup_config")
@@ -252,7 +318,8 @@ export async function saveSiteContactConfig(input: {
   whatsapp_url: string;
   extra_links?: SiteContactLink[];
 }): Promise<ActionResult> {
-  await requireAdmin("website", { action: "save", summary: "Обнови контакти на сайта" });
+  const guard = await guardAction("website", { action: "save", summary: "Обнови контакти на сайта" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { data: existing } = await supabase
     .from("site_contact_config")
@@ -312,7 +379,8 @@ export async function saveEmailFooter(input: {
   header_bg_color: string;
   copyright_enabled: boolean;
 }): Promise<ActionResult> {
-  await requireAdmin("email-footer", { action: "save", summary: "Обнови email подпис" });
+  const guard = await guardAction("email-footer", { action: "save", summary: "Обнови email подпис" });
+  if (!guard.ok) return guard;
   const resolvedLinks = (
     await resolveSignatureCatalogHrefs({
       ...footerConfigFromRow(null, input.locale),
@@ -486,7 +554,8 @@ function automationOriginsPayload(input: AutomationInput) {
 export async function createAutomation(
   input: AutomationInput,
 ): Promise<ActionResult & { id?: string }> {
-  await requireAdmin("automations", { action: "create", summary: "Създаде автоматизация" });
+  const guard = await guardAction("automations", { action: "create", summary: "Създаде автоматизация" });
+  if (!guard.ok) return guard;
   const validationErr = await validateAutomationInput(input);
   if (validationErr) return { ok: false, message: validationErr };
   const supabase = getAdminClient();
@@ -528,7 +597,8 @@ export async function updateAutomation(
   id: string,
   input: AutomationInput,
 ): Promise<ActionResult> {
-  await requireAdmin("automations", { action: "update", summary: "Обнови автоматизация" });
+  const guard = await guardAction("automations", { action: "update", summary: "Обнови автоматизация" });
+  if (!guard.ok) return guard;
   const validationErr = await validateAutomationInput(input);
   if (validationErr) return { ok: false, message: validationErr };
   const supabase = getAdminClient();
@@ -579,7 +649,8 @@ export async function duplicateAutomation(
   id: string,
   options?: { after_automation_id?: string | null; name?: string },
 ): Promise<ActionResult & { id?: string; name?: string }> {
-  await requireAdmin("automations", { action: "duplicate", summary: "Дублира автоматизация" });
+  const guard = await guardAction("automations", { action: "duplicate", summary: "Дублира автоматизация" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: source, error: readError } = await supabase
@@ -683,7 +754,8 @@ export async function duplicateAutomation(
 }
 
 export async function deleteAutomation(id: string): Promise<ActionResult> {
-  await requireAdmin("automations", { action: "delete", summary: "Изтри автоматизация" });
+  const guard = await guardAction("automations", { action: "delete", summary: "Изтри автоматизация" });
+  if (!guard.ok) return guard;
   try {
     await cancelAutomationScheduledJobs(id);
   } catch {
@@ -700,7 +772,8 @@ export async function toggleAutomationEnabled(
   id: string,
   enabled: boolean,
 ): Promise<ActionResult> {
-  await requireAdmin("automations", { action: "update", summary: "Превключи автоматизация" });
+  const guard = await guardAction("automations", { action: "update", summary: "Превключи автоматизация" });
+  if (!guard.ok) return guard;
   if (!enabled) {
     await cancelAutomationScheduledJobs(id);
   }
@@ -806,7 +879,8 @@ export async function diagnoseAutomationsForEmail(
 }
 
 export async function syncAutomation(id: string): Promise<ActionResult> {
-  await requireAdmin("automations", { action: "sync", summary: "Синхронизира автоматизация" });
+  const guard = await guardAction("automations", { action: "sync", summary: "Синхронизира автоматизация" });
+  if (!guard.ok) return guard;
   const result = await syncAutomationDeliveries(id);
   revalidatePath("/admin/automations");
   return {
@@ -816,7 +890,8 @@ export async function syncAutomation(id: string): Promise<ActionResult> {
 }
 
 export async function syncAllAutomations(): Promise<ActionResult> {
-  await requireAdmin("automations", { action: "sync", summary: "Синхронизира всички автоматизации" });
+  const guard = await guardAction("automations", { action: "sync", summary: "Синхронизира всички автоматизации" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { data } = await supabase.from("automations").select("id");
   const ids = ((data as { id: string }[]) ?? []).map((r) => r.id);
@@ -850,7 +925,8 @@ export async function getAutomationDeliveriesReport(
 export async function resendAutomationToNonOpeners(
   automationId: string,
 ): Promise<ActionResult> {
-  await requireAdmin("automations", { action: "send", summary: "Препрати автоматизация към неотворили" });
+  const guard = await guardAction("automations", { action: "send", summary: "Препрати автоматизация към неотворили" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -975,7 +1051,8 @@ export async function addSubscriber(input: {
   locale: "bg" | "en";
   tags?: string[];
 }): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "create", summary: "Добави абонат" });
+  const guard = await guardAction("subscribers", { action: "create", summary: "Добави абонат" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const email = input.email.trim().toLowerCase();
   const locale = input.locale;
@@ -1062,7 +1139,8 @@ export async function importSubscribers(input: {
     errors?: string[];
   }
 > {
-  await requireAdmin("subscribers", { action: "import", summary: "Импортира абонати" });
+  const guard = await guardAction("subscribers", { action: "import", summary: "Импортира абонати" });
+  if (!guard.ok) return guard;
 
   // Large files go through /api/admin/subscribers/import in batches — a server
   // action body is capped at 1 MB. This path stays for small, in-place imports.
@@ -1102,7 +1180,8 @@ export async function updateSubscriber(input: {
   status?: "subscribed" | "unsubscribed";
   notes?: string;
 }): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "update", summary: "Обнови абонат" });
+  const guard = await guardAction("subscribers", { action: "update", summary: "Обнови абонат" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: existingRow } = await supabase
@@ -1184,10 +1263,11 @@ export async function deleteSubscribers(
   ids: string[],
 ): Promise<ActionResult & { deleted?: number }> {
   try {
-    await requireAdmin("subscribers", {
+    const guard = await guardAction("subscribers", {
       action: "delete",
       summary: `Изтри ${ids.length} абонат(а)`,
     });
+    if (!guard.ok) return guard;
   } catch (err) {
     const message =
       err instanceof AdminAccessError
@@ -1220,7 +1300,8 @@ export async function createSegmentGroup(input: {
   description?: string;
   parent_id?: string | null;
 }): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "create", summary: "Създаде група" });
+  const guard = await guardAction("subscribers", { action: "create", summary: "Създаде група" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const name = input.name.trim();
   if (!name) return { ok: false, message: "Group name is required." };
@@ -1253,7 +1334,8 @@ export async function updateSegmentGroup(input: {
   description?: string | null;
   parent_id?: string | null;
 }): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "update", summary: "Обнови група" });
+  const guard = await guardAction("subscribers", { action: "update", summary: "Обнови група" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1301,7 +1383,8 @@ export async function updateSegmentGroup(input: {
 }
 
 export async function deleteSegmentGroup(id: string): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "delete", summary: "Изтри група" });
+  const guard = await guardAction("subscribers", { action: "delete", summary: "Изтри група" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("segment_groups").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -1318,7 +1401,8 @@ export async function createSegment(input: {
   description?: string;
   group_id?: string | null;
 }): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "create", summary: "Създаде сегмент" });
+  const guard = await guardAction("subscribers", { action: "create", summary: "Създаде сегмент" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const key = slugify(input.key || input.name);
   if (!key || key === "all") {
@@ -1354,7 +1438,8 @@ export async function updateSegment(input: {
   description?: string | null;
   group_id?: string | null;
 }): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "update", summary: "Обнови сегмент" });
+  const guard = await guardAction("subscribers", { action: "update", summary: "Обнови сегмент" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1399,7 +1484,8 @@ export async function updateSegment(input: {
 }
 
 export async function deleteSegment(id: string): Promise<ActionResult> {
-  await requireAdmin("subscribers", { action: "delete", summary: "Изтри сегмент" });
+  const guard = await guardAction("subscribers", { action: "delete", summary: "Изтри сегмент" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -1908,7 +1994,8 @@ export async function updateEmailCampaignCta(
   id: string,
   input: { cta_label: string; cta_url: string },
 ): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "update", summary: "Обнови CTA на кампания" });
+  const guard = await guardAction("campaigns", { action: "update", summary: "Обнови CTA на кампания" });
+  if (!guard.ok) return guard;
   const ctaLabel = input.cta_label.trim();
   const ctaUrl = input.cta_url.trim();
 
@@ -1947,7 +2034,8 @@ export async function sendEmailCampaign(input: {
   hero_image_url?: string;
   signature_enabled?: boolean;
 }): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "send", summary: "Изпрати имейл кампания" });
+  const guard = await guardAction("campaigns", { action: "send", summary: "Изпрати имейл кампания" });
+  if (!guard.ok) return guard;
   const ctaLabel = input.cta_label?.trim() ?? "";
   const ctaUrl = input.cta_url?.trim() ?? "";
   if (ctaLabel && !ctaUrl) {
@@ -1978,7 +2066,8 @@ export async function sendEmailCampaign(input: {
 
 /** Pull authoritative status + open tracking from the worker into our DB. */
 export async function syncEmailCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "sync", summary: "Синхронизира кампания" });
+  const guard = await guardAction("campaigns", { action: "sync", summary: "Синхронизира кампания" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -2055,7 +2144,8 @@ async function persistCampaignSync(
 
 /** Refresh every campaign that still has a worker job (skips drafts/failed-at-create). */
 export async function syncAllEmailCampaigns(): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "sync", summary: "Синхронизира всички кампании" });
+  const guard = await guardAction("campaigns", { action: "sync", summary: "Синхронизира всички кампании" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -2086,7 +2176,8 @@ export async function resendToNonOpeners(input: {
   campaignId: string;
   subject?: string;
 }): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "send", summary: "Препрати кампания към неотворили" });
+  const guard = await guardAction("campaigns", { action: "send", summary: "Препрати кампания към неотворили" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -2207,7 +2298,8 @@ export async function getSubscribersEngagementSummaries(emails: string[]) {
 const CANCELABLE_EMAIL_STATUSES: CampaignStatus[] = ["scheduled", "queued"];
 
 export async function cancelEmailCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "cancel", summary: "Отмени имейл кампания" });
+  const guard = await guardAction("campaigns", { action: "cancel", summary: "Отмени имейл кампания" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from("email_campaigns")
@@ -2260,7 +2352,8 @@ export async function cancelEmailCampaign(id: string): Promise<ActionResult> {
 }
 
 export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "delete", summary: "Изтри имейл кампания" });
+  const guard = await guardAction("campaigns", { action: "delete", summary: "Изтри имейл кампания" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -2355,7 +2448,8 @@ export async function sendSmsCampaign(input: {
   audience: AudienceInput;
   scheduled_at?: string;
 }): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "send", summary: "Изпрати SMS кампания" });
+  const guard = await guardAction("campaigns", { action: "send", summary: "Изпрати SMS кампания" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const audience = await resolveAudience(input.audience);
 
@@ -2464,7 +2558,8 @@ export async function sendSmsCampaign(input: {
 }
 
 export async function syncSmsCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "sync", summary: "Синхронизира SMS кампания" });
+  const guard = await guardAction("campaigns", { action: "sync", summary: "Синхронизира SMS кампания" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -2496,7 +2591,8 @@ export async function syncSmsCampaign(id: string): Promise<ActionResult> {
 }
 
 export async function syncAllSmsCampaigns(): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "sync", summary: "Синхронизира всички SMS кампании" });
+  const guard = await guardAction("campaigns", { action: "sync", summary: "Синхронизира всички SMS кампании" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -2525,7 +2621,8 @@ export async function syncAllSmsCampaigns(): Promise<ActionResult> {
 const CANCELABLE_SMS_STATUSES: SmsCampaignStatus[] = ["scheduled", "queued"];
 
 export async function cancelSmsCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "cancel", summary: "Отмени SMS кампания" });
+  const guard = await guardAction("campaigns", { action: "cancel", summary: "Отмени SMS кампания" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from("sms_campaigns")
@@ -2572,7 +2669,8 @@ export async function cancelSmsCampaign(id: string): Promise<ActionResult> {
 }
 
 export async function deleteSmsCampaign(id: string): Promise<ActionResult> {
-  await requireAdmin("campaigns", { action: "delete", summary: "Изтри SMS кампания" });
+  const guard = await guardAction("campaigns", { action: "delete", summary: "Изтри SMS кампания" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data } = await supabase
@@ -2620,6 +2718,81 @@ export type ProductOfferInput = {
 /** Postgres error for a column the pending migration has not created yet. */
 function isMissingColumn(message: string | undefined): boolean {
   return Boolean(message && /column .* does not exist/i.test(message));
+}
+
+/** A slug the unique index refused — name the field the admin has to change. */
+function catalogSaveMessage(message: string): string {
+  if (/slug/i.test(message) && /duplicate|unique/i.test(message)) {
+    return "Този адрес вече се ползва от друго нещо. Смени „Адрес на страницата“.";
+  }
+  return message;
+}
+
+export type CatalogLinkInput = {
+  slug?: string;
+  link_mode?: string;
+  link_url?: string;
+};
+
+type CatalogLinkColumns = {
+  slug: string | null;
+  link_mode: CatalogLinkMode;
+  link_url: string;
+};
+
+/**
+ * The link columns of a product or guide (migration 067), resolved to
+ * something safe to write: a slug nobody else in that table is already using,
+ * and a mode the check constraint accepts.
+ *
+ * Returns `null` when the columns are not there yet, so a save landing between
+ * the code deploy and the migration still stores everything else.
+ *
+ * The catalogue tables hold tens of rows, so one page is the whole table; the
+ * limit is there to make that assumption visible rather than to page.
+ */
+async function catalogLinkColumns(
+  supabase: ReturnType<typeof getAdminClient>,
+  table: "site_guides" | "site_products",
+  id: string | undefined,
+  title: string,
+  input: CatalogLinkInput,
+): Promise<CatalogLinkColumns | null> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("id, slug")
+    .limit(1000);
+
+  // The column is not there yet — save everything else rather than fail.
+  if (error && isMissingColumn(error.message)) return null;
+
+  const rows = (data as { id: string; slug: string | null }[]) ?? [];
+
+  // Typed by hand or generated from the title — either way it goes through the
+  // same normalisation, so the stored slug is always one that resolves.
+  const wanted = catalogSlug(input.slug) || catalogSlug(title);
+  const current = rows.find((row) => row.id === id)?.slug?.trim() ?? "";
+
+  // Could not read the table for some other reason: write the slug as asked and
+  // let the unique index have the final word, rather than drop it silently.
+  let slug = wanted;
+  if (!error && wanted !== current) {
+    const taken = rows
+      .filter((row) => row.id !== id)
+      .map((row) => row.slug?.trim() ?? "")
+      .filter(Boolean);
+    slug = uniqueCatalogSlug(wanted, taken);
+  }
+
+  const mode = normalizeCatalogLinkMode(input.link_mode);
+  const url = normalizeCustomLinkUrl(input.link_url);
+
+  return {
+    slug: slug || null,
+    link_mode: mode,
+    // A leftover URL on a row that no longer links anywhere custom is noise.
+    link_url: mode === "custom" ? url : "",
+  };
 }
 
 async function syncProductPlacement(
@@ -2681,7 +2854,8 @@ export async function saveSiteSection(input: {
   title_bg?: string;
   title_en?: string;
 }): Promise<ActionResult> {
-  await requireAdmin("website", { action: "save", summary: "Обнови секция на сайта" });
+  const guard = await guardAction("website", { action: "save", summary: "Обнови секция на сайта" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_sections").upsert(
     {
@@ -2714,7 +2888,8 @@ export async function saveSiteEvent(input: {
   enabled?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin("website", { action: "save", summary: "Запази събитие" });
+  const guard = await guardAction("website", { action: "save", summary: "Запази събитие" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const row = {
     title_bg: input.title_bg.trim(),
@@ -2751,7 +2926,8 @@ export async function saveSiteEvent(input: {
 }
 
 export async function deleteSiteEvent(id: string): Promise<ActionResult> {
-  await requireAdmin("website", { action: "delete", summary: "Изтри събитие" });
+  const guard = await guardAction("website", { action: "delete", summary: "Изтри събитие" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_events").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -2768,7 +2944,8 @@ export async function saveSiteVideo(input: {
   enabled_en?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin("website", { action: "save", summary: "Запази видео" });
+  const guard = await guardAction("website", { action: "save", summary: "Запази видео" });
+  if (!guard.ok) return guard;
   const youtubeUrl = input.youtube_url.trim();
   if (!parseYoutubeVideoId(youtubeUrl)) {
     return { ok: false, message: "Невалиден YouTube линк." };
@@ -2799,7 +2976,8 @@ export async function saveSiteVideo(input: {
 }
 
 export async function deleteSiteVideo(id: string): Promise<ActionResult> {
-  await requireAdmin("website", { action: "delete", summary: "Изтри видео" });
+  const guard = await guardAction("website", { action: "delete", summary: "Изтри видео" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_videos").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -2828,8 +3006,12 @@ export async function saveSiteGuide(input: {
   enabled?: boolean;
   enabled_en?: boolean;
   sort_order?: number;
+  slug?: string;
+  link_mode?: string;
+  link_url?: string;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin("website", { action: "save", summary: "Запази наръчник" });
+  const guard = await guardAction("website", { action: "save", summary: "Запази наръчник" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const titleBg = input.title_bg.trim();
   const titleEn = input.title_en.trim() || titleBg;
@@ -2863,7 +3045,10 @@ export async function saveSiteGuide(input: {
     };
   }
 
+  const links = await catalogLinkColumns(supabase, "site_guides", input.id, titleBg, input);
+
   const row = {
+    ...(links ?? {}),
     title_bg: titleBg,
     title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
@@ -2886,19 +3071,20 @@ export async function saveSiteGuide(input: {
 
   if (input.id) {
     const { error } = await supabase.from("site_guides").update(row).eq("id", input.id);
-    if (error) return { ok: false, message: error.message };
+    if (error) return { ok: false, message: catalogSaveMessage(error.message) };
     revalidateSitePaths();
     return { ok: true, id: input.id };
   }
 
   const { data, error } = await supabase.from("site_guides").insert(row).select("id").single();
-  if (error) return { ok: false, message: error.message };
+  if (error) return { ok: false, message: catalogSaveMessage(error.message) };
   revalidateSitePaths();
   return { ok: true, id: (data as { id: string }).id };
 }
 
 export async function deleteSiteGuide(id: string): Promise<ActionResult> {
-  await requireAdmin("website", { action: "delete", summary: "Изтри наръчник" });
+  const guard = await guardAction("website", { action: "delete", summary: "Изтри наръчник" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_guides").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -2907,7 +3093,8 @@ export async function deleteSiteGuide(id: string): Promise<ActionResult> {
 }
 
 export async function reorderSiteGuides(ids: string[]): Promise<ActionResult> {
-  await requireAdmin("website", { action: "update", summary: "Пренареди наръчници" });
+  const guard = await guardAction("website", { action: "update", summary: "Пренареди наръчници" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   await Promise.all(
     ids.map((id, index) =>
@@ -3008,8 +3195,12 @@ export async function saveSiteProduct(input: {
   downsell_enabled?: boolean;
   downsell_headline_bg?: string;
   downsell_headline_en?: string;
+  slug?: string;
+  link_mode?: string;
+  link_url?: string;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin("website", { action: "save", summary: "Запази продукт" });
+  const guard = await guardAction("website", { action: "save", summary: "Запази продукт" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const titleBg = input.title_bg.trim();
   const titleEn = input.title_en.trim() || titleBg;
@@ -3077,7 +3268,16 @@ export async function saveSiteProduct(input: {
     downsell_headline_en: input.downsell_headline_en?.trim() ?? "",
   };
 
+  const links = await catalogLinkColumns(
+    supabase,
+    "site_products",
+    input.id,
+    titleBg,
+    input,
+  );
+
   const row: Partial<SiteProduct> = {
+    ...(links ?? {}),
     title_bg: titleBg,
     title_en: titleEn,
     description_bg: input.description_bg?.trim() ?? "",
@@ -3109,7 +3309,7 @@ export async function saveSiteProduct(input: {
 
   if (input.id) {
     const { error } = await supabase.from("site_products").update(row).eq("id", input.id);
-    if (error) return { ok: false, message: error.message };
+    if (error) return { ok: false, message: catalogSaveMessage(error.message) };
     const sync = await syncProductPlacement(
       supabase,
       input.id,
@@ -3127,7 +3327,7 @@ export async function saveSiteProduct(input: {
     .insert(row)
     .select("id")
     .single();
-  if (error) return { ok: false, message: error.message };
+  if (error) return { ok: false, message: catalogSaveMessage(error.message) };
   const productId = (data as { id: string }).id;
   const sync = await syncProductPlacement(
     supabase,
@@ -3142,7 +3342,8 @@ export async function saveSiteProduct(input: {
 }
 
 export async function deleteSiteProduct(id: string): Promise<ActionResult> {
-  await requireAdmin("website", { action: "delete", summary: "Изтри продукт" });
+  const guard = await guardAction("website", { action: "delete", summary: "Изтри продукт" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("site_products").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -3154,13 +3355,201 @@ export async function deleteSiteProduct(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+// ── Programme cards (home page section „Програми“) ─────────────
+
+function cleanLines(values: string[] | undefined): string[] {
+  return (values ?? []).map((v) => v.trim()).filter(Boolean);
+}
+
+export type SiteProgramCardInput = {
+  id?: string;
+  badge_bg?: string;
+  badge_en?: string;
+  title_bg: string;
+  title_en?: string;
+  duration_bg?: string;
+  duration_en?: string;
+  price_bg?: string;
+  price_en?: string;
+  description_bg?: string;
+  description_en?: string;
+  features_bg?: string[];
+  features_en?: string[];
+  cta_label_bg?: string;
+  cta_label_en?: string;
+  href?: string;
+  href_en?: string;
+  image_url?: string;
+  highlight?: boolean;
+  enabled?: boolean;
+  enabled_en?: boolean;
+  sort_order?: number;
+};
+
+export async function saveSiteProgramCard(
+  input: SiteProgramCardInput,
+): Promise<ActionResult & { id?: string }> {
+  const guard = await guardAction("website", {
+    action: "save",
+    summary: "Запази картичка в „Програми“",
+  });
+  if (!guard.ok) return guard;
+
+  const titleBg = input.title_bg.trim();
+  if (!titleBg) return { ok: false, message: "Попълни заглавие на картичката (BG)." };
+  const titleEn = input.title_en?.trim() ?? "";
+
+  const supabase = getAdminClient();
+  const row = {
+    badge_bg: input.badge_bg?.trim() ?? "",
+    badge_en: input.badge_en?.trim() ?? "",
+    title_bg: titleBg,
+    title_en: titleEn,
+    duration_bg: input.duration_bg?.trim() ?? "",
+    duration_en: input.duration_en?.trim() ?? "",
+    price_bg: input.price_bg?.trim() ?? "",
+    price_en: input.price_en?.trim() ?? "",
+    description_bg: input.description_bg?.trim() ?? "",
+    description_en: input.description_en?.trim() ?? "",
+    features_bg: cleanLines(input.features_bg),
+    features_en: cleanLines(input.features_en),
+    cta_label_bg: input.cta_label_bg?.trim() ?? "",
+    cta_label_en: input.cta_label_en?.trim() ?? "",
+    href: input.href?.trim() ?? "",
+    href_en: input.href_en?.trim() ?? "",
+    image_url: input.image_url?.trim() || null,
+    highlight: input.highlight ?? false,
+    enabled: input.enabled ?? true,
+    enabled_en: input.enabled_en ?? true,
+    sort_order: input.sort_order ?? 0,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { error } = await supabase
+      .from("site_program_cards")
+      .update(row)
+      .eq("id", input.id);
+    if (error) return { ok: false, message: error.message };
+    revalidateSitePaths();
+    return { ok: true, id: input.id };
+  }
+
+  // A new card needs a key of its own: reusing one would hand it the Stripe
+  // product and the upsell offer configured for another programme.
+  const { data: existing, error: keysError } = await supabase
+    .from("site_program_cards")
+    .select("placement_key");
+  if (keysError) return { ok: false, message: keysError.message };
+  const placementKey = nextProgramPlacementKey(
+    ((existing as { placement_key: string }[]) ?? []).map((r) => r.placement_key),
+  );
+
+  const { data, error } = await supabase
+    .from("site_program_cards")
+    .insert({ ...row, placement_key: placementKey })
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: error.message };
+
+  // Give the button a placements row so it can later carry an upsell offer or
+  // a Stripe product, like the buttons of the original three cards.
+  await supabase.from("site_cta_placements").upsert(
+    {
+      key: placementKey,
+      ...programCardPlacementLabel(titleBg, titleEn),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "key" },
+  );
+
+  revalidateSitePaths();
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function deleteSiteProgramCard(id: string): Promise<ActionResult> {
+  const guard = await guardAction("website", {
+    action: "delete",
+    summary: "Изтри картичка от „Програми“",
+  });
+  if (!guard.ok) return guard;
+  const supabase = getAdminClient();
+  const { data: card } = await supabase
+    .from("site_program_cards")
+    .select("placement_key")
+    .eq("id", id)
+    .single();
+  const { error } = await supabase.from("site_program_cards").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+
+  // The three original cards share their keys with the programme landing pages
+  // („Бутони“ still lists them), so only a key this feature created is removed.
+  const key = (card as { placement_key: string } | null)?.placement_key;
+  if (key && !["programs_0", "programs_1", "programs_2"].includes(key)) {
+    await supabase.from("site_cta_placements").delete().eq("key", key);
+  }
+  revalidateSitePaths();
+  return { ok: true };
+}
+
+export async function reorderSiteProgramCards(ids: string[]): Promise<ActionResult> {
+  const guard = await guardAction("website", {
+    action: "update",
+    summary: "Пренареди картичките в „Програми“",
+  });
+  if (!guard.ok) return guard;
+  const supabase = getAdminClient();
+  await Promise.all(
+    ids.map((id, index) =>
+      supabase
+        .from("site_program_cards")
+        .update({ sort_order: (index + 1) * 10, updated_at: new Date().toISOString() })
+        .eq("id", id),
+    ),
+  );
+  revalidateSitePaths();
+  return { ok: true };
+}
+
+/**
+ * Drop the text and link typed under „Бутони“ for one card button, and show it
+ * again if it was hidden there, so the card is the one thing that describes its
+ * own button. Stripe stays untouched — a payment button must keep charging.
+ */
+export async function clearProgramCardButtonOverride(
+  placementKey: string,
+): Promise<ActionResult> {
+  const guard = await guardAction("website", {
+    action: "update",
+    summary: "Изчисти настройка от „Бутони“ за картичка",
+  });
+  if (!guard.ok) return guard;
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("site_cta_placements")
+    .update({
+      button_label_bg: "",
+      button_label_en: "",
+      button_url: "",
+      button_url_en: "",
+      button_enabled: true,
+      button_enabled_en: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("key", placementKey);
+  if (error) return { ok: false, message: error.message };
+  revalidateSitePaths();
+  return { ok: true };
+}
+
 export async function fetchStripeCatalog(): Promise<
   ActionResult & {
     items?: StripeCatalogItem[];
     paymentLinks?: StripePaymentLinkItem[];
   }
 > {
-  await requireAdmin(["website", "campaigns", "automations", "forms"] as const);
+  const guard = await guardAction(["website", "campaigns", "automations", "forms"] as const);
+  if (!guard.ok) return guard;
   try {
     const { items, paymentLinks } = await getStripeCatalogForAdmin();
     return { ok: true, items, paymentLinks };
@@ -3173,7 +3562,8 @@ export async function fetchStripeCatalog(): Promise<
 export async function importStripeProduct(
   stripeProductId: string,
 ): Promise<ActionResult & { id?: string }> {
-  await requireAdmin("website", { action: "create", summary: "Импортира Stripe продукт" });
+  const guard = await guardAction("website", { action: "create", summary: "Импортира Stripe продукт" });
+  if (!guard.ok) return guard;
   const prodId = stripeProductId.trim();
   if (!prodId.startsWith("prod_")) {
     return { ok: false, message: "Невалиден Stripe Product ID." };
@@ -3219,7 +3609,8 @@ export async function importStripeProduct(
 export async function syncSiteProductFromStripe(
   siteProductId: string,
 ): Promise<ActionResult> {
-  await requireAdmin("website", { action: "sync", summary: "Синхронизира продукт от Stripe" });
+  const guard = await guardAction("website", { action: "sync", summary: "Синхронизира продукт от Stripe" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { data: product, error } = await supabase
     .from("site_products")
@@ -3258,7 +3649,8 @@ export async function syncSiteProductFromStripe(
 }
 
 export async function reorderSiteProducts(ids: string[]): Promise<ActionResult> {
-  await requireAdmin("website", { action: "update", summary: "Пренареди продукти" });
+  const guard = await guardAction("website", { action: "update", summary: "Пренареди продукти" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   await Promise.all(
     ids.map((id, index) =>
@@ -3289,7 +3681,8 @@ export async function saveCtaPlacement(input: {
   button_enabled?: boolean;
   button_enabled_en?: boolean;
 }): Promise<ActionResult> {
-  await requireAdmin("website", { action: "save", summary: "Обнови CTA на сайта" });
+  const guard = await guardAction("website", { action: "save", summary: "Обнови CTA на сайта" });
+  if (!guard.ok) return guard;
 
   // Only what the caller sent is written. The buttons screen and the offer
   // screen edit different halves of the same row, and blanking the half you are
@@ -3356,52 +3749,52 @@ export async function saveCtaPlacement(input: {
 }
 
 // ── Media uploads ───────────────────────────────────────────
-export async function uploadSiteImage(
-  formData: FormData,
-): Promise<ActionResult & { url?: string }> {
-  await requireAdmin(["blog", "website", "popup", "email-footer", "forms", "campaigns", "automations"] as const, { action: "upload", summary: "Качи изображение" });
+//
+// These actions hand out a signed Storage URL; the browser then PUTs the file
+// straight to Supabase. Nothing but the descriptor crosses the Server Action
+// boundary, so the 4 MB body limit and the function timeout stop applying and a
+// 20 MB PDF uploads as reliably as a 200 KB thumbnail.
 
-  const file = formData.get("file");
-  const folder = formData.get("folder");
+export type UploadTicketResult = ActionResult & { ticket?: MediaUploadTicket };
 
-  if (!(file instanceof File)) {
-    return { ok: false, message: "Липсва файл." };
-  }
-  if (typeof folder !== "string" || !MEDIA_FOLDERS.includes(folder as MediaFolder)) {
+export async function createSiteImageUpload(
+  file: MediaUploadDescriptor,
+  folder: string,
+): Promise<UploadTicketResult> {
+  const guard = await guardAction(
+    ["blog", "website", "popup", "email-footer", "forms", "campaigns", "automations"] as const,
+    { action: "upload", summary: "Качи изображение" },
+  );
+  if (!guard.ok) return guard;
+
+  if (!MEDIA_FOLDERS.includes(folder as MediaFolder)) {
     return { ok: false, message: "Невалидна папка за качване." };
   }
 
-  const result = await uploadMediaImage(file, folder as MediaFolder);
+  const result = await createImageUploadTicket(file, folder as MediaFolder);
   if (!result.ok) return { ok: false, message: result.message };
-  return { ok: true, url: result.url };
+  return { ok: true, ticket: result.ticket };
 }
 
-export async function uploadEmailAttachment(
-  formData: FormData,
-): Promise<
-  ActionResult & { path?: string; filename?: string; url?: string }
-> {
-  await requireAdmin(["campaigns", "automations", "email-footer"] as const, { action: "upload", summary: "Качи прикачен файл" });
+export async function createEmailAttachmentUpload(
+  file: MediaUploadDescriptor,
+): Promise<UploadTicketResult> {
+  const guard = await guardAction(
+    ["campaigns", "automations", "email-footer"] as const,
+    { action: "upload", summary: "Качи прикачен файл" },
+  );
+  if (!guard.ok) return guard;
 
-  const file = formData.get("file");
-  if (!(file instanceof File)) {
-    return { ok: false, message: "Липсва файл." };
-  }
-
-  const result = await uploadEmailPdf(file);
+  const result = await createPdfUploadTicket(file);
   if (!result.ok) return { ok: false, message: result.message };
-  return {
-    ok: true,
-    path: result.path,
-    filename: result.filename,
-    url: result.url,
-  };
+  return { ok: true, ticket: result.ticket };
 }
 
 // ── Forms ─────────────────────────────────────────────────────
 
 export async function createFormFromPreset(presetKey: string): Promise<ActionResult & { id?: string }> {
-  await requireAdmin("forms", { action: "create", summary: "Създаде форма" });
+  const guard = await guardAction("forms", { action: "create", summary: "Създаде форма" });
+  if (!guard.ok) return guard;
   const preset = getFormPreset(presetKey);
   if (!preset) return { ok: false, message: "Шаблонът не е намерен." };
 
@@ -3464,7 +3857,8 @@ export async function saveFormTemplate(input: {
   attachment_filename?: string;
   hero_image_url?: string;
 }): Promise<ActionResult & { id?: string }> {
-  await requireAdmin("forms", { action: "save", summary: "Запази форма" });
+  const guard = await guardAction("forms", { action: "save", summary: "Запази форма" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const name = input.name.trim();
   const slug = slugify(input.slug.trim() || name);
@@ -3515,7 +3909,8 @@ export async function saveFormTemplate(input: {
 }
 
 export async function deleteFormTemplate(id: string): Promise<ActionResult> {
-  await requireAdmin("forms", { action: "delete", summary: "Изтри форма" });
+  const guard = await guardAction("forms", { action: "delete", summary: "Изтри форма" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("form_templates").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
@@ -3527,7 +3922,8 @@ export async function sendFormByEmail(input: {
   formId: string;
   audience: AudienceInput;
 }): Promise<ActionResult> {
-  await requireAdmin("forms", { action: "send", summary: "Изпрати форма по имейл" });
+  const guard = await guardAction("forms", { action: "send", summary: "Изпрати форма по имейл" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
   const { data: row } = await supabase
@@ -3691,7 +4087,8 @@ export async function getFormSubmissionsReport(formId: string) {
 export async function cancelContactJobAction(
   localJobId: string,
 ): Promise<{ ok: boolean; message?: string }> {
-  await requireAdmin("contacts", { action: "cancel", summary: "Отмени задача на контакт" });
+  const guard = await guardAction("contacts", { action: "cancel", summary: "Отмени задача на контакт" });
+  if (!guard.ok) return guard;
   const { cancelContactWorkerJobById } = await import("@/lib/notification-worker");
   const canceled = await cancelContactWorkerJobById(localJobId);
   revalidatePath("/admin/contacts");
@@ -3709,7 +4106,8 @@ export async function saveZoomLiveConfig(input: {
   label_en: string;
   manual_is_live: boolean;
 }): Promise<{ ok: boolean; message?: string }> {
-  await requireAdmin("zoom", { action: "save", summary: "Обнови Zoom настройка" });
+  const guard = await guardAction("zoom", { action: "save", summary: "Обнови Zoom настройка" });
+  if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("zoom_live_config")
@@ -3753,7 +4151,8 @@ export async function saveMetaPixelConfig(input: {
   catalog_id?: string;
   notes?: string;
 }): Promise<ActionResult> {
-  await requireAdmin("meta", { action: "save", summary: "Обнови Meta Pixel" });
+  const guard = await guardAction("meta", { action: "save", summary: "Обнови Meta Pixel" });
+  if (!guard.ok) return guard;
 
   const pixelId = input.pixel_id.trim();
   if (pixelId && !/^\d{6,25}$/.test(pixelId)) {
@@ -3811,7 +4210,8 @@ export async function saveMetaPixelConfig(input: {
 
 /** Sends a Lead event to Meta so the admin can confirm the connection works. */
 export async function sendMetaTestEvent(): Promise<ActionResult> {
-  await requireAdmin("meta", { action: "send", summary: "Изпрати тестов Meta event" });
+  const guard = await guardAction("meta", { action: "send", summary: "Изпрати тестов Meta event" });
+  if (!guard.ok) return guard;
 
   const result = await sendMetaEvent({
     eventName: "Lead",

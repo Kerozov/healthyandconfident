@@ -50,6 +50,7 @@ import {
   newRequiredEmailField,
 } from "@/lib/forms/required-email";
 import { publicFormUrl, siteOrigin } from "@/lib/forms/urls";
+import { CopyButton } from "@/components/admin/share-links";
 import { formatDate } from "@/lib/utils";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
 import { cn } from "@/lib/utils";
@@ -900,7 +901,11 @@ export function FormsManager({
                     {f.submission_count} отговора · {f.invitation_count} изпратени
                   </p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1">
+                  <CopyButton
+                    value={publicFormUrl(f.slug, "bg")}
+                    title="Копирай линка към формата"
+                  />
                   <a
                     href={publicFormUrl(f.slug, "bg")}
                     target="_blank"
