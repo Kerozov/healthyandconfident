@@ -2879,6 +2879,7 @@ export async function saveSiteEvent(input: {
   description_bg?: string;
   description_en?: string;
   url: string;
+  url_en?: string;
   image_url?: string;
   event_date?: string | null;
   offer_id?: string | null;
@@ -2886,6 +2887,7 @@ export async function saveSiteEvent(input: {
   offer_headline_en?: string;
   offer_enabled?: boolean;
   enabled?: boolean;
+  enabled_en?: boolean;
   sort_order?: number;
 }): Promise<ActionResult & { id?: string }> {
   const guard = await guardAction("website", { action: "save", summary: "Запази събитие" });
@@ -2897,6 +2899,7 @@ export async function saveSiteEvent(input: {
     description_bg: input.description_bg?.trim() ?? "",
     description_en: input.description_en?.trim() ?? "",
     url: input.url.trim(),
+    url_en: input.url_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
     event_date: normalizeSendDate(input.event_date),
     offer_id: input.offer_id || null,
@@ -2904,6 +2907,7 @@ export async function saveSiteEvent(input: {
     offer_headline_en: input.offer_headline_en?.trim() ?? "",
     offer_enabled: input.offer_enabled ?? false,
     enabled: input.enabled ?? true,
+    enabled_en: input.enabled_en ?? true,
     sort_order: input.sort_order ?? 0,
     updated_at: new Date().toISOString(),
   };

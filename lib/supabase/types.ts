@@ -344,6 +344,8 @@ export type SiteEvent = {
   description_bg: string;
   description_en: string;
   url: string;
+  /** English registration link. Empty falls back to `url`. */
+  url_en: string;
   image_url: string | null;
   event_date: string | null;
   offer_id: string | null;
@@ -351,6 +353,8 @@ export type SiteEvent = {
   offer_headline_en: string;
   offer_enabled: boolean;
   enabled: boolean;
+  /** When false, the event is hidden on the English site. */
+  enabled_en: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;

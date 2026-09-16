@@ -64,6 +64,7 @@ const EMPTY_EVENT = {
   description_bg: "",
   description_en: "",
   url: "",
+  url_en: "",
   image_url: "",
   event_date: "",
   offer_id: "",
@@ -71,6 +72,7 @@ const EMPTY_EVENT = {
   offer_headline_en: "",
   offer_enabled: false,
   enabled: true,
+  enabled_en: true,
   sort_order: 0,
 };
 
@@ -183,6 +185,7 @@ export function WebsiteManager({
       description_bg: event.description_bg,
       description_en: event.description_en,
       url: event.url,
+      url_en: event.url_en ?? "",
       image_url: event.image_url ?? "",
       event_date: event.event_date ?? "",
       offer_id: event.offer_id ?? "",
@@ -190,9 +193,29 @@ export function WebsiteManager({
       offer_headline_en: event.offer_headline_en ?? "",
       offer_enabled: event.offer_enabled ?? false,
       enabled: event.enabled,
+      enabled_en: event.enabled_en !== false,
       sort_order: event.sort_order,
     });
     setError(null);
+  }
+
+  // Title and link are required only for the languages the card actually shows
+  // in — an EN-only event carries neither a Bulgarian heading nor a BG link.
+  function canSaveEvent() {
+    if (eventForm.enabled && !(eventForm.title_bg.trim() && eventForm.url.trim())) {
+      return false;
+    }
+    if (eventForm.enabled_en && !eventForm.title_en.trim()) return false;
+    if (
+      eventForm.enabled_en &&
+      !(eventForm.url_en.trim() || eventForm.url.trim())
+    ) {
+      return false;
+    }
+    return Boolean(
+      (eventForm.title_bg.trim() || eventForm.title_en.trim()) &&
+        (eventForm.url.trim() || eventForm.url_en.trim()),
+    );
   }
 
   function saveEvent() {
@@ -721,10 +744,22 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Линк към събитието">
+                <Field label="Линк към събитието — BG">
                   <Input
                     value={eventForm.url}
                     onChange={(e) => setEventForm({ ...eventForm, url: e.target.value })}
+                    placeholder="https://..."
+                  />
+                </Field>
+                <Field
+                  label="Линк към събитието — EN"
+                  hint="Празно = ползва българския линк."
+                >
+                  <Input
+                    value={eventForm.url_en}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, url_en: e.target.value })
+                    }
                     placeholder="https://..."
                   />
                 </Field>
@@ -757,23 +792,20 @@ export function WebsiteManager({
                 </Field>
               </div>
 
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={eventForm.enabled}
-                  onChange={(e) =>
-                    setEventForm({ ...eventForm, enabled: e.target.checked })
-                  }
-                />
-                Покажи картичката
-              </label>
+              <LocaleVisibilityCheckboxes
+                enabled={eventForm.enabled}
+                enabledEn={eventForm.enabled_en}
+                onEnabledChange={(enabled) => setEventForm({ ...eventForm, enabled })}
+                onEnabledEnChange={(enabled_en) =>
+                  setEventForm({ ...eventForm, enabled_en })
+                }
+                disabled={pending}
+              />
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={saveEvent}
-                  disabled={
-                    pending || !eventForm.title_bg || !eventForm.title_en || !eventForm.url
-                  }
+                  disabled={pending || !canSaveEvent()}
                   className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
                 >
                   <Save className="h-4 w-4" /> Запази
@@ -800,10 +832,27 @@ export function WebsiteManager({
                   key={event.id}
                   className="flex items-start justify-between gap-4 px-4 py-3"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Calendar className="h-4 w-4 text-forest-600" />
-                      <p className="font-medium">{event.title_bg}</p>
+                      <Calendar className="h-4 w-4 shrink-0 text-forest-600" />
+                      <p className="font-medium">{event.title_bg || event.title_en}</p>
+                      {event.enabled && event.enabled_en !== false ? (
+                        <span className="rounded-full bg-forest-600/10 px-2 py-0.5 text-[11px] font-semibold text-forest-700">
+                          BG + EN
+                        </span>
+                      ) : event.enabled ? (
+                        <span className="rounded-full bg-forest-600/10 px-2 py-0.5 text-[11px] font-semibold text-forest-700">
+                          само BG
+                        </span>
+                      ) : event.enabled_en !== false ? (
+                        <span className="rounded-full bg-sky-600/10 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                          само EN
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-ink/10 px-2 py-0.5 text-[11px] text-ink-soft">
+                          скрито
+                        </span>
+                      )}
                     </div>
                     <div className="mt-1 flex items-center gap-1.5">
                       <p className="truncate text-xs text-ink-soft">{event.url}</p>
@@ -817,8 +866,23 @@ export function WebsiteManager({
                         </CopyButton>
                       )}
                     </div>
+                    {event.url_en && event.url_en !== event.url && (
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="shrink-0 text-[11px] font-semibold text-sky-800">
+                          EN
+                        </span>
+                        <p className="truncate text-xs text-ink-soft">{event.url_en}</p>
+                        <CopyButton
+                          value={event.url_en}
+                          title="Копирай английския линк на събитието"
+                          className="px-1.5 py-0.5"
+                        >
+                          <span className="sr-only">Копирай</span>
+                        </CopyButton>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex shrink-0 gap-1">
                     <button
                       onClick={() => openEditEvent(event)}
                       disabled={pending}
@@ -827,7 +891,9 @@ export function WebsiteManager({
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => removeEvent(event.id, event.title_bg)}
+                      onClick={() =>
+                        removeEvent(event.id, event.title_bg || event.title_en)
+                      }
                       disabled={pending}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600"
                     >

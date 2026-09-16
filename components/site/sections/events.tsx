@@ -7,6 +7,7 @@ import { Container } from "@/components/ui/container";
 import { EventOfferSlot } from "@/components/site/cta-offer-slot";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { visibleInLocale } from "@/lib/site/locale-stripe";
 
 export function EventsSection({
   dict,
@@ -22,7 +23,11 @@ export function EventsSection({
   /** Products available as the "extra offer" configured per event. */
   offersById?: Record<string, SiteProduct>;
 }) {
-  if (events.length === 0) return null;
+  const items = events.filter((event) =>
+    visibleInLocale(event.enabled, event.enabled_en, locale),
+  );
+
+  if (items.length === 0) return null;
 
   const title =
     locale === "bg"
@@ -48,19 +53,21 @@ export function EventsSection({
         <div
           className={cn(
             "mt-14 grid gap-8",
-            events.length === 1 && "mx-auto max-w-sm",
-            events.length === 2 && "mx-auto max-w-4xl md:grid-cols-2",
-            events.length > 2 && "md:grid-cols-2 xl:grid-cols-3",
+            items.length === 1 && "mx-auto max-w-sm",
+            items.length === 2 && "mx-auto max-w-4xl md:grid-cols-2",
+            items.length > 2 && "md:grid-cols-2 xl:grid-cols-3",
           )}
         >
-          {events.map((event) => {
+          {items.map((event) => {
             const eventTitle = locale === "bg" ? event.title_bg : event.title_en;
             const description =
               locale === "bg" ? event.description_bg : event.description_en;
+            const url =
+              (locale === "en" ? event.url_en?.trim() : "") || event.url;
             const isExternal =
-              event.url.startsWith("http") ||
-              event.url.startsWith("mailto:") ||
-              event.url.startsWith("tel:");
+              url.startsWith("http") ||
+              url.startsWith("mailto:") ||
+              url.startsWith("tel:");
 
             return (
               <div
@@ -68,7 +75,7 @@ export function EventsSection({
                 className="flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
               >
                 <Link
-                  href={event.url}
+                  href={url}
                   {...(isExternal
                     ? { target: "_blank", rel: "noopener noreferrer" }
                     : {})}
