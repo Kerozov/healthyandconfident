@@ -1,11 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { productVisibleInLocale } from "@/lib/site/product-locale";
-import {
-  hasOwnCheckout,
-  stripeForLocale,
-  type StripeCheckout,
-} from "@/lib/site/locale-stripe";
+import { stripeForLocale, type StripeCheckout } from "@/lib/site/locale-stripe";
 
 /** Placements where upsell/downsell popups are allowed (not hero, nav, or contact). */
 export const UPSELL_SECTION_PLACEMENT_KEYS = [
@@ -175,6 +171,20 @@ export function programPricingPlacementKey(baseKey: string, index: number): stri
   return `${baseKey}_pricing_${index}`;
 }
 
+/**
+ * The button under the video and the last button of a landing page get their
+ * own rows. They used to share the programme's main key, so wiring a price to
+ * the main button silently turned "watch the video" and "get in touch" into
+ * payment buttons.
+ */
+export function programVideoPlacementKey(baseKey: string): string {
+  return `${baseKey}_video`;
+}
+
+export function programFinalPlacementKey(baseKey: string): string {
+  return `${baseKey}_final`;
+}
+
 export function placementStripeForLocale(
   placement: SiteCtaPlacement | undefined,
   locale: Locale,
@@ -183,6 +193,61 @@ export function placementStripeForLocale(
     return { stripe_url: "", stripe_product_id: "", stripe_price_id: "" };
   }
   return stripeForLocale(placement, locale);
+}
+
+/**
+ * Where one button actually sends the visitor.
+ *
+ * Resolved in exactly one place so the site, the offer popup and the admin
+ * screen can never disagree about it. Our own Checkout session wins over a
+ * Payment Link whenever the button has a Stripe price: it is the only route
+ * that carries the contact id and the ad-click ids into Stripe, and it handles
+ * a subscription price and a one-off price with the same configuration.
+ */
+export type PlacementTarget =
+  /** Open a Stripe Checkout session for this button in a new tab. */
+  | { kind: "checkout"; placementKey: string }
+  /** Open a Stripe Payment Link (buy.stripe.com) in a new tab. */
+  | { kind: "payment-link"; url: string }
+  /** Ordinary link: another page, an anchor, WhatsApp, Calendly… */
+  | { kind: "link"; href: string }
+  /** Nothing configured and nothing sensible to fall back to. */
+  | { kind: "none" };
+
+export function placementTarget(
+  placement: SiteCtaPlacement | undefined,
+  key: string,
+  locale: Locale,
+  fallbackHref = "",
+): PlacementTarget {
+  const stripe = placementStripeForLocale(placement, locale);
+  if (stripe.stripe_price_id) return { kind: "checkout", placementKey: key };
+  if (stripe.stripe_url) return { kind: "payment-link", url: stripe.stripe_url };
+
+  const enUrl = placement?.button_url_en?.trim() ?? "";
+  const bgUrl = placement?.button_url?.trim() ?? "";
+  const custom = locale === "en" ? enUrl || bgUrl : bgUrl;
+  if (custom) return { kind: "link", href: custom };
+
+  const fallback = fallbackHref.trim();
+  if (fallback) return { kind: "link", href: fallback };
+  return { kind: "none" };
+}
+
+/** True when the button charges money — checkout session or Payment Link. */
+export function targetIsPayment(target: PlacementTarget): boolean {
+  return target.kind === "checkout" || target.kind === "payment-link";
+}
+
+export function placementButtonHref(
+  placement: SiteCtaPlacement | undefined,
+  locale: Locale,
+): string {
+  if (!placement) return "";
+  const target = placementTarget(placement, placement.key, locale);
+  if (target.kind === "payment-link") return target.url;
+  if (target.kind === "link") return target.href;
+  return "";
 }
 
 export function placementButtonHidden(
@@ -194,23 +259,12 @@ export function placementButtonHidden(
   return placement.button_enabled === false;
 }
 
-export function placementButtonHref(
-  placement: SiteCtaPlacement | undefined,
-  locale: Locale,
-): string {
-  if (!placement) return "";
-  const stripe = placementStripeForLocale(placement, locale);
-  if (hasOwnCheckout(stripe) && stripe.stripe_url) return stripe.stripe_url;
-  const enUrl = placement.button_url_en?.trim() ?? "";
-  const bgUrl = placement.button_url?.trim() ?? "";
-  if (locale === "en") return enUrl || bgUrl;
-  return bgUrl;
-}
-
 export type ResolvedPlacementButton = {
   label: string;
+  /** Href for the rendered anchor. Payment buttons navigate via `target`. */
   href: string;
   hidden: boolean;
+  target: PlacementTarget;
   stripePriceId: string;
   stripeUrl: string;
 };
@@ -227,11 +281,17 @@ export function resolvePlacementButton(
   const customLabel = (
     locale === "bg" ? placement?.button_label_bg : placement?.button_label_en
   )?.trim();
-  const customHref = placementButtonHref(placement, locale);
+  const target = placementTarget(placement, key, locale, fallback.href);
   return {
     hidden: placementButtonHidden(placement, locale),
     label: customLabel || fallback.label,
-    href: customHref || fallback.href,
+    href:
+      target.kind === "payment-link"
+        ? target.url
+        : target.kind === "link"
+          ? target.href
+          : "",
+    target,
     stripePriceId: stripe.stripe_price_id,
     stripeUrl: stripe.stripe_url,
   };

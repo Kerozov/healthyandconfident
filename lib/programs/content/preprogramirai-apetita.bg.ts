@@ -2,11 +2,13 @@ import type { ProgramLandingContent } from "../types";
 import { PROGRAM_FOOD_IMAGES, PROGRAM_VESI_IMAGES } from "../images";
 import { CLIENT_TRANSFORMATION_PAIRS } from "@/lib/site/transformation-images";
 
-const whatsapp = "https://wa.me/447876565263";
-/** Замени с реалните Stripe линкове от PDF, когато ги имаш */
-const checkout38 = whatsapp;
-const checkout12m = whatsapp;
-const checkout3m = whatsapp;
+/**
+ * Fallback target for every "buy" button on this page, used only until the
+ * button is wired to a Stripe product in админ → Сайт → Бутони. It scrolls to
+ * the price list instead of leaving the site: a visitor who wanted to pay was
+ * previously dropped into WhatsApp, which looked like the payment was broken.
+ */
+const pricingAnchor = "#pricing";
 
 const FOOD = [...PROGRAM_FOOD_IMAGES];
 
@@ -26,7 +28,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
     bullets: ["10 минути на ден, които връщат лекотата и спокойствието"],
     priceLine: "Всичко за само €38/месец",
     primaryCta: "Да, искам да се справя",
-    primaryHref: checkout38,
+    primaryHref: pricingAnchor,
     secondaryCta: "Какво включва клубът",
     secondaryHref: "#includes",
     placementKey: "programs_2",
@@ -291,7 +293,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         price: "€38/месец",
         note: "Първите 100 души — после таксата се увеличава · Обща стойност €530",
         cta: "Искам достъп сега",
-        href: checkout38,
+        href: pricingAnchor,
       },
       {
         label: "Вариант 1",
@@ -299,7 +301,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         price: "28€ на месец",
         note: "Абонамент за 12 месеца с 25% отстъпка — само за 336€, вместо 456€",
         cta: "Искам достъп сега",
-        href: checkout12m,
+        href: pricingAnchor,
       },
       {
         label: "Вариант 2",
@@ -307,7 +309,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
         price: "30€ на месец",
         note: "Абонамент за 3 месеца с 20% отстъпка — само за 90€, вместо 114€",
         cta: "Искам достъп сега",
-        href: checkout3m,
+        href: pricingAnchor,
       },
     ],
     ps: "Натисни бутона — ще те насочим към плащане и достъп до Skool.",
@@ -337,6 +339,6 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
   finalCta: {
     title: "ГОТОВА СЪМ!",
     cta: "Искам достъп сега",
-    href: checkout38,
+    href: pricingAnchor,
   },
 };

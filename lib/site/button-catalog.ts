@@ -1,12 +1,13 @@
 /**
- * The site buttons an admin can edit, named after what they actually do.
+ * Every button on the public site that an admin can edit, described the way the
+ * person editing it sees it: which page, which section, what the button says
+ * today.
  *
  * A `site_cta_placements` row only carries a key and a label written by a
- * migration; the site decides where that key is rendered, so several rows drive
- * more than one button and a few of the old labels name a programme that no
- * longer exists. Keeping the naming here — next to the components that use the
- * keys — is what makes the admin screen readable, and it stays right without
- * re-running a migration.
+ * migration, and a few of those labels still name a programme that no longer
+ * exists. The site — not the database — decides where a key is rendered, so the
+ * naming lives here, next to the components that use the keys, and stays right
+ * without re-running a migration.
  */
 export type SiteButtonKind = "button" | "offer";
 
@@ -14,137 +15,208 @@ export type SiteButtonSpec = {
   key: string;
   /** What this button is, in the admin's words. */
   name: string;
-  /** Every place on the site the one row controls. */
-  where: string;
-  /** Text shown when the label is left empty. */
+  /** Every spot on the page this one row controls, one entry per spot. */
+  spots: string[];
+  /** Text shown on the site when the label field is left empty. */
   defaultLabel?: string;
+  /** What the button does when no Stripe product is chosen. */
+  fallback?: string;
+  /** True when the button is meant to sell something. */
+  sells?: boolean;
   /** `offer` rows have no button — only the popup offer. */
   kind?: SiteButtonKind;
 };
 
 export type SiteButtonGroup = {
   id: string;
+  /** The page these buttons live on. */
   title: string;
+  /** Path of that page, so the admin can open it and look. */
+  path?: string;
   note?: string;
   buttons: SiteButtonSpec[];
 };
 
 export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
   {
+    id: "home",
+    title: "Начална страница",
+    path: "/bg",
+    buttons: [
+      {
+        key: "about_cta",
+        name: "Секция „За мен“ — бутон под биографията",
+        spots: ["Началната страница, секция „За мен“, под списъка с квалификации."],
+        defaultLabel: "Работи с мен",
+        fallback: "Води към секция „Контакти“.",
+      },
+      {
+        key: "bio_banner_cta",
+        name: "Банер „Веси Ней“ — бутон „Към общността“",
+        spots: [
+          "Тъмният банер със снимките на храна, в бялата карта вдясно.",
+        ],
+        defaultLabel: "Към общността",
+        fallback: "Води към страницата на клуб „Препрограмирай апетита“.",
+      },
+      {
+        key: "outcomes_cta",
+        name: "Секция „Резултати“ — бутон под списъка",
+        spots: ["Началната страница, секция „Резултати“."],
+        fallback: "Води към секция „Програми“.",
+      },
+      {
+        key: "challenge_21_cta",
+        name: "21-дневно предизвикателство — бутон",
+        spots: ["Началната страница, тъмната секция за предизвикателството."],
+        fallback: "Води към формата за записване.",
+      },
+    ],
+  },
+  {
     id: "programs_1",
     title: "Програма „Живей без резистентност“",
-    note: "/bg/programs/zhivey-bez-rezistentnost",
+    path: "/bg/programs/zhivey-bez-rezistentnost",
     buttons: [
       {
         key: "programs_1",
-        name: "Главен бутон",
-        where:
-          "Картата на началната страница, големият бутон в началото на страницата, бутонът под видеото и последният бутон.",
+        name: "Главен бутон „Включи се днес“",
+        spots: [
+          "Началната страница → картата на програмата в секция „Програми“.",
+          "Страницата на програмата → големият бутон най-горе.",
+        ],
         defaultLabel: "Включи се днес",
+        sells: true,
+        fallback: "Скролва до секцията с цените на същата страница.",
       },
       {
         key: "programs_1_secondary",
-        name: "Втори бутон горе",
-        where: "До главния бутон в началото на страницата.",
+        name: "Втори бутон горе „Виж какво включва“",
+        spots: ["Страницата на програмата → до главния бутон най-горе."],
         defaultLabel: "Виж какво включва",
+        fallback: "Скролва до секцията „Какво включва“.",
       },
       {
         key: "programs_1_pricing_0",
-        name: "Цена „Месечни вноски“ (3 × 180 €)",
-        where: "Секцията с цените.",
+        name: "Цена 1: „Месечни вноски“ — 3 × 180 €",
+        spots: ["Страницата на програмата → секцията с цените, първата карта."],
         defaultLabel: "Включи се с месечни вноски",
+        sells: true,
       },
       {
         key: "programs_1_pricing_1",
-        name: "Цена „Еднократно днес“ (480 €)",
-        where: "Секцията с цените.",
+        name: "Цена 2: „Еднократно днес“ — 480 €",
+        spots: ["Страницата на програмата → секцията с цените, втората карта."],
         defaultLabel: "Включи се с еднократна такса днес",
+        sells: true,
+      },
+      {
+        key: "programs_1_video",
+        name: "Бутон под видеото",
+        spots: ["Страницата на програмата → секцията „Запознай се с мен и метода“."],
+        defaultLabel: "Още подробности — видео тук",
+        fallback: "Води към секция „Контакти“.",
+      },
+      {
+        key: "programs_1_final",
+        name: "Последен бутон най-долу",
+        spots: ["Страницата на програмата → тъмната лента най-накрая."],
+        defaultLabel: "Свържи се с мен тук",
+        fallback: "Води към секция „Контакти“.",
       },
     ],
   },
   {
     id: "programs_2",
-    title: "Програма „Препрограмирай апетита“",
-    note: "/bg/programs/preprogramirai-apetita",
+    title: "Клуб „Препрограмирай апетита“",
+    path: "/bg/programs/preprogramirai-apetita",
     buttons: [
       {
         key: "programs_2",
-        name: "Главен бутон",
-        where:
-          "Картата на началната страница, банерът „За мен“ на началната страница, големият бутон горе, бутонът под видеото и последният бутон.",
+        name: "Главен бутон „Да, искам да се справя“",
+        spots: [
+          "Началната страница → картата на клуба в секция „Програми“.",
+          "Страницата на клуба → големият бутон най-горе.",
+        ],
         defaultLabel: "Да, искам да се справя",
+        sells: true,
+        fallback: "Скролва до секцията с цените на същата страница.",
       },
       {
         key: "programs_2_secondary",
-        name: "Втори бутон горе",
-        where: "До главния бутон в началото на страницата.",
+        name: "Втори бутон горе „Какво включва клубът“",
+        spots: ["Страницата на клуба → до главния бутон най-горе."],
         defaultLabel: "Какво включва клубът",
+        fallback: "Скролва до секцията „Какво включва“.",
       },
       {
         key: "programs_2_pricing_0",
-        name: "Цена „Месечен достъп“ (€38/месец)",
-        where: "Секцията с цените.",
+        name: "Цена 1: „Месечен достъп“ — €38/месец",
+        spots: ["Страницата на клуба → секцията с цените, първата карта."],
         defaultLabel: "Искам достъп сега",
+        sells: true,
       },
       {
         key: "programs_2_pricing_1",
-        name: "Цена „Вариант 1“ (28 €/месец)",
-        where: "Секцията с цените.",
+        name: "Цена 2: „Вариант 1“ — 28 €/месец за 12 месеца",
+        spots: ["Страницата на клуба → секцията с цените, втората карта."],
         defaultLabel: "Искам достъп сега",
+        sells: true,
       },
       {
         key: "programs_2_pricing_2",
-        name: "Цена „Вариант 2“ (30 €/месец)",
-        where: "Секцията с цените.",
+        name: "Цена 3: „Вариант 2“ — 30 €/месец за 3 месеца",
+        spots: ["Страницата на клуба → секцията с цените, третата карта."],
         defaultLabel: "Искам достъп сега",
+        sells: true,
+      },
+      {
+        key: "programs_2_final",
+        name: "Последен бутон най-долу („ГОТОВА СЪМ!“)",
+        spots: ["Страницата на клуба → тъмната лента най-накрая."],
+        defaultLabel: "Искам достъп сега",
+        sells: true,
+        fallback: "Скролва до секцията с цените.",
       },
     ],
   },
   {
     id: "programs_0",
     title: "Програма „Лято – стройна и спокойна“",
-    note: "/bg/programs/summer-programme",
+    path: "/bg/programs/summer-programme",
     buttons: [
       {
         key: "programs_0",
-        name: "Главен бутон",
-        where:
-          "Картата на началната страница, големият бутон горе и последният бутон на страницата.",
+        name: "Главен бутон „Искам моето спокойно лято“",
+        spots: [
+          "Началната страница → картата на програмата в секция „Програми“.",
+          "Страницата на програмата → големият бутон най-горе.",
+        ],
         defaultLabel: "Искам моето спокойно лято",
+        sells: true,
+        fallback: "Скролва до секцията с цените на същата страница.",
       },
       {
         key: "programs_0_secondary",
-        name: "Втори бутон горе",
-        where: "До главния бутон в началото на страницата.",
+        name: "Втори бутон горе „Виж какво има вътре“",
+        spots: ["Страницата на програмата → до главния бутон най-горе."],
         defaultLabel: "Виж какво има вътре",
+        fallback: "Скролва до секцията „Какво включва“.",
       },
       {
         key: "programs_0_pricing_0",
-        name: "Цена „Летен пакет“ (€36)",
-        where: "Секцията с цените.",
+        name: "Цена: „Летен пакет“ — €36 еднократно",
+        spots: ["Страницата на програмата → секцията с цените."],
         defaultLabel: "Вземи летния пакет сега",
-      },
-    ],
-  },
-  {
-    id: "home",
-    title: "Начална страница",
-    buttons: [
-      {
-        key: "about_cta",
-        name: "Секция „За мен“",
-        where: "Бутонът под кратката биография.",
-        defaultLabel: "Работи с мен",
+        sells: true,
       },
       {
-        key: "outcomes_cta",
-        name: "Секция „Резултати“",
-        where: "Бутонът под списъка с резултати. Празно = секция „Програми“.",
-      },
-      {
-        key: "challenge_21_cta",
-        name: "21-дневно предизвикателство",
-        where: "Бутонът в тъмната секция за предизвикателството.",
+        key: "programs_0_final",
+        name: "Последен бутон най-долу",
+        spots: ["Страницата на програмата → тъмната лента най-накрая."],
+        defaultLabel: "Искам моето спокойно лято",
+        sells: true,
+        fallback: "Скролва до секцията с цените.",
       },
     ],
   },
@@ -154,9 +226,10 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
     buttons: [
       {
         key: "leadmagnet_cta",
-        name: "Popup оферта",
-        where:
-          "Показва се веднага след като някой остави имейла си за безплатното 2-дневно меню. Тук няма бутон за настройка — само офертата.",
+        name: "Popup оферта след безплатното меню",
+        spots: [
+          "Показва се веднага след като някой остави имейла си за безплатното 2-дневно меню.",
+        ],
         kind: "offer",
       },
     ],

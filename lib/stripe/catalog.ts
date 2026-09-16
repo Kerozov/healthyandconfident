@@ -5,9 +5,14 @@ import { getStripe } from "@/lib/stripe/server";
 import type {
   StripeCatalogRow,
   StripePaymentLinkRow,
+  StripeRecurring,
 } from "@/lib/stripe/catalog-types";
 
-export type { StripeCatalogRow, StripePaymentLinkRow } from "@/lib/stripe/catalog-types";
+export type {
+  StripeCatalogRow,
+  StripePaymentLinkRow,
+  StripeRecurring,
+} from "@/lib/stripe/catalog-types";
 
 function formatStripeAmount(amount: number, currency: string): string {
   const value = amount / 100;
@@ -34,6 +39,17 @@ function defaultPriceId(product: Stripe.Product): string | null {
   const dp = product.default_price;
   if (!dp) return null;
   return typeof dp === "string" ? dp : dp.id;
+}
+
+/** Subscription cadence of a price, or null when it charges once. */
+function recurringFromStripePrice(
+  price: Stripe.Price | null | undefined,
+): StripeRecurring | null {
+  if (!price?.recurring) return null;
+  return {
+    interval: price.recurring.interval,
+    intervalCount: price.recurring.interval_count,
+  };
 }
 
 function defaultPriceObject(product: Stripe.Product): Stripe.Price | null {
@@ -64,6 +80,7 @@ export async function listStripeCatalog(): Promise<StripeCatalogRow[]> {
         description: product.description,
         imageUrl: product.images[0] ?? null,
         priceLabel: priceLabelFromStripePrice(defaultPriceObject(product)),
+        recurring: recurringFromStripePrice(defaultPriceObject(product)),
         active: product.active,
       });
     }
@@ -93,6 +110,7 @@ export async function getStripeCatalogProduct(
     description: product.description,
     imageUrl: product.images[0] ?? null,
     priceLabel: priceLabelFromStripePrice(defaultPriceObject(product)),
+    recurring: recurringFromStripePrice(defaultPriceObject(product)),
     active: product.active,
   };
 }
@@ -153,6 +171,7 @@ export async function listStripePaymentLinks(): Promise<StripePaymentLinkRow[]> 
             url: link.url,
             name: paymentLinkName(link, price),
             priceLabel: priceLabelFromStripePrice(price),
+            recurring: recurringFromStripePrice(price),
             stripeProductId,
             stripePriceId: price?.id ?? null,
             active: link.active,
@@ -163,6 +182,7 @@ export async function listStripePaymentLinks(): Promise<StripePaymentLinkRow[]> 
             url: link.url,
             name: paymentLinkName(link, null),
             priceLabel: "",
+            recurring: null,
             stripeProductId: null,
             stripePriceId: null,
             active: link.active,

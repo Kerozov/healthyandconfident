@@ -3,11 +3,14 @@ import type { ProgramLandingContent } from "../types";
 /**
  * „Лято – стройна и спокойна“ — Summer Programme With Vessie Ney.
  * Заменя стария наръчник „Гарнитури“.
- *
- * Линкът за плащане идва от админ → Продукти (Stripe Payment Link).
- * Смени `checkout` с реалния линк, когато продуктът е създаден в Stripe.
  */
-const checkout = "/#shop";
+/**
+ * Fallback target for every "buy" button on this page, used only until the
+ * button is wired to a Stripe product in админ → Сайт → Бутони. It scrolls to
+ * the price list instead of leaving the site: a visitor who wanted to pay was
+ * previously dropped into WhatsApp, which looked like the payment was broken.
+ */
+const pricingAnchor = "#pricing";
 
 export const summerProgrammeBg: ProgramLandingContent = {
   slug: "summer-programme",
@@ -30,7 +33,7 @@ export const summerProgrammeBg: ProgramLandingContent = {
     ],
     priceLine: "Само €36 еднократно · достъп 60 дни",
     primaryCta: "Искам моето спокойно лято",
-    primaryHref: checkout,
+    primaryHref: pricingAnchor,
     secondaryCta: "Виж какво има вътре",
     secondaryHref: "#includes",
     placementKey: "programs_0",
@@ -260,7 +263,7 @@ export const summerProgrammeBg: ProgramLandingContent = {
         price: "€36",
         note: "Еднократно плащане · 60 дни достъп · ръководства, 12 рецепти и SOS аудио практики",
         cta: "Вземи летния пакет сега",
-        href: checkout,
+        href: pricingAnchor,
       },
     ],
     ps: "🔒 Защитено плащане с карта · 📩 Достъп по имейл · 🕒 60 дни достъп · 📱 Отваря се на телефон, таблет и компютър",
@@ -268,6 +271,6 @@ export const summerProgrammeBg: ProgramLandingContent = {
   finalCta: {
     title: "Това лято да е спокойното",
     cta: "Искам моето спокойно лято",
-    href: checkout,
+    href: pricingAnchor,
   },
 };

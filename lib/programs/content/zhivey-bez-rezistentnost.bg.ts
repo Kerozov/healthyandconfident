@@ -5,7 +5,16 @@ import {
   PROGRAM_VESI_IMAGES,
 } from "../images";
 
-const whatsapp = "https://wa.me/447876565263";
+/**
+ * Fallback target for every "buy" button on this page, used only until the
+ * button is wired to a Stripe product in админ → Сайт → Бутони. It scrolls to
+ * the price list instead of leaving the site: a visitor who wanted to pay was
+ * previously dropped into WhatsApp, which looked like the payment was broken.
+ */
+const pricingAnchor = "#pricing";
+
+/** The site's contact section — for buttons that ask, rather than sell. */
+const contactSection = "/#contact";
 
 const FOOD = [...PROGRAM_FOOD_IMAGES];
 const FOOD2 = [...PROGRAM_FOOD_IMAGES_2];
@@ -29,7 +38,7 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
       "Без глад, без поредната диета",
     ],
     primaryCta: "Включи се днес",
-    primaryHref: whatsapp,
+    primaryHref: pricingAnchor,
     secondaryCta: "Виж какво включва",
     secondaryHref: "#includes",
     placementKey: "programs_1",
@@ -278,14 +287,14 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
         price: "3 × 180 €",
         note: "Вместо 1 090 € · около 5,90 €/ден",
         cta: "Включи се с месечни вноски",
-        href: whatsapp,
+        href: pricingAnchor,
       },
       {
         label: "Еднократно днес",
         price: "480 €",
         note: "Вместо 1 090 € · около 5,30 €/ден — колкото кафе + сандвич",
         cta: "Включи се с еднократна такса днес",
-        href: whatsapp,
+        href: pricingAnchor,
       },
     ],
     ps: "P.S. Местата с тази отстъпка са само няколко — побързай!",
@@ -294,7 +303,7 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
     title: "Запознай се с мен и",
     titleAccent: "метода",
     cta: "Още подробности — видео тук",
-    href: whatsapp,
+    href: contactSection,
   },
   newsletter: {
     title: "Искаш ли да получаваш здравни новини и рецепти? Запиши се тук:",
@@ -307,6 +316,6 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
   finalCta: {
     title: "Свържи се с мен",
     cta: "Свържи се с мен тук",
-    href: whatsapp,
+    href: contactSection,
   },
 };

@@ -1344,6 +1344,45 @@ update public.site_cta_placements set
   label_en = 'Outcomes section — button'
 where key = 'outcomes_cta';
 
+-- 064: the home "Към общността" banner gets its own button row instead of
+-- borrowing the Reprogram Your Appetite programme's placement.
+
+insert into public.site_cta_placements (key, label_bg, label_en) values
+  (
+    'bio_banner_cta',
+    'Начална страница — банер „Веси Ней“ (бутон „Към общността“)',
+    'Home — “Vessie Nay” banner (community button)'
+  )
+on conflict (key) do nothing;
+
 notify pgrst, 'reload schema';
 
-select 'Upgrade complete (012–057 applied). Also run 007_automations.sql if not yet applied.' as result;
+-- 065: the video button and the last button of each programme page get their
+-- own rows instead of sharing the programme's main placement.
+
+insert into public.site_cta_placements (key, label_bg, label_en) values
+  (
+    'programs_1_video',
+    'Живей без резистентност — бутон под видеото',
+    'Live Without Resistance — button under the video'
+  ),
+  (
+    'programs_1_final',
+    'Живей без резистентност — последен бутон на страницата',
+    'Live Without Resistance — last button on the page'
+  ),
+  (
+    'programs_2_final',
+    'Препрограмирай апетита — последен бутон на страницата',
+    'Reprogram Your Appetite — last button on the page'
+  ),
+  (
+    'programs_0_final',
+    'Лято – стройна и спокойна — последен бутон на страницата',
+    'Summer — slim and calm — last button on the page'
+  )
+on conflict (key) do nothing;
+
+notify pgrst, 'reload schema';
+
+select 'Upgrade complete (012–057 and 064–065 applied). Also run 007_automations.sql if not yet applied.' as result;

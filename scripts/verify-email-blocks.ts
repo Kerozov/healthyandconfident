@@ -195,6 +195,7 @@ const stripeCardHtml = expandEmailProductMarkers(
         description: "Desc",
         imageUrl: "https://files.stripe.com/pic.png",
         priceLabel: "€49",
+        recurring: null,
         active: true,
       },
     ],

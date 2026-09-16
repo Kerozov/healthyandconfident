@@ -24,8 +24,10 @@ import type { ProgramLandingContent } from "@/lib/programs/types";
 import type { SiteCtaPlacement } from "@/lib/supabase/types";
 import {
   resolvePlacementButton,
+  programFinalPlacementKey,
   programPricingPlacementKey,
   programSecondaryPlacementKey,
+  programVideoPlacementKey,
 } from "@/lib/site/cta-placements";
 import { Container } from "@/components/ui/container";
 import { buttonVariants } from "@/components/ui/button";
@@ -227,14 +229,16 @@ export function ProgramLanding({
           { label: hero.secondaryCta, href: hero.secondaryHref },
         )
       : null;
+  const videoPlacementKey = programVideoPlacementKey(placementKey);
+  const finalPlacementKey = programFinalPlacementKey(placementKey);
   const videoButton = content.video
-    ? resolvePlacementButton(ctaPlacements, placementKey, locale, {
+    ? resolvePlacementButton(ctaPlacements, videoPlacementKey, locale, {
         label: content.video.cta,
         href: content.video.href,
       })
     : null;
   const finalButton = content.finalCta
-    ? resolvePlacementButton(ctaPlacements, placementKey, locale, {
+    ? resolvePlacementButton(ctaPlacements, finalPlacementKey, locale, {
         label: content.finalCta.cta,
         href: content.finalCta.href,
       })
@@ -983,7 +987,10 @@ export function ProgramLanding({
 
       {/* Pricing */}
       {content.pricing && (
-        <section className="overflow-x-clip bg-gradient-to-br from-cream-50 via-white to-cream py-16 sm:py-24">
+        <section
+          id="pricing"
+          className="scroll-mt-24 overflow-x-clip bg-gradient-to-br from-cream-50 via-white to-cream py-16 sm:py-24"
+        >
           <Container className="max-w-5xl">
             <div className="text-center">
               <h2 className="text-balance font-display text-2xl font-semibold text-forest-900 sm:text-4xl">
@@ -1138,7 +1145,7 @@ export function ProgramLanding({
                   :
                 </h2>
                 <CtaLink
-                  placementKey={placementKey}
+                  placementKey={videoPlacementKey}
                   href={videoButton!.href}
                   variant="forest"
                   size="lg"
@@ -1193,7 +1200,7 @@ export function ProgramLanding({
               {content.finalCta.title}
             </h2>
             <CtaLink
-              placementKey={placementKey}
+              placementKey={finalPlacementKey}
               href={finalButton!.href}
               variant="onDark"
               size="lg"

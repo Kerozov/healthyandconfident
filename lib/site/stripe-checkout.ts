@@ -28,103 +28,119 @@ function beginCheckoutTracking(contentIds: string[]): string {
   return eventId;
 }
 
-export async function startGuideCheckout(guideId: string, locale: Locale): Promise<void> {
-  const metaEvent = beginCheckoutTracking([guideId]);
+function loadingDocument(locale: Locale): string {
+  const title = locale === "bg" ? "Отваряме плащането…" : "Opening checkout…";
+  const note =
+    locale === "bg"
+      ? "Пренасочваме те към защитеното плащане в Stripe."
+      : "Taking you to secure checkout on Stripe.";
+  return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+<style>body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;
+justify-content:center;gap:14px;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+background:#faf7f2;color:#26312c}.s{width:34px;height:34px;border-radius:50%;
+border:3px solid rgba(38,49,44,.15);border-top-color:#3f6b52;animation:r .8s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}p{margin:0}small{opacity:.65}</style></head>
+<body><div class="s"></div><p>${title}</p><small>${note}</small></body></html>`;
+}
+
+/**
+ * The tab the visitor ends up paying in, opened synchronously inside the click
+ * so no popup blocker stops it.
+ *
+ * `noopener` is deliberately absent: with it the browser hands back `null`
+ * instead of a window handle, which is what used to leave an empty tab behind
+ * while Stripe loaded over the page the visitor was reading. The link back to
+ * this page is cut with `opener = null` instead, which keeps our handle.
+ */
+function openCheckoutTab(locale: Locale): Window | null {
+  const tab = window.open("", "_blank");
+  if (!tab) return null;
+  try {
+    tab.opener = null;
+    tab.document.write(loadingDocument(locale));
+    tab.document.close();
+  } catch {
+    // about:blank in a stricter browser — the tab still navigates below.
+  }
+  return tab;
+}
+
+function sendToCheckout(tab: Window | null, url: string) {
+  if (tab && !tab.closed) {
+    tab.location.replace(url);
+    try {
+      tab.focus();
+    } catch {
+      // Focus is a courtesy; the tab is already open with the payment in it.
+    }
+    return;
+  }
+  // Popup blocked — better to pay in this tab than to lose the sale.
+  window.location.href = url;
+}
+
+type CheckoutRequest = {
+  productIds?: string[];
+  guideIds?: string[];
+  placementKey?: string;
+};
+
+/**
+ * One path to Stripe for every button on the site: open the tab, ask the API
+ * for a Checkout session, land the tab on it. Subscriptions and one-off prices
+ * differ only in the `mode` the server picks, so nothing here has to know.
+ */
+async function startCheckout(
+  request: CheckoutRequest,
+  contentIds: string[],
+  locale: Locale,
+): Promise<void> {
+  const metaEvent = beginCheckoutTracking(contentIds);
   const ids = metaBrowserIds();
-  const tab = window.open("", "_blank", "noopener,noreferrer");
+  const tab = openCheckoutTab(locale);
 
-  const res = await fetch("/api/checkout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      guideIds: [guideId],
-      locale,
-      metaEventId: metaEvent,
-      fbp: ids.fbp,
-      fbc: ids.fbc,
-      fbclid: ids.fbclid,
-    }),
-  });
+  try {
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...request,
+        locale,
+        metaEventId: metaEvent,
+        fbp: ids.fbp,
+        fbc: ids.fbc,
+        fbclid: ids.fbclid,
+      }),
+    });
 
-  const data = (await res.json()) as { url?: string; message?: string };
-  if (!res.ok || !data.url) {
+    const data = (await res.json()) as { url?: string; message?: string };
+    if (!res.ok || !data.url) {
+      throw new Error(data.message ?? "Checkout failed");
+    }
+    sendToCheckout(tab, data.url);
+  } catch (err) {
     tab?.close();
-    throw new Error(data.message ?? "Checkout failed");
+    throw err;
   }
+}
 
-  if (tab) {
-    tab.location.href = data.url;
-  } else {
-    window.location.href = data.url;
-  }
+export async function startGuideCheckout(guideId: string, locale: Locale): Promise<void> {
+  await startCheckout({ guideIds: [guideId] }, [guideId], locale);
 }
 
 export async function startStripeCheckout(
   productIds: string[],
   locale: Locale,
 ): Promise<void> {
-  const metaEvent = beginCheckoutTracking(productIds);
-  const ids = metaBrowserIds();
-  const tab = window.open("", "_blank", "noopener,noreferrer");
-
-  const res = await fetch("/api/checkout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      productIds,
-      locale,
-      metaEventId: metaEvent,
-      fbp: ids.fbp,
-      fbc: ids.fbc,
-      fbclid: ids.fbclid,
-    }),
-  });
-
-  const data = (await res.json()) as { url?: string; message?: string };
-  if (!res.ok || !data.url) {
-    tab?.close();
-    throw new Error(data.message ?? "Checkout failed");
-  }
-
-  if (tab) {
-    tab.location.href = data.url;
-  } else {
-    window.location.href = data.url;
-  }
+  await startCheckout({ productIds }, productIds, locale);
 }
 
 export async function startPlacementCheckout(
   placementKey: string,
   locale: Locale,
 ): Promise<void> {
-  const metaEvent = beginCheckoutTracking([placementKey]);
-  const ids = metaBrowserIds();
-  const tab = window.open("", "_blank", "noopener,noreferrer");
-
-  const res = await fetch("/api/checkout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      placementKey,
-      locale,
-      metaEventId: metaEvent,
-      fbp: ids.fbp,
-      fbc: ids.fbc,
-      fbclid: ids.fbclid,
-    }),
-  });
-
-  const data = (await res.json()) as { url?: string; message?: string };
-  if (!res.ok || !data.url) {
-    tab?.close();
-    throw new Error(data.message ?? "Checkout failed");
-  }
-
-  if (tab) {
-    tab.location.href = data.url;
-  } else {
-    window.location.href = data.url;
-  }
+  await startCheckout({ placementKey }, [placementKey], locale);
 }
 
 /**

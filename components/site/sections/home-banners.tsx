@@ -67,7 +67,7 @@ export function BioCommunityBanner({
             {bioBanner.invite}
           </p>
           <CtaLink
-            placementKey="programs_2"
+            placementKey="bio_banner_cta"
             href={bioBanner.href.replace("{locale}", locale)}
             variant="forest"
             size="lg"

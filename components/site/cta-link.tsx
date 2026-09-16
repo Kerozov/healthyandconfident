@@ -6,17 +6,17 @@ import { buttonVariants } from "@/components/ui/button";
 import { useOfferPopup } from "@/components/site/offer-popup";
 import { trackMeta } from "@/lib/meta/client";
 import { trackSiteCheckout } from "@/lib/analytics/client";
-import { startPlacementCheckout } from "@/lib/site/stripe-checkout";
-import { resolvePlacementButton } from "@/lib/site/cta-placements";
+import {
+  openStripeUrl,
+  startPlacementCheckout,
+} from "@/lib/site/stripe-checkout";
+import {
+  resolvePlacementButton,
+  targetIsPayment,
+  type PlacementTarget,
+} from "@/lib/site/cta-placements";
 import { cn } from "@/lib/utils";
 import type { VariantProps } from "class-variance-authority";
-
-/** Stripe payment links leave the site, so the click is the only conversion signal. */
-function isStripeCheckoutUrl(href: string): boolean {
-  return /^https?:\/\/(buy\.stripe\.com|checkout\.stripe\.com|[a-z0-9-]+\.stripe\.com)/i.test(
-    href,
-  );
-}
 
 type CtaLinkProps = VariantProps<typeof buttonVariants> & {
   placementKey: string;
@@ -26,6 +26,14 @@ type CtaLinkProps = VariantProps<typeof buttonVariants> & {
   target?: string;
   rel?: string;
 };
+
+/** How the offer popup should continue once the visitor is done with it. */
+function continueToken(target: PlacementTarget): string {
+  if (target.kind === "checkout") return `placement-checkout:${target.placementKey}`;
+  if (target.kind === "payment-link") return target.url;
+  if (target.kind === "link") return target.href;
+  return "";
+}
 
 export function CtaLink({
   placementKey,
@@ -39,6 +47,7 @@ export function CtaLink({
 }: CtaLinkProps) {
   const { tryOpenPlacement, placements, locale } = useOfferPopup();
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const resolved = resolvePlacementButton(
     placements,
     placementKey,
@@ -48,75 +57,103 @@ export function CtaLink({
 
   if (resolved.hidden) return null;
 
-  const finalHref = resolved.href;
   const classes = cn(buttonVariants({ variant, size }), className);
   const label = resolved.label || children;
-  const external =
-    finalHref.startsWith("http") ||
-    finalHref.startsWith("tel:") ||
-    finalHref.startsWith("mailto:");
+  const btnTarget = resolved.target;
+  const isPayment = targetIsPayment(btnTarget);
 
-  function continueHref(): string {
-    if (resolved.stripePriceId) return `placement-checkout:${placementKey}`;
-    return finalHref;
+  // A payment button never behaves like a link: its work happens in the new tab
+  // the click opens, so it is rendered as a real button and cannot be
+  // middle-clicked into a half-finished checkout.
+  const linkHref =
+    btnTarget.kind === "link" ? btnTarget.href : `/${locale}#contact`;
+  const external =
+    linkHref.startsWith("http") ||
+    linkHref.startsWith("tel:") ||
+    linkHref.startsWith("mailto:");
+
+  function pay() {
+    setError(null);
+    if (btnTarget.kind === "payment-link") {
+      openStripeUrl(btnTarget.url, [placementKey]);
+      return;
+    }
+    if (btnTarget.kind !== "checkout") return;
+    setPending(true);
+    void startPlacementCheckout(placementKey, locale)
+      .catch((err: unknown) => {
+        console.error("[cta] placement checkout failed", err);
+        setError(
+          locale === "bg"
+            ? "Плащането не можа да се отвори. Опитай пак или ни пиши."
+            : "Checkout could not be opened. Please try again or contact us.",
+        );
+      })
+      .finally(() => setPending(false));
   }
 
   function handleClick(e: React.MouseEvent) {
-    if (tryOpenPlacement(placementKey, continueHref())) {
+    if (tryOpenPlacement(placementKey, continueToken(btnTarget))) {
       e.preventDefault();
       return;
     }
-    if (resolved.stripePriceId) {
+    if (isPayment) {
       e.preventDefault();
-      setPending(true);
-      void startPlacementCheckout(placementKey, locale)
-        .catch((err) => {
-          console.error("[cta] placement checkout failed", err);
-        })
-        .finally(() => setPending(false));
+      pay();
       return;
     }
-    if (isStripeCheckoutUrl(finalHref)) {
-      trackSiteCheckout();
-      trackMeta("InitiateCheckout", {
-        contentIds: [placementKey],
-        contentType: "product",
-        numItems: 1,
-      });
+    trackLinkClick();
+  }
+
+  function trackLinkClick() {
+    if (!/^https?:\/\/[a-z0-9-]*\.?stripe\.com/i.test(linkHref)) return;
+    trackSiteCheckout();
+    trackMeta("InitiateCheckout", {
+      contentIds: [placementKey],
+      contentType: "product",
+      numItems: 1,
+    });
+  }
+
+  const button = (() => {
+    if (pending) {
+      return (
+        <span className={cn(classes, "pointer-events-none opacity-70")}>{label}</span>
+      );
     }
-  }
-
-  if (pending) {
+    if (isPayment) {
+      return (
+        <button type="button" className={classes} onClick={handleClick}>
+          {label}
+        </button>
+      );
+    }
+    if (external) {
+      return (
+        <a
+          href={linkHref}
+          target={target}
+          rel={rel}
+          className={classes}
+          onClick={handleClick}
+        >
+          {label}
+        </a>
+      );
+    }
     return (
-      <span className={cn(classes, "pointer-events-none opacity-70")}>{label}</span>
-    );
-  }
-
-  if (resolved.stripePriceId && !resolved.stripeUrl) {
-    return (
-      <button type="button" className={classes} onClick={handleClick}>
+      <Link href={linkHref} className={classes} onClick={handleClick}>
         {label}
-      </button>
+      </Link>
     );
-  }
+  })();
 
-  if (external) {
-    return (
-      <a
-        href={finalHref}
-        target={target}
-        rel={rel}
-        className={classes}
-        onClick={handleClick}
-      >
-        {label}
-      </a>
-    );
-  }
+  if (!error) return button;
 
   return (
-    <Link href={finalHref} className={classes} onClick={handleClick}>
-      {label}
-    </Link>
+    <span className="inline-flex flex-col items-start gap-2">
+      {button}
+      <span className="text-sm font-medium text-coral-600">{error}</span>
+    </span>
   );
 }

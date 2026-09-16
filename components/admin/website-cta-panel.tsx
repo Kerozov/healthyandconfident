@@ -2,7 +2,17 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Check, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import {
+  Save,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  Loader2,
+  AlertTriangle,
+  CreditCard,
+  Link2,
+} from "lucide-react";
 import type { SiteCtaPlacement, SiteProduct } from "@/lib/supabase/types";
 import { saveCtaPlacement } from "@/app/(admin)/admin/actions";
 import { Field, Input, Select } from "@/components/admin/fields";
@@ -11,8 +21,9 @@ import type {
   StripeCatalogItem,
   StripePaymentLinkItem,
 } from "@/lib/admin/stripe-product-types";
+import { stripePriceSummary } from "@/lib/stripe/catalog-types";
 import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
-import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
+import { DEFAULT_OFFER_HEADLINE, placementTarget } from "@/lib/site/cta-placements";
 import { SITE_BUTTON_GROUPS, type SiteButtonSpec } from "@/lib/site/button-catalog";
 import { cn } from "@/lib/utils";
 import { TabList } from "@/components/admin/tab-list";
@@ -56,6 +67,14 @@ function modeOf(stripe: StripeValue, url: string): LinkMode {
   return "default";
 }
 
+/** "Клуб Препрограмирай апетита · €38 на месец" — product plus how it charges. */
+function stripeLabel(
+  item: { name: string; priceLabel: string; recurring: StripeCatalogItem["recurring"] },
+): string {
+  const price = stripePriceSummary(item.priceLabel, item.recurring);
+  return price ? `${item.name} · ${price}` : item.name;
+}
+
 function stripeName(
   value: StripeValue,
   items: StripeCatalogItem[],
@@ -63,16 +82,21 @@ function stripeName(
 ): string {
   const url = value.stripe_url.trim();
   const link = links.find((l) => l.url === url);
-  if (link) return link.name;
+  if (link) return stripeLabel(link);
   const id = value.stripe_id.trim();
   const item = items.find(
     (i) => i.stripeProductId === id || i.stripePriceId === id,
   );
-  if (item) return item.name;
+  if (item) return stripeLabel(item);
   return id || url || "Stripe";
 }
 
-/** One dropdown for the whole Stripe catalogue; raw ids stay behind „Ръчно“. */
+/**
+ * One dropdown for the whole Stripe catalogue, split by how the price charges.
+ * A button works the same either way — the site opens a subscription and a
+ * one-off payment through the same checkout — but the admin still has to see
+ * which one they just picked. Raw ids stay behind „Ръчно“.
+ */
 function StripeTargetPicker({
   value,
   onChange,
@@ -91,6 +115,9 @@ function StripeTargetPicker({
   disabled?: boolean;
 }) {
   const activeItems = items.filter((i) => i.active);
+  const oneOff = activeItems.filter((i) => !i.recurring);
+  const recurring = activeItems.filter((i) => i.recurring);
+
   const selected = useMemo(() => {
     const url = value.stripe_url.trim();
     if (url && paymentLinks.some((l) => l.url === url)) return `link:${url}`;
@@ -141,31 +168,38 @@ function StripeTargetPicker({
   return (
     <div className="space-y-2">
       <Field
-        label="Продукт от Stripe"
-        hint="Продукт = плащането се отваря в сайта. Payment Link = отива в страницата на Stripe."
+        label="Кой продукт се плаща"
+        hint="Избери един продукт. Натискането на бутона отваря нов таб със самото плащане в Stripe — еднократно или абонамент, според цената на продукта."
       >
         <Select
           value={selected}
           disabled={disabled || (pending && items.length === 0)}
           onChange={(e) => pick(e.target.value)}
         >
-          <option value="">— избери —</option>
-          {activeItems.length > 0 && (
-            <optgroup label="Продукти">
-              {activeItems.map((item) => (
+          <option value="">— избери продукт —</option>
+          {oneOff.length > 0 && (
+            <optgroup label="Еднократно плащане">
+              {oneOff.map((item) => (
                 <option key={item.stripeProductId} value={`prod:${item.stripeProductId}`}>
-                  {item.name}
-                  {item.priceLabel ? ` · ${item.priceLabel}` : ""}
+                  {stripeLabel(item)}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {recurring.length > 0 && (
+            <optgroup label="Абонамент (повтаряща се такса)">
+              {recurring.map((item) => (
+                <option key={item.stripeProductId} value={`prod:${item.stripeProductId}`}>
+                  {stripeLabel(item)}
                 </option>
               ))}
             </optgroup>
           )}
           {paymentLinks.length > 0 && (
-            <optgroup label="Payment Links">
+            <optgroup label="Payment Links (готови линкове от Stripe)">
               {paymentLinks.map((link) => (
                 <option key={link.id} value={`link:${link.url}`}>
-                  {link.name}
-                  {link.priceLabel ? ` · ${link.priceLabel}` : ""}
+                  {stripeLabel(link)}
                 </option>
               ))}
             </optgroup>
@@ -217,21 +251,32 @@ function ModeSelect({
   onChange,
   disabled,
   label,
+  fallback,
 }: {
   value: LinkMode;
   onChange: (mode: LinkMode) => void;
   disabled?: boolean;
   label: string;
+  fallback?: string;
 }) {
+  const hint =
+    value === "stripe"
+      ? "Бутонът отваря нов таб със самото плащане в Stripe."
+      : value === "link"
+        ? "Бутонът отваря линка, който попълваш отдолу."
+        : fallback
+          ? `Без настройка: ${fallback}`
+          : "Бутонът прави каквото е зададено в страницата.";
+
   return (
-    <Field label={label}>
+    <Field label={label} hint={hint}>
       <Select
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value as LinkMode)}
       >
-        <option value="default">Както е на страницата</option>
-        <option value="stripe">Плащане със Stripe</option>
+        <option value="default">Без настройка (както е на страницата)</option>
+        <option value="stripe">Плащане със Stripe продукт</option>
         <option value="link">Друг линк</option>
       </Select>
     </Field>
@@ -300,9 +345,39 @@ function SaveButton({
   );
 }
 
+/** The one thing an admin opening a row needs first: which button is this. */
+function WhereIsIt({ spec, path }: { spec: SiteButtonSpec; path?: string }) {
+  return (
+    <div className="rounded-xl border border-forest-600/20 bg-forest-600/[0.06] px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-forest-700">
+        Къде е този бутон на сайта
+      </p>
+      <ul className="mt-2 space-y-1 text-sm text-ink">
+        {spec.spots.map((spot) => (
+          <li key={spot} className="flex gap-2">
+            <span className="text-forest-600">•</span>
+            <span>{spot}</span>
+          </li>
+        ))}
+      </ul>
+      {path && (
+        <a
+          href={path}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-forest-700 underline underline-offset-2"
+        >
+          Отвори страницата <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      )}
+    </div>
+  );
+}
+
 function ButtonEditor({
   placement,
   spec,
+  path,
   items,
   paymentLinks,
   catalogPending,
@@ -311,6 +386,7 @@ function ButtonEditor({
 }: {
   placement: SiteCtaPlacement;
   spec: SiteButtonSpec;
+  path?: string;
   items: StripeCatalogItem[];
   paymentLinks: StripePaymentLinkItem[];
   catalogPending: boolean;
@@ -356,7 +432,7 @@ function ButtonEditor({
 
   function save() {
     if (form.mode === "link" && !form.url_bg.trim()) {
-      setError("Попълни линка или избери „Както е на страницата“.");
+      setError("Попълни линка или избери „Без настройка“.");
       return;
     }
     if (form.mode === "stripe" && !hasStripe(form.stripe_bg)) {
@@ -407,6 +483,8 @@ function ButtonEditor({
 
   return (
     <div className="space-y-4 border-t border-ink/10 bg-cream-2/20 px-4 py-4">
+      <WhereIsIt spec={spec} path={path} />
+
       <VisibilityToggles
         bg={form.enabled}
         en={form.enabled_en}
@@ -425,20 +503,21 @@ function ButtonEditor({
           />
         </Field>
         <ModeSelect
-          label="Накъде води"
+          label="Какво прави бутона"
           value={form.mode}
           disabled={pending}
+          fallback={spec.fallback}
           onChange={(mode) => patch({ mode })}
         />
       </div>
 
       {form.mode === "link" && (
-        <Field label="Линк" hint="WhatsApp, друга страница или #секция.">
+        <Field label="Линк" hint="Друга страница, #секция, WhatsApp или Calendly.">
           <Input
             value={form.url_bg}
             disabled={pending}
             onChange={(e) => patch({ url_bg: e.target.value })}
-            placeholder="https://wa.me/… или /bg#programs"
+            placeholder="https://… или /bg#programs"
           />
         </Field>
       )}
@@ -477,9 +556,10 @@ function ButtonEditor({
               />
             </Field>
             <ModeSelect
-              label="Накъде води (EN)"
+              label="Какво прави бутона (EN)"
               value={form.mode_en}
               disabled={pending}
+              fallback={spec.fallback}
               onChange={(mode_en) => patch({ mode_en })}
             />
           </div>
@@ -515,10 +595,12 @@ function ButtonEditor({
 
 function OfferEditor({
   placement,
+  spec,
   offers,
   onSaved,
 }: {
   placement: SiteCtaPlacement;
+  spec: SiteButtonSpec;
   offers: SiteProduct[];
   onSaved: () => void;
 }) {
@@ -562,6 +644,8 @@ function OfferEditor({
 
   return (
     <div className="space-y-4 border-t border-ink/10 bg-cream-2/20 px-4 py-4">
+      <WhereIsIt spec={spec} />
+
       <label className="flex items-center gap-2 text-sm font-medium">
         <input
           type="checkbox"
@@ -616,27 +700,71 @@ function OfferEditor({
 function Badge({
   children,
   tone = "muted",
+  icon: Icon,
 }: {
   children: React.ReactNode;
-  tone?: "muted" | "green" | "amber";
+  tone?: "muted" | "green" | "amber" | "red";
+  icon?: typeof CreditCard;
 }) {
   return (
     <span
       className={cn(
-        "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
         tone === "green" && "bg-forest-600/10 text-forest-700",
         tone === "amber" && "bg-gold-400/25 text-ink",
+        tone === "red" && "bg-coral-600/10 text-coral-700",
         tone === "muted" && "bg-ink/10 text-ink-soft",
       )}
     >
+      {Icon && <Icon className="h-3 w-3" />}
       {children}
     </span>
   );
 }
 
+/** One line saying exactly what happens when a visitor presses this button. */
+function TargetBadge({
+  placement,
+  spec,
+  items,
+  paymentLinks,
+}: {
+  placement: SiteCtaPlacement;
+  spec: SiteButtonSpec;
+  items: StripeCatalogItem[];
+  paymentLinks: StripePaymentLinkItem[];
+}) {
+  const target = placementTarget(placement, placement.key, "bg");
+  const stripe = stripeBg(placement);
+
+  if (target.kind === "checkout" || target.kind === "payment-link") {
+    return (
+      <Badge tone="green" icon={CreditCard}>
+        Плащане · {stripeName(stripe, items, paymentLinks)}
+      </Badge>
+    );
+  }
+  if (spec.sells) {
+    return (
+      <Badge tone="red" icon={AlertTriangle}>
+        Няма избран продукт
+      </Badge>
+    );
+  }
+  if (target.kind === "link" && (placement.button_url ?? "").trim()) {
+    return (
+      <Badge icon={Link2}>
+        Линк · {(placement.button_url ?? "").trim()}
+      </Badge>
+    );
+  }
+  return <Badge>Както е на страницата</Badge>;
+}
+
 function PlacementRow({
   placement,
   spec,
+  path,
   offers,
   items,
   paymentLinks,
@@ -648,6 +776,7 @@ function PlacementRow({
 }: {
   placement: SiteCtaPlacement;
   spec: SiteButtonSpec;
+  path?: string;
   offers: SiteProduct[];
   items: StripeCatalogItem[];
   paymentLinks: StripePaymentLinkItem[];
@@ -660,9 +789,7 @@ function PlacementRow({
   const isOffer = spec.kind === "offer";
   const bgVisible = placement.button_enabled !== false;
   const enVisible = placement.button_enabled_en !== false;
-  const stripe = stripeBg(placement);
-  const mode = modeOf(stripe, placement.button_url ?? "");
-  const label = (placement.button_label_bg ?? "").trim();
+  const label = (placement.button_label_bg ?? "").trim() || spec.defaultLabel || "";
 
   return (
     <div className="overflow-hidden rounded-xl border border-ink/10 bg-white">
@@ -690,32 +817,37 @@ function PlacementRow({
                 {!bgVisible && !enVisible && <Badge>скрит</Badge>}
                 {bgVisible && !enVisible && <Badge tone="amber">само BG</Badge>}
                 {!bgVisible && enVisible && <Badge tone="amber">само EN</Badge>}
-                {mode === "stripe" && (
-                  <Badge tone="green">
-                    плащане · {stripeName(stripe, items, paymentLinks)}
-                  </Badge>
-                )}
-                {mode === "link" && <Badge>линк</Badge>}
+                <TargetBadge
+                  placement={placement}
+                  spec={spec}
+                  items={items}
+                  paymentLinks={paymentLinks}
+                />
               </>
             )}
           </span>
           <span className="mt-0.5 block truncate text-xs text-ink-soft">
-            {isOffer
-              ? spec.where
-              : label
-                ? `„${label}“ · ${spec.where}`
-                : spec.where}
+            {isOffer ? spec.spots[0] : label ? `Пише „${label}“ · ${spec.spots[0]}` : spec.spots[0]}
+            {!isOffer && spec.spots.length > 1
+              ? ` (+ още ${spec.spots.length - 1})`
+              : ""}
           </span>
         </span>
       </button>
 
       {open &&
         (isOffer ? (
-          <OfferEditor placement={placement} offers={offers} onSaved={onSaved} />
+          <OfferEditor
+            placement={placement}
+            spec={spec}
+            offers={offers}
+            onSaved={onSaved}
+          />
         ) : (
           <ButtonEditor
             placement={placement}
             spec={spec}
+            path={path}
             items={items}
             paymentLinks={paymentLinks}
             catalogPending={catalogPending}
@@ -770,10 +902,18 @@ export function CtaPlacementsPanel({
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-ink-soft">
-        Всеки ред е един бутон на сайта. Отвори го, за да смениш текста, къде води и
-        на кой език се показва. Празни полета = както е на страницата.
-      </p>
+      <div className="rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink-soft">
+        <p>
+          Всеки ред е един бутон на сайта, подреден по страницата, на която стои.
+          Отвори го, за да видиш точно къде се показва и да смениш текста, продукта
+          за плащане и езиците.
+        </p>
+        <p className="mt-2">
+          Бутон с избран продукт отваря{" "}
+          <strong className="text-ink">нов таб със самото плащане</strong> в Stripe —
+          работи еднакво за еднократно плащане и за месечен абонамент.
+        </p>
+      </div>
 
       {missing.length > 0 && (
         <p className="rounded-xl bg-gold-400/15 px-4 py-3 text-sm text-ink-soft">
@@ -785,14 +925,25 @@ export function CtaPlacementsPanel({
 
       {groups.map((group) => (
         <div key={group.id} className="space-y-2">
-          <div>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="text-sm font-semibold text-ink">{group.title}</h3>
+            {group.path && (
+              <a
+                href={group.path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-ink-soft underline underline-offset-2 hover:text-ink"
+              >
+                {group.path} <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
             {group.note && <p className="text-xs text-ink-soft">{group.note}</p>}
           </div>
           {group.rows.map(({ spec, placement }) => (
             <PlacementRow
               key={spec.key}
               spec={spec}
+              path={group.path}
               placement={placement}
               offers={offers}
               items={catalog.items}

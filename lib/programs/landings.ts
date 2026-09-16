@@ -4,7 +4,11 @@ import { zhiveyBezRezistentnostBg } from "./content/zhivey-bez-rezistentnost.bg"
 import { preprogramiraiApetitaBg } from "./content/preprogramirai-apetita.bg";
 import { summerProgrammeBg } from "./content/summer-programme.bg";
 
-const whatsapp = "https://wa.me/447876565263";
+/** Same rule as the Bulgarian landings: an unwired buy button shows the prices. */
+const pricingAnchor = "#pricing";
+
+/** The site's contact section — for buttons that ask, rather than sell. */
+const contactSection = "/#contact";
 
 const bg: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "zhivey-bez-rezistentnost": zhiveyBezRezistentnostBg,
@@ -151,14 +155,14 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
           price: "3 × €180",
           note: "Instead of €1,090 · ~€5.90/day",
           cta: "Join with installments",
-          href: whatsapp,
+          href: pricingAnchor,
         },
         {
           label: "Pay in full",
           price: "€480",
           note: "Instead of €1,090 · ~€5.30/day",
           cta: "Join with one payment",
-          href: whatsapp,
+          href: pricingAnchor,
         },
       ],
       ps: "P.S. Only a few discounted spots left!",
@@ -167,7 +171,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       title: "Meet me and the",
       titleAccent: "method",
       cta: "More details — watch video",
-      href: whatsapp,
+      href: contactSection,
     },
     newsletter: {
       title: "Want health news and recipes? Sign up:",
@@ -180,7 +184,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     finalCta: {
       title: "Get in touch",
       cta: "Contact me here",
-      href: whatsapp,
+      href: contactSection,
     },
   },
   "preprogramirai-apetita": {
