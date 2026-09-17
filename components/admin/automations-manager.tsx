@@ -26,7 +26,6 @@ import type { FormTemplateRecord } from "@/lib/forms/types";
 import type {
   Automation,
   AutomationChannel,
-  AutomationDelivery,
   AutomationTrigger,
   AutomationStats,
   Segment,
@@ -45,6 +44,8 @@ import {
   getAutomationDeliveriesReport,
   resendAutomationToNonOpeners,
 } from "@/app/(admin)/admin/actions";
+import { AutomationReportPanel } from "@/components/admin/automation-report-panel";
+import type { AutomationReport } from "@/lib/admin/automation-report";
 import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
 import { AutomationFlowView, flattenAutomationsForDisplay, TRIGGER_SECTION_LABELS } from "@/components/admin/automation-flow";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
@@ -228,23 +229,14 @@ function audienceSummary(a: Automation): string {
 
 type AutomationRow = Automation & AutomationStats;
 
-type DeliveryFilter = "all" | "sent" | "scheduled" | "failed";
-
-const DELIVERY_STATUS_STYLES: Record<string, string> = {
-  opened: "text-forest-600 bg-forest-500/10",
-  delivered: "text-forest-600 bg-forest-500/10",
-  sent: "text-ink-soft bg-ink/5",
-  pending: "text-gold-600 bg-gold-400/15",
-  scheduled: "text-gold-600 bg-gold-400/15",
-  bounced: "text-coral-600 bg-coral-500/15",
-  failed: "text-coral-600 bg-coral-500/15",
-  canceled: "text-ink-soft bg-ink/10",
-  skipped: "text-ink-soft bg-ink/10",
-};
-
 function openRate(a: AutomationRow) {
   if (!a.sent_count) return 0;
   return Math.round((a.opened_count / a.sent_count) * 100);
+}
+
+function pct(part: number, whole: number) {
+  if (!whole) return 0;
+  return Math.round((part / whole) * 100);
 }
 
 function formatAutomationAudienceLine(
@@ -311,29 +303,6 @@ function Metric({
       </p>
     </div>
   );
-}
-
-function DeliveryStatusBadge({ status }: { status: string }) {
-  return (
-    <span
-      className={cn(
-        "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-        DELIVERY_STATUS_STYLES[status] ?? "bg-ink/5 text-ink-soft",
-      )}
-    >
-      {status}
-    </span>
-  );
-}
-
-function filterDeliveries(
-  rows: AutomationDelivery[],
-  filter: DeliveryFilter,
-): AutomationDelivery[] {
-  if (filter === "all") return rows;
-  if (filter === "sent") return rows.filter((d) => d.status === "sent");
-  if (filter === "scheduled") return rows.filter((d) => d.status === "scheduled");
-  return rows.filter((d) => d.status === "failed");
 }
 
 const EMPTY_FORM = {
@@ -449,9 +418,8 @@ export function AutomationsManager({
   /** Ref, not state: the one-shot sync must not trigger an extra render. */
   const autoSyncedRef = useRef(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [deliveries, setDeliveries] = useState<AutomationDelivery[] | null>(null);
-  const [loadingDeliveries, setLoadingDeliveries] = useState(false);
-  const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>("all");
+  const [report, setReport] = useState<AutomationReport | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
   const [viewTab, setViewTab] = useState<"list" | "flow">("flow");
   const [contentLocale, setContentLocale] = useState<"bg" | "en">("bg");
   const [smsLinks, setSmsLinks] = useState({ bg: "", en: "" });
@@ -751,18 +719,15 @@ export function AutomationsManager({
   async function toggleDeliveries(automationId: string) {
     if (expandedId === automationId) {
       setExpandedId(null);
-      setDeliveries(null);
-      setDeliveryFilter("all");
+      setReport(null);
       return;
     }
     setExpandedId(automationId);
-    setLoadingDeliveries(true);
-    setDeliveries(null);
-    setDeliveryFilter("all");
+    setLoadingReport(true);
+    setReport(null);
     const res = await getAutomationDeliveriesReport(automationId);
-    setLoadingDeliveries(false);
-    if (res.ok) setDeliveries(res.deliveries);
-    else setDeliveries([]);
+    setLoadingReport(false);
+    setReport(res.ok ? res.report : null);
     router.refresh();
   }
 
@@ -1594,6 +1559,8 @@ export function AutomationsManager({
             const showHeader = trigger !== lastTrigger;
             if (showHeader) lastTrigger = trigger;
             const rate = openRate(a);
+            const deliveryRate = pct(a.delivered_count, a.sent_count);
+            const clickRate = pct(a.unique_clickers_count, a.sent_count);
             const audienceLine = formatAutomationAudienceLine(a, groups, segments);
             const signupSourcesLine =
               a.trigger_event === "new_subscriber"
@@ -1617,10 +1584,6 @@ export function AutomationsManager({
               a.channel === "email" &&
               a.sent_count > 0 &&
               a.not_opened_count > 0;
-            const filteredDeliveries = deliveries
-              ? filterDeliveries(deliveries, deliveryFilter)
-              : [];
-
             return (
             <div key={a.id} className="space-y-3">
               {showHeader && (
@@ -1760,15 +1723,28 @@ export function AutomationsManager({
 
               {(a.sent_count > 0 || a.scheduled_count > 0 || a.failed_count > 0) && (
                 <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-ink/10 pt-4">
-                  <Metric label="Sent" value={a.sent_count} />
+                  <Metric label="Изпратени" value={a.sent_count} />
                   {a.scheduled_count > 0 && (
-                    <Metric label="Scheduled" value={a.scheduled_count} tone="warn" />
+                    <Metric label="Насрочени" value={a.scheduled_count} tone="warn" />
                   )}
                   {a.channel === "email" && (
                     <>
-                      <Metric label="Delivered" value={a.delivered_count} tone="good" />
                       <Metric
-                        label="Opened"
+                        label="Доставени"
+                        value={
+                          <span>
+                            {a.delivered_count}
+                            {a.sent_count > 0 && (
+                              <span className="ml-1 text-xs font-normal text-ink-soft/60">
+                                {deliveryRate}%
+                              </span>
+                            )}
+                          </span>
+                        }
+                        tone="good"
+                      />
+                      <Metric
+                        label="Отворили"
                         value={
                           <span>
                             {a.opened_count}
@@ -1781,28 +1757,31 @@ export function AutomationsManager({
                         }
                         tone="good"
                       />
-                      <Metric label="Not opened" value={a.not_opened_count} tone="muted" />
-                      {(a.total_clicks ?? 0) > 0 && (
-                        <Metric
-                          label="Clicks"
-                          value={
-                            <span>
-                              {a.total_clicks}
+                      <Metric label="Неотворили" value={a.not_opened_count} tone="muted" />
+                      <Metric
+                        label="Кликнали"
+                        value={
+                          <span>
+                            {a.unique_clickers_count}
+                            {a.sent_count > 0 && (
                               <span className="ml-1 text-xs font-normal text-ink-soft/60">
-                                {a.unique_clickers_count} човека
+                                {clickRate}%
                               </span>
-                            </span>
-                          }
-                          tone="good"
-                        />
+                            )}
+                          </span>
+                        }
+                        tone={a.unique_clickers_count > 0 ? "good" : "muted"}
+                      />
+                      {(a.total_clicks ?? 0) > 0 && (
+                        <Metric label="Кликове общо" value={a.total_clicks} tone="good" />
                       )}
                     </>
                   )}
                   {a.bounced_count > 0 && (
-                    <Metric label="Bounced" value={a.bounced_count} tone="bad" />
+                    <Metric label="Върнати" value={a.bounced_count} tone="bad" />
                   )}
                   {a.failed_count > 0 && (
-                    <Metric label="Failed" value={a.failed_count} tone="bad" />
+                    <Metric label="Грешки" value={a.failed_count} tone="bad" />
                   )}
                   {a.channel === "email" && a.sent_count > 0 && (
                     <div className="ml-auto flex min-w-[120px] flex-1 items-center gap-3">
@@ -1828,81 +1807,22 @@ export function AutomationsManager({
                   ) : (
                     <ChevronDown className="h-4 w-4" />
                   )}
-                  {isExpanded ? "Hide" : "Show"} recipients
+                  {isExpanded ? "Скрий" : "Виж"} детайлната статистика
                 </button>
               )}
 
               {isExpanded && (
-                <div className="mt-3 space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    {(["all", "sent", "scheduled", "failed"] as DeliveryFilter[]).map(
-                      (f) => (
-                        <button
-                          key={f}
-                          type="button"
-                          onClick={() => setDeliveryFilter(f)}
-                          className={cn(
-                            "rounded-full px-3 py-1 text-xs font-medium capitalize",
-                            deliveryFilter === f
-                              ? "bg-forest-600 text-cream"
-                              : "bg-ink/10 text-ink-soft hover:bg-ink/15",
-                          )}
-                        >
-                          {f}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                  <div className="overflow-x-auto rounded-xl border border-ink/10">
-                    {loadingDeliveries ? (
-                      <p className="p-4 text-sm text-ink-soft">Loading…</p>
-                    ) : filteredDeliveries.length > 0 ? (
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
-                            <th className="px-4 py-2">Email</th>
-                            <th className="px-4 py-2">Status</th>
-                            <th className="px-4 py-2">Sent</th>
-                            <th className="px-4 py-2">Opened</th>
-                            <th className="px-4 py-2">Clicks</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredDeliveries.map((d) => (
-                            <tr
-                              key={d.id}
-                              className="border-b border-ink/5 last:border-0"
-                            >
-                              <td className="px-4 py-2 font-mono text-xs">{d.email}</td>
-                              <td className="px-4 py-2">
-                                <DeliveryStatusBadge
-                                  status={
-                                    d.opened_at
-                                      ? "opened"
-                                      : d.recipient_status ?? d.status
-                                  }
-                                />
-                              </td>
-                              <td className="px-4 py-2 text-xs text-ink-soft">
-                                {d.status === "scheduled" && d.scheduled_for
-                                  ? `scheduled ${formatDate(d.scheduled_for, "en")}`
-                                  : formatDate(d.sent_at, "en")}
-                              </td>
-                              <td className="px-4 py-2 text-xs text-ink-soft">
-                                {d.opened_at ? formatDate(d.opened_at, "en") : "—"}
-                              </td>
-                              <td className="px-4 py-2 text-xs font-medium text-forest-700">
-                                {d.click_count ?? 0}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <p className="p-4 text-sm text-ink-soft">No recipients in this filter.</p>
-                    )}
-                  </div>
-                </div>
+                loadingReport ? (
+                  <p className="mt-4 rounded-2xl bg-cream-2/40 p-4 text-sm text-ink-soft">
+                    Зареждам статистиката…
+                  </p>
+                ) : report ? (
+                  <AutomationReportPanel report={report} automationName={a.name} />
+                ) : (
+                  <p className="mt-4 rounded-2xl bg-cream-2/40 p-4 text-sm text-ink-soft">
+                    Статистиката не можа да се зареди.
+                  </p>
+                )
               )}
 
               {canResend && (

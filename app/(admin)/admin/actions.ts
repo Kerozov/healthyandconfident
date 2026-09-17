@@ -88,9 +88,11 @@ import {
   type FormAnswerCondition,
 } from "@/lib/automation/form-conditions";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
+import { getAutomationReport } from "@/lib/admin/automation-report-data";
+import type { AutomationReport } from "@/lib/admin/automation-report";
 import type {
   Automation,
-  AutomationDelivery,
+  AutomationChannel,
   SiteCtaPlacement,
   SiteSectionKey,
   SiteProduct,
@@ -912,14 +914,21 @@ export async function syncAllAutomations(): Promise<ActionResult> {
 export async function getAutomationDeliveriesReport(
   automationId: string,
 ): Promise<
-  | { ok: true; deliveries: AutomationDelivery[] }
-  | { ok: false; message: string }
+  { ok: true; report: AutomationReport } | { ok: false; message: string }
 > {
   await requireAdmin("automations");
   await syncAutomationDeliveries(automationId);
-  const deliveries = await getAutomationDeliveries(automationId);
+
+  const { data: row } = await getAdminClient()
+    .from("automations")
+    .select("channel")
+    .eq("id", automationId)
+    .maybeSingle();
+  const channel = (row as { channel: AutomationChannel } | null)?.channel ?? "email";
+
+  const report = await getAutomationReport(automationId, channel);
   revalidatePath("/admin/automations");
-  return { ok: true, deliveries };
+  return { ok: true, report };
 }
 
 export async function resendAutomationToNonOpeners(
