@@ -744,10 +744,7 @@ export function ProgramLanding({
                 )}
               </div>
               <div className="max-w-md text-center lg:px-4">
-                <p className="font-display text-xl font-semibold text-forest-900">
-                  {content.transformation.couple}
-                </p>
-                <div className="mt-6 space-y-4 text-left text-sm leading-relaxed">
+                <div className="space-y-4 text-left text-sm leading-relaxed">
                   <div>
                     <p className="font-semibold text-rose-700">
                       {locale === "bg" ? "Преди:" : "Before:"}

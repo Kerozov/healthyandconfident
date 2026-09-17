@@ -56,7 +56,6 @@ export type ProgramLandingContent = {
   };
   transformation?: {
     title?: string;
-    couple: string;
     before: string[];
     after: string[];
     beforeImage?: string;

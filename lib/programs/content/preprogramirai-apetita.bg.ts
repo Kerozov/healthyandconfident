@@ -203,7 +203,6 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
   },
   transformation: {
     title: "Истинска трансформация",
-    couple: "Верчето и Сашо",
     before: [
       "тя „живееше“ на шоколад, оплакваше се от подут корем",
       "той — стресиран от работа и много притеснен от диагнозата пред-диабет",
@@ -211,8 +210,8 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
     ],
     after: [
       "сега се хранят вкусно, спокойни са, радват се на комплименти",
-      "Сашо вече има настроение и си играе с децата",
-      "Верчето просто сияе",
+      "той вече има настроение и си играе с децата",
+      "тя просто сияе",
     ],
     beforeImage: CLIENT_TRANSFORMATION_PAIRS[0].before,
     afterImage: CLIENT_TRANSFORMATION_PAIRS[0].after,

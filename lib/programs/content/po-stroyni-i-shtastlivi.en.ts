@@ -49,7 +49,7 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
       "In the UK, together with my colleagues, we use a new and successful health method — the easier way to deal once and for all with excess weight, insulin resistance and Type 2 Diabetes.",
       "Instead of relying on medication that may have many side effects in the long run.",
       "This isn't starving and it isn't another diet. It's a clear structure, delicious food and knowledge that stays with you for life.",
-      "The method has a 94% success rate in the UK — and it is finally available here too.",
+      "The method is called T2DPR and has a 94% success rate in the UK — and it is finally available here too.",
     ],
   },
   audience: {
@@ -130,6 +130,18 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
         "The main benefit for me was knowing I'd done something good for myself — and how great I looked and felt afterwards: no bloating, a flatter tummy, better sleep and more energy.",
       name: "Evelina, Denmark",
     },
+    {
+      headline: "From the inside out",
+      quote:
+        "Vessie will change not only the way you eat, but the way you look and live. Happy, healthy and confident — from the inside out.",
+      name: "Vasi Angelova, CFO BOIARON",
+    },
+    {
+      headline: "No overeating and no emotional eating",
+      quote:
+        "Thank you, Vessie. I cannot thank you enough. It's been a wonderful kickstart to better healthy choices. I feel more in control, and I've not overeaten or eaten on emotion since starting this journey with you. I've also got back to swimming, which I adore.",
+      name: "Sarah, Sandhurst",
+    },
   ],
   testimonialsNote:
     "Results are individual and depend on your starting point and consistency.",
@@ -137,7 +149,7 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
     ...poStroyniIShtastliviBg.promoStrip!,
     subtitle: "An innovative method with 94% success",
     title: "In just 21 days we achieve",
-    stat: "The method has already changed thousands of lives in the UK. Now it's here too.",
+    stat: "The innovative T2DPR method has already changed thousands of lives in the UK. Now it's here too.",
     checklist: [
       "~20 cm off your measurements — tummy, hips and thighs",
       "~3–5 kg down, and that's only the beginning",
@@ -173,7 +185,6 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
   transformation: {
     ...poStroyniIShtastliviBg.transformation!,
     title: "One change, a whole family",
-    couple: "Vercheto and Sasho",
     before: [
       "She “lived” on chocolate and complained of a bloated belly",
       "He was stressed at work and worried by a pre-diabetes diagnosis",
@@ -181,8 +192,8 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
     ],
     after: [
       "They eat deliciously, they're calm, and they enjoy the compliments",
-      "Sasho is in good spirits again and plays with the kids",
-      "And Vercheto simply glows",
+      "He is in good spirits again and plays with the kids",
+      "And she simply glows",
     ],
     audienceTitle: "Often the whole family joins in",
     audienceBullets: [
@@ -319,7 +330,7 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
         href: contactSection,
       },
     ],
-    ps: "📩 Within 48 hours of payment you get an email with the recipes, the food group list and the link to take part — check your Spam folder too. 🔒 Payment is secure.",
+    ps: "💚 You save a great deal on medication and on the junk you no longer buy — wafers, biscuits, chocolate — for years to come. 📩 Within 48 hours of payment you get an email with the recipes, the food group list and the link to take part — check your Spam folder too. 🔒 Payment is secure.",
   },
   faq: [
     {
