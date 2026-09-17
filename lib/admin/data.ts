@@ -118,7 +118,11 @@ export async function getAutomatedEmails(): Promise<AutomatedEmail[]> {
   return (data as AutomatedEmail[]) ?? [];
 }
 
-export { getAutomations, getAutomationDeliveries } from "@/lib/admin/automations-data";
+export {
+  getAutomations,
+  getAutomationStats,
+  getAutomationDeliveries,
+} from "@/lib/admin/automations-data";
 export type { AutomationRow } from "@/lib/admin/automations-data";
 
 export async function getEmailCampaigns(): Promise<EmailCampaign[]> {

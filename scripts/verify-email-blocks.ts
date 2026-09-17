@@ -24,6 +24,7 @@ const blocks: EmailBlock[] = [
   { ...createEmailBlock("heading"), type: "heading", text: "Заглавие \"кавички\"", level: 1, align: "right" } as EmailBlock,
   { ...createEmailBlock("button"), type: "button", label: "Запиши се", href: "https://x.co/a?b=1&c=2", align: "center", variant: "green" } as EmailBlock,
   { ...createEmailBlock("image"), type: "image", src: "https://img/a.png", alt: "алт", href: "/bg#contact", width: 60, align: "right", radius: false, caption: "Подпис" } as EmailBlock,
+  { ...createEmailBlock("youtube"), type: "youtube", url: "https://youtu.be/dQw4w9WgXcQ", thumb: "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg", label: "Гледай видеото", caption: "Епизод 1 & 2", width: 80, align: "center", radius: true } as EmailBlock,
   { ...createEmailBlock("columns"), type: "columns", columns: [
       { src: "https://img/1.png", alt: "1", text: "Ляво", href: "https://a.co" },
       { src: "https://img/2.png", alt: "2", text: "Дясно\nвтори ред", href: "" },
@@ -214,6 +215,28 @@ const ourOwn = parseEmailBlocks('<p style="margin:0 0 16px;line-height:1.65;colo
 check("our own paragraph style converts", ourOwn[0].type === "text");
 const legacyInline = parseEmailBlocks('<p style="margin:0 0 16px;line-height:0"><img src="https://img/i.png" alt="" style="display:block;width:100%;max-width:100%;height:auto;border:0;border-radius:8px" /></p>');
 check("legacy inline image still converts", legacyInline[0].type === "image" && legacyInline[0].src === "https://img/i.png", legacyInline[0].type);
+
+/* 11. youtube banner ---------------------------------------------------- */
+const ytHtml = serializeEmailBlocks([
+  { ...createEmailBlock("youtube"), type: "youtube", url: "https://www.youtube.com/shorts/dQw4w9WgXcQ", thumb: "", label: "Гледай", caption: "", width: 100, align: "center", radius: true } as EmailBlock,
+]);
+check("youtube links to the watch page", ytHtml.includes('href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"'), ytHtml);
+check("youtube falls back to the video frame", ytHtml.includes("https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"), ytHtml);
+check("youtube banner is one line", !ytHtml.includes("\n"));
+check("youtube renders the play bar", ytHtml.includes("#FF0000") && ytHtml.includes("&#9654;"), ytHtml);
+check("youtube survives normalize", normalizeEmailBodyHtml(ytHtml) === ytHtml);
+
+const ytBare = serializeEmailBlocks([
+  { ...createEmailBlock("youtube"), type: "youtube", url: "dQw4w9WgXcQ", thumb: "", label: "", caption: "", width: 100, align: "center", radius: true } as EmailBlock,
+]);
+check("youtube without a label has no bar", !ytBare.includes("#FF0000"), ytBare);
+
+check(
+  "a non-youtube link renders nothing",
+  serializeEmailBlocks([
+    { ...createEmailBlock("youtube"), type: "youtube", url: "https://vimeo.com/123", thumb: "", label: "X", caption: "", width: 100, align: "center", radius: true } as EmailBlock,
+  ]) === "",
+);
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

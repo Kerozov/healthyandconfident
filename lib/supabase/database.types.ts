@@ -41,6 +41,12 @@ type FormInvitation = {
   completed_at: string | null;
 };
 
+type FormTemplateSlug = {
+  slug: string;
+  form_id: string;
+  created_at: string;
+};
+
 type EmailLinkClick = {
   id: string;
   source_type: "campaign" | "automation";
@@ -103,6 +109,7 @@ export type Database = {
       form_templates: TableShape<FormTemplateRecord>;
       form_submissions: TableShape<FormSubmissionRecord>;
       form_invitations: TableShape<FormInvitation>;
+      form_template_slugs: TableShape<FormTemplateSlug>;
       site_sections: TableShape<SiteSection>;
       site_events: TableShape<SiteEvent>;
       site_products: TableShape<SiteProduct>;

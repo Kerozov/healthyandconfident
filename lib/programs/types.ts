@@ -3,17 +3,25 @@ import type { Locale } from "@/i18n/config";
 export type ProgramLandingSlug =
   | "zhivey-bez-rezistentnost"
   | "preprogramirai-apetita"
-  | "summer-programme";
+  | "summer-programme"
+  | "po-stroyni-i-shtastlivi";
 
 export const PROGRAM_LANDING_SLUGS: ProgramLandingSlug[] = [
   "zhivey-bez-rezistentnost",
   "preprogramirai-apetita",
   "summer-programme",
+  "po-stroyni-i-shtastlivi",
 ];
 
 export type ProgramLandingContent = {
   slug: ProgramLandingSlug;
   meta: { title: string; description: string };
+  /**
+   * Keep the page out of search while the programme is not on sale yet. The
+   * URL still works, so the landing can be shared and reviewed — it simply is
+   * not indexed until the buttons carry a real price.
+   */
+  noindex?: boolean;
   hero: {
     eyebrow: string;
     title: string;

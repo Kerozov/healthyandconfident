@@ -17,6 +17,7 @@ import {
   MoveVertical,
   Package,
   BookOpen,
+  Play,
   Plus,
   Quote,
   Trash2,
@@ -27,7 +28,11 @@ import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { EmailAttachmentPicker } from "@/components/admin/email-attachment-picker";
-import { parseYoutubeVideoId, resolveYoutubeThumbnail } from "@/lib/youtube";
+import {
+  parseYoutubeVideoId,
+  resolveYoutubeThumbnail,
+  youtubeThumbnailUrl,
+} from "@/lib/youtube";
 import {
   EmailBlockEditor,
   type BlockEditorContext,
@@ -53,6 +58,7 @@ const BLOCK_ICONS: Record<EmailBlockType, React.ComponentType<{ className?: stri
   heading: Heading,
   button: MousePointerClick,
   image: ImageIcon,
+  youtube: Play,
   columns: Columns2,
   quote: Quote,
   list: List,
@@ -66,7 +72,7 @@ const BLOCK_ICONS: Record<EmailBlockType, React.ComponentType<{ className?: stri
 
 const PALETTE: { title: string; types: EmailBlockType[] }[] = [
   { title: "Текст", types: ["text", "heading", "list", "quote"] },
-  { title: "Медия", types: ["image", "columns"] },
+  { title: "Медия", types: ["image", "youtube", "columns"] },
   { title: "Действие", types: ["button", "product", "guide", "form"] },
   { title: "Оформление", types: ["divider", "spacer", "html"] },
 ];
@@ -249,6 +255,8 @@ export function EmailBuilder({
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">
               Взима кадъра (thumbnail) на видеото и го слага като банер отгоре.
+              Горният банер не се кликва — за банер, който отваря YouTube,
+              добави блок „YouTube видео“.
             </p>
             {youtubeError && (
               <p className="mt-1.5 text-xs text-coral-600">{youtubeError}</p>
@@ -291,7 +299,8 @@ export function EmailBuilder({
                 Добави първия блок
               </span>
               <span className="text-xs text-ink-soft">
-                Текст, снимка, бутон, продукт, наръчник или форма — в какъвто ред искаш.
+                Текст, снимка, видео, бутон, продукт, наръчник или форма — в
+                какъвто ред искаш.
               </span>
             </button>
           )}
@@ -533,6 +542,34 @@ function BlockGlance({
           className="h-8 w-12 shrink-0 rounded object-cover"
         />
         <span className="truncate text-sm text-ink">
+          {emailBlockSummary(block)}
+        </span>
+      </span>
+    );
+  }
+
+  if (block.type === "youtube") {
+    const videoId = parseYoutubeVideoId(block.url);
+    const thumb = videoId
+      ? block.thumb.trim() || youtubeThumbnailUrl(videoId, "hqdefault")
+      : "";
+    return (
+      <span className="flex min-w-0 items-center gap-2">
+        {thumb ? (
+          <span className="relative inline-flex shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={thumb} alt="" className="h-8 w-12 rounded object-cover" />
+            <span className="absolute inset-0 flex items-center justify-center">
+              <Play className="h-3 w-3 fill-white text-white drop-shadow" />
+            </span>
+          </span>
+        ) : null}
+        <span
+          className={cn(
+            "truncate text-sm",
+            videoId ? "text-ink" : "text-ink-soft/70",
+          )}
+        >
           {emailBlockSummary(block)}
         </span>
       </span>

@@ -53,22 +53,75 @@ export async function getFormTemplates(): Promise<FormRow[]> {
   }));
 }
 
-export async function getFormTemplateBySlug(
-  slug: string,
-  options?: { includeDisabled?: boolean },
-): Promise<FormTemplateRecord | null> {
-  const supabase = getAdminClient();
-  let query = supabase.from("form_templates").select("*").eq("slug", slug);
-  if (!options?.includeDisabled) query = query.eq("enabled", true);
-  const { data } = await query.maybeSingle();
-
-  if (!data) return null;
-  const row = data as FormTemplateRecord;
+function normalizeFormRow(row: FormTemplateRecord): FormTemplateRecord {
   return {
     ...row,
     fields: Array.isArray(row.fields) ? row.fields : [],
     settings: row.settings ?? { theme: "default", thank_you_bg: "", thank_you_en: "" },
   };
+}
+
+/**
+ * A read that fails is not a form that does not exist. Swallowing the error
+ * here turned every hiccup into a permanent-looking 404 on the public page, so
+ * the failure is raised and only "no such row" comes back as null.
+ */
+function assertReadOk(error: { message: string } | null, what: string): void {
+  if (error) throw new Error(`form lookup failed (${what}): ${error.message}`);
+}
+
+export async function getFormTemplateById(
+  id: string,
+): Promise<FormTemplateRecord | null> {
+  const supabase = getAdminClient();
+  const { data, error } = await supabase
+    .from("form_templates")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  assertReadOk(error, `id=${id}`);
+  return data ? normalizeFormRow(data as FormTemplateRecord) : null;
+}
+
+export async function getFormTemplateBySlug(
+  slug: string,
+  options?: { includeDisabled?: boolean },
+): Promise<FormTemplateRecord | null> {
+  const wanted = slug.trim();
+  if (!wanted) return null;
+
+  const supabase = getAdminClient();
+  const { data, error } = await supabase
+    .from("form_templates")
+    .select("*")
+    .eq("slug", wanted)
+    .maybeSingle();
+  assertReadOk(error, `slug=${wanted}`);
+
+  let row = data as FormTemplateRecord | null;
+
+  // Not the current slug — it may be one this form used to have. Links already
+  // sent out keep working instead of 404-ing the moment the slug is edited.
+  // Tolerates the table not being there yet: deploying the code before the
+  // migration lands must not take every form page down with it.
+  if (!row) {
+    const { data: alias, error: aliasError } = await supabase
+      .from("form_template_slugs")
+      .select("form_id")
+      .eq("slug", wanted)
+      .maybeSingle();
+    if (aliasError) {
+      console.error(`[forms] slug history lookup (${wanted}):`, aliasError.message);
+      return null;
+    }
+    const formId = (alias as { form_id: string } | null)?.form_id;
+    if (!formId) return null;
+    row = await getFormTemplateById(formId);
+    if (!row) return null;
+  }
+
+  if (!options?.includeDisabled && !row.enabled) return null;
+  return normalizeFormRow(row);
 }
 
 export async function getFormSubmissions(formId: string): Promise<FormSubmissionRecord[]> {

@@ -733,7 +733,7 @@ export function ProgramLanding({
             <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto_1fr]">
               <div className="text-center">
                 <p className="font-display text-4xl font-bold tracking-widest text-forest-400">
-                  ПРЕДИ
+                  {locale === "bg" ? "ПРЕДИ" : "BEFORE"}
                 </p>
                 {content.transformation.beforeImage && (
                   <LandingFigure
@@ -749,7 +749,9 @@ export function ProgramLanding({
                 </p>
                 <div className="mt-6 space-y-4 text-left text-sm leading-relaxed">
                   <div>
-                    <p className="font-semibold text-rose-700">Преди:</p>
+                    <p className="font-semibold text-rose-700">
+                      {locale === "bg" ? "Преди:" : "Before:"}
+                    </p>
                     <ul className="mt-2 space-y-1 text-forest-700">
                       {content.transformation.before.map((b) => (
                         <li key={b}>— {b}</li>
@@ -757,7 +759,9 @@ export function ProgramLanding({
                     </ul>
                   </div>
                   <div>
-                    <p className="font-semibold text-forest-600">Сега:</p>
+                    <p className="font-semibold text-forest-600">
+                      {locale === "bg" ? "Сега:" : "Now:"}
+                    </p>
                     <ul className="mt-2 space-y-1 text-forest-700">
                       {content.transformation.after.map((a) => (
                         <li key={a}>— {a}</li>
@@ -768,7 +772,7 @@ export function ProgramLanding({
               </div>
               <div className="text-center">
                 <p className="font-display text-4xl font-bold tracking-widest text-forest-500">
-                  СЛЕД
+                  {locale === "bg" ? "СЛЕД" : "AFTER"}
                 </p>
                 {content.transformation.afterImage && (
                   <LandingFigure
@@ -1005,7 +1009,16 @@ export function ProgramLanding({
             </div>
 
             {(content.pricing.audienceTitle || content.pricing.includesList) && (
-              <div className="mt-12 grid gap-8 lg:grid-cols-2">
+              <div
+                className={cn(
+                  "mt-12 grid gap-8",
+                  // One card alone in a two-column grid sat in the left half
+                  // with an empty right half next to it.
+                  content.pricing.audienceTitle && content.pricing.includesList
+                    ? "lg:grid-cols-2"
+                    : "mx-auto max-w-2xl",
+                )}
+              >
                 {content.pricing.audienceTitle && content.pricing.audienceBullets && (
                   <div className="rounded-2xl border border-forest-100 bg-white p-6">
                     <p className="font-display text-lg font-semibold text-forest-900">

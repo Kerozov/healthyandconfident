@@ -29,6 +29,9 @@ export async function generateMetadata({
   return {
     title: content.meta.title,
     description: content.meta.description,
+    // A programme that is not on sale yet stays reachable by link, but out of
+    // search — nobody should land on it from Google before its buttons work.
+    robots: content.noindex ? { index: false, follow: true } : undefined,
     alternates: {
       canonical: `${origin}/${locale}/programs/${slug}`,
     },
@@ -50,7 +53,12 @@ export default async function ProgramPage({
   const { locale, slug } = await params;
   if (!isLocale(locale)) notFound();
   // Retired slugs — keep old links, ads and emails working.
-  if (slug === "balansirano-hranene-21" || slug === "garnituri") {
+  // `balansirano-hranene-21` was the 21-day challenge, which has its own page
+  // again, so it goes back to the challenge rather than to the summer package.
+  if (slug === "balansirano-hranene-21") {
+    redirect(`/${locale}/programs/po-stroyni-i-shtastlivi`);
+  }
+  if (slug === "garnituri") {
     redirect(`/${locale}/programs/summer-programme`);
   }
   const content = getProgramLanding(locale as Locale, slug);

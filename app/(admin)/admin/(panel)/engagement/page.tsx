@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getAdminSession, sessionCanAccess } from "@/lib/admin/auth";
 import { getEmailStats } from "@/lib/admin/email-stats";
 import { parseStatsPeriod } from "@/lib/admin/stats-periods";
 import { EmailStatsDashboard } from "@/components/admin/email-stats-dashboard";
@@ -16,7 +17,15 @@ export default async function AdminEngagementPage({
 }) {
   const { period: periodParam } = await searchParams;
   const period = parseStatsPeriod(periodParam);
-  const stats = await getEmailStats(period);
+  const [stats, session] = await Promise.all([
+    getEmailStats(period),
+    getAdminSession(),
+  ]);
+  // Opening a row loads that automation's recipients, which is the automations
+  // screen's data — don't offer it to someone who can't open that screen.
+  const canOpenAutomations = session
+    ? sessionCanAccess(session, "automations")
+    : false;
 
   return (
     <div>
@@ -28,7 +37,10 @@ export default async function AdminEngagementPage({
           <StatsToolbar active={period} />
         </Suspense>
       </PageHeader>
-      <EmailStatsDashboard stats={stats} />
+      <EmailStatsDashboard
+        stats={stats}
+        canOpenAutomations={canOpenAutomations}
+      />
     </div>
   );
 }

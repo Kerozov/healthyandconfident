@@ -87,12 +87,16 @@ import {
   parseFormAnswerConditions,
   type FormAnswerCondition,
 } from "@/lib/automation/form-conditions";
-import { getAutomationDeliveries } from "@/lib/admin/automations-data";
+import {
+  getAutomationDeliveries,
+  getAutomationStats,
+} from "@/lib/admin/automations-data";
 import { getAutomationReport } from "@/lib/admin/automation-report-data";
 import type { AutomationReport } from "@/lib/admin/automation-report";
 import type {
   Automation,
   AutomationChannel,
+  AutomationStats,
   SiteCtaPlacement,
   SiteSectionKey,
   SiteProduct,
@@ -114,8 +118,9 @@ import {
   getSubscriberEngagementDetail,
 } from "@/lib/admin/engagement";
 import type { FormField, FormSettings } from "@/lib/forms/types";
-import { getFormPreset, FORM_PRESETS } from "@/lib/forms/presets";
+import { getFormPreset } from "@/lib/forms/presets";
 import { forceEmailFieldsRequired, emailFieldCount } from "@/lib/forms/required-email";
+import { formSlug as normalizeFormSlug } from "@/lib/forms/slug";
 import { getFormSubmissions } from "@/lib/admin/forms-data";
 import { publicFormInviteUrl } from "@/lib/forms/invite-url";
 import { createFormInviteToken } from "@/lib/forms/form-invite-token";
@@ -878,6 +883,18 @@ export async function diagnoseAutomationsForEmail(
   });
 
   return { ok: true, subscriberFound, diagnosis };
+}
+
+/**
+ * Per-rule counters for the list tab. Reads `automation_deliveries` only — no
+ * worker traffic — and is called lazily, so opening the automations screen to
+ * edit a rule costs one query on the `automations` table and nothing else.
+ */
+export async function getAutomationStatsMap(): Promise<
+  Record<string, AutomationStats>
+> {
+  await requireAdmin("automations");
+  return getAutomationStats();
 }
 
 export async function syncAutomation(id: string): Promise<ActionResult> {
@@ -3805,6 +3822,48 @@ export async function createEmailAttachmentUpload(
 
 // ── Forms ─────────────────────────────────────────────────────
 
+/**
+ * A slug nobody else is using — checked against both the live slugs and the
+ * retired ones kept for old links, so reusing a retired slug can never point
+ * an old invite at a different form.
+ */
+async function reserveFormSlug(
+  desired: string,
+  excludeFormId?: string,
+): Promise<string> {
+  const supabase = getAdminClient();
+  const base = desired || "form";
+
+  for (let i = 0; i < 50; i++) {
+    const candidate = i === 0 ? base : `${base}-${i + 1}`;
+    const [{ data: live }, { data: retired }] = await Promise.all([
+      supabase.from("form_templates").select("id").eq("slug", candidate).maybeSingle(),
+      supabase
+        .from("form_template_slugs")
+        .select("form_id")
+        .eq("slug", candidate)
+        .maybeSingle(),
+    ]);
+    const liveId = (live as { id: string } | null)?.id;
+    const retiredId = (retired as { form_id: string } | null)?.form_id;
+    const takenByOther =
+      (liveId && liveId !== excludeFormId) || (retiredId && retiredId !== excludeFormId);
+    if (!takenByOther) return candidate;
+  }
+
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+/** Keeps a slug pointing at its form after a rename. Best effort — never fatal. */
+async function rememberFormSlug(formId: string, slug: string): Promise<void> {
+  if (!slug) return;
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("form_template_slugs")
+    .upsert({ slug, form_id: formId }, { onConflict: "slug" });
+  if (error) console.error("[forms] slug history:", error.message);
+}
+
 export async function createFormFromPreset(presetKey: string): Promise<ActionResult & { id?: string }> {
   const guard = await guardAction("forms", { action: "create", summary: "Създаде форма" });
   if (!guard.ok) return guard;
@@ -3812,19 +3871,7 @@ export async function createFormFromPreset(presetKey: string): Promise<ActionRes
   if (!preset) return { ok: false, message: "Шаблонът не е намерен." };
 
   const supabase = getAdminClient();
-  let slug = preset.slug;
-  for (let i = 0; i < 20; i++) {
-    const candidate = i === 0 ? slug : `${slug}-${i + 1}`;
-    const { data: existing } = await supabase
-      .from("form_templates")
-      .select("id")
-      .eq("slug", candidate)
-      .maybeSingle();
-    if (!existing) {
-      slug = candidate;
-      break;
-    }
-  }
+  const slug = await reserveFormSlug(preset.slug);
 
   const { data, error } = await supabase
     .from("form_templates")
@@ -3847,8 +3894,10 @@ export async function createFormFromPreset(presetKey: string): Promise<ActionRes
     .single();
 
   if (error) return { ok: false, message: error.message };
+  const newId = (data as { id: string }).id;
+  await rememberFormSlug(newId, slug);
   revalidatePath("/admin/forms");
-  return { ok: true, id: (data as { id: string }).id, slug };
+  return { ok: true, id: newId, slug };
 }
 
 export async function saveFormTemplate(input: {
@@ -3874,15 +3923,25 @@ export async function saveFormTemplate(input: {
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const name = input.name.trim();
-  const slug = slugify(input.slug.trim() || name);
   if (!name) return { ok: false, message: "Попълни име на формата." };
-  if (!slug) return { ok: false, message: "Невалиден URL адрес (slug)." };
+
+  const wanted = normalizeFormSlug(input.slug, name);
+  if (!wanted) {
+    return {
+      ok: false,
+      message: "Невалиден URL адрес (slug) — използвай букви и цифри.",
+    };
+  }
   if (emailFieldCount(input.fields) === 0) {
     return {
       ok: false,
       message: "Формата трябва да има задължително поле за имейл.",
     };
   }
+
+  // A clash with another form silently became a Postgres unique-violation the
+  // admin could do nothing about — take the next free slug instead.
+  const slug = await reserveFormSlug(wanted, input.id);
 
   const row = {
     name,
@@ -3907,8 +3966,9 @@ export async function saveFormTemplate(input: {
   if (input.id) {
     const { error } = await supabase.from("form_templates").update(row).eq("id", input.id);
     if (error) return { ok: false, message: error.message };
+    await rememberFormSlug(input.id, slug);
     revalidatePath("/admin/forms");
-    return { ok: true, id: input.id };
+    return { ok: true, id: input.id, slug };
   }
 
   const { data, error } = await supabase
@@ -3917,17 +3977,56 @@ export async function saveFormTemplate(input: {
     .select("id")
     .single();
   if (error) return { ok: false, message: error.message };
+  const newId = (data as { id: string }).id;
+  await rememberFormSlug(newId, slug);
   revalidatePath("/admin/forms");
-  return { ok: true, id: (data as { id: string }).id };
+  return { ok: true, id: newId, slug };
+}
+
+/** One-click activate from the list — a hidden form's public link is a 404. */
+export async function setFormEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<ActionResult> {
+  const guard = await guardAction("forms", {
+    action: "save",
+    summary: enabled ? "Активира форма" : "Скри форма",
+  });
+  if (!guard.ok) return guard;
+  const supabase = getAdminClient();
+  const { error } = await supabase
+    .from("form_templates")
+    .update({ enabled, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/forms");
+  return { ok: true, id };
 }
 
 export async function deleteFormTemplate(id: string): Promise<ActionResult> {
   const guard = await guardAction("forms", { action: "delete", summary: "Изтри форма" });
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
+
+  // The foreign key nulls trigger_form_id on delete, which leaves an enabled
+  // automation that can never fire again and says nothing about it. Name them
+  // instead, and let the admin retarget or switch them off first.
+  const { data: dependents } = await supabase
+    .from("automations")
+    .select("name")
+    .eq("trigger_form_id", id);
+  const names = ((dependents as { name: string }[] | null) ?? []).map((a) => a.name);
+  if (names.length > 0) {
+    return {
+      ok: false,
+      message: `Формата се ползва от ${names.length} автоматизация(и): ${names.join(", ")}. Смени формата им или ги изключи, преди да я изтриеш.`,
+    };
+  }
+
   const { error } = await supabase.from("form_templates").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/forms");
+  revalidatePath("/admin/automations");
   return { ok: true };
 }
 

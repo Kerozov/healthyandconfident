@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Loader2, Mail, Plus, Trash2, User } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Mail, Play, Plus, Trash2, User } from "lucide-react";
 import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { productSellableInLocale } from "@/lib/site/product-locale";
@@ -16,6 +16,11 @@ import {
 import { isStripeProductId } from "@/lib/stripe/parse-stripe-id";
 import type { StripeCatalogItem } from "@/lib/admin/stripe-product-types";
 import { insertAtCursor } from "@/lib/email/body-buttons";
+import {
+  parseYoutubeVideoId,
+  resolveYoutubeThumbnail,
+  youtubeThumbnailUrl,
+} from "@/lib/youtube";
 import {
   isSafeEmailHref,
   type EmailBlock,
@@ -443,6 +448,9 @@ export function EmailBlockEditor({
           </Row>
         </div>
       );
+
+    case "youtube":
+      return <YoutubeEditor block={block} onChange={onChange} ctx={ctx} />;
 
     case "columns":
       return <ColumnsEditor block={block} onChange={onChange} ctx={ctx} />;
@@ -887,6 +895,167 @@ function PickerCard({
         ) : null}
       </span>
     </button>
+  );
+}
+
+/**
+ * Paste a YouTube link → the video's frame becomes a banner in the email that
+ * opens the watch page when clicked. The frame is resolved in the browser
+ * (`resolveYoutubeThumbnail` probes for a maxres version) and stored on the
+ * block, so the send pipeline never has to talk to YouTube.
+ */
+function YoutubeEditor({
+  block,
+  onChange,
+  ctx,
+}: {
+  block: Block<"youtube">;
+  onChange: (next: EmailBlock) => void;
+  ctx: BlockEditorContext;
+}) {
+  const disabled = ctx.disabled;
+  const videoId = parseYoutubeVideoId(block.url);
+  const invalid = Boolean(block.url.trim()) && !videoId;
+
+  // The probe below resolves long after its effect ran, so the block it
+  // captured is stale by then — read the committed one through a ref instead.
+  const blockRef = useRef(block);
+  useEffect(() => {
+    blockRef.current = block;
+  });
+  // A block that already carries a frame must not re-resolve on open: that
+  // would overwrite a hand-picked one and mark the form dirty for nothing.
+  const resolvedFor = useRef<string | null>(
+    block.thumb.trim() ? videoId : null,
+  );
+
+  useEffect(() => {
+    if (!videoId || resolvedFor.current === videoId) return;
+    resolvedFor.current = videoId;
+    let alive = true;
+    void resolveYoutubeThumbnail(videoId).then((thumb) => {
+      const current = blockRef.current;
+      if (!alive || parseYoutubeVideoId(current.url) !== videoId) return;
+      onChange({ ...current, thumb });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [videoId, onChange]);
+
+  const preview = videoId
+    ? block.thumb.trim() || youtubeThumbnailUrl(videoId, "hqdefault")
+    : "";
+
+  return (
+    <div className="space-y-3">
+      <Row label="YouTube линк">
+        <Input
+          type="url"
+          inputMode="url"
+          value={block.url}
+          disabled={disabled}
+          onChange={(e) => onChange({ ...block, url: e.target.value })}
+          placeholder="https://www.youtube.com/watch?v=…"
+          className={invalid ? "border-coral-500" : undefined}
+        />
+        {invalid ? (
+          <p className="mt-1 text-xs text-coral-600">
+            Не разпознах видео в този линк. Работят watch, youtu.be и shorts.
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-ink-soft">
+            Кадърът от видеото влиза като банер и при клик отваря YouTube.
+          </p>
+        )}
+      </Row>
+
+      {preview && (
+        <div
+          className="overflow-hidden rounded-xl border border-ink/10"
+          style={{ maxWidth: 320 }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={preview} alt="" className="block w-full" />
+          {block.label.trim() && (
+            <p className="flex items-center justify-center gap-2 bg-[#FF0000] px-3 py-2 text-sm font-bold text-white">
+              <Play className="h-3.5 w-3.5 fill-current" />
+              {block.label.trim()}
+            </p>
+          )}
+        </div>
+      )}
+
+      <Row label="Текст на червената лента (празно = без лента)">
+        <Input
+          value={block.label}
+          disabled={disabled}
+          onChange={(e) => onChange({ ...block, label: e.target.value })}
+          placeholder="Гледай видеото"
+        />
+      </Row>
+
+      <Row label="Подпис под банера (по избор)">
+        <Input
+          value={block.caption}
+          disabled={disabled}
+          onChange={(e) => onChange({ ...block, caption: e.target.value })}
+          placeholder="Кратко описание"
+        />
+      </Row>
+
+      <div className="flex flex-wrap items-end gap-4">
+        <Row label={`Ширина — ${block.width}%`}>
+          <input
+            type="range"
+            min={20}
+            max={100}
+            step={5}
+            value={block.width}
+            disabled={disabled}
+            onChange={(e) =>
+              onChange({ ...block, width: Number(e.target.value) })
+            }
+            className="h-9 w-44 accent-forest-600"
+          />
+        </Row>
+        <Row label="Подравняване">
+          <AlignPicker
+            value={block.align}
+            disabled={disabled}
+            onChange={(align) => onChange({ ...block, align })}
+          />
+        </Row>
+        <Row label="Ъгли">
+          <Segmented
+            value={block.radius ? "round" : "sharp"}
+            disabled={disabled}
+            onChange={(v) => onChange({ ...block, radius: v === "round" })}
+            options={[
+              { value: "round", label: "Заоблени" },
+              { value: "sharp", label: "Прави" },
+            ]}
+          />
+        </Row>
+      </div>
+
+      <details className="rounded-xl border border-ink/10 bg-cream/30 p-3">
+        <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
+          Смени кадъра със собствена снимка
+        </summary>
+        <div className="mt-3">
+          <ImageUploadField
+            label="Кадър на банера"
+            hint="Ако кадърът от YouTube не изглежда добре, качи свой. Нов линк го връща към кадъра на видеото."
+            value={block.thumb}
+            folder="email"
+            previewFit="contain"
+            onChange={(thumb) => onChange({ ...block, thumb })}
+            className={disabled ? "pointer-events-none opacity-60" : undefined}
+          />
+        </div>
+      </details>
+    </div>
   );
 }
 

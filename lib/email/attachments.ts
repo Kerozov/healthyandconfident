@@ -32,6 +32,15 @@ export function workerAttachmentsFromStored(
   ];
 }
 
+/** `attachment_filename` is a plain text column an action can write — never inline it raw. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export function appendAttachmentBlock(
   bodyHtml: string,
   attachment: WorkerAttachment,
@@ -40,7 +49,7 @@ export function appendAttachmentBlock(
   const heading = locale === "en" ? "Attached PDF" : "Прикачен PDF";
   return `${bodyHtml}<p style="margin:20px 0 0;padding:14px 16px;background:#f5f5f0;border-radius:10px;font-size:14px;line-height:1.5;color:#334155;">
     📎 <strong>${heading}:</strong>
-    <a href="${attachment.url}" style="color:#2d5016;font-weight:600;text-decoration:underline;">${attachment.filename}</a>
+    <a href="${escapeHtml(attachment.url)}" style="color:#2d5016;font-weight:600;text-decoration:underline;">${escapeHtml(attachment.filename)}</a>
   </p>`;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, useCallback, useRef } from "react";
+import { useMemo, useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -41,6 +41,7 @@ import {
   toggleAutomationEnabled,
   syncAllAutomations,
   syncAutomation,
+  getAutomationStatsMap,
   getAutomationDeliveriesReport,
   resendAutomationToNonOpeners,
 } from "@/app/(admin)/admin/actions";
@@ -229,6 +230,21 @@ function audienceSummary(a: Automation): string {
 
 type AutomationRow = Automation & AutomationStats;
 
+/** Shown until the list tab asks the server for the real counters. */
+const EMPTY_STATS: AutomationStats = {
+  sent_count: 0,
+  scheduled_count: 0,
+  failed_count: 0,
+  opened_count: 0,
+  delivered_count: 0,
+  bounced_count: 0,
+  not_opened_count: 0,
+  clicked_count: 0,
+  unique_clickers_count: 0,
+  total_clicks: 0,
+  last_synced_at: null,
+};
+
 function openRate(a: AutomationRow) {
   if (!a.sent_count) return 0;
   return Math.round((a.opened_count / a.sent_count) * 100);
@@ -393,14 +409,14 @@ function automationToForm(a: Automation): typeof EMPTY_FORM {
 }
 
 export function AutomationsManager({
-  automations,
+  automations: rules,
   segments,
   groups,
   products,
   guides = [],
   forms,
 }: {
-  automations: AutomationRow[];
+  automations: Automation[];
   segments: Segment[];
   groups: SegmentGroup[];
   products: SiteProduct[];
@@ -415,8 +431,6 @@ export function AutomationsManager({
   const [saved, setSaved] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  /** Ref, not state: the one-shot sync must not trigger an extra render. */
-  const autoSyncedRef = useRef(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [report, setReport] = useState<AutomationReport | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
@@ -426,24 +440,38 @@ export function AutomationsManager({
   /** Copied automation, waiting to be pasted somewhere in the flow. */
   const [clipboard, setClipboard] = useState<{ id: string; name: string } | null>(null);
 
-  const hasTrackable = automations.some(
-    (a) => a.sent_count > 0 || a.scheduled_count > 0,
+  /**
+   * Counters live here, not in the server payload: the flow tab shows none of
+   * them, so they are fetched the first time the list tab is opened.
+   */
+  const [statsById, setStatsById] = useState<Record<string, AutomationStats> | null>(
+    null,
+  );
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  const automations = useMemo<AutomationRow[]>(
+    () => rules.map((a) => ({ ...a, ...EMPTY_STATS, ...(statsById?.[a.id] ?? {}) })),
+    [rules, statsById],
   );
 
+  const loadStats = useCallback(async () => {
+    setLoadingStats(true);
+    try {
+      setStatsById(await getAutomationStatsMap());
+    } finally {
+      setLoadingStats(false);
+    }
+  }, []);
+
+  /** Pulls fresh tracking from the worker — only reachable from the list tab. */
   const refreshAll = useCallback(() => {
     setNote(null);
     startTransition(async () => {
       const res = await syncAllAutomations();
       if (res.message) setNote(res.message);
-      router.refresh();
+      await loadStats();
     });
-  }, [router]);
-
-  useEffect(() => {
-    if (autoSyncedRef.current || !hasTrackable) return;
-    autoSyncedRef.current = true;
-    refreshAll();
-  }, [hasTrackable, refreshAll]);
+  }, [loadStats]);
 
   const otherAutomations = automations
     .filter((a) => (editingId === "new" ? true : a.id !== editingId))
@@ -693,7 +721,7 @@ export function AutomationsManager({
     startTransition(async () => {
       const res = await syncAutomation(id);
       if (res.message) setNote(res.message);
-      router.refresh();
+      await loadStats();
       setBusyId(null);
     });
   }
@@ -711,7 +739,7 @@ export function AutomationsManager({
     startTransition(async () => {
       const res = await resendAutomationToNonOpeners(a.id);
       setNote(res.message ?? null);
-      router.refresh();
+      await loadStats();
       setBusyId(null);
     });
   }
@@ -728,7 +756,7 @@ export function AutomationsManager({
     const res = await getAutomationDeliveriesReport(automationId);
     setLoadingReport(false);
     setReport(res.ok ? res.report : null);
-    router.refresh();
+    await loadStats();
   }
 
   const triggerMeta = TRIGGER_OPTIONS.find((t) => t.value === form.trigger_event);
@@ -765,19 +793,23 @@ export function AutomationsManager({
           {note && <p className="mt-1 text-xs text-ink-soft">{note}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={refreshAll}
-            disabled={pending}
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-ink/15 px-3 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
-          >
-            {pending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span className="sm:inline">Обнови</span>
-          </button>
+          {/* Stats-only action: the flow tab shows no counters to refresh. */}
+          {viewTab === "list" && (
+            <button
+              type="button"
+              onClick={refreshAll}
+              disabled={pending || loadingStats}
+              title="Изтегля отчетите от worker-а за всяка изпратена стъпка"
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-ink/15 px-3 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
+            >
+              {pending || loadingStats ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="sm:inline">Обнови</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => openNew("email")}
@@ -828,7 +860,12 @@ export function AutomationsManager({
         active={viewTab}
         onChange={(id) => {
           if (editingId) closeEditor();
-          setViewTab(id as "list" | "flow");
+          const next = id as "list" | "flow";
+          setViewTab(next);
+          // First visit to the list tab is what pays for the counters.
+          if (next === "list" && statsById === null && !loadingStats) {
+            void loadStats();
+          }
         }}
         contentId="automations-view-panel"
         tabs={[
@@ -1526,6 +1563,12 @@ export function AutomationsManager({
         </Card>
       ) : (
       <div className="space-y-3">
+        {loadingStats && statsById === null && (
+          <p className="flex items-center gap-2 text-xs text-ink-soft">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Зареждам статистиките…
+          </p>
+        )}
         {automations.length === 0 ? (
           <div className="rounded-2xl border border-ink/10 bg-white p-8 text-center">
             <p className="text-sm text-ink-soft">
@@ -1648,7 +1691,11 @@ export function AutomationsManager({
                   <button
                     type="button"
                     onClick={() => syncOne(a.id)}
-                    disabled={pending || a.sent_count + a.scheduled_count === 0}
+                    disabled={
+                      pending ||
+                      loadingStats ||
+                      a.sent_count + a.scheduled_count === 0
+                    }
                     title="Sync stats from worker"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 disabled:opacity-40"
                   >

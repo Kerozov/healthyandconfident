@@ -3,6 +3,7 @@ import { locales } from "@/i18n/config";
 import { publicSiteOrigin } from "@/lib/site";
 import { getAllPublishedSlugs } from "@/lib/blog";
 import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
+import { getProgramLanding } from "@/lib/programs/landings";
 import { getSiteGuides, getSiteProducts } from "@/lib/site/content";
 import { filterProductsForLocale } from "@/lib/site/product-locale";
 import { filterGuidesForLocale } from "@/lib/site/guide-catalog";
@@ -78,6 +79,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     );
     for (const slug of PROGRAM_LANDING_SLUGS) {
+      // A programme that is not on sale yet renders with `noindex`; listing it
+      // here would hand Google a URL it is told not to index.
+      if (getProgramLanding(locale, slug)?.noindex) continue;
       staticEntries.push({
         url: `${base}/${locale}/programs/${slug}`,
         lastModified: now,

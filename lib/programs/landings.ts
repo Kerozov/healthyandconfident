@@ -3,6 +3,8 @@ import type { ProgramLandingContent, ProgramLandingSlug } from "./types";
 import { zhiveyBezRezistentnostBg } from "./content/zhivey-bez-rezistentnost.bg";
 import { preprogramiraiApetitaBg } from "./content/preprogramirai-apetita.bg";
 import { summerProgrammeBg } from "./content/summer-programme.bg";
+import { poStroyniIShtastliviBg } from "./content/po-stroyni-i-shtastlivi.bg";
+import { poStroyniIShtastliviEn } from "./content/po-stroyni-i-shtastlivi.en";
 
 /** Same rule as the Bulgarian landings: an unwired buy button shows the prices. */
 const pricingAnchor = "#pricing";
@@ -14,6 +16,7 @@ const bg: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "zhivey-bez-rezistentnost": zhiveyBezRezistentnostBg,
   "preprogramirai-apetita": preprogramiraiApetitaBg,
   "summer-programme": summerProgrammeBg,
+  "po-stroyni-i-shtastlivi": poStroyniIShtastliviBg,
 };
 
 const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
@@ -504,6 +507,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       href: summerProgrammeBg.finalCta!.href,
     },
   },
+  "po-stroyni-i-shtastlivi": poStroyniIShtastliviEn,
 };
 
 export function getProgramLanding(

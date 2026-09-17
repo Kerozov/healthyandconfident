@@ -15,6 +15,9 @@ import {
   ArrowUp,
   ArrowDown,
   Copy,
+  Eye,
+  EyeOff,
+  AlertTriangle,
 } from "lucide-react";
 import type { Segment, SegmentGroup } from "@/lib/supabase/types";
 import type { FormField, FormFieldType, FormSettings, FormTheme } from "@/lib/forms/types";
@@ -26,6 +29,7 @@ import {
   deleteFormTemplate,
   sendFormByEmail,
   getFormSubmissionsReport,
+  setFormEnabled,
 } from "@/app/(admin)/admin/actions";
 import { AudiencePicker, EMPTY_AUDIENCE } from "@/components/admin/audience-picker";
 import { FormOptionSegmentEditor } from "@/components/admin/form-option-segment-editor";
@@ -49,7 +53,8 @@ import {
   hasRequiredEmailField,
   newRequiredEmailField,
 } from "@/lib/forms/required-email";
-import { publicFormUrl, siteOrigin } from "@/lib/forms/urls";
+import { publicFormUrl } from "@/lib/forms/urls";
+import { formSlug } from "@/lib/forms/slug";
 import { CopyButton } from "@/components/admin/share-links";
 import { formatDate } from "@/lib/utils";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
@@ -121,6 +126,7 @@ export function FormsManager({
   const [tab, setTab] = useState<EditorTab>("content");
   const [previewLocale, setPreviewLocale] = useState<"bg" | "en">("bg");
   const [error, setError] = useState<string | null>(null);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<
     import("@/lib/forms/types").FormSubmissionRecord[] | null
@@ -174,6 +180,7 @@ export function FormsManager({
       }
       setEditingId(res.id ?? "new");
       setTab("content");
+      setSavedNote(null);
       setForm({
         id: res.id,
         name: preset.name,
@@ -203,6 +210,7 @@ export function FormsManager({
   function openEdit(row: FormRow) {
     setEditingId(row.id);
     setTab("content");
+    setSavedNote(null);
     setForm({
       id: row.id,
       name: row.name,
@@ -233,6 +241,7 @@ export function FormsManager({
   function closeEditor() {
     setEditingId(null);
     setError(null);
+    setSavedNote(null);
   }
 
   function save() {
@@ -248,15 +257,40 @@ export function FormsManager({
         setError(res.message || "Failed");
         return;
       }
+      // The server has the last word on the slug (it normalizes and, if it
+      // clashes with another form, moves it). Adopt it so the link on screen
+      // is the link that exists.
+      if (res.slug && res.slug !== form.slug) {
+        setForm((prev) => ({ ...prev, id: res.id ?? prev.id, slug: res.slug! }));
+        setSavedNote(
+          `Запазено. Публичният адрес е /bg/forms/${res.slug} — това е линкът за споделяне.`,
+        );
+        setEditingId(res.id ?? editingId);
+        router.refresh();
+        return;
+      }
       closeEditor();
+      router.refresh();
+    });
+  }
+
+  function toggleEnabled(id: string, next: boolean) {
+    startTransition(async () => {
+      const res = await setFormEnabled(id, next);
+      if (!res.ok) setError(res.message || "Failed");
       router.refresh();
     });
   }
 
   function remove(id: string, name: string) {
     if (!confirm(`Изтрий форма „${name}"?`)) return;
+    setError(null);
     startTransition(async () => {
-      await deleteFormTemplate(id);
+      const res = await deleteFormTemplate(id);
+      if (!res.ok) {
+        setError(res.message || "Формата не може да бъде изтрита.");
+        return;
+      }
       router.refresh();
     });
   }
@@ -289,7 +323,13 @@ export function FormsManager({
     });
   }
 
-  const publicBase = siteOrigin();
+  // What the URL will actually be. The admin types free text (often Cyrillic);
+  // showing the raw text here is what handed out links that 404.
+  const savedSlug = formSlug(form.slug, form.name);
+  const savedForm = editingId ? forms.find((f) => f.id === editingId) : undefined;
+  const liveSlug = savedForm?.slug ?? "";
+  const slugPublished = Boolean(liveSlug) && liveSlug === savedSlug;
+  const editorUrl = savedSlug ? publicFormUrl(savedSlug, "bg") : "";
 
   return (
     <div className="space-y-6">
@@ -348,12 +388,64 @@ export function FormsManager({
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </Field>
-              <Field label="URL slug" hint={`${publicBase}/bg/forms/${form.slug || "…"}`}>
+              <Field
+                label="URL slug"
+                hint="Само латиница и цифри — кирилицата се превръща автоматично."
+              >
                 <Input
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                  onBlur={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      slug: formSlug(prev.slug, prev.name),
+                    }))
+                  }
                 />
               </Field>
+
+              <div className="md:col-span-2 rounded-xl border border-ink/10 bg-ink/[0.02] p-3">
+                <p className="text-xs font-medium text-ink-soft">Публичен линк</p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <code className="break-all text-sm text-ink">
+                    {editorUrl || "—"}
+                  </code>
+                  {editorUrl && slugPublished && (
+                    <>
+                      <CopyButton value={editorUrl} title="Копирай линка към формата" />
+                      <a
+                        href={editorUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </>
+                  )}
+                </div>
+                {!slugPublished && (
+                  <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-800">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    Още не е записан — натисни „Запази“, за да заработи този адрес.
+                    {liveSlug && ` Активен в момента е /bg/forms/${liveSlug}.`}
+                  </p>
+                )}
+                {slugPublished && !form.enabled && (
+                  <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-800">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    Формата е скрита — този адрес връща 404. Отваря се само с личния
+                    линк от имейл поканата.
+                  </p>
+                )}
+                {liveSlug && slugPublished && (
+                  <p className="mt-2 text-xs text-ink-soft">
+                    Старите адреси на тази форма продължават да работят — вече
+                    изпратените линкове не се чупят при преименуване.
+                  </p>
+                )}
+              </div>
+
               <label className="flex items-center gap-2 text-sm font-medium md:col-span-2">
                 <input
                   type="checkbox"
@@ -850,6 +942,7 @@ export function FormsManager({
           </div>
 
           {error && <p className="mt-4 text-sm text-coral-600">{error}</p>}
+          {savedNote && <p className="mt-4 text-sm text-forest-700">{savedNote}</p>}
 
           <div className="mt-6 flex gap-2">
             <button
@@ -869,6 +962,12 @@ export function FormsManager({
             </button>
           </div>
         </Card>
+      )}
+
+      {!editingId && error && (
+        <p className="rounded-xl border border-coral-500/30 bg-coral-500/5 px-4 py-3 text-sm text-coral-600">
+          {error}
+        </p>
       )}
 
       <div className="space-y-3">
@@ -900,17 +999,56 @@ export function FormsManager({
                     /forms/{f.slug} · {f.fields?.length ?? 0} въпроса ·{" "}
                     {f.submission_count} отговора · {f.invitation_count} изпратени
                   </p>
+                  {!f.enabled && (
+                    <p className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-800">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      Скрита — публичният линк връща 404. Само личните линкове от
+                      имейл поканите я отварят.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleEnabled(f.id, !f.enabled)}
+                    disabled={pending}
+                    title={
+                      f.enabled
+                        ? "Скрий формата от публичния адрес"
+                        : "Активирай — публичният линк заработва веднага"
+                    }
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-ink/5 disabled:opacity-60",
+                      f.enabled ? "text-forest-600" : "text-amber-700",
+                    )}
+                  >
+                    {f.enabled ? (
+                      <Eye className="h-4 w-4" />
+                    ) : (
+                      <EyeOff className="h-4 w-4" />
+                    )}
+                  </button>
                   <CopyButton
                     value={publicFormUrl(f.slug, "bg")}
-                    title="Копирай линка към формата"
+                    title={
+                      f.enabled
+                        ? "Копирай линка към формата"
+                        : "Формата е скрита — този линк връща 404, докато не я активираш"
+                    }
                   />
                   <a
                     href={publicFormUrl(f.slug, "bg")}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5"
+                    title={
+                      f.enabled
+                        ? "Отвори формата"
+                        : "Формата е скрита — този адрес връща 404"
+                    }
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-ink/5",
+                      f.enabled ? "text-ink-soft" : "text-amber-700",
+                    )}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </a>

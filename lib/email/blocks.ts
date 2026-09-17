@@ -24,6 +24,7 @@ import {
 } from "@/lib/email/products-block";
 import { isStripeProductId } from "@/lib/stripe/parse-stripe-id";
 import { guideEmailMarker } from "@/lib/email/guides-block";
+import { parseYoutubeVideoId, youtubeThumbnailUrl } from "@/lib/youtube";
 
 export type EmailBlockAlign = "left" | "center" | "right";
 export type EmailTextSize = "sm" | "md" | "lg";
@@ -71,6 +72,21 @@ export type EmailBlock =
       radius: boolean;
       caption: string;
     }
+  | {
+      id: string;
+      type: "youtube";
+      /** The link as pasted — watch, youtu.be and shorts all work. */
+      url: string;
+      /** Frame used as the banner; empty falls back to the video's own. */
+      thumb: string;
+      /** Text on the play bar under the frame; empty hides the bar. */
+      label: string;
+      caption: string;
+      /** Percentage of the email width, 20–100. */
+      width: number;
+      align: EmailBlockAlign;
+      radius: boolean;
+    }
   | { id: string; type: "columns"; columns: EmailColumn[] }
   | { id: string; type: "quote"; text: string }
   | { id: string; type: "list"; items: string[]; ordered: boolean }
@@ -99,6 +115,7 @@ const SERIF = "Georgia,'Times New Roman',serif";
 const TEXT = "#1A2E1A";
 const MUTED = "#5A7A5A";
 const RULE = "rgba(45,122,71,0.18)";
+const YOUTUBE_RED = "#FF0000";
 
 /* ------------------------------------------------------------------ utils */
 
@@ -198,6 +215,18 @@ export function createEmailBlock(type: EmailBlockType): EmailBlock {
         radius: true,
         caption: "",
       };
+    case "youtube":
+      return {
+        id,
+        type,
+        url: "",
+        thumb: "",
+        label: "Гледай видеото",
+        caption: "",
+        width: 100,
+        align: "center",
+        radius: true,
+      };
     case "columns":
       return { id, type, columns: [{ ...DEFAULT_COLUMN }, { ...DEFAULT_COLUMN }] };
     case "quote":
@@ -235,6 +264,9 @@ export function isEmptyEmailBlock(block: EmailBlock): boolean {
       return !block.label.trim();
     case "image":
       return !block.src.trim();
+    // Without a readable video id there is no banner and nowhere to click.
+    case "youtube":
+      return !parseYoutubeVideoId(block.url);
     case "columns":
       return block.columns.every((c) => !c.src.trim() && !c.text.trim());
     case "list":
@@ -326,6 +358,43 @@ function serializeImage(block: Extract<EmailBlock, { type: "image" }>): string {
   return `<table data-hc="image" data-src="${escAttr(src)}" data-alt="${escAttr(block.alt)}" data-href="${escAttr(href)}" data-width="${width}" data-align="${block.align}" data-radius="${block.radius ? 1 : 0}" data-caption="${escAttr(block.caption)}" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0"><tr><td align="${block.align}" style="padding:0;line-height:0;font-size:0">${media}</td></tr>${caption}</table>`;
 }
 
+/**
+ * A YouTube link becomes a clickable banner: the video's own frame with a red
+ * play bar under it, both linking straight to the watch page. Email clients
+ * neither play video nor honour `position:absolute`, so the play affordance
+ * sits in its own row instead of floating over the frame — that way it renders
+ * identically everywhere, Outlook included.
+ */
+function serializeYoutube(
+  block: Extract<EmailBlock, { type: "youtube" }>,
+): string {
+  const videoId = parseYoutubeVideoId(block.url);
+  if (!videoId) return "";
+  const watch = `https://www.youtube.com/watch?v=${videoId}`;
+  const thumb = block.thumb.trim() || youtubeThumbnailUrl(videoId, "hqdefault");
+  const width = clamp(block.width, 20, 100);
+  const px = Math.round((600 * width) / 100);
+  const label = block.label.trim();
+
+  const frameRadius = block.radius
+    ? `;border-radius:${label ? "12px 12px 0 0" : "12px"}`
+    : "";
+  const barRadius = block.radius ? ";border-radius:0 0 12px 12px" : "";
+
+  const img = `<img src="${escAttr(thumb)}" alt="${escAttr(label || "Видео")}" width="${px}" style="display:block;width:100%;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic${frameRadius}" />`;
+  const frame = `<tr><td align="center" style="padding:0;line-height:0;font-size:0"><a href="${escAttr(watch)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none">${img}</a></td></tr>`;
+  // Padding lives on the cell — Outlook drops it from the <a>.
+  const bar = label
+    ? `<tr><td align="center" style="padding:13px 20px;background-color:${YOUTUBE_RED};text-align:center${barRadius}"><a href="${escAttr(watch)}" target="_blank" rel="noopener noreferrer" style="display:block;font-family:${SANS};font-size:15px;font-weight:700;line-height:1.3;color:#FFFFFF;text-decoration:none">&#9654;&nbsp;&nbsp;${esc(label)}</a></td></tr>`
+    : "";
+  const caption = block.caption.trim()
+    ? `<tr><td align="${block.align}" style="padding:8px 0 0;font-family:${SANS};font-size:13px;line-height:1.5;color:${MUTED};text-align:${block.align}">${inline(block.caption)}</td></tr>`
+    : "";
+
+  const card = `<table role="presentation" width="${width}%" align="${block.align}" cellspacing="0" cellpadding="0" style="width:${width}%;max-width:100%;margin:${imageMargin(block.align)};border-collapse:separate">${frame}${bar}${caption}</table>`;
+  return `<table data-hc="youtube" data-url="${escAttr(block.url.trim())}" data-thumb="${escAttr(block.thumb)}" data-label="${escAttr(block.label)}" data-caption="${escAttr(block.caption)}" data-width="${width}" data-align="${block.align}" data-radius="${block.radius ? 1 : 0}" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0"><tr><td align="${block.align}" style="padding:0">${card}</td></tr></table>`;
+}
+
 function serializeColumns(
   block: Extract<EmailBlock, { type: "columns" }>,
 ): string {
@@ -401,6 +470,8 @@ export function serializeEmailBlock(block: EmailBlock): string {
       return serializeButton(block);
     case "image":
       return serializeImage(block);
+    case "youtube":
+      return serializeYoutube(block);
     case "columns":
       return serializeColumns(block);
     case "quote":
@@ -542,6 +613,18 @@ function parseKnownBlock(chunk: string, kind: string): EmailBlock | null {
         align: align(attr(chunk, "data-align")),
         radius: attr(chunk, "data-radius") !== "0",
         caption: attr(chunk, "data-caption"),
+      };
+    case "youtube":
+      return {
+        id,
+        type: "youtube",
+        url: attr(chunk, "data-url"),
+        thumb: attr(chunk, "data-thumb"),
+        label: attr(chunk, "data-label"),
+        caption: attr(chunk, "data-caption"),
+        width: clamp(Number(attr(chunk, "data-width")) || 100, 20, 100),
+        align: align(attr(chunk, "data-align")),
+        radius: attr(chunk, "data-radius") !== "0",
       };
     case "columns": {
       const count = clamp(Number(attr(chunk, "data-cols")) || 2, 1, 3);
@@ -857,6 +940,7 @@ export const EMAIL_BLOCK_LABELS: Record<EmailBlockType, string> = {
   heading: "Заглавие",
   button: "Бутон",
   image: "Снимка",
+  youtube: "YouTube видео",
   columns: "Две колони",
   quote: "Акцент",
   list: "Списък",
@@ -883,6 +967,11 @@ export function emailBlockSummary(block: EmailBlock): string {
       return block.src.trim()
         ? `${block.width}% · ${block.align === "center" ? "центрирана" : block.align === "right" ? "вдясно" : "вляво"}`
         : "Без снимка";
+    case "youtube": {
+      const videoId = parseYoutubeVideoId(block.url);
+      if (!videoId) return block.url.trim() ? "Невалиден YouTube линк" : "Няма линк";
+      return block.label.trim() || `youtu.be/${videoId}`;
+    }
     case "columns":
       return `${block.columns.length} колони`;
     case "list":

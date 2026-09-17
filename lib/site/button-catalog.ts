@@ -56,6 +56,7 @@ const HOME = "";
 const PROGRAM_SUMMER = "/programs/summer-programme";
 const PROGRAM_RESISTANCE = "/programs/zhivey-bez-rezistentnost";
 const CLUB_APPETITE = "/programs/preprogramirai-apetita";
+const CHALLENGE_21 = "/programs/po-stroyni-i-shtastlivi";
 
 /** `/programs/x` on the Bulgarian site is `/bg/programs/x`. */
 export function siteButtonPath(locale: string, path: string): string {
@@ -340,6 +341,65 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
         defaultLabel: "Искам моето спокойно лято",
         sells: true,
         fallback: "Скролва до секцията с цените.",
+      },
+    ],
+  },
+  {
+    id: "challenge_21",
+    title: "Предизвикателство „21 дни по-стройни и щастливи“",
+    path: CHALLENGE_21,
+    note: "Програмата още не е пусната в „Програми“ — страницата работи, но бутоните чакат продукт в Stripe.",
+    buttons: [
+      {
+        key: "product_po-stroyni-i-shtastlivi",
+        name: "Главен бутон „Включи се сега“",
+        spots: [
+          {
+            where: "Страницата на предизвикателството → големият бутон най-горе.",
+            path: CHALLENGE_21,
+          },
+        ],
+        defaultLabel: "Включи се сега",
+        sells: true,
+        fallback: "Скролва до секцията с цените на същата страница.",
+      },
+      {
+        key: "product_po-stroyni-i-shtastlivi_secondary",
+        name: "Втори бутон горе „Виж какво включва“",
+        spots: [
+          {
+            where: "Страницата на предизвикателството → до главния бутон най-горе.",
+            path: CHALLENGE_21,
+          },
+        ],
+        defaultLabel: "Виж какво включва",
+        fallback: "Скролва до секцията „Какво включва предизвикателството“.",
+      },
+      {
+        key: "product_po-stroyni-i-shtastlivi_pricing_0",
+        name: "Цена: „21 дни по-стройни и щастливи“ (€49)",
+        spots: [
+          {
+            where: "Страницата на предизвикателството → секцията с цената.",
+            path: CHALLENGE_21,
+          },
+        ],
+        defaultLabel: "Да! Включвам се",
+        sells: true,
+        fallback: "Води към секция „Контакти“, докато няма избран продукт.",
+      },
+      {
+        key: "product_po-stroyni-i-shtastlivi_final",
+        name: "Последен бутон най-долу",
+        spots: [
+          {
+            where: "Страницата на предизвикателството → тъмната лента най-накрая.",
+            path: CHALLENGE_21,
+          },
+        ],
+        defaultLabel: "Да! Включвам се",
+        sells: true,
+        fallback: "Скролва до секцията с цената.",
       },
     ],
   },

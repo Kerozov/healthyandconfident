@@ -173,6 +173,24 @@ export const siteMedia: SiteMediaItem[] = [
       en: "Client after the program — joy and energy every day",
     },
   },
+  {
+    src: "/images/21-days-before.jpg",
+    category: "result",
+    aspect: "portrait",
+    alt: {
+      bg: "Семейство преди 21-дневното предизвикателство",
+      en: "A couple before the 21-day challenge",
+    },
+  },
+  {
+    src: "/images/21-days-after.jpg",
+    category: "result",
+    aspect: "portrait",
+    alt: {
+      bg: "Същото семейство след 21-дневното предизвикателство — по-стройни и усмихнати",
+      en: "The same couple after the 21-day challenge — slimmer and smiling",
+    },
+  },
 ];
 
 export function mediaByCategory(category: MediaCategory): SiteMediaItem[] {

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { getFormTemplateBySlug } from "@/lib/admin/forms-data";
+import {
+  getFormTemplateById,
+  getFormTemplateBySlug,
+} from "@/lib/admin/forms-data";
 import { verifyFormInviteToken } from "@/lib/forms/form-invite-token";
 import { resolveTagsOnSubmit } from "@/lib/forms/tags-on-submit";
 import {
@@ -92,7 +95,15 @@ export async function POST(
   }
 
   const locale = body.locale === "en" ? "en" : "bg";
-  const form = await getFormTemplateBySlug(slug, { includeDisabled: true });
+
+  // Same resolution the public page uses: current slug, a retired one, or the
+  // form id carried by the invite token. A posted answer is never lost to a
+  // slug that was edited between the invite and the reply.
+  const tokenPayload = body.token ? verifyFormInviteToken(body.token) : null;
+  const form =
+    (await getFormTemplateBySlug(slug, { includeDisabled: true })) ??
+    (tokenPayload ? await getFormTemplateById(tokenPayload.f) : null);
+
   if (!form) {
     return NextResponse.json({ error: formError(locale, "notFound") }, { status: 404 });
   }
@@ -119,7 +130,7 @@ export async function POST(
   let invitationId: string | null = null;
 
   if (body.token) {
-    const payload = verifyFormInviteToken(body.token);
+    const payload = tokenPayload;
     if (!payload || payload.f !== form.id) {
       return NextResponse.json({ error: formError(locale, "invalid") }, { status: 403 });
     }
@@ -179,7 +190,7 @@ export async function POST(
   const fixedTags = resolveTagsOnSubmit(form.settings);
   const answerTags = tagsFromMappedAnswers(fields, answers);
   const hasTagWork = fixedTags.length > 0 || answerTags.length > 0;
-  const formSource = `form:${slug}`;
+  const formSource = `form:${form.slug}`;
 
   if (email && hasMarketingConsent(fields, answers)) {
     const { data: subRow } = await supabase
@@ -205,7 +216,7 @@ export async function POST(
         })
         .eq("id", sub.id);
     } else {
-      const { data: inserted } = await supabase
+      const { data: inserted, error: subscriberError } = await supabase
         .from("subscribers")
         .insert({
           email,
@@ -217,6 +228,13 @@ export async function POST(
         })
         .select("id")
         .single();
+
+      if (subscriberError) {
+        console.error(
+          `[form-submit] subscriber insert failed for ${email}:`,
+          subscriberError.message,
+        );
+      }
 
       const newId = (inserted as { id: string } | null)?.id ?? null;
       subscriberId = newId;
@@ -237,7 +255,7 @@ export async function POST(
         );
         await cancelIneligibleAutomationDeliveriesForSubscriber(email, nextTags);
       }
-      await runAutomations({
+      const report = await runAutomations({
         email,
         locale,
         subscriberId: subscriberId ?? null,
@@ -248,9 +266,25 @@ export async function POST(
         formId: form.id,
         formAnswers: answers as Record<string, string | string[] | boolean>,
       });
+
+      // "The automations did not fire" is otherwise invisible: the run reports
+      // exactly which rule was skipped and why, so print it next to the submit.
+      console.info(
+        `[form-submit] ${formSource} ${email}: triggers=[${report.triggerEvents.join(",")}] ` +
+          `rules=${report.rulesLoaded} sent=${report.submitted}` +
+          (report.skipped.length
+            ? ` skipped=${report.skipped.map((s) => `${s.name}(${s.reason})`).join(" | ")}`
+            : "") +
+          (report.errors.length ? ` errors=${report.errors.join(",")}` : ""),
+      );
     } catch (err) {
       console.error("[form-submit] automations:", err);
     }
+  } else if (email) {
+    console.info(
+      `[form-submit] ${formSource} ${email}: no marketing consent ticked — ` +
+        "submission stored, no subscriber and no automations.",
+    );
   }
 
   return NextResponse.json({ ok: true });

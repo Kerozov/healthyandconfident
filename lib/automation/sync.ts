@@ -122,8 +122,19 @@ export async function syncAutomationDeliveries(
   return { synced, total: rows.length };
 }
 
+/** The only delivery columns the counters need — a narrowed select satisfies it. */
+export type AutomationStatsInput = Pick<
+  AutomationDelivery,
+  | "status"
+  | "recipient_status"
+  | "opened_at"
+  | "delivered_at"
+  | "click_count"
+  | "last_synced_at"
+>;
+
 export function aggregateAutomationStats(
-  deliveries: AutomationDelivery[],
+  deliveries: AutomationStatsInput[],
 ): import("@/lib/supabase/types").AutomationStats {
   let sent_count = 0;
   let scheduled_count = 0;

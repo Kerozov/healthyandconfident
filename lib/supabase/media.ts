@@ -102,6 +102,42 @@ export async function createImageUploadTicket(
   );
 }
 
+const MAX_FILENAME_CHARS = 120;
+
+/**
+ * The name the recipient sees — on the attachment itself and in the body link.
+ *
+ * Cyrillic has to survive. The old rule was ASCII-only (`\w` without the `u`
+ * flag), so `Енергия.pdf` collapsed to `_.pdf` — the whole stem is one run of
+ * non-ASCII and `+` swallowed it into a single underscore. The allowlist below
+ * still drops every character that would matter inside HTML, because the name
+ * is inlined into the email body.
+ */
+function displayPdfName(raw: string): string {
+  const base = raw.replace(/\\/g, "/").split("/").pop()?.trim() ?? "";
+  const stem = base
+    .replace(/\.pdf$/i, "")
+    .replace(/[^\p{L}\p{N}.\-_() ]+/gu, "_")
+    .replace(/_{2,}/g, "_")
+    .trim();
+  return `${stem.slice(0, MAX_FILENAME_CHARS) || "attachment"}.pdf`;
+}
+
+/**
+ * The storage key, and so the public URL the worker fetches at send time.
+ * Kept ASCII on purpose: no percent-encoding to get wrong on any hop between
+ * Storage, the worker and ZeptoMail. The UUID prefix carries uniqueness, so a
+ * stem that sanitizes down to nothing is fine.
+ */
+function storageKeyName(raw: string): string {
+  const stem = raw
+    .replace(/\.pdf$/i, "")
+    .replace(/[^A-Za-z0-9.\-_]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
+  return `${stem.slice(0, 60) || "attachment"}.pdf`;
+}
+
 export async function createPdfUploadTicket(
   file: MediaUploadDescriptor,
 ): Promise<MediaTicketResult> {
@@ -118,12 +154,10 @@ export async function createPdfUploadTicket(
     return { ok: false, message: "Позволен е само PDF формат." };
   }
 
-  const safeName = (file.name || "attachment.pdf")
-    .replace(/[^\w.\-() ]+/g, "_")
-    .slice(0, 120);
+  const name = file.name || "attachment.pdf";
 
   return signUpload(
-    `email-attachments/${crypto.randomUUID()}-${safeName}`,
-    safeName,
+    `email-attachments/${crypto.randomUUID()}-${storageKeyName(name)}`,
+    displayPdfName(name),
   );
 }

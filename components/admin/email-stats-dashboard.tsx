@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type { EmailStatsOverview } from "@/lib/admin/email-stats";
+import type { AutomationReport } from "@/lib/admin/automation-report";
+import { getAutomationDeliveriesReport } from "@/app/(admin)/admin/actions";
+import { AutomationReportPanel } from "@/components/admin/automation-report-panel";
 import { formatNumber, formatPercent } from "@/lib/money";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { Card } from "@/components/admin/fields";
 import { Badge, DataTable, TabList } from "@/components/admin/ui";
 import {
@@ -41,9 +45,45 @@ function RateCell({ value }: { value: number }) {
   );
 }
 
-export function EmailStatsDashboard({ stats }: { stats: EmailStatsOverview }) {
+export function EmailStatsDashboard({
+  stats,
+  canOpenAutomations = false,
+}: {
+  stats: EmailStatsOverview;
+  /** The per-automation detail is behind the automations screen's permission. */
+  canOpenAutomations?: boolean;
+}) {
   const [tab, setTab] = useState("overview");
   const { totals, trends, timeline, audience } = stats;
+
+  // Per-automation detail is fetched only when a row is opened — the report
+  // walks every delivery of that automation, which is too much to preload for
+  // the whole table.
+  const [openAutomationId, setOpenAutomationId] = useState<string | null>(null);
+  const [report, setReport] = useState<AutomationReport | null>(null);
+  const [reportError, setReportError] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  async function toggleAutomation(id: string) {
+    if (openAutomationId === id) {
+      setOpenAutomationId(null);
+      setReport(null);
+      return;
+    }
+    setOpenAutomationId(id);
+    setReport(null);
+    setReportError(false);
+    setLoadingReport(true);
+    try {
+      const res = await getAutomationDeliveriesReport(id);
+      if (res.ok) setReport(res.report);
+      else setReportError(true);
+    } catch {
+      setReportError(true);
+    } finally {
+      setLoadingReport(false);
+    }
+  }
 
   const labels = timeline.map((p) => shortDay(p.date));
 
@@ -331,13 +371,34 @@ export function EmailStatsDashboard({ stats }: { stats: EmailStatsOverview }) {
                   <th className="p-4 font-semibold">Кликове</th>
                   <th className="p-4 font-semibold">CTOR</th>
                   <th className="p-4 font-semibold">Чакащи</th>
+                  <th className="p-4 font-semibold">
+                    <span className="sr-only">Детайли</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {stats.automations.map((a) => (
-                  <tr key={a.id} className="border-b border-ink/5 last:border-0">
+                {stats.automations.map((a) => {
+                  const isOpen = openAutomationId === a.id;
+                  return (
+                  <Fragment key={a.id}>
+                  <tr
+                    className={cn(
+                      "border-b border-ink/5 last:border-0",
+                      isOpen && "bg-forest-50/40",
+                    )}
+                  >
                     <td className="p-4">
-                      <p className="font-medium text-ink">{a.name}</p>
+                      {canOpenAutomations ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleAutomation(a.id)}
+                          className="text-left font-medium text-ink hover:text-forest-700 hover:underline"
+                        >
+                          {a.name}
+                        </button>
+                      ) : (
+                        <p className="font-medium text-ink">{a.name}</p>
+                      )}
                       <p className="text-xs text-ink-soft">
                         {TRIGGER_LABELS[a.trigger] ?? a.trigger}
                         {!a.enabled && " · изключена"}
@@ -360,8 +421,55 @@ export function EmailStatsDashboard({ stats }: { stats: EmailStatsOverview }) {
                       <RateCell value={a.ctor} />
                     </td>
                     <td className="p-4 text-ink-soft">{formatNumber(a.scheduled)}</td>
+                    <td className="p-4 text-right">
+                      {canOpenAutomations && (
+                      <button
+                        type="button"
+                        onClick={() => toggleAutomation(a.id)}
+                        aria-expanded={isOpen}
+                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-ink/5 px-3 py-1 text-xs font-medium text-ink-soft hover:bg-ink/10"
+                      >
+                        {isOpen && loadingReport ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : isOpen ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                        {isOpen ? "Скрий" : "Кой точно"}
+                      </button>
+                      )}
+                    </td>
                   </tr>
-                ))}
+                  {isOpen && (
+                    <tr className="border-b border-ink/5 last:border-0">
+                      <td colSpan={7} className="bg-cream-2/30 p-4">
+                        {loadingReport ? (
+                          <p className="text-sm text-ink-soft">
+                            Зареждам получателите…
+                          </p>
+                        ) : report ? (
+                          <>
+                            <p className="text-xs text-ink-soft">
+                              Детайлът по-долу е за цялото време на
+                              автоматизацията, не само за избрания период.
+                            </p>
+                            <AutomationReportPanel
+                              report={report}
+                              automationName={a.name}
+                            />
+                          </>
+                        ) : reportError ? (
+                          <p className="text-sm text-ink-soft">
+                            Статистиката не можа да се зареди.
+                          </p>
+                        ) : null}
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           )}
