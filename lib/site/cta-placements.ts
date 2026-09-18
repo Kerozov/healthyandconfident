@@ -32,7 +32,7 @@ export function isUpsellSectionPlacement(key: string): boolean {
     // Programme cards are added in the admin, so the list above cannot name
     // every card button — any `programs_<n>` is one.
     /^programs_\d+$/.test(key) ||
-    /^programs_\d+_(hero|secondary|pricing_\d+)$/.test(key)
+    /^programs_\d+_(secondary|pricing_\d+)$/.test(key)
   );
 }
 
@@ -164,18 +164,6 @@ export function resolvePlacementOffers(
 
 export function placementLabel(placement: SiteCtaPlacement, locale: Locale): string {
   return locale === "bg" ? placement.label_bg : placement.label_en;
-}
-
-/**
- * The big button at the top of a programme page.
- *
- * A `programs_<n>` key belongs to the programme's card on the home page, and
- * the page's own top button used to render with that same key — so the two
- * were one row in the admin and could not be edited apart. A `product_<slug>`
- * key has no home card: the page is its only spot, so it keeps the base key.
- */
-export function programHeroPlacementKey(baseKey: string): string {
-  return /^programs_\d+$/.test(baseKey) ? `${baseKey}_hero` : baseKey;
 }
 
 export function programSecondaryPlacementKey(baseKey: string): string {

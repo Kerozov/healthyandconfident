@@ -33,6 +33,12 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "4mb" },
   },
   images: {
+    // Serve /public/images as-is. Vercel's image optimiser answers every
+    // /_next/image request with 402 OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED
+    // once the plan's transformation quota is spent, which blanks every photo
+    // that isn't already in a CDN cache. The photos are pre-compressed
+    // (≤ 330 KB), so skipping the optimiser costs little.
+    unoptimized: true,
     // Next 16 only optimises qualities listed here — 82 is what the site asks
     // for, and without it every photo falls back to an unoptimised response.
     qualities: [75, 82],
