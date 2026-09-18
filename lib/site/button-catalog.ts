@@ -123,12 +123,21 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
     buttons: [
       {
         key: "programs_1",
-        name: "Главен бутон „Включи се днес“",
+        name: "Бутон на картата в началната страница „Включи се днес“",
         spots: [
           {
             where: "Началната страница → картата на програмата в секция „Програми“.",
             path: HOME,
           },
+        ],
+        defaultLabel: "Включи се днес",
+        sells: true,
+        fallback: "Скролва до секцията с цените на страницата на програмата.",
+      },
+      {
+        key: "programs_1_hero",
+        name: "Главен бутон горе „Включи се днес“",
+        spots: [
           {
             where: "Страницата на програмата → големият бутон най-горе.",
             path: PROGRAM_RESISTANCE,
@@ -207,12 +216,21 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
     buttons: [
       {
         key: "programs_2",
-        name: "Главен бутон „Да, искам да се справя“",
+        name: "Бутон на картата в началната страница „Да, искам да се справя“",
         spots: [
           {
             where: "Началната страница → картата на клуба в секция „Програми“.",
             path: HOME,
           },
+        ],
+        defaultLabel: "Да, искам да се справя",
+        sells: true,
+        fallback: "Скролва до секцията с цените на страницата на клуба.",
+      },
+      {
+        key: "programs_2_hero",
+        name: "Главен бутон горе „Да, искам да се справя“",
+        spots: [
           {
             where: "Страницата на клуба → големият бутон най-горе.",
             path: CLUB_APPETITE,
@@ -292,12 +310,21 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
     buttons: [
       {
         key: "programs_0",
-        name: "Главен бутон „Искам моето спокойно лято“",
+        name: "Бутон на картата в началната страница „Искам моето спокойно лято“",
         spots: [
           {
             where: "Началната страница → картата на програмата в секция „Програми“.",
             path: HOME,
           },
+        ],
+        defaultLabel: "Искам моето спокойно лято",
+        sells: true,
+        fallback: "Скролва до секцията с цените на страницата на програмата.",
+      },
+      {
+        key: "programs_0_hero",
+        name: "Главен бутон горе „Искам моето спокойно лято“",
+        spots: [
           {
             where: "Страницата на програмата → големият бутон най-горе.",
             path: PROGRAM_SUMMER,
