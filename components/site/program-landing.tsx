@@ -25,6 +25,7 @@ import type { SiteCtaPlacement } from "@/lib/supabase/types";
 import {
   resolvePlacementButton,
   programFinalPlacementKey,
+  programHeroPlacementKey,
   programPricingPlacementKey,
   programSecondaryPlacementKey,
   programVideoPlacementKey,
@@ -216,7 +217,8 @@ export function ProgramLanding({
 }) {
   const { hero } = content;
   const placementKey = hero.placementKey ?? `product_${content.slug}`;
-  const primaryButton = resolvePlacementButton(ctaPlacements, placementKey, locale, {
+  const heroPlacementKey = programHeroPlacementKey(placementKey);
+  const primaryButton = resolvePlacementButton(ctaPlacements, heroPlacementKey, locale, {
     label: hero.primaryCta,
     href: hero.primaryHref,
   });
@@ -336,7 +338,7 @@ export function ProgramLanding({
 
               <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-3">
                 <CtaLink
-                  placementKey={placementKey}
+                  placementKey={heroPlacementKey}
                   href={primaryButton.href}
                   variant="onDark"
                   size="lg"

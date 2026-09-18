@@ -13,6 +13,68 @@ export const PROGRAM_LANDING_SLUGS: ProgramLandingSlug[] = [
   "po-stroyni-i-shtastlivi",
 ];
 
+/**
+ * The short address of each programme — what comes after `/programs/` in a
+ * link. The id on the left is what the code and the database know the
+ * programme by (button keys, signup sources, saved card links), so it never
+ * changes; only the public path is short enough to say out loud.
+ */
+export const PROGRAM_PUBLIC_SLUGS: Record<ProgramLandingSlug, string> = {
+  "zhivey-bez-rezistentnost": "3-mes",
+  "po-stroyni-i-shtastlivi": "21-dni",
+  "preprogramirai-apetita": "klub",
+  "summer-programme": "lyato",
+};
+
+/**
+ * Addresses that used to open a programme and still must — old links, ads
+ * and emails carry them. `balansirano-hranene-21` was the 21-day challenge,
+ * which has its own page again, so it goes back to the challenge rather than
+ * to the summer package.
+ */
+const RETIRED_PROGRAM_SLUGS: Record<string, ProgramLandingSlug> = {
+  "balansirano-hranene-21": "po-stroyni-i-shtastlivi",
+  garnituri: "summer-programme",
+};
+
+export function isProgramLandingSlug(value: string): value is ProgramLandingSlug {
+  return (PROGRAM_LANDING_SLUGS as string[]).includes(value);
+}
+
+/** `/programs/3-mes` — without a language, the way site links are written. */
+export function programPath(id: ProgramLandingSlug): string {
+  return `/programs/${PROGRAM_PUBLIC_SLUGS[id]}`;
+}
+
+/**
+ * Which programme a `/programs/<segment>` opens: the short address, the id
+ * itself, or a retired name. `null` when it is none of them.
+ */
+export function resolveProgramSlug(segment: string): ProgramLandingSlug | null {
+  const wanted = segment.trim().toLowerCase();
+  if (!wanted) return null;
+  for (const id of PROGRAM_LANDING_SLUGS) {
+    if (PROGRAM_PUBLIC_SLUGS[id] === wanted) return id;
+  }
+  if (isProgramLandingSlug(wanted)) return wanted;
+  return RETIRED_PROGRAM_SLUGS[wanted] ?? null;
+}
+
+/**
+ * A link written with a programme's id or a retired name, rewritten to the
+ * short address; anything else is returned untouched. Saved card links and
+ * old blog posts keep working without a redirect hop.
+ */
+export function shortenProgramHref(href: string): string {
+  return href.replace(
+    /^((?:\/(?:bg|en))?\/programs\/)([^/?#]+)/i,
+    (whole, head: string, segment: string) => {
+      const id = resolveProgramSlug(segment);
+      return id ? `${head}${PROGRAM_PUBLIC_SLUGS[id]}` : whole;
+    },
+  );
+}
+
 export type ProgramLandingContent = {
   slug: ProgramLandingSlug;
   meta: { title: string; description: string };

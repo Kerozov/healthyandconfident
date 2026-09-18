@@ -355,7 +355,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
                 rows={3}
                 value={form.notes}
                 onChange={(e) => set("notes", e.target.value)}
-                placeholder="Напр. пиксел на агенцията добавен на 12.03; кампания „Лятна програма“ води към /bg/programs/summer-programme"
+                placeholder="Напр. пиксел на агенцията добавен на 12.03; кампания „Лятна програма“ води към /bg/programs/lyato"
               />
             </Field>
           </div>

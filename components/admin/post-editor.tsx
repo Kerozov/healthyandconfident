@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Save, Send } from "lucide-react";
 import type { BlogPost } from "@/lib/supabase/types";
 import { savePost } from "@/app/(admin)/admin/actions";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
+import { MarkdownLinkToolbar } from "@/components/admin/markdown-link-toolbar";
 import { Markdown } from "@/components/site/markdown";
 import { slugify } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ export function PostEditor({ post }: { post?: BlogPost }) {
   const [pending, startTransition] = useTransition();
   const [preview, setPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const [form, setForm] = useState({
     locale: post?.locale ?? "bg",
@@ -155,16 +157,33 @@ export function PostEditor({ post }: { post?: BlogPost }) {
             </div>
             {preview ? (
               <div className="min-h-[300px] rounded-xl border border-ink/10 bg-cream-2/40 p-5">
-                <Markdown content={form.content || "_Nothing to preview_"} />
+                <Markdown
+                  content={form.content || "_Nothing to preview_"}
+                  locale={form.locale as "bg" | "en"}
+                />
               </div>
             ) : (
-              <Textarea
-                rows={18}
-                value={form.content}
-                onChange={(e) => set("content", e.target.value)}
-                placeholder="Write in Markdown — ## headings, **bold**, lists, [links](url), images..."
-                className="font-mono text-[13px]"
-              />
+              <>
+                <MarkdownLinkToolbar
+                  textareaRef={contentRef}
+                  value={form.content}
+                  onChange={(content) => set("content", content)}
+                />
+                <Textarea
+                  ref={contentRef}
+                  rows={18}
+                  value={form.content}
+                  onChange={(e) => set("content", e.target.value)}
+                  placeholder="Write in Markdown — ## headings, **bold**, lists, [links](url), images..."
+                  className="font-mono text-[13px]"
+                />
+                <p className="mt-2 text-xs leading-relaxed text-ink-soft">
+                  Бутон = линк, чието заглавие е „button“:{" "}
+                  <code>[Запиши се](/programs/21-dni &quot;button&quot;)</code>. С
+                  „button-2“ бутонът е с контур. Два бутона на един ред стоят един
+                  до друг.
+                </p>
+              </>
             )}
           </Card>
         </div>

@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { isLocale, locales, type Locale } from "@/i18n/config";
-import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
+import {
+  PROGRAM_LANDING_SLUGS,
+  PROGRAM_PUBLIC_SLUGS,
+  programPath,
+  resolveProgramSlug,
+} from "@/lib/programs/types";
 import { getProgramLanding } from "@/lib/programs/landings";
 import { getCtaPlacements } from "@/lib/site/content";
 import { ProgramLanding } from "@/components/site/program-landing";
@@ -10,7 +15,7 @@ import { siteConfig, publicSiteOrigin } from "@/lib/site";
 
 export function generateStaticParams() {
   return locales.flatMap((locale) =>
-    PROGRAM_LANDING_SLUGS.map((slug) => ({ locale, slug })),
+    PROGRAM_LANDING_SLUGS.map((id) => ({ locale, slug: PROGRAM_PUBLIC_SLUGS[id] })),
   );
 }
 
@@ -21,10 +26,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
-  const content = getProgramLanding(locale, slug);
-  if (!content) return { title: "Not found" };
+  const id = resolveProgramSlug(slug);
+  const content = id ? getProgramLanding(locale, id) : null;
+  if (!id || !content) return { title: "Not found" };
 
   const origin = publicSiteOrigin();
+  const url = `${origin}/${locale}${programPath(id)}`;
 
   return {
     title: content.meta.title,
@@ -33,13 +40,13 @@ export async function generateMetadata({
     // search — nobody should land on it from Google before its buttons work.
     robots: content.noindex ? { index: false, follow: true } : undefined,
     alternates: {
-      canonical: `${origin}/${locale}/programs/${slug}`,
+      canonical: url,
     },
     openGraph: {
       type: "website",
       title: content.meta.title,
       description: content.meta.description,
-      url: `${origin}/${locale}/programs/${slug}`,
+      url,
       images: [{ url: siteConfig.ogImage }],
     },
   };
@@ -52,16 +59,14 @@ export default async function ProgramPage({
 }) {
   const { locale, slug } = await params;
   if (!isLocale(locale)) notFound();
-  // Retired slugs — keep old links, ads and emails working.
-  // `balansirano-hranene-21` was the 21-day challenge, which has its own page
-  // again, so it goes back to the challenge rather than to the summer package.
-  if (slug === "balansirano-hranene-21") {
-    redirect(`/${locale}/programs/po-stroyni-i-shtastlivi`);
+  const id = resolveProgramSlug(slug);
+  if (!id) notFound();
+  // The long id and retired names still open the programme — old links, ads
+  // and emails carry them — but land on the short address.
+  if (slug !== PROGRAM_PUBLIC_SLUGS[id]) {
+    redirect(`/${locale}${programPath(id)}`);
   }
-  if (slug === "garnituri") {
-    redirect(`/${locale}/programs/summer-programme`);
-  }
-  const content = getProgramLanding(locale as Locale, slug);
+  const content = getProgramLanding(locale as Locale, id);
   if (!content) notFound();
 
   const placementRows = await getCtaPlacements();

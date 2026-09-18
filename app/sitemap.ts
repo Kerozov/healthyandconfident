@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { locales } from "@/i18n/config";
 import { publicSiteOrigin } from "@/lib/site";
 import { getAllPublishedSlugs } from "@/lib/blog";
-import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
+import { PROGRAM_LANDING_SLUGS, programPath } from "@/lib/programs/types";
 import { getProgramLanding } from "@/lib/programs/landings";
 import { getSiteGuides, getSiteProducts } from "@/lib/site/content";
 import { filterProductsForLocale } from "@/lib/site/product-locale";
@@ -83,7 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       // here would hand Google a URL it is told not to index.
       if (getProgramLanding(locale, slug)?.noindex) continue;
       staticEntries.push({
-        url: `${base}/${locale}/programs/${slug}`,
+        url: `${base}/${locale}${programPath(slug)}`,
         lastModified: now,
         changeFrequency: "monthly",
         priority: 0.9,

@@ -2,7 +2,11 @@ import type { Locale } from "@/i18n/config";
 import type { Program } from "@/i18n/types";
 import type { SiteProgramCard } from "@/lib/supabase/types";
 import { visibleInLocale } from "@/lib/site/locale-stripe";
-import { PROGRAM_LANDING_SLUGS } from "@/lib/programs/types";
+import {
+  PROGRAM_LANDING_SLUGS,
+  programPath,
+  shortenProgramHref,
+} from "@/lib/programs/types";
 
 /** Hidden per language, exactly like shop products and guides. */
 export function programCardVisibleInLocale(
@@ -31,7 +35,9 @@ export function isExternalProgramHref(href: string): boolean {
  * external link are both left alone.
  */
 export function programCardHref(href: string, locale: Locale): string {
-  const value = href.trim();
+  // Cards saved before the programmes got short addresses still name the
+  // long ones — sent straight to the short page, no redirect on the way.
+  const value = shortenProgramHref(href.trim());
   if (!value) return `/${locale}#contact`;
   if (isExternalProgramHref(value)) return value;
   if (value.startsWith("#")) return `/${locale}${value}`;
@@ -91,8 +97,8 @@ export type ProgramLinkOption = { value: string; label: string };
  */
 export const PROGRAM_LINK_OPTIONS: ProgramLinkOption[] = [
   ...PROGRAM_LANDING_SLUGS.map((slug) => ({
-    value: `/programs/${slug}`,
-    label: `Страница на програмата: /programs/${slug}`,
+    value: programPath(slug),
+    label: `Страница на програмата: ${programPath(slug)}`,
   })),
   { value: "/programs", label: "Всички програми: /programs" },
   { value: "/blog", label: "Блог: /blog" },
