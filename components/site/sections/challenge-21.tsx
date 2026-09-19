@@ -91,8 +91,6 @@ export function Challenge21Section({
             <CtaLink
               placementKey="challenge_21_cta"
               href={SIGNUP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
               size="lg"
               className="mt-10 rounded-lg bg-white px-8 py-4 text-sm font-bold uppercase tracking-wide text-slate-800 shadow-lg hover:bg-cream"
             >

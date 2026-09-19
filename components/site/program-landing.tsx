@@ -343,8 +343,6 @@ export function ProgramLanding({
                   variant="onDark"
                   size="lg"
                   className="w-full sm:w-auto"
-                  target={primaryButton.href.startsWith("http") ? "_blank" : undefined}
-                  rel={primaryButton.href.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
                   {primaryButton.label}
                 </CtaLink>
@@ -355,12 +353,6 @@ export function ProgramLanding({
                     variant="onDarkOutline"
                     size="lg"
                     className="w-full sm:w-auto"
-                    target={secondaryButton.href.startsWith("http") ? "_blank" : undefined}
-                    rel={
-                      secondaryButton.href.startsWith("http")
-                        ? "noopener noreferrer"
-                        : undefined
-                    }
                   >
                     {secondaryButton.label}
                   </CtaLink>
@@ -1100,8 +1092,6 @@ export function ProgramLanding({
                       variant={i === 0 ? "forest" : "secondary"}
                       size="lg"
                       className="mt-4 h-auto min-h-12 w-full max-w-full whitespace-normal px-4 py-3 text-center text-sm leading-snug sm:text-base"
-                      target={href.startsWith("http") ? "_blank" : undefined}
-                      rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
                     >
                       {pricingButton.label}
                     </CtaLink>
@@ -1162,8 +1152,6 @@ export function ProgramLanding({
                   variant="forest"
                   size="lg"
                   className="mt-8 gap-3 px-10"
-                  target={videoButton!.href.startsWith("http") ? "_blank" : undefined}
-                  rel={videoButton!.href.startsWith("http") ? "noopener noreferrer" : undefined}
                 >
                   <Play className="h-5 w-5 fill-current" />
                   {videoButton!.label}
@@ -1217,8 +1205,6 @@ export function ProgramLanding({
               variant="onDark"
               size="lg"
               className="mt-8"
-              target={finalButton!.href.startsWith("http") ? "_blank" : undefined}
-              rel={finalButton!.href.startsWith("http") ? "noopener noreferrer" : undefined}
             >
               {finalButton!.label}
             </CtaLink>

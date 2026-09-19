@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteGuide } from "@/lib/supabase/types";
 import { guideButtonHref } from "@/lib/site/share-links";
+import { externalLinkProps, leavesSite } from "@/lib/site/external-link";
 
 function GuideCardImage({ src, alt }: { src: string; alt: string }) {
   return (
@@ -36,11 +37,17 @@ export function GuidesGrid({
           locale === "bg" ? guide.description_bg : guide.description_en;
         const price =
           locale === "bg" ? guide.price_label_bg : guide.price_label_en;
+        const href = guideButtonHref(guide, locale);
+        // A card that leads off the site (a custom link, or `/buy/…` straight
+        // to Stripe) is a plain anchor in a new tab — no prefetch, and the
+        // catalogue stays open behind it.
+        const Card = leavesSite(href) ? "a" : Link;
 
         return (
-          <Link
+          <Card
             key={guide.id}
-            href={guideButtonHref(guide, locale)}
+            href={href}
+            {...externalLinkProps(href)}
             className="group flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
           >
             {guide.image_url ? (
@@ -71,7 +78,7 @@ export function GuidesGrid({
                 {cta} <ArrowUpRight className="h-4 w-4" />
               </span>
             </div>
-          </Link>
+          </Card>
         );
       })}
     </div>

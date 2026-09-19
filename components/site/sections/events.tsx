@@ -5,6 +5,7 @@ import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { EventOfferSlot } from "@/components/site/cta-offer-slot";
+import { externalLinkProps } from "@/lib/site/external-link";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { visibleInLocale } from "@/lib/site/locale-stripe";
@@ -64,10 +65,6 @@ export function EventsSection({
               locale === "bg" ? event.description_bg : event.description_en;
             const url =
               (locale === "en" ? event.url_en?.trim() : "") || event.url;
-            const isExternal =
-              url.startsWith("http") ||
-              url.startsWith("mailto:") ||
-              url.startsWith("tel:");
 
             return (
               <div
@@ -76,9 +73,7 @@ export function EventsSection({
               >
                 <Link
                   href={url}
-                  {...(isExternal
-                    ? { target: "_blank", rel: "noopener noreferrer" }
-                    : {})}
+                  {...externalLinkProps(url)}
                   className="group flex flex-1 flex-col"
                 >
                 <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">

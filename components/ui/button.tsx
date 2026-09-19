@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { cva, type VariantProps } from "class-variance-authority";
+import { externalLinkProps } from "@/lib/site/external-link";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -57,8 +58,10 @@ export function Button(props: ButtonAsButton | ButtonAsLink) {
     const external =
       href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:");
     if (external) {
+      // An outside site gets its own tab unless the caller says otherwise.
+      const tab = externalLinkProps(href);
       return (
-        <a href={href} target={target} rel={rel} className={classes}>
+        <a href={href} target={target ?? tab.target} rel={rel ?? tab.rel} className={classes}>
           {children}
         </a>
       );

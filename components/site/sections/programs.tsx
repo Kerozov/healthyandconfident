@@ -8,7 +8,6 @@ import { SiteImage } from "@/components/site/site-image";
 import { mediaAlt } from "@/lib/site/media-gallery";
 import {
   filterProgramCardsForLocale,
-  isExternalProgramHref,
   programCardForLocale,
   programCardHref,
 } from "@/lib/site/program-cards";
@@ -97,7 +96,6 @@ export function Programs({
         <div className="mt-14 grid w-full min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
           {items.map(({ program: p, placementKey }) => {
             const href = programCardHref(p.href, locale);
-            const external = isExternalProgramHref(href);
             return (
               <div
                 key={placementKey}
@@ -148,8 +146,6 @@ export function Programs({
                   <CtaLink
                     placementKey={placementKey}
                     href={href}
-                    target={external ? "_blank" : undefined}
-                    rel={external ? "noopener noreferrer" : undefined}
                     variant={p.highlight ? "primary" : "outline"}
                     className={cn("mt-8 w-full py-3", p.highlight && "font-semibold")}
                   >

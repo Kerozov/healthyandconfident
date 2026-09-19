@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { productButtonHref } from "@/lib/site/share-links";
+import { externalLinkProps, leavesSite } from "@/lib/site/external-link";
 
 export function ShopProductGrid({
   products,
@@ -25,11 +26,17 @@ export function ShopProductGrid({
           locale === "bg" ? product.description_bg : product.description_en;
         const price =
           locale === "bg" ? product.price_label_bg : product.price_label_en;
+        const href = productButtonHref(product, locale);
+        // A card that leads off the site (a custom link, or `/buy/…` straight
+        // to Stripe) is a plain anchor in a new tab — no prefetch, and the
+        // shop stays open behind it.
+        const Card = leavesSite(href) ? "a" : Link;
 
         return (
-          <Link
+          <Card
             key={product.id}
-            href={productButtonHref(product, locale)}
+            href={href}
+            {...externalLinkProps(href)}
             className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
           >
             <div className="flex min-h-[168px] items-center justify-center overflow-hidden bg-cream-2 sm:min-h-[200px]">
@@ -64,7 +71,7 @@ export function ShopProductGrid({
                 {shopCta} <ArrowUpRight className="h-4 w-4" />
               </span>
             </div>
-          </Link>
+          </Card>
         );
       })}
     </div>

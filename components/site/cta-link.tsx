@@ -7,6 +7,7 @@ import { useOfferPopup } from "@/components/site/offer-popup";
 import { useIsCtaPreview } from "@/components/site/cta-preview";
 import { trackMeta } from "@/lib/meta/client";
 import { trackSiteCheckout } from "@/lib/analytics/client";
+import { externalLinkProps } from "@/lib/site/external-link";
 import {
   openStripeUrl,
   startPlacementCheckout,
@@ -24,8 +25,6 @@ type CtaLinkProps = VariantProps<typeof buttonVariants> & {
   href: string;
   className?: string;
   children: React.ReactNode;
-  target?: string;
-  rel?: string;
 };
 
 /** How the offer popup should continue once the visitor is done with it. */
@@ -43,8 +42,6 @@ export function CtaLink({
   size,
   className,
   children,
-  target,
-  rel,
 }: CtaLinkProps) {
   const { tryOpenPlacement, placements, locale } = useOfferPopup();
   const previewing = useIsCtaPreview();
@@ -85,6 +82,9 @@ export function CtaLink({
     linkHref.startsWith("http") ||
     linkHref.startsWith("tel:") ||
     linkHref.startsWith("mailto:");
+  // Decided from the link the button really has — the admin may have pointed
+  // it somewhere else entirely — so an outside site always gets its own tab.
+  const tab = externalLinkProps(linkHref);
 
   function pay() {
     setError(null);
@@ -148,9 +148,8 @@ export function CtaLink({
       return (
         <a
           {...marker}
+          {...tab}
           href={linkHref}
-          target={target}
-          rel={rel}
           className={classes}
           onClick={handleClick}
         >
