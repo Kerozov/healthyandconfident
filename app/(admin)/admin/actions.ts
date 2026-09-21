@@ -505,7 +505,7 @@ function validateSegmentEntryAutomation(input: AutomationInput): string | null {
     (input.segment_keys?.filter(Boolean).length ?? 0) > 0 ||
     (input.group_ids?.filter(Boolean).length ?? 0) > 0;
   if (!hasInclude) {
-    return "При „Влизане в сегмент“ избери поне един сегмент или група във „Включване“.";
+    return "При „Влизане в група“ избери поне една група или сегмент във „Включване“.";
   }
   return null;
 }
@@ -1326,7 +1326,7 @@ export async function createSegmentGroup(input: {
   description?: string;
   parent_id?: string | null;
 }): Promise<ActionResult> {
-  const guard = await guardAction("subscribers", { action: "create", summary: "Създаде група" });
+  const guard = await guardAction("subscribers", { action: "create", summary: "Създаде сегмент" });
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const name = input.name.trim();
@@ -1360,7 +1360,7 @@ export async function updateSegmentGroup(input: {
   description?: string | null;
   parent_id?: string | null;
 }): Promise<ActionResult> {
-  const guard = await guardAction("subscribers", { action: "update", summary: "Обнови група" });
+  const guard = await guardAction("subscribers", { action: "update", summary: "Обнови сегмент" });
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
@@ -1409,7 +1409,7 @@ export async function updateSegmentGroup(input: {
 }
 
 export async function deleteSegmentGroup(id: string): Promise<ActionResult> {
-  const guard = await guardAction("subscribers", { action: "delete", summary: "Изтри група" });
+  const guard = await guardAction("subscribers", { action: "delete", summary: "Изтри сегмент" });
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const { error } = await supabase.from("segment_groups").delete().eq("id", id);
@@ -1427,7 +1427,7 @@ export async function createSegment(input: {
   description?: string;
   group_id?: string | null;
 }): Promise<ActionResult> {
-  const guard = await guardAction("subscribers", { action: "create", summary: "Създаде сегмент" });
+  const guard = await guardAction("subscribers", { action: "create", summary: "Създаде група" });
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const key = slugify(input.key || input.name);
@@ -1464,7 +1464,7 @@ export async function updateSegment(input: {
   description?: string | null;
   group_id?: string | null;
 }): Promise<ActionResult> {
-  const guard = await guardAction("subscribers", { action: "update", summary: "Обнови сегмент" });
+  const guard = await guardAction("subscribers", { action: "update", summary: "Обнови група" });
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
@@ -1510,7 +1510,7 @@ export async function updateSegment(input: {
 }
 
 export async function deleteSegment(id: string): Promise<ActionResult> {
-  const guard = await guardAction("subscribers", { action: "delete", summary: "Изтри сегмент" });
+  const guard = await guardAction("subscribers", { action: "delete", summary: "Изтри група" });
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
 
@@ -1649,7 +1649,7 @@ async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> 
   return {
     emails: uniqueNormalized(rows.map((r) => r.email)),
     phones: uniqueNormalized(rows.map((r) => r.phone || "")),
-    label: `segments: ${labelParts.join(", ")}${includesGroups ? " (вкл. групи)" : ""}`,
+    label: `segments: ${labelParts.join(", ")}${includesGroups ? " (вкл. сегменти)" : ""}`,
     segment_tag: `segments:${filtered.join(",")}`,
     target_tags: filtered,
   };

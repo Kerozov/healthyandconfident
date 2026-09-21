@@ -39,7 +39,7 @@ export function SegmentAssignChecklist({
 
   if (assignableSegments(segments).length === 0) {
     return (
-      <p className="text-sm text-ink-soft">Няма сегменти — създайте първи по-горе.</p>
+      <p className="text-sm text-ink-soft">Няма групи — създайте първи по-горе.</p>
     );
   }
 
@@ -120,7 +120,7 @@ export function AudienceTargetChecklist({
 
   if (assignableSegments(segments).length === 0 && groups.length === 0) {
     return (
-      <p className="text-sm text-ink-soft">Няма сегменти или групи — създайте първи по-горе.</p>
+      <p className="text-sm text-ink-soft">Няма групи или сегменти — създайте първи по-горе.</p>
     );
   }
 
@@ -186,7 +186,7 @@ export function AudienceTargetChecklist({
               <span className="min-w-0">
                 <span className="font-semibold text-ink">{group.name}</span>
                 <span className="ml-1.5 text-xs text-ink-soft">
-                  (група · {segmentCount} сегмент{segmentCount === 1 ? "" : "а"})
+                  (сегмент · {segmentCount} груп{segmentCount === 1 ? "а" : "и"})
                 </span>
               </span>
             </label>
@@ -220,8 +220,8 @@ export function AudienceTargetChecklist({
       })}
       <p className="text-xs text-ink-soft">
         {isExclude
-          ? "Ако абонатът влезе в някоя от тези групи или сегменти, този имейл/SMS няма да тръгне — и вече насроченият във воркера се отменя веднага, заедно със следващите стъпки в същата поредица."
-          : "Групата включва всички сегменти в нея и вложените подгрупи. Ако абонатът излезе от аудиторията, насроченият имейл във воркера също се отказва."}
+          ? "Ако абонатът влезе в някой от тези сегменти или групи, този имейл/SMS няма да тръгне — и вече насроченият във воркера се отменя веднага, заедно със следващите стъпки в същата поредица."
+          : "Сегментът включва всички групи в него и вложените подсегменти. Ако абонатът излезе от аудиторията, насроченият имейл във воркера също се отказва."}
       </p>
     </div>
   );

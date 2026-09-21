@@ -87,6 +87,8 @@ const HEADER_ALIASES: Record<string, string> = {
   tags: "tags",
   tag: "tags",
   сегменти: "tags",
+  групи: "tags",
+  група: "tags",
   source: "source",
   източник: "source",
   notes: "notes",

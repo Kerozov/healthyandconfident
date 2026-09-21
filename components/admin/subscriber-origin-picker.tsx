@@ -29,7 +29,7 @@ export function SubscriberOriginPicker({
     <div className="space-y-3">
       <p className="text-xs text-ink-soft">
         Кой тип запис задейства автоматизацията. Празно = по подразбиране (нови +
-        вече регистрирани от сайт). Не е сегмент и не е източник (форма/меню).
+        вече регистрирани от сайт). Не е група и не е източник (форма/меню).
       </p>
       <p className="rounded-lg border border-violet-200/80 bg-white/80 px-3 py-2 text-xs leading-relaxed text-violet-950">
         Всяка автоматизация е отделна. Ако някой вече е минал през серия А, може да

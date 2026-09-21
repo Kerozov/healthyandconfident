@@ -59,7 +59,7 @@ export function SegmentsManager({
   function remove(id: string, name: string) {
     if (
       !confirm(
-        `Изтриване на сегмент „${name}"? Таговете при абонатите не се премахват автоматично.`,
+        `Изтриване на група „${name}"? Таговете при абонатите не се премахват автоматично.`,
       )
     ) {
       return;
@@ -73,19 +73,19 @@ export function SegmentsManager({
   function changeGroup(id: string, groupId: string | null) {
     startTransition(async () => {
       const res = await updateSegment({ id, group_id: groupId });
-      if (!res.ok) setError(res.message || "Грешка при промяна на група");
+      if (!res.ok) setError(res.message || "Грешка при промяна на сегмент");
       else router.refresh();
     });
   }
 
   return (
-    <Card title="Сегменти">
+    <Card title="Групи">
       <p className="mb-4 text-sm text-ink-soft">
-        Сегментите са тагове върху абоната (форма, покупка, ръчно). При безплатното
+        Групите са тагове върху абоната (форма, покупка, ръчно). При безплатното
         меню: колоната <strong className="text-slate-800">Интерес</strong> =
         „Безплатно меню“; колоната{" "}
-        <strong className="text-slate-800">Сегменти</strong> = отговорът (диабет /
-        ИР / отслабване). Групата е само за организация.
+        <strong className="text-slate-800">Групи</strong> = отговорът (диабет /
+        ИР / отслабване). Сегментът само обединява групи.
       </p>
 
       <form onSubmit={submit} className="mb-6 grid gap-4 md:grid-cols-5">
@@ -93,7 +93,7 @@ export function SegmentsManager({
           <Input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="VIP клиенти"
+            placeholder="Диабет"
             required
           />
         </Field>
@@ -101,15 +101,15 @@ export function SegmentsManager({
           <Input
             value={form.key}
             onChange={(e) => setForm({ ...form, key: e.target.value })}
-            placeholder="vip-klienti"
+            placeholder="diabet"
           />
         </Field>
-        <Field label="Група">
+        <Field label="Сегмент">
           <Select
             value={form.group_id}
             onChange={(e) => setForm({ ...form, group_id: e.target.value })}
           >
-            <option value="">— Без група —</option>
+            <option value="">— Без сегмент —</option>
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name}
@@ -131,7 +131,7 @@ export function SegmentsManager({
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
           >
             <Plus className="h-4 w-4" />
-            Добави сегмент
+            Добави група
           </button>
         </div>
       </form>
@@ -139,7 +139,7 @@ export function SegmentsManager({
 
       <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
         {sortedSegments.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-ink-soft">Няма сегменти.</p>
+          <p className="px-4 py-6 text-sm text-ink-soft">Няма групи.</p>
         ) : (
           sortedSegments.map((segment) => (
             <div
@@ -151,8 +151,8 @@ export function SegmentsManager({
                 <p className="text-xs text-ink-soft">
                   <code>{segment.key}</code>
                   {segment.group_id
-                    ? ` · група: ${groupNameById.get(segment.group_id) ?? "—"}`
-                    : " · без група"}
+                    ? ` · сегмент: ${groupNameById.get(segment.group_id) ?? "—"}`
+                    : " · без сегмент"}
                   {segment.description ? ` · ${segment.description}` : ""}
                 </p>
               </div>
@@ -163,7 +163,7 @@ export function SegmentsManager({
                   disabled={pending}
                   className="!h-9 !min-h-9 !w-auto !min-w-[9.5rem] !rounded-lg !px-3 !py-0 text-xs leading-none"
                 >
-                  <option value="">Без група</option>
+                  <option value="">Без сегмент</option>
                   {groups.map((group) => (
                     <option key={group.id} value={group.id}>
                       {group.name}

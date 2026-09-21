@@ -410,7 +410,7 @@ export function WebsiteManager({
             </p>
             <p>
               Ако има Stripe цена (<code>price_/prod_</code>), сайтът ползва
-              Checkout (нужно за сегменти след покупка и за оферта в същата
+              Checkout (нужно за групи след покупка и за оферта в същата
               сметка). Payment Link е резервен вариант.
             </p>
           </div>
@@ -606,9 +606,9 @@ export function WebsiteManager({
                 currentStripeIdEn={productForm.stripe_id_en}
               />
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
-                <p className="text-sm font-semibold text-forest-800">Сегменти след покупка</p>
+                <p className="text-sm font-semibold text-forest-800">Групи след покупка</p>
                 <p className="text-xs text-ink-soft">
-                  След успешно плащане абонатът влиза в избраните сегменти. В автоматизации
+                  След успешно плащане абонатът влиза в избраните групи. В автоматизации
                   можеш да ги ползваш за включване или изключване (напр. да спреш напомняния
                   след покупка).
                 </p>

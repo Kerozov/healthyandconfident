@@ -31,7 +31,7 @@ const TRIGGER_LABELS: Record<string, string> = {
   purchase: "Покупка",
   registration: "Регистрация",
   form_submit: "След форма",
-  segment_entry: "Влизане в сегмент",
+  segment_entry: "Влизане в група",
 };
 
 function shortDay(key: string): string {

@@ -84,7 +84,7 @@ export function PopupEditor({
         </Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Save to segment">
+        <Field label="Запази в група">
           <Select
             value={form.segment_tag}
             onChange={(e) => set("segment_tag", e.target.value)}

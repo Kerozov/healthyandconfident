@@ -59,7 +59,7 @@ export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
   function remove(id: string, name: string) {
     if (
       !confirm(
-        `Изтриване на група „${name}"? Сегментите остават, но се откачат от групата.`,
+        `Изтриване на сегмент „${name}"? Групите остават, но се откачат от сегмента.`,
       )
     ) {
       return;
@@ -79,28 +79,28 @@ export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
   }
 
   return (
-    <Card title="Групи">
+    <Card title="Сегменти">
       <p className="mb-4 text-sm text-ink-soft">
-        Групите организират сегментите — не се присвояват директно на абонати.
-        При кампания или автоматизация избор на група включва всички сегменти в
-        нея (и вложените подгрупи).
+        Сегментът обединява групи — не се присвоява директно на абонати.
+        При кампания или автоматизация избор на сегмент включва всички групи в
+        него (и вложените подсегменти).
       </p>
 
       <form onSubmit={submit} className="mb-6 grid gap-4 md:grid-cols-4">
-        <Field label="Име на група">
+        <Field label="Име на сегмент">
           <Input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Програми"
+            placeholder="Клиенти"
             required
           />
         </Field>
-        <Field label="Родителска група">
+        <Field label="Родителски сегмент">
           <Select
             value={form.parent_id}
             onChange={(e) => setForm({ ...form, parent_id: e.target.value })}
           >
-            <option value="">— Главна група —</option>
+            <option value="">— Главен сегмент —</option>
             {parentOptions.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name}
@@ -122,14 +122,14 @@ export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
           >
             <Plus className="h-4 w-4" />
-            Добави група
+            Добави сегмент
           </button>
         </div>
       </form>
       {error && <p className="mb-4 text-sm text-coral-600">{error}</p>}
 
       {tree.length === 0 ? (
-        <p className="text-sm text-ink-soft">Няма групи — създайте първа по-горе.</p>
+        <p className="text-sm text-ink-soft">Няма сегменти — създайте първи по-горе.</p>
       ) : (
         <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
           {tree.map(({ group, depth }) => {
@@ -149,7 +149,7 @@ export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
                     {group.name}
                     {childCount > 0 && (
                       <span className="ml-2 text-xs font-normal text-ink-soft">
-                        ({childCount} подгруп{childCount === 1 ? "а" : "и"})
+                        ({childCount} подсегмент{childCount === 1 ? "" : "а"})
                       </span>
                     )}
                   </p>
@@ -164,7 +164,7 @@ export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
                     disabled={pending}
                     className="!h-9 !min-h-9 !w-auto !min-w-[9.5rem] !rounded-lg !px-3 !py-0 text-xs leading-none"
                   >
-                    <option value="">Главна група</option>
+                    <option value="">Главен сегмент</option>
                     {parents.map((parent) => (
                       <option key={parent.id} value={parent.id}>
                         {parent.name}

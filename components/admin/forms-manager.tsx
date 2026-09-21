@@ -497,11 +497,11 @@ export function FormsManager({
               </Field>
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3 md:col-span-2">
                 <p className="text-sm font-semibold text-forest-800">
-                  Фиксирани сегменти след попълване
+                  Фиксирани групи след попълване
                 </p>
                 <p className="text-xs text-ink-soft">
                   Слагат се винаги. Отделно от това всеки отговор в Полета може да води
-                  към свой сегмент.
+                  към своя група.
                 </p>
                 <SegmentAssignChecklist
                   segments={segments}
@@ -567,7 +567,7 @@ export function FormsManager({
                 </div>
               )}
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
-                <p className="text-sm font-semibold text-forest-800">Шаблони с отговор → сегмент</p>
+                <p className="text-sm font-semibold text-forest-800">Шаблони с отговор → група</p>
                 <p className="text-xs text-ink-soft">
                   Добави готов въпрос или запази текущо поле като шаблон за следващи форми.
                 </p>
@@ -796,7 +796,7 @@ export function FormsManager({
                         field.type === "radio" ||
                         field.type === "checkbox") && (
                         <div className="md:col-span-2">
-                          <Field label="Отговори → сегмент">
+                          <Field label="Отговори → група">
                             <FormOptionSegmentEditor
                               options={field.options ?? []}
                               segments={segments}

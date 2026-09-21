@@ -22,7 +22,7 @@ export default async function AdminAutomationsPage() {
     <div>
       <PageHeader
         title="Автоматизации"
-        description="Автоматични имейли и SMS при нов абонат, покупка, попълнена форма или влизане в сегмент."
+        description="Автоматични имейли и SMS при нов абонат, покупка, попълнена форма или влизане в група."
       >
         {!workerOk && (
           <Alert variant="warning">

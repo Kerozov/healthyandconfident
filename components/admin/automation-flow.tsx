@@ -71,7 +71,7 @@ const TRIGGER_META: Record<
     color: "bg-violet-100 text-violet-900 border-violet-200",
   },
   segment_entry: {
-    label: "Влизане в сегмент",
+    label: "Влизане в група",
     icon: Tags,
     color: "bg-forest-100 text-forest-900 border-forest-200",
   },
@@ -147,8 +147,8 @@ function audienceSummary(
 ): string {
   const logic = automation.audience_logic === "all" ? " И " : " ИЛИ ";
   const include: string[] = [];
-  audience.groups.forEach((g) => include.push(`група „${g.name}“`));
-  audience.segments.forEach((s) => include.push(`сегмент „${s.name}“`));
+  audience.groups.forEach((g) => include.push(`сегмент „${g.name}“`));
+  audience.segments.forEach((s) => include.push(`група „${s.name}“`));
   const inc =
     include.length > 0 ? include.join(logic) : "всички абонати (без филтър)";
   const exc =
@@ -421,7 +421,7 @@ function FlowCard({
                 className="flex items-center gap-1.5 text-[11px] text-coral-800"
               >
                 <UserMinus className="h-3 w-3 shrink-0" />
-                {ex.kind === "group" ? "Група" : "Сегмент"} ·{" "}
+                {ex.kind === "group" ? "Сегмент" : "Група"} ·{" "}
                 <strong>{ex.name}</strong>
               </li>
             ))}
@@ -797,10 +797,10 @@ export function AutomationFlowView({
         </p>
         <div className="mt-2 flex flex-wrap gap-3 text-xs">
           <span className="inline-flex items-center gap-1">
-            <Users className="h-3 w-3 text-forest-600" /> Група
+            <Users className="h-3 w-3 text-forest-600" /> Сегмент
           </span>
           <span className="inline-flex items-center gap-1">
-            <Tag className="h-3 w-3 text-slate-600" /> Сегмент
+            <Tag className="h-3 w-3 text-slate-600" /> Група
           </span>
           <span className="inline-flex items-center gap-1 text-amber-800">
             <Split className="h-3 w-3" /> Разклонение

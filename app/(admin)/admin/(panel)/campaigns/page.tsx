@@ -34,7 +34,7 @@ export default async function AdminCampaignsPage() {
     <div>
       <PageHeader
         title="Кампании"
-        description="Изпращане по сегмент или тагове, проследяване на доставката и повторно изпращане към неотворили."
+        description="Изпращане по група или тагове, проследяване на доставката и повторно изпращане към неотворили."
       />
 
       <CampaignsWorkspace

@@ -263,7 +263,7 @@ function formatAutomationAudienceLine(
   const includeParts: string[] = [];
   for (const groupId of a.group_ids ?? []) {
     const group = groups.find((g) => g.id === groupId);
-    if (group) includeParts.push(`група: ${group.name}`);
+    if (group) includeParts.push(`сегмент: ${group.name}`);
   }
   for (const key of a.segment_keys ?? []) {
     const segment = segments.find((s) => s.key === key);
@@ -593,7 +593,7 @@ export function AutomationsManager({
       (form.segment_keys?.filter(Boolean).length ?? 0) === 0 &&
       (form.group_ids?.filter(Boolean).length ?? 0) === 0
     ) {
-      setError("При „Влизане в сегмент“ избери поне един сегмент или група във „Включване“.");
+      setError("При „Влизане в група“ избери поне една група или сегмент във „Включване“.");
       return;
     }
     if (form.channel === "sms") {
@@ -1117,10 +1117,10 @@ export function AutomationsManager({
             <WorkspacePanel title="Аудитория">
               <p className="mb-3 text-xs leading-relaxed text-ink-soft">
                 {form.trigger_event === "segment_entry"
-                  ? "Включване е самият тригер — автоматизацията тръгва, когато човекът влезе в тези сегменти/групи за първи път. Изключване спира изпращането."
+                  ? "Включване е самият тригер — автоматизацията тръгва, когато човекът влезе в тези групи/сегменти за първи път. Изключване спира изпращането."
                   : form.trigger_event === "form_submit"
                     ? "По желание ограничи кой да получи стъпката след формата. Празно включване = всеки, който е попълнил и минава условията по отговори."
-                    : "Включване = кой да получи тази стъпка. Изключване = кой никога не трябва да я получи (напр. вече платил). Смяната на сегмент отменя насрочения имейл във воркера — не чака датата на изпращане."}
+                    : "Включване = кой да получи тази стъпка. Изключване = кой никога не трябва да я получи (напр. вече платил). Смяната на група отменя насрочения имейл във воркера — не чака датата на изпращане."}
               </p>
               <div className="grid gap-3">
                 <div className="rounded-xl border border-forest-500/25 bg-forest-50/30 p-3 space-y-2">
@@ -1572,7 +1572,7 @@ export function AutomationsManager({
         {automations.length === 0 ? (
           <div className="rounded-2xl border border-ink/10 bg-white p-8 text-center">
             <p className="text-sm text-ink-soft">
-              Няма автоматизации. Създай welcome имейл, SMS по сегмент или серия след
+              Няма автоматизации. Създай welcome имейл, SMS по група или серия след
               покупка.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">

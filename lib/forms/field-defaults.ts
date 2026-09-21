@@ -13,7 +13,7 @@ export const BUILTIN_FIELD_DEFAULTS: FormFieldDefault[] = [
   {
     id: "interest-menu",
     name: "Интерес (като менюто)",
-    description: "Диабет / ИР / общо → съответния сегмент",
+    description: "Диабет / ИР / общо → съответната група",
     builtin: true,
     field: {
       type: "radio",

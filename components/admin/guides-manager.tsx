@@ -315,10 +315,10 @@ export function GuidesManagerPanel({
             />
           )}
           <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
-            <p className="text-sm font-semibold text-forest-800">Сегменти след покупка</p>
+            <p className="text-sm font-semibold text-forest-800">Групи след покупка</p>
             <p className="text-xs text-ink-soft">
-              След успешно плащане абонатът влиза в избраните сегменти. Използвай ги в
-              автоматизации (вкл. „изключи сегмент“), за да спреш кампании след покупка.
+              След успешно плащане абонатът влиза в избраните групи. Използвай ги в
+              автоматизации (вкл. „изключи група“), за да спреш кампании след покупка.
             </p>
             <SegmentAssignChecklist
               segments={segments}

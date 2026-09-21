@@ -722,12 +722,12 @@ export function SubscribersManager({
       </Card>
 
       {editing && (
-        <Card title={`Сегменти и интерес — ${editing.email}`}>
+        <Card title={`Групи и интерес — ${editing.email}`}>
           <div className="rounded-xl border border-forest-100 bg-cream/40 p-4">
-            <p className="text-sm font-semibold text-slate-800">Здравен сегмент</p>
+            <p className="text-sm font-semibold text-slate-800">Здравна група</p>
             <p className="mt-1 text-xs text-ink-soft">
               Отговорът от формата (диабет / ИР / общо отслабване) — отива в колоната
-              Сегменти. Колоната Интерес показва „Безплатно меню“, ако има таг free-menu.
+              Групи. Колоната Интерес показва „Безплатно меню“, ако има таг free-menu.
             </p>
             <div className="mt-3 flex flex-col gap-2">
               {(
@@ -753,7 +753,7 @@ export function SubscribersManager({
           </div>
 
           <div className="mt-4">
-          <Field label="Други сегменти">
+          <Field label="Други групи">
             <SegmentAssignChecklist
               segments={segments}
               groups={groups}
@@ -831,12 +831,12 @@ export function SubscribersManager({
               <option value="all">Всички</option>
               {groups.map((group) => (
                 <option key={group.id} value={`group:${group.id}`}>
-                  Група: {group.name}
+                  Сегмент: {group.name}
                 </option>
               ))}
               {assignableSegments(segments).map((segment) => (
                 <option key={segment.key} value={segment.key}>
-                  Сегмент: {segment.name}
+                  Група: {segment.name}
                 </option>
               ))}
             </Select>
@@ -948,7 +948,7 @@ export function SubscribersManager({
                 <th className="py-2 pr-4">Phone</th>
                 <th className="py-2 pr-4">Lang</th>
                 <th className="py-2 pr-4">Интерес</th>
-                <th className="py-2 pr-4">Сегменти</th>
+                <th className="py-2 pr-4">Групи</th>
                 <th className="py-2 pr-4">Плащане</th>
                 <th className="py-2 pr-4">Zoom</th>
                 <th className="py-2 pr-4">Source</th>
@@ -1120,7 +1120,7 @@ export function SubscribersManager({
                           </button>
                           <button
                             onClick={() => openEditSegments(s)}
-                            title="Сегменти и интерес"
+                            title="Групи и интерес"
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink"
                           >
                             <Tag className="h-4 w-4" />

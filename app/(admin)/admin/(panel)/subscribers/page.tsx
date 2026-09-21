@@ -27,7 +27,7 @@ export default async function AdminSubscribersPage() {
     <div>
       <PageHeader
         title="Абонати"
-        description="Управление на списъка — сегменти, имейли на човека, Zoom и покупки. Кликни иконата 📊 до имейла за пълен профил и история на имейлите."
+        description="Управление на списъка — групи, имейли на човека, Zoom и покупки. Кликни иконата 📊 до имейла за пълен профил и история на имейлите."
       />
       <div className="space-y-8">
         <FunnelBrandSync status={funnelBrandStatus} />

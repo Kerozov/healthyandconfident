@@ -53,7 +53,7 @@ export const ADMIN_SCREEN_GROUPS = [
         key: "subscribers",
         label: "Абонати",
         href: "/admin/subscribers",
-        description: "Абонати, сегменти и групи",
+        description: "Абонати, групи и сегменти",
       },
       {
         key: "contacts",

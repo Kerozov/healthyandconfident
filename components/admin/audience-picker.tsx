@@ -90,7 +90,7 @@ export function AudiencePicker({
             value.mode === "segment" ? "bg-forest-600 text-cream" : "text-ink-soft",
           )}
         >
-          By segment
+          По група / сегмент
         </button>
         <button
           type="button"
@@ -100,7 +100,7 @@ export function AudiencePicker({
             value.mode === "tags" ? "bg-forest-600 text-cream" : "text-ink-soft",
           )}
         >
-          By tags
+          По тагове
         </button>
       </div>
 
@@ -108,7 +108,7 @@ export function AudiencePicker({
         <div className="space-y-3">
           <Field
             label="All subscribers"
-            hint="Send to everyone subscribed (ignores segment checkboxes below)."
+            hint="Send to everyone subscribed (ignores group/segment checkboxes below)."
           >
             <label className="inline-flex items-center gap-2 text-sm">
               <input
@@ -140,8 +140,8 @@ export function AudiencePicker({
             </label>
           </Field>
           <Field
-            label="Групи и сегменти"
-            hint="Групата обединява сегментите в нея. Можеш да избереш група, отделни сегменти, или и двете (OR)."
+            label="Сегменти и групи"
+            hint="Сегментът обединява групите в него. Можеш да избереш сегмент, отделни групи, или и двете (OR)."
           >
             <AudienceTargetChecklist
               segments={segments}

@@ -52,7 +52,7 @@ export function FormOptionSegmentEditor({
   return (
     <div className="space-y-3">
       <p className="text-xs text-ink-soft">
-        За всеки отговор избери към кой сегмент да отиде човекът след попълване.
+        За всеки отговор избери към коя група да отиде човекът след попълване.
       </p>
       {options.map((opt, index) => (
         <div
@@ -95,7 +95,7 @@ export function FormOptionSegmentEditor({
                 });
               }}
             >
-              <option value="">— Без сегмент —</option>
+              <option value="">— Без група —</option>
               {ungrouped.map((s) => (
                 <option key={s.id} value={s.key}>
                   {s.name}
@@ -127,7 +127,7 @@ export function FormOptionSegmentEditor({
       ))}
       {assignableSegments(segments).length === 0 && (
         <p className="text-xs text-coral-600">
-          Няма сегменти — създай ги първо в Сегменти, после ги вържи към отговорите.
+          Няма групи — създай ги първо в Групи, после ги вържи към отговорите.
         </p>
       )}
       <button

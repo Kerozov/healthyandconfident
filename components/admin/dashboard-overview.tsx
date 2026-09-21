@@ -485,7 +485,7 @@ export function DashboardOverviewPanel({
                     <thead>
                       <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft">
                         <th className="p-4 font-semibold">Тема</th>
-                        <th className="p-4 font-semibold">Сегмент</th>
+                        <th className="p-4 font-semibold">Група</th>
                         <th className="p-4 font-semibold">Получатели</th>
                         <th className="p-4 font-semibold">Статус</th>
                         <th className="p-4 font-semibold">Дата</th>
