@@ -201,9 +201,17 @@ export function OfferPopupProvider({
     dismiss(true);
   }
 
-  /** Close extra offers and continue whatever the visitor originally clicked. */
+  /**
+   * Close extra offers and continue whatever the visitor originally clicked.
+   * Once a checkout attempt has failed, closing must not retry it — otherwise
+   * every X / backdrop / Escape re-fires the same error and the dialog is stuck.
+   */
   function closeOfferDialog() {
     if (pending) return;
+    if (checkoutError) {
+      dismiss(false);
+      return;
+    }
     proceedWithOriginal();
   }
 
@@ -213,7 +221,7 @@ export function OfferPopupProvider({
     document.body.style.overflow = "hidden";
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !pending) proceedWithOriginal();
+      if (e.key === "Escape") closeOfferDialog();
     }
     window.addEventListener("keydown", onKeyDown);
 
@@ -221,7 +229,8 @@ export function OfferPopupProvider({
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [popup, pending, dismiss]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [popup, pending, checkoutError]);
 
   const current = popup
     ? popup.step === "upsell"

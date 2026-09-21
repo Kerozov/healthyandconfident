@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle, X } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
@@ -26,23 +27,44 @@ const COPY = {
 
 export function CheckoutNotice({ locale }: { locale: Locale }) {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const copy = COPY[locale] ?? COPY.bg;
 
-  // Derived from the URL — dismissing drops the param, which hides the banner.
   const checkout = searchParams.get("checkout");
   const status =
     checkout === "success" || checkout === "cancelled" ? checkout : null;
 
+  // Closing is local state, so the dialog disappears on the click itself. The
+  // old version waited for `router.replace` to re-render the whole (dynamic)
+  // home page from the server, which on a slow connection or a failed RSC
+  // fetch left the visitor staring at a popup that would not close.
+  const [dismissed, setDismissed] = useState(false);
+
   function dismiss() {
-    const params = new URLSearchParams(searchParams.toString());
+    setDismissed(true);
+    // Drop the param without a server round-trip so a reload/share/back does
+    // not resurrect the notice. Next syncs `useSearchParams` with this call.
+    const params = new URLSearchParams(window.location.search);
     params.delete("checkout");
     const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`,
+    );
   }
 
-  if (!status) return null;
+  const open = Boolean(status) && !dismissed;
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") dismiss();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  if (!open || !status) return null;
 
   const isSuccess = status === "success";
 

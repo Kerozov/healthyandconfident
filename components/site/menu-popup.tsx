@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -53,6 +54,8 @@ export function MenuPopupProvider({
   const [source, setSource] = useState("menu-popup");
   const [done, setDone] = useState(false);
   const { tryOpenPlacement } = useOfferPopup();
+  // The "thanks" auto-close; cleared on close so it can't shut a later opening.
+  const autoCloseRef = useRef<number | null>(null);
 
   const storageKey = `hc_popup_${locale}`;
 
@@ -85,6 +88,10 @@ export function MenuPopupProvider({
         typeof window !== "undefined"
       ) {
         localStorage.setItem(storageKey, "dismissed");
+      }
+      if (autoCloseRef.current !== null) {
+        window.clearTimeout(autoCloseRef.current);
+        autoCloseRef.current = null;
       }
       setOpen(false);
       setDone(false);
@@ -167,7 +174,7 @@ export function MenuPopupProvider({
                       // unlock the page under the offer popup 2.5s later.
                       close(false);
                     } else {
-                      window.setTimeout(() => close(false), 2500);
+                      autoCloseRef.current = window.setTimeout(() => close(false), 2500);
                     }
                   }}
                 />
