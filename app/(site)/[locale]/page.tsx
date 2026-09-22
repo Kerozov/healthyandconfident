@@ -53,6 +53,15 @@ export default async function HomePage({
       <Marquee locale={l} />
       <TrustFeatures locale={l} />
       <About dict={dict} locale={l} />
+      {eventsSection && site.events.length > 0 && (
+        <EventsSection
+          dict={dict}
+          locale={l}
+          section={eventsSection}
+          events={site.events}
+          offersById={site.offersById}
+        />
+      )}
       <FoodShowcase dict={dict} locale={l} />
       <Problems dict={dict} />
       <Method dict={dict} locale={l} />
@@ -66,6 +75,14 @@ export default async function HomePage({
       <TransformationResults dict={dict} locale={l} />
       <Outcomes dict={dict} locale={l} />
       <Testimonials dict={dict} locale={l} />
+      {productsSection && site.products.length > 0 && (
+        <ShopSection
+          dict={dict}
+          locale={l}
+          section={productsSection}
+          products={site.products}
+        />
+      )}
       <GoogleReviews dict={dict} />
       <Challenge21Section dict={dict} locale={l} />
       {videosSection && site.videos.length > 0 && (
@@ -74,23 +91,6 @@ export default async function HomePage({
           locale={l}
           section={videosSection}
           videos={site.videos}
-        />
-      )}
-      {eventsSection && site.events.length > 0 && (
-        <EventsSection
-          dict={dict}
-          locale={l}
-          section={eventsSection}
-          events={site.events}
-          offersById={site.offersById}
-        />
-      )}
-      {productsSection && site.products.length > 0 && (
-        <ShopSection
-          dict={dict}
-          locale={l}
-          section={productsSection}
-          products={site.products}
         />
       )}
       {guidesSection && site.guides.length > 0 && (
