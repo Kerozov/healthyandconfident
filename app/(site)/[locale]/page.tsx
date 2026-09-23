@@ -48,11 +48,6 @@ export default async function HomePage({
   return (
     <>
       <HomeJsonLd dict={dict} locale={l} />
-      <Hero dict={dict} locale={l} />
-      <SuccessProof dict={dict} />
-      <Marquee locale={l} />
-      <TrustFeatures locale={l} />
-      <About dict={dict} locale={l} />
       {eventsSection && site.events.length > 0 && (
         <EventsSection
           dict={dict}
@@ -62,6 +57,11 @@ export default async function HomePage({
           offersById={site.offersById}
         />
       )}
+      <Hero dict={dict} locale={l} />
+      <SuccessProof dict={dict} />
+      <Marquee locale={l} />
+      <TrustFeatures locale={l} />
+      <About dict={dict} locale={l} />
       <FoodShowcase dict={dict} locale={l} />
       <Problems dict={dict} />
       <Method dict={dict} locale={l} />
