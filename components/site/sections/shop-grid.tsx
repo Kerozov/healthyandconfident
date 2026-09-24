@@ -4,6 +4,7 @@ import type { Locale } from "@/i18n/config";
 import type { SiteProduct } from "@/lib/supabase/types";
 import { productButtonHref } from "@/lib/site/share-links";
 import { externalLinkProps, leavesSite } from "@/lib/site/external-link";
+import { CardImage } from "@/components/site/card-image";
 
 export function ShopProductGrid({
   products,
@@ -39,20 +40,18 @@ export function ShopProductGrid({
             {...externalLinkProps(href)}
             className="group flex flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
           >
-            <div className="flex min-h-[168px] items-center justify-center overflow-hidden bg-cream-2 sm:min-h-[200px]">
-              {product.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={product.image_url}
-                  alt={productTitle}
-                  className="h-auto max-h-[240px] w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90">
-                  {shopEyebrow}
-                </div>
-              )}
-            </div>
+            {product.image_url ? (
+              <CardImage
+                src={product.image_url}
+                alt={productTitle}
+                className="aspect-[4/3]"
+                imageClassName="transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            ) : (
+              <div className="flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90">
+                {shopEyebrow}
+              </div>
+            )}
             <div className="flex flex-1 flex-col p-6">
               {price && (
                 <p className="font-display text-2xl font-semibold text-slate-800">

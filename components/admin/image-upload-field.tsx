@@ -9,6 +9,7 @@ import {
 } from "@/lib/admin/upload-to-storage";
 import type { MediaFolder } from "@/lib/media/folders";
 import { Field } from "@/components/admin/fields";
+import { CardImage } from "@/components/site/card-image";
 import { cn } from "@/lib/utils";
 
 export function ImageUploadField({
@@ -19,6 +20,7 @@ export function ImageUploadField({
   folder,
   className,
   previewFit = "cover",
+  previewFrame,
 }: {
   label: string;
   hint?: string;
@@ -28,6 +30,8 @@ export function ImageUploadField({
   className?: string;
   /** `contain` shows the full image (emails, portraits). `cover` crops to fill (product cards). */
   previewFit?: "cover" | "contain";
+  /** The site card's ratio (e.g. `aspect-[16/10]`) — previews the image exactly as the card shows it. */
+  previewFrame?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
@@ -107,7 +111,15 @@ export function ImageUploadField({
                 : "border-ink/20 bg-cream-2/40 hover:border-forest-500/40",
           )}
         >
-          {value ? (
+          {value && previewFrame ? (
+            <div className="p-2">
+              <CardImage
+                src={value}
+                alt=""
+                className={cn("max-w-sm rounded-lg", previewFrame)}
+              />
+            </div>
+          ) : value ? (
             <div
               className={cn(
                 "relative w-full p-2",

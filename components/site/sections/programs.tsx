@@ -4,7 +4,7 @@ import type { Locale } from "@/i18n/config";
 import type { SiteProgramCard, SiteSection } from "@/lib/supabase/types";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
-import { SiteImage } from "@/components/site/site-image";
+import { CardImage } from "@/components/site/card-image";
 import { mediaAlt } from "@/lib/site/media-gallery";
 import {
   filterProgramCardsForLocale,
@@ -12,37 +12,6 @@ import {
   programCardHref,
 } from "@/lib/site/program-cards";
 import { cn } from "@/lib/utils";
-
-/** A card image can be a file in /public or an upload in Supabase Storage. */
-function CardFigure({
-  src,
-  alt,
-}: {
-  src: string;
-  alt: string;
-}) {
-  return (
-    <figure className="relative aspect-[4/3] overflow-hidden bg-cream-2">
-      {src.startsWith("http") ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={alt}
-          loading="lazy"
-          className="h-full w-full object-contain sm:object-cover"
-        />
-      ) : (
-        <SiteImage
-          src={src}
-          alt={alt}
-          fill
-          sizes="(max-width: 1024px) 100vw, 33vw"
-          imageClassName="object-contain sm:object-cover"
-        />
-      )}
-    </figure>
-  );
-}
 
 export function Programs({
   dict,
@@ -107,7 +76,11 @@ export function Programs({
                 )}
               >
                 {p.image && (
-                  <CardFigure src={p.image} alt={mediaAlt(p.image, locale) || p.title} />
+                  <CardImage
+                    src={p.image}
+                    alt={mediaAlt(p.image, locale) || p.title}
+                    className="aspect-[4/3]"
+                  />
                 )}
                 <div className="flex flex-1 flex-col p-6">
                   {p.badge && (

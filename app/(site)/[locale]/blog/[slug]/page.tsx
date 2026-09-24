@@ -8,6 +8,7 @@ import { getPostBySlug, getAllPublishedSlugs, getPublishedPosts } from "@/lib/bl
 import { Container } from "@/components/ui/container";
 import { Markdown } from "@/components/site/markdown";
 import { BlogCard } from "@/components/site/blog-card";
+import { CardImage } from "@/components/site/card-image";
 import { JsonLd } from "@/components/seo/json-ld";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
@@ -112,11 +113,11 @@ export default async function BlogPostPage({
 
       {post.cover_image && (
         <Container className="mt-10 max-w-4xl">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <CardImage
             src={post.cover_image}
             alt={post.title}
-            className="aspect-[16/9] w-full rounded-3xl object-cover"
+            className="aspect-[16/9] rounded-3xl"
+            sizes="(max-width: 896px) 100vw, 896px"
           />
         </Container>
       )}

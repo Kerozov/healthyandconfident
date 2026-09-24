@@ -468,6 +468,8 @@ export function WebsiteManager({
                 </Field>
                 <ImageUploadField
                   label="Снимка"
+                  hint="Снимката не се реже — показва се цялата. Най-добре изглежда хоризонтална 4:3 (1200×900 px); при друг формат празното място се запълва с размазан фон."
+                  previewFrame="aspect-[4/3]"
                   value={productForm.image_url}
                   onChange={(url) => setProductForm({ ...productForm, image_url: url })}
                   folder="products"
@@ -774,6 +776,8 @@ export function WebsiteManager({
                 </Field>
                 <ImageUploadField
                   label="Снимка"
+                  hint="Снимката не се реже — показва се цялата. Най-добре изглежда хоризонтална 16:10 (1600×1000 px); при друг формат празното място се запълва с размазан фон."
+                  previewFrame="aspect-[16/10]"
                   value={eventForm.image_url}
                   onChange={(url) => setEventForm({ ...eventForm, image_url: url })}
                   folder="events"

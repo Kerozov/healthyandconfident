@@ -4,19 +4,7 @@ import type { Locale } from "@/i18n/config";
 import type { SiteGuide } from "@/lib/supabase/types";
 import { guideButtonHref } from "@/lib/site/share-links";
 import { externalLinkProps, leavesSite } from "@/lib/site/external-link";
-
-function GuideCardImage({ src, alt }: { src: string; alt: string }) {
-  return (
-    <div className="relative aspect-[4/3] overflow-hidden bg-cream-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02] sm:object-cover"
-      />
-    </div>
-  );
-}
+import { CardImage } from "@/components/site/card-image";
 
 export function GuidesGrid({
   guides,
@@ -51,7 +39,12 @@ export function GuidesGrid({
             className="group flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border border-forest-100 bg-white text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-soft"
           >
             {guide.image_url ? (
-              <GuideCardImage src={guide.image_url} alt={title} />
+              <CardImage
+                src={guide.image_url}
+                alt={title}
+                className="aspect-[4/3]"
+                imageClassName="transition-transform duration-500 group-hover:scale-[1.02]"
+              />
             ) : (
               <div className="flex min-h-[168px] items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90 sm:min-h-[200px]">
                 PDF

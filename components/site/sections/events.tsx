@@ -5,6 +5,7 @@ import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { EventOfferSlot } from "@/components/site/cta-offer-slot";
+import { CardImage } from "@/components/site/card-image";
 import { externalLinkProps } from "@/lib/site/external-link";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -76,20 +77,18 @@ export function EventsSection({
                   {...externalLinkProps(url)}
                   className="group flex flex-1 flex-col"
                 >
-                <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">
-                  {event.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={event.image_url}
-                      alt={eventTitle}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90">
-                      {dict.events.eyebrow}
-                    </div>
-                  )}
-                </div>
+                {event.image_url ? (
+                  <CardImage
+                    src={event.image_url}
+                    alt={eventTitle}
+                    className="aspect-[16/10]"
+                    imageClassName="transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex aspect-[16/10] w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-xl text-white/90">
+                    {dict.events.eyebrow}
+                  </div>
+                )}
                 <div className="flex flex-1 flex-col p-6">
                   {event.event_date && (
                     <p className="text-xs font-medium uppercase tracking-wider text-forest-500">

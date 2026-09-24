@@ -218,7 +218,8 @@ export function PostEditor({ post }: { post?: BlogPost }) {
           <Card title="Media & taxonomy">
             <ImageUploadField
               label="Корица"
-              hint="JPEG, PNG, WebP — до 5 MB"
+              hint="JPEG, PNG, WebP — до 5 MB. Снимката не се реже; най-добре изглежда хоризонтална 16:10 (1600×1000 px)."
+              previewFrame="aspect-[16/10]"
               value={form.cover_image}
               onChange={(url) => set("cover_image", url)}
               folder="blog"

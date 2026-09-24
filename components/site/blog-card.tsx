@@ -3,6 +3,7 @@ import { ArrowUpRight, Clock } from "lucide-react";
 import type { BlogPost } from "@/lib/supabase/types";
 import type { Locale } from "@/i18n/config";
 import { formatDate } from "@/lib/utils";
+import { CardImage } from "@/components/site/card-image";
 
 export function BlogCard({
   post,
@@ -20,20 +21,18 @@ export function BlogCard({
       href={`/${locale}/blog/${post.slug}`}
       className="group flex flex-col overflow-hidden rounded-3xl border border-ink/10 bg-bg-card transition-all hover:-translate-y-1 hover:shadow-soft"
     >
-      <div className="relative aspect-[16/10] overflow-hidden bg-forest-100">
-        {post.cover_image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.cover_image}
-            alt={post.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-2xl text-cream/90">
-            Healthy &amp; Confident
-          </div>
-        )}
-      </div>
+      {post.cover_image ? (
+        <CardImage
+          src={post.cover_image}
+          alt={post.title}
+          className="aspect-[16/10]"
+          imageClassName="transition-transform duration-500 group-hover:scale-[1.03]"
+        />
+      ) : (
+        <div className="flex aspect-[16/10] w-full items-center justify-center bg-gradient-to-br from-forest-400 to-forest-600 font-display text-2xl text-cream/90">
+          Healthy &amp; Confident
+        </div>
+      )}
       <div className="flex flex-1 flex-col p-6">
         <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft/70">
           {post.tags.slice(0, 2).map((t) => (

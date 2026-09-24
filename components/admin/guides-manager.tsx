@@ -246,6 +246,8 @@ export function GuidesManagerPanel({
             </Field>
             <ImageUploadField
               label="Корица"
+              hint="Снимката не се реже — показва се цялата. Най-добре изглежда хоризонтална 4:3 (1200×900 px); при друг формат празното място се запълва с размазан фон."
+              previewFrame="aspect-[4/3]"
               value={form.image_url}
               onChange={(url) => setForm({ ...form, image_url: url })}
               folder="guides"
