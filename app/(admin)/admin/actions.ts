@@ -3833,25 +3833,31 @@ async function reserveFormSlug(
 ): Promise<string> {
   const supabase = getAdminClient();
   const base = desired || "form";
+  const candidates = Array.from({ length: 50 }, (_, i) =>
+    i === 0 ? base : `${base}-${i + 1}`,
+  );
 
-  for (let i = 0; i < 50; i++) {
-    const candidate = i === 0 ? base : `${base}-${i + 1}`;
-    const [{ data: live }, { data: retired }] = await Promise.all([
-      supabase.from("form_templates").select("id").eq("slug", candidate).maybeSingle(),
-      supabase
-        .from("form_template_slugs")
-        .select("form_id")
-        .eq("slug", candidate)
-        .maybeSingle(),
-    ]);
-    const liveId = (live as { id: string } | null)?.id;
-    const retiredId = (retired as { form_id: string } | null)?.form_id;
-    const takenByOther =
-      (liveId && liveId !== excludeFormId) || (retiredId && retiredId !== excludeFormId);
-    if (!takenByOther) return candidate;
+  // Every candidate in one request per table — checking them one by one cost
+  // two round trips for each form already made from the same preset.
+  const [{ data: live }, { data: retired }] = await Promise.all([
+    supabase.from("form_templates").select("id, slug").in("slug", candidates),
+    supabase
+      .from("form_template_slugs")
+      .select("form_id, slug")
+      .in("slug", candidates),
+  ]);
+  const taken = new Set<string>();
+  for (const row of (live as { id: string; slug: string }[] | null) ?? []) {
+    if (row.id !== excludeFormId) taken.add(row.slug);
+  }
+  for (const row of (retired as { form_id: string; slug: string }[] | null) ?? []) {
+    if (row.form_id !== excludeFormId) taken.add(row.slug);
   }
 
-  return `${base}-${Date.now().toString(36)}`;
+  return (
+    candidates.find((candidate) => !taken.has(candidate)) ??
+    `${base}-${Date.now().toString(36)}`
+  );
 }
 
 /** Keeps a slug pointing at its form after a rename. Best effort — never fatal. */

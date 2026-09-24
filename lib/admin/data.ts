@@ -75,6 +75,16 @@ export async function getSegments(): Promise<Segment[]> {
 /** All unique tags currently assigned to subscribers (for tag-based targeting). */
 export async function getSubscriberTags(): Promise<string[]> {
   const supabase = getAdminClient();
+
+  // Collected in SQL: paging every subscriber's tags through PostgREST cost one
+  // round trip per 1000 subscribers on every render of the forms and campaigns
+  // pages. Falls back to paging while the function is not deployed yet.
+  const { data, error } = await supabase.rpc("subscriber_tags");
+  if (!error && Array.isArray(data)) return data;
+  if (error) {
+    console.warn("[subscribers] subscriber_tags unavailable, paging instead:", error.message);
+  }
+
   // Paged: a single response stops at 1000 rows, which used to hide every tag
   // that only newer subscribers carry.
   const rows = await fetchAllRows<{ tags: string[] }>(

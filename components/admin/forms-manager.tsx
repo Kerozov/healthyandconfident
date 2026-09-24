@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   Plus,
   Pencil,
@@ -120,7 +119,6 @@ export function FormsManager({
   groups: SegmentGroup[];
   subscriberTags: string[];
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [tab, setTab] = useState<EditorTab>("content");
@@ -203,7 +201,6 @@ export function FormsManager({
         attachment_filename: "",
         enabled: true,
       });
-      router.refresh();
     });
   }
 
@@ -266,11 +263,9 @@ export function FormsManager({
           `Запазено. Публичният адрес е /bg/forms/${res.slug} — това е линкът за споделяне.`,
         );
         setEditingId(res.id ?? editingId);
-        router.refresh();
         return;
       }
       closeEditor();
-      router.refresh();
     });
   }
 
@@ -278,7 +273,6 @@ export function FormsManager({
     startTransition(async () => {
       const res = await setFormEnabled(id, next);
       if (!res.ok) setError(res.message || "Failed");
-      router.refresh();
     });
   }
 
@@ -289,9 +283,7 @@ export function FormsManager({
       const res = await deleteFormTemplate(id);
       if (!res.ok) {
         setError(res.message || "Формата не може да бъде изтрита.");
-        return;
       }
-      router.refresh();
     });
   }
 
@@ -319,7 +311,6 @@ export function FormsManager({
     startTransition(async () => {
       const res = await sendFormByEmail({ formId, audience: sendAudience });
       setSendNote(res.message ?? (res.ok ? "Изпратено." : "Грешка."));
-      router.refresh();
     });
   }
 

@@ -144,6 +144,11 @@ export type Database = {
         Args: { p_campaign_id: string };
         Returns: number;
       };
+      /** Migration 075 — distinct tags of subscribed subscribers, in one call. */
+      subscriber_tags: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
