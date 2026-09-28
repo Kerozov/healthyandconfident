@@ -9,6 +9,8 @@ import {
 } from "@/lib/site/health-tags";
 import { applyEnglishRecipientTag } from "@/i18n/subscriber-locale";
 import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
+import { allowedSignupTags, sanitizeSignupSource } from "@/lib/site/signup-tags";
+import { createRateLimiter, requestIp } from "@/lib/util/rate-limit";
 import type { Locale } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,12 @@ export const maxDuration = 60;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEALTH_TAG_SET = new Set<string>(ALL_HEALTH_TAG_KEYS);
+const rateLimited = createRateLimiter(10, 60_000);
+
+function field(value: unknown, max: number): string | null {
+  if (typeof value !== "string") return null;
+  return value.trim().slice(0, max) || null;
+}
 
 function resolveHealthSegment(
   interest: string | null | undefined,
@@ -54,6 +62,10 @@ function buildFinalTags(
 }
 
 export async function POST(req: Request) {
+  if (rateLimited(requestIp(req))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   let body: {
     email?: string;
     name?: string;
@@ -73,8 +85,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const email = (body.email || "").trim().toLowerCase();
-  if (!EMAIL_RE.test(email)) {
+  const email = (typeof body.email === "string" ? body.email : "").trim().toLowerCase();
+  if (email.length > 254 || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
@@ -83,28 +95,37 @@ export async function POST(req: Request) {
   }
 
   const locale = body.locale === "en" ? "en" : "bg";
-  const source = body.source || "popup";
+  const source = sanitizeSignupSource(body.source);
   const mailLocale: Locale = locale;
-  const rawTags = Array.isArray(body.tags)
-    ? body.tags.filter((t) => typeof t === "string" && t.length > 0)
-    : [];
-  const healthSegment = resolveHealthSegment(body.interest, rawTags);
-  const incomingOther = rawTags.filter((t) => !HEALTH_TAG_SET.has(t));
 
-  const firstName = body.first_name?.trim() || null;
-  const lastName = body.last_name?.trim() || null;
+  const firstName = field(body.first_name, 100);
+  const lastName = field(body.last_name, 100);
   const name =
-    body.name?.trim() ||
+    field(body.name, 200) ||
     fullNameFromParts(firstName ?? "", lastName ?? "") ||
     null;
-  const facebookUrl = body.facebook_url?.trim() || null;
+  const facebookUrl = field(body.facebook_url, 300);
+  const phone = field(body.phone, 40);
 
   try {
+    const allowedTags = await allowedSignupTags();
+    const rawTags = Array.isArray(body.tags)
+      ? body.tags.filter(
+          (t): t is string => typeof t === "string" && allowedTags.has(t),
+        )
+      : [];
+    const interest =
+      typeof body.interest === "string" && HEALTH_TAG_SET.has(body.interest)
+        ? body.interest
+        : null;
+    const healthSegment = resolveHealthSegment(interest, rawTags);
+    const incomingOther = rawTags.filter((t) => !HEALTH_TAG_SET.has(t));
+
     const supabase = getAdminClient();
 
     const { data: existing } = await supabase
       .from("subscribers")
-      .select("id, tags")
+      .select("id, tags, name, first_name, last_name, facebook_url, phone")
       .eq("email", email)
       .maybeSingle();
 
@@ -118,12 +139,22 @@ export async function POST(req: Request) {
     );
     const tagsWithLocale = applyEnglishRecipientTag(finalTags, mailLocale);
 
+    // Anyone can post any address here, so an existing profile is only filled
+    // in, never overwritten — a stranger must not be able to rename someone
+    // or swap their phone number.
+    const current = (existing ?? {}) as {
+      name?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      facebook_url?: string | null;
+      phone?: string | null;
+    };
     const profilePatch = {
-      ...(firstName ? { first_name: firstName } : {}),
-      ...(lastName ? { last_name: lastName } : {}),
-      ...(name ? { name } : {}),
-      ...(facebookUrl ? { facebook_url: facebookUrl } : {}),
-      ...(body.phone?.trim() ? { phone: body.phone.trim() } : {}),
+      ...(firstName && !current.first_name ? { first_name: firstName } : {}),
+      ...(lastName && !current.last_name ? { last_name: lastName } : {}),
+      ...(name && !current.name ? { name } : {}),
+      ...(facebookUrl && !current.facebook_url ? { facebook_url: facebookUrl } : {}),
+      ...(phone && !current.phone ? { phone } : {}),
     };
 
     if (existing) {
@@ -146,7 +177,7 @@ export async function POST(req: Request) {
           first_name: firstName,
           last_name: lastName,
           facebook_url: facebookUrl,
-          phone: body.phone?.trim() || null,
+          phone,
           locale,
           source,
           tags: tagsWithLocale,
@@ -167,7 +198,7 @@ export async function POST(req: Request) {
         subscriberId = (raced as { id: string } | null)?.id;
         if (!subscriberId) {
           console.error("[subscribe] insert failed:", insertError.message);
-          return NextResponse.json({ error: insertError.message }, { status: 500 });
+          return NextResponse.json({ error: "Failed" }, { status: 500 });
         }
       } else {
         subscriberId = (inserted as { id: string } | null)?.id;
@@ -187,12 +218,13 @@ export async function POST(req: Request) {
 
     // Await automations so the worker is actually called before the serverless
     // function ends. `after()` alone was dropping sends on Vercel.
-    let automationReport;
     try {
-      automationReport = await runAutomations({
+      const report = await runAutomations({
         email,
-        name,
-        phone: body.phone?.trim() || null,
+        // The stored profile wins: a stranger's post must not put their words
+        // in the greeting of someone else's welcome email.
+        name: current.name || name,
+        phone: current.phone || phone,
         locale: mailLocale,
         subscriberId: subscriberId ?? null,
         tags: tagsWithLocale,
@@ -200,19 +232,13 @@ export async function POST(req: Request) {
         isNew,
         source,
       });
+      if (report.errors.length > 0) {
+        console.warn(
+          `[subscribe] ${source} ${email}: automations ${report.errors.join(", ")}`,
+        );
+      }
     } catch (err) {
       console.error("[subscribe] automations:", err);
-      automationReport = {
-        workerConfigured: false,
-        unsubscribed: false,
-        triggerEvents: [],
-        rulesLoaded: 0,
-        matchedEmail: 0,
-        prepared: 0,
-        submitted: 0,
-        skipped: [],
-        errors: [err instanceof Error ? err.message : "automation_failed"],
-      };
     }
 
     if (subscriberId) {
@@ -229,16 +255,11 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({
-      ok: true,
-      tags: tagsWithLocale,
-      interest: healthSegment,
-      automation: automationReport,
-    });
+    // Nothing about the list goes back to an anonymous caller — the automation
+    // report named internal rules and why each one was skipped.
+    return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed" },
-      { status: 500 },
-    );
+    console.error("[subscribe]", err instanceof Error ? err.message : err);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

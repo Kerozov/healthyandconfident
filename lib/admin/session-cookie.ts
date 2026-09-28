@@ -4,6 +4,12 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 
+/**
+ * Session subject for the owner when the admin_users table could not be read
+ * at login. Resolved back to the real owner row on every request.
+ */
+export const VIRTUAL_OWNER_SESSION_ID = "owner";
+
 type SessionPayload = {
   u: string;
   iat: number;

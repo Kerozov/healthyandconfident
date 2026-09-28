@@ -18,6 +18,20 @@ export type FulfillPurchaseInput = {
   currency?: string | null;
 };
 
+/** Webhooks arrive out of order and repeat; the later stage of an order wins. */
+const STATUS_RANK: Record<PurchasePaymentStatus, number> = {
+  failed: 0,
+  paid: 1,
+  refunded: 2,
+};
+
+function strongerStatus(
+  current: PurchasePaymentStatus,
+  incoming: PurchasePaymentStatus,
+): PurchasePaymentStatus {
+  return (STATUS_RANK[current] ?? 0) >= STATUS_RANK[incoming] ? current : incoming;
+}
+
 function mergeTags(...groups: string[][]): string[] {
   return Array.from(new Set(groups.flat().filter(Boolean)));
 }
@@ -43,44 +57,68 @@ async function upsertPurchaseRow(input: {
     amount_cents: input.item.amountCents,
     order_total_cents: input.orderTotalCents,
     currency: input.item.currency,
-    purchased_at: new Date().toISOString(),
   };
 
-  const { data: existing } = await supabase
-    .from("subscriber_purchases")
-    .select("id")
-    .eq("stripe_session_id", input.stripeSessionId)
-    .eq("stripe_product_id", input.item.stripeProductId)
-    .maybeSingle();
+  const loadExisting = async () => {
+    const { data } = await supabase
+      .from("subscriber_purchases")
+      .select("id, payment_status")
+      .eq("stripe_session_id", input.stripeSessionId)
+      .eq("stripe_product_id", input.item.stripeProductId)
+      .maybeSingle();
+    return data as { id: string; payment_status: PurchasePaymentStatus } | null;
+  };
 
-  if (existing) {
+  // A re-delivered webhook must not move the order: `purchased_at` stays the
+  // first time we saw it (reports bucket revenue by it), and a refund is never
+  // turned back into a sale by a late `checkout.session.completed` retry.
+  const updateExisting = async (existing: { id: string; payment_status: PurchasePaymentStatus }) => {
+    const patch = {
+      ...row,
+      payment_status: strongerStatus(existing.payment_status, input.paymentStatus),
+    };
     const { error } = await supabase
       .from("subscriber_purchases")
-      .update(row)
-      .eq("id", (existing as { id: string }).id);
+      .update(patch)
+      .eq("id", existing.id);
     if (error) {
       throw new Error(`[purchase] update failed: ${error.message}`);
     }
+  };
+
+  const existing = await loadExisting();
+  if (existing) {
+    await updateExisting(existing);
     return;
   }
 
-  const { error } = await supabase.from("subscriber_purchases").insert(row);
+  const { error } = await supabase
+    .from("subscriber_purchases")
+    .insert({ ...row, purchased_at: new Date().toISOString() });
   if (!error) return;
 
   if (error.code === "23505") {
     // Concurrent webhook — update the row that won the insert race.
-    const { error: raceError } = await supabase
-      .from("subscriber_purchases")
-      .update(row)
-      .eq("stripe_session_id", input.stripeSessionId)
-      .eq("stripe_product_id", input.item.stripeProductId);
-    if (raceError) {
-      throw new Error(`[purchase] race update failed: ${raceError.message}`);
+    const raced = await loadExisting();
+    if (!raced) {
+      throw new Error("[purchase] race: duplicate reported but row missing");
     }
+    await updateExisting(raced);
     return;
   }
 
   throw new Error(`[purchase] insert failed: ${error.message}`);
+}
+
+/** Whether Stripe already refunded this checkout — its purchase rows say so. */
+async function sessionWasRefunded(stripeSessionId: string): Promise<boolean> {
+  const { data } = await getAdminClient()
+    .from("subscriber_purchases")
+    .select("id")
+    .eq("stripe_session_id", stripeSessionId)
+    .eq("payment_status", "refunded")
+    .limit(1);
+  return (data ?? []).length > 0;
 }
 
 /** Record purchase, apply purchase segments, run purchase automations. */
@@ -129,6 +167,13 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
       console.error(err instanceof Error ? err.message : err);
       return { ok: false, productIds, guideIds, tags: [] };
     }
+    return { ok: true, productIds, guideIds, tags: [] };
+  }
+
+  // A retry of the paid event that lands after the refund: no tags, no
+  // "thank you for your purchase" automations for money already returned.
+  if (await sessionWasRefunded(input.stripeSessionId)) {
+    console.info(`[purchase] skip fulfil — session ${input.stripeSessionId} was refunded`);
     return { ok: true, productIds, guideIds, tags: [] };
   }
 

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { Container } from "@/components/ui/container";
+import { verifyUnsubscribeToken } from "@/lib/email/unsubscribe-token";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -24,19 +25,29 @@ function parseStatus(value: string | string[] | undefined): Status | null {
   return null;
 }
 
+/** `vessie@example.com` → `v•••••@example.com` — enough to recognise, not to harvest. */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  return `${local.slice(0, 1)}${"•".repeat(Math.max(3, local.length - 1))}@${domain}`;
+}
+
 export default async function UnsubscribePage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ status?: string | string[] }>;
+  searchParams: Promise<{ status?: string | string[]; token?: string | string[] }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
   const dict = getDictionary(l);
   const u = dict.unsubscribe;
-  const status = parseStatus((await searchParams).status);
+  const query = await searchParams;
+  const status = parseStatus(query.status);
+  const token = Array.isArray(query.token) ? query.token[0] : query.token;
+  const pending = !status && token ? verifyUnsubscribeToken(token) : null;
 
   const content = (() => {
     switch (status) {
@@ -49,6 +60,16 @@ export default async function UnsubscribePage({
       case "invalid":
         return { title: u.invalidTitle, body: u.invalidBody, tone: "warn" as const };
       default:
+        if (token && !pending) {
+          return { title: u.invalidTitle, body: u.invalidBody, tone: "warn" as const };
+        }
+        if (pending) {
+          return {
+            title: u.confirmTitle,
+            body: u.confirmBody.replace("{email}", maskEmail(pending.email)),
+            tone: "neutral" as const,
+          };
+        }
         return { title: u.title, body: u.helpBody, tone: "neutral" as const };
     }
   })();
@@ -76,12 +97,30 @@ export default async function UnsubscribePage({
           {(status === "success" || status === "already") && (
             <p className="mt-4 text-sm text-ink-soft">{u.resubscribeHint}</p>
           )}
-          <Link
-            href={`/${l}`}
-            className="mt-8 inline-flex rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-forest-700"
-          >
-            {u.backHome}
-          </Link>
+          {pending && token ? (
+            <form method="post" action="/api/unsubscribe" className="mt-8">
+              <input type="hidden" name="token" value={token} />
+              <input type="hidden" name="locale" value={l} />
+              <button
+                type="submit"
+                className="inline-flex rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-forest-700"
+              >
+                {u.confirmButton}
+              </button>
+              <div className="mt-4">
+                <Link href={`/${l}`} className="text-sm text-ink-soft underline">
+                  {u.backHome}
+                </Link>
+              </div>
+            </form>
+          ) : (
+            <Link
+              href={`/${l}`}
+              className="mt-8 inline-flex rounded-full bg-forest-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-forest-700"
+            >
+              {u.backHome}
+            </Link>
+          )}
         </div>
       </Container>
     </div>

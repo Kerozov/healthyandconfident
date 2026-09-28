@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Download, Upload, Trash2, Tag, UserMinus, UserCheck, X, ChevronDown, ChevronUp, BarChart3, Loader2 } from "lucide-react";
+import { Plus, Download, Upload, Trash2, Tag, UserMinus, UserCheck, X, ChevronUp, BarChart3, Loader2 } from "lucide-react";
 import type { Subscriber, Segment, SegmentGroup } from "@/lib/supabase/types";
 import type { EmailEngagementSummary, EngagementActivityItem, ClickEventItem } from "@/lib/admin/engagement";
 import type { PersonEmailItem } from "@/lib/admin/person-email";

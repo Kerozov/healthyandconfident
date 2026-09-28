@@ -37,10 +37,9 @@ function meetingIdFrom(body: ZoomWebhookBody): string {
  * against the `x-zm-signature` header.
  *
  * Without this check anyone who learned the URL could POST fake
- * `participant_joined` events and mark contacts as having attended. Verification
- * is skipped only when no secret is configured, so an install that never set
- * ZOOM_WEBHOOK_SECRET keeps working exactly as before — it just says so in the
- * logs.
+ * `participant_joined` events and mark contacts as having attended, or flip the
+ * site's "live now" banner on. Production refuses every delivery until
+ * ZOOM_WEBHOOK_SECRET is set; local development still accepts them unverified.
  */
 async function signatureValid(
   req: Request,
@@ -90,9 +89,14 @@ export async function POST(req: Request) {
       console.warn("[zoom/webhook] rejected: bad or missing signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
+  } else if (process.env.NODE_ENV === "production") {
+    console.error(
+      "[zoom/webhook] rejected: ZOOM_WEBHOOK_SECRET is not set — set it in the environment to accept Zoom events.",
+    );
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   } else {
     console.warn(
-      "[zoom/webhook] ZOOM_WEBHOOK_SECRET is not set — events are accepted unverified.",
+      "[zoom/webhook] ZOOM_WEBHOOK_SECRET is not set — events are accepted unverified (development only).",
     );
   }
 

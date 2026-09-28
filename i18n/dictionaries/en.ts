@@ -588,6 +588,9 @@ export const en: Dictionary = {
   unsubscribe: {
     title: "Email unsubscribe",
     helpBody: "Use the “Unsubscribe” link at the bottom of an email you received from us.",
+    confirmTitle: "Unsubscribe?",
+    confirmBody: "{email} will stop receiving marketing emails from Healthy & Confident.",
+    confirmButton: "Yes, unsubscribe me",
     successTitle: "You're unsubscribed",
     successBody:
       "You won't receive marketing emails from Healthy & Confident anymore. You may still get transactional messages when needed (e.g. order confirmations).",

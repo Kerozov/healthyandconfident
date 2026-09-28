@@ -31,7 +31,6 @@ import {
   programVideoPlacementKey,
 } from "@/lib/site/cta-placements";
 import { Container } from "@/components/ui/container";
-import { buttonVariants } from "@/components/ui/button";
 import { CtaLink } from "@/components/site/cta-link";
 import { LeadForm } from "@/components/site/lead-form";
 import { ProgramCountdown } from "@/components/site/program-countdown";

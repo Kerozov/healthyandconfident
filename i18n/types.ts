@@ -242,6 +242,9 @@ export type Dictionary = {
   unsubscribe: {
     title: string;
     helpBody: string;
+    confirmTitle: string;
+    confirmBody: string;
+    confirmButton: string;
     successTitle: string;
     successBody: string;
     alreadyTitle: string;

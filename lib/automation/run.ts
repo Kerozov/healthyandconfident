@@ -289,7 +289,7 @@ async function recordDelivery(input: {
   scheduledFor?: string | null;
 }) {
   const supabase = getAdminClient();
-  await supabase.from("automation_deliveries").upsert(
+  const { error } = await supabase.from("automation_deliveries").upsert(
     {
       automation_id: input.automationId,
       subscriber_id: input.subscriberId ?? null,
@@ -304,6 +304,13 @@ async function recordDelivery(input: {
     },
     { onConflict: "automation_id,email" },
   );
+  if (error) {
+    // A lost row means the "already sent" check misses it next time.
+    console.error(
+      `[automation] record delivery ${input.automationId} ${input.email}:`,
+      error.message,
+    );
+  }
 }
 
 async function scheduleChainedFromParent(
@@ -595,7 +602,18 @@ async function sendAutomationNow(
     includeSignature: automation.signature_enabled !== false,
   });
 
-  const res = await sendEmail({ subject, html, recipients: [email], attachments });
+  // Same key the scheduled path uses: a retried request or a second webhook
+  // racing this one resolves to the job that already exists.
+  const res = await sendEmail({
+    subject,
+    html,
+    recipients: [email],
+    attachments,
+    idempotencyKey: idempotencyKey(automation.id, {
+      email,
+      subscriberId: ctx.subscriberId,
+    }),
+  });
   await recordDelivery({
     automationId: automation.id,
     subscriberId: ctx.subscriberId,
@@ -898,6 +916,9 @@ export async function runAutomations(
                   subject: job.subject,
                   html: job.html,
                   recipients: job.recipients,
+                  // The batch may have reached the worker before it failed —
+                  // the key keeps this fallback from mailing the person twice.
+                  idempotencyKey: job.idempotencyKey,
                   attachments: job.attachments,
                 })
               : await scheduleEmail({

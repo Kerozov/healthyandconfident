@@ -50,7 +50,11 @@ export function verifyUnsubscribeToken(token: string): { email: string } | null 
   }
 
   try {
-    const data = JSON.parse(fromBase64url(payload)) as { e?: string };
+    const data = JSON.parse(fromBase64url(payload)) as Record<string, unknown>;
+    // Click and form-invite tokens share this secret and format, and carry an
+    // `e` too. Only a payload that is exactly `{ e }` is an unsubscribe token —
+    // otherwise every tracked link in an email doubled as an unsubscribe link.
+    if (Object.keys(data).length !== 1) return null;
     if (!data.e || typeof data.e !== "string") return null;
     return { email: data.e.trim().toLowerCase() };
   } catch {

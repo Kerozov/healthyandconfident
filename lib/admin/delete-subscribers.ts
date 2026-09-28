@@ -13,7 +13,7 @@ export type BulkDeleteResult = {
 
 /**
  * Delete subscribers by id in small DB batches.
- * Marks queued mail canceled in DB first (no worker HTTP calls).
+ * Cancels their queued mail in the worker first (bulk calls, not one per job).
  */
 export async function deleteSubscribersByIds(
   ids: string[],
@@ -56,10 +56,10 @@ export async function deleteSubscribersByIds(
   }
 
   try {
-    const { markScheduledMailCanceledForEmails } = await import(
+    const { cancelScheduledMailForEmails } = await import(
       "@/lib/automation/cancel"
     );
-    await markScheduledMailCanceledForEmails(
+    await cancelScheduledMailForEmails(
       subscribers.map((row) => row.email),
     );
   } catch (err) {

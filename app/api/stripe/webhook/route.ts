@@ -249,24 +249,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  if (event.type === "payment_intent.succeeded") {
-    const intent = event.data.object as Stripe.PaymentIntent;
-    const sessionId =
-      typeof intent.metadata?.checkout_session_id === "string"
-        ? intent.metadata.checkout_session_id
-        : null;
-    if (sessionId) {
-      const stripe = getStripe();
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      if (isSessionPaid(session)) {
-        const result = await handlePaidSession(session);
-        if (!result.ok) {
-          return NextResponse.json(result, { status: 500 });
-        }
-        return NextResponse.json(result);
-      }
-    }
-  }
-
   return NextResponse.json({ received: true });
 }

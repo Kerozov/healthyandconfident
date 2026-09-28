@@ -11,7 +11,10 @@ import {
   type AdminScreenKey,
 } from "@/lib/admin/screens";
 import { safeEqualSecret, verifyPassword } from "@/lib/admin/passwords";
-import { verifyAdminSessionToken } from "@/lib/admin/session-cookie";
+import {
+  VIRTUAL_OWNER_SESSION_ID,
+  verifyAdminSessionToken,
+} from "@/lib/admin/session-cookie";
 import { logAdminChange, type AdminAuditInput } from "@/lib/admin/audit";
 import { normalizeUsername } from "@/lib/admin/usernames";
 import type { AdminActorPublic } from "@/lib/admin/actor-types";
@@ -241,23 +244,26 @@ async function markLogin(user: AdminUser): Promise<void> {
 }
 
 export const getAdminSession = cache(async (): Promise<AdminSession | null> => {
-  const secret = adminSecret();
-  if (!secret) return null;
+  // Sessions are signed with ADMIN_SECRET; without it none can be valid.
+  if (!adminSecret()) return null;
 
   const cookieStore = await cookies();
   const raw = cookieStore.get(ADMIN_COOKIE)?.value;
   if (!raw) return null;
 
-  if (safeEqualSecret(raw, secret)) {
+  // The cookie is always a signed token. It used to be the raw ADMIN_SECRET
+  // when the owner row was unavailable, which left the master password sitting
+  // in the browser for 30 days.
+  const parsed = verifyAdminSessionToken(raw);
+  if (!parsed) return null;
+
+  if (parsed.userId === VIRTUAL_OWNER_SESSION_ID) {
     const owner = await ensureOwnerRow();
     if (!owner) return virtualOwnerSession();
     if (!owner.active) return null;
     void touchLastSeen(owner);
     return toSession(owner);
   }
-
-  const parsed = verifyAdminSessionToken(raw);
-  if (!parsed) return null;
 
   const user = await loadUserById(parsed.userId);
   if (!user || !user.active) return null;

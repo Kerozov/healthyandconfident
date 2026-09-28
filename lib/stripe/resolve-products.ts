@@ -144,7 +144,6 @@ function lineFromProducts(
   for (const id of productIds) {
     const product = byId.get(id);
     if (!product) continue;
-    const bgPrice = product.stripe_price_id?.trim() || "";
     const enPrice = product.stripe_price_id_en?.trim() || "";
     const stripePriceId = pickPaidPriceId(product, byPrice, localeHint);
     const stripeProductId =

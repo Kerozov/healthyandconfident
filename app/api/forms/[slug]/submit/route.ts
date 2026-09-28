@@ -12,9 +12,12 @@ import {
 } from "@/lib/forms/answer-tags";
 import type { FormField } from "@/lib/forms/types";
 import { runAutomations } from "@/lib/automation/run";
+import { createRateLimiter, requestIp } from "@/lib/util/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+const rateLimited = createRateLimiter(10, 60_000);
 
 function formError(locale: string, key: "required" | "invalid" | "already" | "notFound" | "json" | "email"): string {
   const en = locale === "en";
@@ -82,6 +85,10 @@ export async function POST(
   context: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await context.params;
+
+  if (rateLimited(requestIp(request))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   let body: {
     answers?: Record<string, unknown>;
@@ -177,7 +184,11 @@ export async function POST(
   });
 
   if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+    console.error(`[form-submit] ${form.slug} insert failed:`, insertError.message);
+    return NextResponse.json(
+      { error: locale === "en" ? "Something went wrong. Please try again." : "Нещо се обърка. Опитай отново." },
+      { status: 500 },
+    );
   }
 
   if (invitationId) {

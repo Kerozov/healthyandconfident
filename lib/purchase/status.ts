@@ -10,15 +10,16 @@ export async function updatePurchaseStatusBySession(
   paymentStatus: PurchasePaymentStatus,
   lineItems?: ResolvedLineItem[],
 ): Promise<number> {
+  // `purchased_at` is left alone: a refund used to overwrite it with "now",
+  // which moved the order into the refund's reporting period.
   const supabase = getAdminClient();
-  const now = new Date().toISOString();
 
   if (lineItems && lineItems.length > 0) {
     let updated = 0;
     for (const item of lineItems) {
       const { data, error } = await supabase
         .from("subscriber_purchases")
-        .update({ payment_status: paymentStatus, purchased_at: now })
+        .update({ payment_status: paymentStatus })
         .eq("stripe_session_id", stripeSessionId)
         .eq("stripe_product_id", item.stripeProductId)
         .select("id");
@@ -34,7 +35,7 @@ export async function updatePurchaseStatusBySession(
 
   const { data, error } = await supabase
     .from("subscriber_purchases")
-    .update({ payment_status: paymentStatus, purchased_at: now })
+    .update({ payment_status: paymentStatus })
     .eq("stripe_session_id", stripeSessionId)
     .select("id");
 

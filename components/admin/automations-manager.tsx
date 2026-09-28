@@ -49,7 +49,7 @@ import { AutomationReportPanel } from "@/components/admin/automation-report-pane
 import type { AutomationReport } from "@/lib/admin/automation-report";
 import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
 import { AutomationFlowView, flattenAutomationsForDisplay, TRIGGER_SECTION_LABELS } from "@/components/admin/automation-flow";
-import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
+import { Field, Input, Select, Card } from "@/components/admin/fields";
 import { SmsComposeFields } from "@/components/admin/sms-compose-fields";
 import { buildSmsBody, checkSmsCompose, splitMessageAndLink } from "@/lib/sms/compose-validation";
 import { TabList } from "@/components/admin/ui";

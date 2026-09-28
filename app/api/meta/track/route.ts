@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sendMetaEvent } from "@/lib/meta/capi";
 import { fbcFromClickId, metaUserFromRequest } from "@/lib/meta/request";
 import type { MetaEventName, MetaTrackRequest } from "@/lib/meta/types";
+import { createRateLimiter } from "@/lib/util/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -16,25 +17,7 @@ const ALLOWED: ReadonlySet<MetaEventName> = new Set<MetaEventName>([
   "Contact",
 ]);
 
-const RATE_LIMIT = 40;
-const RATE_WINDOW_MS = 60_000;
-const buckets = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimited(key: string): boolean {
-  const now = Date.now();
-  const bucket = buckets.get(key);
-
-  if (!bucket || bucket.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    if (buckets.size > 5000) {
-      for (const [k, v] of buckets) if (v.resetAt <= now) buckets.delete(k);
-    }
-    return false;
-  }
-
-  bucket.count += 1;
-  return bucket.count > RATE_LIMIT;
-}
+const rateLimited = createRateLimiter(40, 60_000);
 
 function safeNumber(value: unknown): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return undefined;

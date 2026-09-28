@@ -3,7 +3,13 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { subscriberMatchesAutomationAudience } from "@/lib/automation/audience";
-import { cancelEmailJob } from "@/lib/worker/email";
+import {
+  cancelEmailJob,
+  cancelEmailJobsBulk,
+  removeEmailJobRecipients,
+} from "@/lib/worker/email";
+import { fetchAllRows } from "@/lib/admin/stats-shared";
+import { chunkArray } from "@/lib/utils";
 import { cancelSmsJob } from "@/lib/worker/sms";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 
@@ -160,56 +166,20 @@ export async function cancelIneligibleAutomationDeliveriesForSubscriber(
   return { canceled, checked: rows.length, failed };
 }
 
-const EMAIL_BATCH = 150;
+const EMAIL_BATCH = 100;
+
+type ScheduledRow = { id: string; worker_job_id: string | null };
 
 /**
- * Fast path for bulk delete — mark queued deliveries canceled in the DB only.
- * Avoids per-job worker HTTP calls that can time out when deleting hundreds of rows.
+ * Everything still queued for many addresses at once — bulk subscriber delete.
+ *
+ * It used to only flip the rows to `canceled` in our tables to stay fast, but
+ * the worker kept the jobs and still sent them: deleted people went on getting
+ * the drip and any scheduled campaign. Now the worker is told, in bulk:
+ * automation and reminder jobs through the batch cancel endpoint (200 per
+ * call), campaigns by taking these addresses out of the shared campaign job.
  */
-export async function markScheduledMailCanceledForEmails(
-  emails: string[],
-): Promise<void> {
-  const normalized = [
-    ...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean)),
-  ];
-  if (normalized.length === 0) return;
-
-  const supabase = getAdminClient();
-
-  for (let i = 0; i < normalized.length; i += EMAIL_BATCH) {
-    const batch = normalized.slice(i, i + EMAIL_BATCH);
-
-    const { data: contactRows } = await supabase
-      .from("contacts")
-      .select("id")
-      .in("email", batch);
-    const contactIds =
-      (contactRows as { id: string }[] | null)?.map((row) => row.id) ?? [];
-
-    await Promise.all([
-      supabase
-        .from("automation_deliveries")
-        .update({ status: "canceled" })
-        .in("email", batch)
-        .eq("status", "scheduled"),
-      supabase
-        .from("campaign_deliveries")
-        .update({ status: "canceled" })
-        .in("email", batch)
-        .eq("status", "scheduled"),
-      contactIds.length > 0
-        ? supabase
-            .from("contact_worker_jobs")
-            .update({ status: "canceled" })
-            .in("contact_id", contactIds)
-            .eq("status", "pending")
-        : Promise.resolve({ error: null }),
-    ]);
-  }
-}
-
-/** Bulk cancel queued mail before deleting many subscribers at once. */
-export async function cancelAllScheduledMailForSubscribers(
+export async function cancelScheduledMailForEmails(
   emails: string[],
 ): Promise<{ failed: number }> {
   const normalized = [
@@ -217,71 +187,115 @@ export async function cancelAllScheduledMailForSubscribers(
   ];
   if (normalized.length === 0) return { failed: 0 };
 
-  if (normalized.length > 5) {
-    await markScheduledMailCanceledForEmails(normalized);
-    return { failed: 0 };
-  }
-
-  let failed = 0;
   const supabase = getAdminClient();
+  const workerOn = isNotificationWorkerConfigured();
+  let failed = 0;
 
   for (let i = 0; i < normalized.length; i += EMAIL_BATCH) {
     const batch = normalized.slice(i, i + EMAIL_BATCH);
 
-    const [{ data: autoRows }, { data: campRows }, { data: contactRows }] =
-      await Promise.all([
+    const [autoRows, campRows, contactRows] = await Promise.all([
+      fetchAllRows<ScheduledRow & { channel: string }>((from, to) =>
         supabase
           .from("automation_deliveries")
           .select("id, worker_job_id, channel")
           .in("email", batch)
-          .eq("status", "scheduled"),
+          .eq("status", "scheduled")
+          .order("id")
+          .range(from, to),
+      ),
+      fetchAllRows<ScheduledRow & { email: string }>((from, to) =>
         supabase
           .from("campaign_deliveries")
-          .select("id, worker_job_id")
+          .select("id, email, worker_job_id")
           .in("email", batch)
-          .eq("status", "scheduled"),
-        supabase.from("contacts").select("id").in("email", batch),
+          .eq("status", "scheduled")
+          .order("id")
+          .range(from, to),
+      ),
+      fetchAllRows<{ id: string }>((from, to) =>
+        supabase.from("contacts").select("id").in("email", batch).order("id").range(from, to),
+      ),
+    ]);
+
+    const contactIds = contactRows.map((row) => row.id);
+    const reminderRows =
+      contactIds.length > 0
+        ? await fetchAllRows<ScheduledRow>((from, to) =>
+            supabase
+              .from("contact_worker_jobs")
+              .select("id, worker_job_id")
+              .in("contact_id", contactIds)
+              .eq("status", "pending")
+              .order("id")
+              .range(from, to),
+          )
+        : [];
+
+    const autoCanceled: string[] = [];
+    const campCanceled: string[] = [];
+    const reminderCanceled: string[] = [];
+
+    if (!workerOn) {
+      autoCanceled.push(...autoRows.map((r) => r.id));
+      campCanceled.push(...campRows.map((r) => r.id));
+      reminderCanceled.push(...reminderRows.map((r) => r.id));
+    } else {
+      // Per-person email jobs (automations + payment reminders): one bulk call.
+      const emailAuto = autoRows.filter((r) => r.channel !== "sms");
+      const bulk = await cancelEmailJobsBulk([
+        ...emailAuto.map((r) => r.worker_job_id ?? ""),
+        ...reminderRows.map((r) => r.worker_job_id ?? ""),
       ]);
+      failed += bulk.failed.size;
+      const stopped = (row: ScheduledRow) =>
+        !row.worker_job_id || bulk.canceled.has(row.worker_job_id);
+      autoCanceled.push(...emailAuto.filter(stopped).map((r) => r.id));
+      reminderCanceled.push(...reminderRows.filter(stopped).map((r) => r.id));
 
-    const auto =
-      (autoRows as { id: string; worker_job_id: string | null; channel: string }[] | null) ??
-      [];
-    const camp =
-      (campRows as { id: string; worker_job_id: string | null }[] | null) ?? [];
-
-    for (const row of auto) {
-      const ok = await cancelWorkerJob(row.worker_job_id, row.channel);
-      if (!ok) failed += 1;
-    }
-    for (const row of camp) {
-      const ok = await cancelWorkerJob(row.worker_job_id, "email");
-      if (!ok) failed += 1;
-    }
-
-    if (auto.length > 0) {
-      await supabase
-        .from("automation_deliveries")
-        .update({ status: "canceled" })
-        .in("email", batch)
-        .eq("status", "scheduled");
-    }
-    if (camp.length > 0) {
-      await supabase
-        .from("campaign_deliveries")
-        .update({ status: "canceled" })
-        .in("email", batch)
-        .eq("status", "scheduled");
-    }
-
-    const contacts = (contactRows as { id: string }[] | null) ?? [];
-    if (contacts.length > 0) {
-      const { cancelContactReminders } = await import("@/lib/notification-worker");
-      for (const contact of contacts) {
-        await cancelContactReminders(contact.id);
+      for (const row of autoRows.filter((r) => r.channel === "sms")) {
+        if (await cancelWorkerJob(row.worker_job_id, "sms")) autoCanceled.push(row.id);
+        else failed += 1;
       }
+
+      // Campaigns: one shared job per campaign — remove only these addresses.
+      const byJob = new Map<string, typeof campRows>();
+      for (const row of campRows) {
+        if (!row.worker_job_id) {
+          campCanceled.push(row.id);
+          continue;
+        }
+        const list = byJob.get(row.worker_job_id) ?? [];
+        list.push(row);
+        byJob.set(row.worker_job_id, list);
+      }
+      for (const [jobId, rows] of byJob) {
+        if (await removeEmailJobRecipients(jobId, rows.map((r) => r.email))) {
+          campCanceled.push(...rows.map((r) => r.id));
+        } else {
+          failed += rows.length;
+        }
+      }
+    }
+
+    for (const ids of chunkArray(autoCanceled, 200)) {
+      await supabase.from("automation_deliveries").update({ status: "canceled" }).in("id", ids);
+    }
+    for (const ids of chunkArray(campCanceled, 200)) {
+      await supabase.from("campaign_deliveries").update({ status: "canceled" }).in("id", ids);
+    }
+    const now = new Date().toISOString();
+    for (const ids of chunkArray(reminderCanceled, 200)) {
+      await supabase
+        .from("contact_worker_jobs")
+        .update({ status: "canceled", canceled_at: now })
+        .in("id", ids);
     }
   }
 
+  if (failed > 0) {
+    console.error(`[automation] bulk cancel: ${failed} job(s) could not be stopped`);
+  }
   return { failed };
 }
 
@@ -315,7 +329,12 @@ export async function cancelScheduledCampaignDeliveriesForSubscriber(
   let failed = 0;
 
   for (const row of rows) {
-    const ok = await cancelWorkerJob(row.worker_job_id, "email");
+    // A campaign is one job for the whole audience: cancelling the job would
+    // stop the send for everyone because this one person unsubscribed.
+    const ok =
+      !row.worker_job_id ||
+      !isNotificationWorkerConfigured() ||
+      (await removeEmailJobRecipients(row.worker_job_id, [normalized]));
     if (!ok) {
       failed += 1;
       continue;

@@ -40,7 +40,6 @@ export function StripeCatalogPanel({
     // Deferred a tick so the first paint is not blocked by the catalog fetch.
     const id = window.setTimeout(() => loadCatalog(), 0);
     return () => window.clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const unlinked = items.filter((i) => !i.linkedProductId);

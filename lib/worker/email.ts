@@ -189,11 +189,21 @@ function getConfig() {
   return { url, key, from };
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+/**
+ * `retry` is only safe when the worker can recognise the repeat — i.e. every
+ * job carries an idempotency key. A timed-out send without one may already
+ * have gone out, and a blind retry mails the recipient twice.
+ */
+async function post<T>(
+  path: string,
+  body: unknown,
+  opts: { retry: boolean },
+): Promise<T> {
   const { url, key } = getConfig();
   let lastError: Error | null = null;
+  const attempts = opts.retry ? 2 : 1;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     let res: Response;
     try {
       res = await fetch(`${url}${path}`, {
@@ -207,7 +217,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
       });
     } catch (error) {
       lastError = error instanceof Error ? error : new Error("Worker request failed");
-      if (attempt === 0) continue;
+      if (attempt < attempts - 1) continue;
       throw lastError;
     }
 
@@ -218,7 +228,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     lastError = new Error(
       (data as { error?: string }).error || `Worker request failed (${res.status})`,
     );
-    if (attempt === 0 && (res.status === 429 || res.status >= 500)) continue;
+    if (attempt < attempts - 1 && (res.status === 429 || res.status >= 500)) continue;
     throw lastError;
   }
 
@@ -261,16 +271,20 @@ export async function lookupEmailJob(
 
 export async function sendEmail(args: SendArgs): Promise<WorkerSendResult> {
   const { from, replyTo } = getNotificationWorkerConfig();
-  return post<WorkerSendResult>("/api/v1/send", {
-    subject: args.subject,
-    html: args.html,
-    recipients: args.recipients,
-    from: args.from || from,
-    replyTo: args.replyTo || replyTo,
-    attachments: args.attachments?.length ? args.attachments : undefined,
-    idempotencyKey: args.idempotencyKey,
-    merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
-  });
+  return post<WorkerSendResult>(
+    "/api/v1/send",
+    {
+      subject: args.subject,
+      html: args.html,
+      recipients: args.recipients,
+      from: args.from || from,
+      replyTo: args.replyTo || replyTo,
+      attachments: args.attachments?.length ? args.attachments : undefined,
+      idempotencyKey: args.idempotencyKey,
+      merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
+    },
+    { retry: Boolean(args.idempotencyKey) },
+  );
 }
 
 /** One HTTP call — worker creates/schedules all jobs (immediate + delayed). */
@@ -281,36 +295,44 @@ export async function submitEmailJobsBatch(
     return { ok: true, results: [] };
   }
   const { from, replyTo } = getNotificationWorkerConfig();
-  return post<WorkerBatchResult>("/api/v1/jobs/batch", {
-    from,
-    replyTo,
-    jobs: jobs.map((job) => ({
-      subject: job.subject,
-      html: job.html,
-      recipients: job.recipients,
-      sendAt: job.sendAt,
-      idempotencyKey: job.idempotencyKey,
-      // Must ride along: this is the path automations actually take, so dropping
-      // it sent lead-magnet emails with no PDF while the single-job fallback
-      // attached one.
-      attachments: job.attachments?.length ? job.attachments : undefined,
-    })),
-  });
+  return post<WorkerBatchResult>(
+    "/api/v1/jobs/batch",
+    {
+      from,
+      replyTo,
+      jobs: jobs.map((job) => ({
+        subject: job.subject,
+        html: job.html,
+        recipients: job.recipients,
+        sendAt: job.sendAt,
+        idempotencyKey: job.idempotencyKey,
+        // Must ride along: this is the path automations actually take, so dropping
+        // it sent lead-magnet emails with no PDF while the single-job fallback
+        // attached one.
+        attachments: job.attachments?.length ? job.attachments : undefined,
+      })),
+    },
+    { retry: jobs.every((job) => Boolean(job.idempotencyKey)) },
+  );
 }
 
 export async function scheduleEmail(args: ScheduleArgs): Promise<WorkerSendResult> {
   const { from, replyTo } = getNotificationWorkerConfig();
-  return post<WorkerSendResult>("/api/v1/schedule", {
-    subject: args.subject,
-    html: args.html,
-    recipients: args.recipients,
-    from: args.from || from,
-    replyTo: args.replyTo || replyTo,
-    sendAt: args.sendAt,
-    idempotencyKey: args.idempotencyKey,
-    attachments: args.attachments?.length ? args.attachments : undefined,
-    merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
-  });
+  return post<WorkerSendResult>(
+    "/api/v1/schedule",
+    {
+      subject: args.subject,
+      html: args.html,
+      recipients: args.recipients,
+      from: args.from || from,
+      replyTo: args.replyTo || replyTo,
+      sendAt: args.sendAt,
+      idempotencyKey: args.idempotencyKey,
+      attachments: args.attachments?.length ? args.attachments : undefined,
+      merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
+    },
+    { retry: Boolean(args.idempotencyKey) },
+  );
 }
 
 const EMPTY_TRACKING: JobTracking = {
@@ -402,4 +424,83 @@ export async function cancelEmailJob(jobId: string): Promise<boolean> {
     cache: "no-store",
   });
   return workerCancelSucceeded(res);
+}
+
+/**
+ * Take addresses out of a pending job without touching anyone else in it.
+ *
+ * A campaign is ONE worker job for the whole audience, so `cancelEmailJob` on
+ * it stops the send for everybody — which is what one person unsubscribing
+ * used to do to a scheduled campaign.
+ *
+ * `true` also when there is nothing left to remove: the worker answers 404/409
+ * for a job that is gone or already sent, and the address is out of reach.
+ */
+export async function removeEmailJobRecipients(
+  jobId: string,
+  emails: string[],
+): Promise<boolean> {
+  const list = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  if (!jobId || list.length === 0) return true;
+
+  const { url, key } = getConfig();
+  try {
+    const res = await fetch(
+      `${url}/api/v1/jobs/${encodeURIComponent(jobId)}/recipients/remove`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ emails: list }),
+        cache: "no-store",
+      },
+    );
+    return res.ok || res.status === 404 || res.status === 409;
+  } catch {
+    return false;
+  }
+}
+
+const BULK_CANCEL_MAX = 200;
+
+/**
+ * Cancel many pending jobs in as few calls as possible (the worker takes 200
+ * per request). `canceled` holds the jobs the worker actually stopped; a job
+ * that is missing from both sets was no longer pending (already sent or
+ * cancelled earlier).
+ */
+export async function cancelEmailJobsBulk(
+  jobIds: string[],
+): Promise<{ canceled: Set<string>; failed: Set<string> }> {
+  const unique = [...new Set(jobIds.map((id) => id.trim()).filter(Boolean))];
+  const canceled = new Set<string>();
+  const failed = new Set<string>();
+  if (unique.length === 0) return { canceled, failed };
+
+  const { url, key } = getConfig();
+  for (let i = 0; i < unique.length; i += BULK_CANCEL_MAX) {
+    const chunk = unique.slice(i, i + BULK_CANCEL_MAX);
+    try {
+      const res = await fetch(`${url}/api/v1/jobs/cancel`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ jobIds: chunk }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        for (const id of chunk) failed.add(id);
+        continue;
+      }
+      const data = (await res.json().catch(() => ({}))) as { jobIds?: string[] };
+      for (const id of data.jobIds ?? []) canceled.add(id);
+    } catch {
+      for (const id of chunk) failed.add(id);
+    }
+  }
+  return { canceled, failed };
 }

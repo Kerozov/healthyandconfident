@@ -3,13 +3,16 @@ import { authenticateAdmin, firstAllowedAdminPath, getAdminCookieName } from "@/
 import {
   getAdminSessionTtlSeconds,
   signAdminSessionToken,
+  VIRTUAL_OWNER_SESSION_ID,
 } from "@/lib/admin/session-cookie";
 import type { AdminSession } from "@/lib/admin/auth";
+import { createRateLimiter, requestIp } from "@/lib/util/rate-limit";
+
+/** Brute-force brake: 10 attempts per address per 15 minutes. */
+const rateLimited = createRateLimiter(10, 15 * 60_000);
 
 function setSessionCookie(response: NextResponse, session: AdminSession) {
-  const token = session.id
-    ? signAdminSessionToken(session.id)
-    : process.env.ADMIN_SECRET?.trim();
+  const token = signAdminSessionToken(session.id ?? VIRTUAL_OWNER_SESSION_ID);
   if (!token) return;
 
   response.cookies.set(getAdminCookieName(), token, {
@@ -21,21 +24,15 @@ function setSessionCookie(response: NextResponse, session: AdminSession) {
   });
 }
 
-/** One-click login link: /api/admin/login?secret=YOUR_ADMIN_SECRET */
-export async function GET(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get("secret") ?? "";
-  const response = NextResponse.redirect(new URL("/admin", request.url));
-
-  const result = await authenticateAdmin({ username: "admin", password: secret });
-  if (result.ok) {
-    setSessionCookie(response, result.session);
-  }
-
-  return response;
-}
-
 /** Form login: POST { "username": "...", "password": "..." } */
 export async function POST(request: NextRequest) {
+  if (rateLimited(requestIp(request))) {
+    return NextResponse.json(
+      { error: "Твърде много опити. Изчакай 15 минути и опитай отново." },
+      { status: 429 },
+    );
+  }
+
   let username = "";
   let password = "";
   try {
