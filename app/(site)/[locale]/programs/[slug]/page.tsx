@@ -7,11 +7,17 @@ import {
   programPath,
   resolveProgramSlug,
 } from "@/lib/programs/types";
-import { getProgramLanding } from "@/lib/programs/landings";
+import { getPricedProgramLanding } from "@/lib/programs/priced";
 import { getCtaPlacements } from "@/lib/site/content";
+import type { SiteCtaPlacement } from "@/lib/supabase/types";
 import { ProgramLanding } from "@/components/site/program-landing";
 import { MetaViewContent } from "@/components/site/meta-view-content";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
+
+async function ctaPlacementsByKey(): Promise<Record<string, SiteCtaPlacement>> {
+  const rows = await getCtaPlacements();
+  return Object.fromEntries(rows.map((p) => [p.key, p]));
+}
 
 export function generateStaticParams() {
   return locales.flatMap((locale) =>
@@ -27,7 +33,10 @@ export async function generateMetadata({
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
   const id = resolveProgramSlug(slug);
-  const content = id ? getProgramLanding(locale, id) : null;
+  // The description quotes the price too, so it comes from Stripe as well.
+  const content = id
+    ? await getPricedProgramLanding(locale, id, await ctaPlacementsByKey())
+    : null;
   if (!id || !content) return { title: "Not found" };
 
   const origin = publicSiteOrigin();
@@ -66,11 +75,9 @@ export default async function ProgramPage({
   if (slug !== PROGRAM_PUBLIC_SLUGS[id]) {
     redirect(`/${locale}${programPath(id)}`);
   }
-  const content = getProgramLanding(locale as Locale, id);
+  const ctaPlacements = await ctaPlacementsByKey();
+  const content = await getPricedProgramLanding(locale as Locale, id, ctaPlacements);
   if (!content) notFound();
-
-  const placementRows = await getCtaPlacements();
-  const ctaPlacements = Object.fromEntries(placementRows.map((p) => [p.key, p]));
 
   return (
     <>

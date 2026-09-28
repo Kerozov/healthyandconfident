@@ -31,7 +31,7 @@ export const poStroyniIShtastliviBg: ProgramLandingContent = {
       "Без глад, без броене на калории и без часове във фитнеса",
       "Иновативен метод от Великобритания — най-после и на български",
     ],
-    priceLine: "€49 вместо €152 · 68% отстъпка за първите 20 места",
+    priceLine: "{amount} вместо €152 · {off:152}% отстъпка за първите 20 места",
     primaryCta: "Включи се сега",
     primaryHref: pricingAnchor,
     secondaryCta: "Виж какво включва",
@@ -346,7 +346,7 @@ export const poStroyniIShtastliviBg: ProgramLandingContent = {
   pricing: {
     title: "Започни промяната",
     titleAccent: "още днес",
-    subtitle: "Такса €152 → €49 за първите 20 места. След това таксата се увеличава.",
+    subtitle: "Такса €152 → {amount} за първите 20 места. След това таксата се увеличава.",
     audienceTitle: "Важно е да знаеш:",
     audienceBullets: [
       "Реалистично и щадящо: за 21 дни очаквай 3–5 кг и 20–25 см от обиколките, най-вече от корема.",
@@ -358,8 +358,9 @@ export const poStroyniIShtastliviBg: ProgramLandingContent = {
     options: [
       {
         label: "21 дни „По-стройни и щастливи“",
-        badge: "68% отстъпка",
-        price: "€49",
+        badge: "{off:152}% отстъпка",
+        price: "{price}",
+        fallbackPrice: { amount: 69 },
         note: "Вместо €152 · за първите 20 места · достъп минимум 3 месеца · стартираш на удобна за теб дата",
         cta: "Да! Включвам се",
         href: contactSection,

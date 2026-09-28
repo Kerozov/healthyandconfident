@@ -2728,6 +2728,10 @@ function revalidateSitePaths() {
   revalidatePath("/admin/website");
   revalidatePath("/bg");
   revalidatePath("/en");
+  // Programme pages are static and quote the Stripe price of their buttons —
+  // re-wiring a button to another price has to reach them too.
+  revalidatePath("/(site)/[locale]/programs", "page");
+  revalidatePath("/(site)/[locale]/programs/[slug]", "page");
 }
 
 export type ProductOfferInput = {

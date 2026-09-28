@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { ProgramLandingContent } from "@/lib/programs/types";
+import { programPlacementKey } from "@/lib/programs/prices";
 import type { SiteCtaPlacement } from "@/lib/supabase/types";
 import {
   resolvePlacementButton,
@@ -215,7 +216,7 @@ export function ProgramLanding({
   ctaPlacements?: Record<string, SiteCtaPlacement>;
 }) {
   const { hero } = content;
-  const placementKey = hero.placementKey ?? `product_${content.slug}`;
+  const placementKey = programPlacementKey(content);
   const heroPlacementKey = programHeroPlacementKey(placementKey, ctaPlacements);
   const primaryButton = resolvePlacementButton(ctaPlacements, heroPlacementKey, locale, {
     label: hero.primaryCta,

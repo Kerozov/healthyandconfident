@@ -17,7 +17,7 @@ export const summerProgrammeBg: ProgramLandingContent = {
   meta: {
     title: "Лято – стройна и спокойна | Летен пакет — Веси Ней",
     description:
-      "Наслади се на морето, сладоледа и вечерите с приятели – без чувство за вина и без през септември да започваш отначало. Практичен летен пакет с ръководства, 12 рецепти и SOS аудио практики. €36 еднократно.",
+      "Наслади се на морето, сладоледа и вечерите с приятели – без чувство за вина и без през септември да започваш отначало. Практичен летен пакет с ръководства, 12 рецепти и SOS аудио практики. {amount} еднократно.",
   },
   hero: {
     eyebrow: "Summer Programme With Vessie Ney",
@@ -31,7 +31,7 @@ export const summerProgrammeBg: ProgramLandingContent = {
       "SOS аудио практики за моментите извън ритъм",
       "Готови решения за хотел, ресторант, барбекю и път",
     ],
-    priceLine: "Само €36 еднократно · достъп 60 дни",
+    priceLine: "Само {amount} еднократно · достъп 60 дни",
     primaryCta: "Искам моето спокойно лято",
     primaryHref: pricingAnchor,
     secondaryCta: "Виж какво има вътре",
@@ -159,7 +159,7 @@ export const summerProgrammeBg: ProgramLandingContent = {
         text: "А не с +3–5 кг след почивката.",
       },
     ],
-    closing: "Разпознаваш ли се? Вземи пакета за €36.",
+    closing: "Разпознаваш ли се? Вземи пакета за {amount}.",
   },
   testimonials: [
     {
@@ -249,7 +249,7 @@ export const summerProgrammeBg: ProgramLandingContent = {
   pricing: {
     title: "Всичко това – на едно място,",
     titleAccent: "за по-малко от една вечеря в ресторант",
-    subtitle: "Само €36 · еднократно · достъп 60 дни",
+    subtitle: "Само {amount} · еднократно · достъп 60 дни",
     audienceTitle: "За кого НЕ е този пакет?",
     audienceBullets: [
       "Ако търсиш бързо чудо.",
@@ -260,7 +260,8 @@ export const summerProgrammeBg: ProgramLandingContent = {
       {
         label: "Лято – стройна и спокойна",
         badge: "Летен пакет",
-        price: "€36",
+        price: "{price}",
+        fallbackPrice: { amount: 36 },
         note: "Еднократно плащане · 60 дни достъп · ръководства, 12 рецепти и SOS аудио практики",
         cta: "Вземи летния пакет сега",
         href: pricingAnchor,

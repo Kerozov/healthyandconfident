@@ -155,6 +155,17 @@ export type ProgramLandingContent = {
   /** Shown under the results — e.g. that outcomes vary per person. */
   testimonialsNote?: string;
   faq?: { q: string; a: string }[];
+  /**
+   * Price cards. Each card's button (`<key>_pricing_<i>` under „Бутони“)
+   * carries a Stripe price, and that price — not a number typed here — is what
+   * the page quotes, so it always matches what Checkout charges.
+   *
+   * Any text on the page quotes it through a placeholder (see
+   * `lib/programs/prices.ts`): `{price}` „38 €/месец“, `{amount}` „38 €“,
+   * `{monthly}`, `{total:12}`, `{perday:90}`, `{off:152}` / `{off:@0}`.
+   * Inside a card they mean that card's price; anywhere else the first card's,
+   * and `{amount@1}` names another card.
+   */
   pricing?: {
     title: string;
     titleAccent?: string;
@@ -165,7 +176,10 @@ export type ProgramLandingContent = {
     options: {
       label: string;
       badge?: string;
+      /** Usually a placeholder — `{price}`, `3 × {amount}`. */
       price: string;
+      /** Quoted only until the card's button has a Stripe price. */
+      fallbackPrice: ProgramFallbackPrice;
       note: string;
       cta: string;
       href?: string;
@@ -192,4 +206,14 @@ export type ProgramLandingContent = {
   finalCta?: { title: string; cta: string; href: string };
 };
 
-export type ProgramLandingsByLocale = Record<Locale, Record<ProgramLandingSlug, ProgramLandingContent>>;
+/** A price card's amount before Stripe is wired, in whole units — 180 = 180 €. */
+export type ProgramFallbackPrice = {
+  amount: number;
+  /** Defaults to EUR. */
+  currency?: string;
+  /** Omitted for a one-off payment. */
+  interval?: "day" | "week" | "month" | "year";
+  intervalCount?: number;
+};
+
+export type ProgramLandingsByLocale =Record<Locale, Record<ProgramLandingSlug, ProgramLandingContent>>;

@@ -155,15 +155,17 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       options: [
         {
           label: "Monthly",
-          price: "3 × €180",
-          note: "Instead of €1,090 · ~€5.90/day",
+          price: "3 × {amount}",
+          fallbackPrice: { amount: 180, interval: "month" },
+          note: "Instead of €1,090 · ~{perday}/day",
           cta: "Join with installments",
           href: pricingAnchor,
         },
         {
           label: "Pay in full",
-          price: "€480",
-          note: "Instead of €1,090 · ~€5.30/day",
+          price: "{price}",
+          fallbackPrice: { amount: 480 },
+          note: "Instead of €1,090 · ~{perday:90}/day",
           cta: "Join with one payment",
           href: pricingAnchor,
         },
@@ -195,7 +197,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     meta: {
       title: "Reprogram Your Appetite | Slim & Light Club — Vessie Nay",
       description:
-        "7–10 minutes a day. Release stress, emotional eating and cravings. 94% success method. From €38/month.",
+        "7–10 minutes a day. Release stress, emotional eating and cravings. 94% success method. From {price}.",
     },
     hero: {
       ...preprogramiraiApetitaBg.hero,
@@ -205,7 +207,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       subtitle:
         "Easy solutions for smart busy women — low energy, bloated belly, strong appetite.",
       bullets: ["10 minutes a day that bring back lightness and calm"],
-      priceLine: "Everything for only €38/month",
+      priceLine: "Everything for only {price}",
       primaryCta: "Yes, I want to handle it",
       secondaryCta: "What's included",
     },
@@ -285,7 +287,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     meta: {
       title: "Summer — Slim and Calm | Summer package — Vessie Nay",
       description:
-        "Enjoy the sea, the ice cream and the evenings with friends — without guilt, and without starting over in September. A practical summer package with guides, 12 recipes and SOS audio practices. €36 one-off.",
+        "Enjoy the sea, the ice cream and the evenings with friends — without guilt, and without starting over in September. A practical summer package with guides, 12 recipes and SOS audio practices. {amount} one-off.",
     },
     hero: {
       ...summerProgrammeBg.hero,
@@ -300,7 +302,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
         "SOS audio practices for the moments you slip",
         "Ready answers for hotels, restaurants, barbecues and the road",
       ],
-      priceLine: "Only €36 one-off · 60 days of access",
+      priceLine: "Only {amount} one-off · 60 days of access",
       primaryCta: "I want my calm summer",
       secondaryCta: "See what's inside",
     },
@@ -397,7 +399,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
           "Rather than with 3–5 kg more than you left with.",
         ][i],
       })),
-      closing: "Recognise yourself? Get the package for €36.",
+      closing: "Recognise yourself? Get the package for {amount}.",
     },
     testimonials: [
       {
@@ -483,7 +485,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       ...summerProgrammeBg.pricing!,
       title: "All of it in one place,",
       titleAccent: "for less than one dinner out",
-      subtitle: "Only €36 · one-off · 60 days of access",
+      subtitle: "Only {amount} · one-off · 60 days of access",
       audienceTitle: "Who is this package NOT for?",
       audienceBullets: [
         "If you're looking for a quick miracle.",
@@ -494,7 +496,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
           ...summerProgrammeBg.pricing!.options[0],
           label: "Summer — slim and calm",
           badge: "Summer package",
-          price: "€36",
+          price: "{price}",
           note: "One-off payment · 60 days of access · guides, 12 recipes and SOS audio practices",
           cta: "Get the summer package",
         },

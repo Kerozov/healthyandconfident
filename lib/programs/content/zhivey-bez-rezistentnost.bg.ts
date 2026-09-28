@@ -284,15 +284,17 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
     options: [
       {
         label: "Месечни вноски",
-        price: "3 × 180 €",
-        note: "Вместо 1 090 € · около 5,90 €/ден",
+        price: "3 × {amount}",
+        fallbackPrice: { amount: 180, interval: "month" },
+        note: "Вместо 1 090 € · около {perday}/ден",
         cta: "Включи се с месечни вноски",
         href: pricingAnchor,
       },
       {
         label: "Еднократно днес",
-        price: "480 €",
-        note: "Вместо 1 090 € · около 5,30 €/ден — колкото кафе + сандвич",
+        price: "{price}",
+        fallbackPrice: { amount: 480 },
+        note: "Вместо 1 090 € · около {perday:90}/ден — колкото кафе + сандвич",
         cta: "Включи се с еднократна такса днес",
         href: pricingAnchor,
       },

@@ -25,7 +25,7 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
       "No hunger, no calorie counting and no hours at the gym",
       "An innovative method from the UK — at last in your language",
     ],
-    priceLine: "€49 instead of €152 · 68% off for the first 20 places",
+    priceLine: "{amount} instead of €152 · {off:152}% off for the first 20 places",
     primaryCta: "Join now",
     secondaryCta: "See what's included",
   },
@@ -312,7 +312,7 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
     ...poStroyniIShtastliviBg.pricing!,
     title: "Start the change",
     titleAccent: "today",
-    subtitle: "€152 → €49 for the first 20 places. After that the fee goes up.",
+    subtitle: "€152 → {amount} for the first 20 places. After that the fee goes up.",
     audienceTitle: "Important to know:",
     audienceBullets: [
       "Realistic and gentle: over 21 days expect 3–5 kg and 20–25 cm off your measurements, mostly around the tummy.",
@@ -323,8 +323,9 @@ export const poStroyniIShtastliviEn: ProgramLandingContent = {
     options: [
       {
         label: "21 Days “Slimmer and Happier”",
-        badge: "68% off",
-        price: "€49",
+        badge: "{off:152}% off",
+        price: "{price}",
+        fallbackPrice: { amount: 69 },
         note: "Instead of €152 · for the first 20 places · at least 3 months of access · start on a date that suits you",
         cta: "Yes! I'm joining",
         href: contactSection,

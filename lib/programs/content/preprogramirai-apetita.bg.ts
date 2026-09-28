@@ -17,7 +17,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
   meta: {
     title: "Препрограмирай апетита | Клуб за стройна фигура и лекота — Веси Ней",
     description:
-      "Клуб „Препрограмирай апетита“ — 7–10 минути на ден. Пусни стреса, емоционалното хранене и изкушенията. Метод с 94% успеваемост. От €38/месец.",
+      "Клуб „Препрограмирай апетита“ — 7–10 минути на ден. Пусни стреса, емоционалното хранене и изкушенията. Метод с 94% успеваемост. От {price}.",
   },
   hero: {
     eyebrow: "Клуб за стройна фигура и лекота",
@@ -26,7 +26,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
     subtitle:
       "Лесни решения за умни заети жени, без енергия, с подут корем и силен апетит.",
     bullets: ["10 минути на ден, които връщат лекотата и спокойствието"],
-    priceLine: "Всичко за само €38/месец",
+    priceLine: "Всичко за само {price}",
     primaryCta: "Да, искам да се справя",
     primaryHref: pricingAnchor,
     secondaryCta: "Какво включва клубът",
@@ -144,7 +144,7 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
       },
     ],
     totalValue: "Обща стойност = €530",
-    totalNote: "Първите 100 души — само €38 на месец. След това таксата се увеличава.",
+    totalNote: "Първите 100 души — само {monthly} на месец. След това таксата се увеличава.",
   },
   education: {
     sections: [
@@ -289,7 +289,8 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
     options: [
       {
         label: "Месечен достъп",
-        price: "€38/месец",
+        price: "{price}",
+        fallbackPrice: { amount: 38, interval: "month" },
         note: "Първите 100 души — после таксата се увеличава · Обща стойност €530",
         cta: "Искам достъп сега",
         href: pricingAnchor,
@@ -297,16 +298,20 @@ export const preprogramiraiApetitaBg: ProgramLandingContent = {
       {
         label: "Вариант 1",
         badge: "Най-изгоден",
-        price: "28€ на месец",
-        note: "Абонамент за 12 месеца с 25% отстъпка — само за 336€, вместо 456€",
+        // Per month and in total, whether Stripe bills the plan monthly or
+        // as one yearly charge.
+        price: "{monthly} на месец",
+        fallbackPrice: { amount: 28, interval: "month" },
+        note: "Абонамент за 12 месеца с {off:@0}% отстъпка — само за {total:12}, вместо {total@0:12}",
         cta: "Искам достъп сега",
         href: pricingAnchor,
       },
       {
         label: "Вариант 2",
         badge: "Най-популярен",
-        price: "30€ на месец",
-        note: "Абонамент за 3 месеца с 20% отстъпка — само за 90€, вместо 114€",
+        price: "{monthly} на месец",
+        fallbackPrice: { amount: 30, interval: "month" },
+        note: "Абонамент за 3 месеца с {off:@0}% отстъпка — само за {total:3}, вместо {total@0:3}",
         cta: "Искам достъп сега",
         href: pricingAnchor,
       },

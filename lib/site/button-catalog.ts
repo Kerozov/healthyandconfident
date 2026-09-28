@@ -161,7 +161,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_1_pricing_0",
-        name: "Цена 1: „Месечни вноски“ — 3 × 180 €",
+        name: "Цена 1: „Месечни вноски“",
         spots: [
           {
             where: "Страницата на програмата → секцията с цените, първата карта.",
@@ -173,7 +173,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_1_pricing_1",
-        name: "Цена 2: „Еднократно днес“ — 480 €",
+        name: "Цена 2: „Еднократно днес“",
         spots: [
           {
             where: "Страницата на програмата → секцията с цените, втората карта.",
@@ -254,7 +254,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_2_pricing_0",
-        name: "Цена 1: „Месечен достъп“ — €38/месец",
+        name: "Цена 1: „Месечен достъп“",
         spots: [
           {
             where: "Страницата на клуба → секцията с цените, първата карта.",
@@ -266,7 +266,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_2_pricing_1",
-        name: "Цена 2: „Вариант 1“ — 28 €/месец за 12 месеца",
+        name: "Цена 2: „Вариант 1“ — абонамент за 12 месеца",
         spots: [
           {
             where: "Страницата на клуба → секцията с цените, втората карта.",
@@ -278,7 +278,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_2_pricing_2",
-        name: "Цена 3: „Вариант 2“ — 30 €/месец за 3 месеца",
+        name: "Цена 3: „Вариант 2“ — абонамент за 3 месеца",
         spots: [
           {
             where: "Страницата на клуба → секцията с цените, третата карта.",
@@ -348,7 +348,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_0_pricing_0",
-        name: "Цена: „Летен пакет“ — €36 еднократно",
+        name: "Цена: „Летен пакет“ — еднократно плащане",
         spots: [
           {
             where: "Страницата на програмата → секцията с цените.",
@@ -406,7 +406,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "product_po-stroyni-i-shtastlivi_pricing_0",
-        name: "Цена: „21 дни по-стройни и щастливи“ (€49)",
+        name: "Цена: „21 дни по-стройни и щастливи“",
         spots: [
           {
             where: "Страницата на предизвикателството → секцията с цената.",
