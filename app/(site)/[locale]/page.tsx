@@ -59,6 +59,14 @@ export default async function HomePage({
       )}
       <Hero dict={dict} locale={l} />
       <SuccessProof dict={dict} />
+      {guidesSection && site.guides.length > 0 && (
+        <GuidesSection
+          dict={dict}
+          locale={l}
+          section={guidesSection}
+          guides={site.guides}
+        />
+      )}
       <Marquee locale={l} />
       <TrustFeatures locale={l} />
       <About dict={dict} locale={l} />
@@ -91,14 +99,6 @@ export default async function HomePage({
           locale={l}
           section={videosSection}
           videos={site.videos}
-        />
-      )}
-      {guidesSection && site.guides.length > 0 && (
-        <GuidesSection
-          dict={dict}
-          locale={l}
-          section={guidesSection}
-          guides={site.guides}
         />
       )}
       <FreeMenuBanner dict={dict} locale={l} />
