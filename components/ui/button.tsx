@@ -73,10 +73,18 @@ export function Button(props: ButtonAsButton | ButtonAsLink) {
     );
   }
 
-  const { type = "button", ...rest } =
-    props as React.ButtonHTMLAttributes<HTMLButtonElement>;
+  // The styling props are taken out first: spread back onto the element, the
+  // raw `className` would replace the variant classes computed above.
+  const {
+    variant: _variant,
+    size: _size,
+    className: _className,
+    children: _children,
+    type = "button",
+    ...rest
+  } = props as ButtonAsButton;
   return (
-    <button type={type} className={classes} {...rest}>
+    <button type={type} {...rest} className={classes}>
       {children}
     </button>
   );

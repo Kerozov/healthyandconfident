@@ -13,7 +13,7 @@ import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-const PRIMARY_NAV = new Set(["#about", "#programs", "#food", "#results", "#contact"]);
+const PRIMARY_NAV = new Set(["#programs", "#results", "#about", "#contact"]);
 
 function isExternal(href: string) {
   return href.startsWith("/") && !href.startsWith(`#`);

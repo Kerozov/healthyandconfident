@@ -42,44 +42,17 @@ function bgPersonSchema(origin: string) {
 };
 }
 
-const bgFaqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
+/** Built from the questions on the page — Google wants the two to match. */
+function faqSchema(dict: Dictionary) {
+  return {
+    "@type": "FAQPage",
+    mainEntity: dict.faq.items.map((item) => ({
       "@type": "Question",
-      name: "Това поредната диета ли е?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Не. Не залагаме на ограничения и глад. Добавяме правилната храна, структура, мотивация и подкрепа, за да са трайни резултатите за цял живот.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Наистина ли помага при Диабет тип 2?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Да — методът е изграден около трайно балансиране на кръвната захар, с 94% успех, базиран на опита на Веси Ней като NHS Diabetes Practitioner със стотици пациенти.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Как протичат срещите с Веси Ней?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Индивидуално и в малки групи онлайн през Zoom, от комфорта на дома ти.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Трябва ли да прекарвам часове в кухнята?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Не. Рецептите са лесни, бързи и засищащи, харесват се от цялото семейство и не изискват пазаруване в специализирани магазини.",
-      },
-    },
-  ],
-};
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}
 
 function bgProfessionalServiceSchema(origin: string) {
   return {
@@ -117,7 +90,7 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
       locale === "bg"
         ? "Реално меню и резултати — Веси Ней"
         : "Real meals and results — Vessie Nay",
-    description: dict.foodGallery.subtitle,
+    description: dict.method.foodNote,
     url: `${pageUrl}#food`,
     image: siteMedia.map((item) => ({
       "@type": "ImageObject",
@@ -130,7 +103,7 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
     return (
       <>
         <JsonLd data={bgPersonSchema(origin)} />
-        <JsonLd data={bgFaqSchema} />
+        <JsonLd data={{ "@context": "https://schema.org", ...faqSchema(dict) }} />
         <JsonLd data={bgProfessionalServiceSchema(origin)} />
         <JsonLd data={imageGallery} />
       </>
@@ -166,15 +139,7 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
       alternateName: siteConfig.tagline,
       inLanguage: "en-GB",
     },
-    {
-      "@type": "FAQPage",
-      "@id": `${url}#faq`,
-      mainEntity: dict.faq.items.map((item) => ({
-        "@type": "Question",
-        name: item.q,
-        acceptedAnswer: { "@type": "Answer", text: item.a },
-      })),
-    },
+    { ...faqSchema(dict), "@id": `${url}#faq` },
   ];
 
   return (

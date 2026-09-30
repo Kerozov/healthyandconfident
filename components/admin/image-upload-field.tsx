@@ -12,6 +12,31 @@ import { Field } from "@/components/admin/fields";
 import { CardImage } from "@/components/site/card-image";
 import { cn } from "@/lib/utils";
 
+/** One image to Storage; resolves to its public URL or a message to show. */
+export async function uploadSiteImage(
+  file: File,
+  folder: MediaFolder,
+): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
+  try {
+    // The file never crosses the Server Action boundary — only its name,
+    // type and size do, so the 4 MB body limit cannot bite.
+    const res = await createSiteImageUpload(
+      { name: file.name, type: file.type, size: file.size },
+      folder,
+    );
+    if (!res.ok || !res.ticket) {
+      return { ok: false, message: res.message || "Качването неуспешно." };
+    }
+
+    const put = await putToSignedUrl(res.ticket.uploadUrl, file);
+    if (!put.ok) return { ok: false, message: put.message };
+
+    return { ok: true, url: res.ticket.publicUrl };
+  } catch (err) {
+    return { ok: false, message: uploadErrorText(err) };
+  }
+}
+
 export function ImageUploadField({
   label,
   hint,
@@ -46,28 +71,9 @@ export function ImageUploadField({
     setError(null);
 
     startTransition(async () => {
-      try {
-        // The file never crosses the Server Action boundary — only its name,
-        // type and size do, so the 4 MB body limit cannot bite.
-        const res = await createSiteImageUpload(
-          { name: file.name, type: file.type, size: file.size },
-          folder,
-        );
-        if (!res.ok || !res.ticket) {
-          setError(res.message || "Качването неуспешно.");
-          return;
-        }
-
-        const put = await putToSignedUrl(res.ticket.uploadUrl, file);
-        if (!put.ok) {
-          setError(put.message);
-          return;
-        }
-
-        onChange(res.ticket.publicUrl);
-      } catch (err) {
-        setError(uploadErrorText(err));
-      }
+      const res = await uploadSiteImage(file, folder);
+      if (res.ok) onChange(res.url);
+      else setError(res.message);
     });
   }
 

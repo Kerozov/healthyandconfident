@@ -26,11 +26,11 @@ export function GuidesSection({
       : section.title_en || dict.guides.title;
 
   return (
-    <section id="guides" className="section-pad scroll-mt-24 bg-cream-2/40">
+    <section id="guides" className="section-pad scroll-mt-24 bg-white">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">
-            <BookOpen className="h-4 w-4" /> {dict.guides.eyebrow}
+            <BookOpen className="h-4 w-4" aria-hidden /> {dict.guides.eyebrow}
           </span>
           <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
             {title}
@@ -38,7 +38,13 @@ export function GuidesSection({
           <p className="mt-4 text-ink-soft">{dict.guides.subtitle}</p>
         </div>
 
-        <GuidesGrid guides={visible} locale={locale} cta={dict.guides.cta} />
+        <GuidesGrid
+          guides={visible}
+          locale={locale}
+          cta={dict.guides.cta}
+          badge={dict.guides.badge}
+          wasLabel={dict.programs.wasLabel}
+        />
       </Container>
     </section>
   );

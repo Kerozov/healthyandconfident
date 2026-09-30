@@ -59,7 +59,13 @@ export default async function GuidesIndexPage({
       subtitle={dict.guides.subtitle}
       empty={empty}
     >
-      <GuidesGrid guides={guides} locale={l} cta={dict.guides.cta} />
+      <GuidesGrid
+        guides={guides}
+        locale={l}
+        cta={dict.guides.cta}
+        badge={dict.guides.badge}
+        wasLabel={dict.programs.wasLabel}
+      />
     </CatalogIndex>
   );
 }

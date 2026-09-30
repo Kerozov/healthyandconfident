@@ -86,6 +86,26 @@ const MONEY_IN_LABEL = new RegExp(
   "i",
 );
 
+/** True when a label quotes an amount („69 €“), not only words („групова програма“). */
+export function labelHasAmount(label: string): boolean {
+  return MONEY_IN_LABEL.test(label);
+}
+
+/** The old price a label compares against: „69 €, вместо 152 €“ → „152 €“. */
+const WAS_PRICE = /[\s,;·(]*(?:вместо|instead of)\s+([^)]+?)\)?\s*$/i;
+
+/**
+ * „69 €, вместо 152 €“ split into the price charged and the price it replaces,
+ * so a card can show the old one struck through. A label without a „вместо“
+ * part comes back whole, with `was` empty.
+ */
+export function splitPriceLabel(label: string): { now: string; was: string } {
+  const text = label.trim();
+  const match = WAS_PRICE.exec(text);
+  if (!match || match.index === 0) return { now: text, was: "" };
+  return { now: text.slice(0, match.index).trim(), was: match[1].trim() };
+}
+
 /**
  * A label typed in the admin, brought in line with the Stripe price it sells.
  *

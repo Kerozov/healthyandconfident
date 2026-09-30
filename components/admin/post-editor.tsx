@@ -2,20 +2,33 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Save, Send } from "lucide-react";
+import { Code, Eye, Rows3, Save, Send } from "lucide-react";
 import type { BlogPost } from "@/lib/supabase/types";
 import { savePost } from "@/app/(admin)/admin/actions";
 import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { MarkdownLinkToolbar } from "@/components/admin/markdown-link-toolbar";
+import { PostContentBuilder } from "@/components/admin/post-content-builder";
 import { Markdown } from "@/components/site/markdown";
 import { slugify } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
+type ContentMode = "blocks" | "markdown" | "preview";
+
+const CONTENT_MODES: {
+  mode: ContentMode;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { mode: "blocks", label: "Блокове", icon: Rows3 },
+  { mode: "markdown", label: "Markdown", icon: Code },
+  { mode: "preview", label: "Преглед", icon: Eye },
+];
+
 export function PostEditor({ post }: { post?: BlogPost }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [preview, setPreview] = useState(false);
+  const [mode, setMode] = useState<ContentMode>("blocks");
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
@@ -145,17 +158,33 @@ export function PostEditor({ post }: { post?: BlogPost }) {
           </Card>
 
           <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold">Content (Markdown)</h2>
-              <button
-                type="button"
-                onClick={() => setPreview((p) => !p)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium hover:bg-ink/5"
-              >
-                <Eye className="h-3.5 w-3.5" /> {preview ? "Edit" : "Preview"}
-              </button>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-display text-lg font-semibold">Content</h2>
+              <div className="inline-flex rounded-full border border-ink/15 p-0.5">
+                {CONTENT_MODES.map(({ mode: m, label, icon: Icon }) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMode(m)}
+                    aria-pressed={mode === m}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
+                      mode === m ? "bg-ink text-white" : "hover:bg-ink/5",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" /> {label}
+                  </button>
+                ))}
+              </div>
             </div>
-            {preview ? (
+            {/* The builder re-reads the Markdown each time it opens, so edits
+                made in the Markdown tab show up as blocks. */}
+            {mode === "blocks" ? (
+              <PostContentBuilder
+                value={form.content}
+                onChange={(content) => set("content", content)}
+              />
+            ) : mode === "preview" ? (
               <div className="min-h-[300px] rounded-xl border border-ink/10 bg-cream-2/40 p-5">
                 <Markdown
                   content={form.content || "_Nothing to preview_"}
