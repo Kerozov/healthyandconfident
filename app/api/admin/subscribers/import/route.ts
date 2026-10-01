@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { AdminAccessError, requireAdmin } from "@/lib/admin/auth";
 import { importSubscriberBatch, IMPORT_BATCH_SIZE } from "@/lib/admin/import-run";
 import type { ImportSubscriberRow } from "@/lib/admin/import-subscribers";
+import type { SegmentSeed } from "@/lib/segments/ensure";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -34,7 +35,12 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { rows?: unknown; mergeSegments?: unknown };
+  let body: {
+    rows?: unknown;
+    mergeSegments?: unknown;
+    newSegments?: unknown;
+    triggerAutomations?: unknown;
+  };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -47,6 +53,23 @@ export async function POST(req: Request) {
   const rows = Array.isArray(body.rows)
     ? (body.rows as ImportSubscriberRow[])
     : [];
+
+  // Readable names for segments the file introduces (MailerLite group names).
+  const newSegments: SegmentSeed[] = (
+    Array.isArray(body.newSegments) ? body.newSegments : []
+  )
+    .slice(0, 1000)
+    .filter(
+      (seed): seed is SegmentSeed =>
+        typeof seed?.key === "string" &&
+        typeof seed?.name === "string" &&
+        (seed.group === undefined || typeof seed.group === "string"),
+    )
+    .map((seed) => ({
+      key: seed.key.slice(0, 200),
+      name: seed.name.slice(0, 200),
+      group: seed.group?.slice(0, 100),
+    }));
 
   if (rows.length === 0) {
     return NextResponse.json(
@@ -68,6 +91,9 @@ export async function POST(req: Request) {
   try {
     const result = await importSubscriberBatch(rows, {
       mergeSegments: body.mergeSegments !== false,
+      newSegments,
+      // Opt-in: a bulk import of old subscribers must not start welcome sequences by accident.
+      triggerAutomations: body.triggerAutomations === true,
     });
     revalidatePath("/admin/subscribers");
     return NextResponse.json(result, { status: result.ok ? 200 : 400 });

@@ -34,6 +34,9 @@ import {
 import {
   downloadImportTemplate,
   parseSubscriberFile,
+  MAILERLITE_SEGMENT_GROUP,
+  type ImportNewSegment,
+  type ImportSegmentUsage,
   type ImportSubscriberRow,
 } from "@/lib/admin/import-subscribers";
 import { cn, formatDate, chunkArray } from "@/lib/utils";
@@ -104,6 +107,9 @@ export function SubscribersManager({
   const [importSkipped, setImportSkipped] = useState<
     { line: number; reason: string }[]
   >([]);
+  const [importSegmentUsage, setImportSegmentUsage] = useState<ImportSegmentUsage[]>([]);
+  const [importNewSegments, setImportNewSegments] = useState<ImportNewSegment[]>([]);
+  const [importTriggerAutomations, setImportTriggerAutomations] = useState(false);
   const [importNote, setImportNote] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{
@@ -394,12 +400,16 @@ export function SubscribersManager({
     setImportNote(null);
     setImportPreview(null);
     setImportSkipped([]);
+    setImportSegmentUsage([]);
+    setImportNewSegments([]);
     if (!file) return;
 
     try {
       const parsed = await parseSubscriberFile(file, segments, importSegments);
       setImportPreview(parsed.rows);
       setImportSkipped(parsed.skipped);
+      setImportSegmentUsage(parsed.segments);
+      setImportNewSegments(parsed.newSegments);
       if (parsed.rows.length === 0) {
         setImportNote(
           parsed.skipped.length
@@ -432,15 +442,22 @@ export function SubscribersManager({
     let created = 0;
     let updated = 0;
     let failed = 0;
+    let keptUnsubscribed = 0;
     let firstError: string | null = null;
     let processed = 0;
 
     try {
       for (const batch of batches) {
+        const batchKeys = new Set(batch.flatMap((row) => row.segments));
         const res = await fetch("/api/admin/subscribers/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rows: batch, mergeSegments: true }),
+          body: JSON.stringify({
+            rows: batch,
+            mergeSegments: true,
+            newSegments: importNewSegments.filter((seed) => batchKeys.has(seed.key)),
+            triggerAutomations: importTriggerAutomations,
+          }),
         });
 
         let data: {
@@ -448,6 +465,7 @@ export function SubscribersManager({
           created?: number;
           updated?: number;
           failed?: number;
+          keptUnsubscribed?: number;
           errors?: string[];
           message?: string;
         } = {};
@@ -460,6 +478,7 @@ export function SubscribersManager({
         created += data.created ?? 0;
         updated += data.updated ?? 0;
         failed += data.failed ?? 0;
+        keptUnsubscribed += data.keptUnsubscribed ?? 0;
         if (!firstError) firstError = data.errors?.[0] ?? null;
 
         if (!res.ok || !data.ok) {
@@ -483,10 +502,18 @@ export function SubscribersManager({
       setImportNote(
         `Импортирани ${total} абонат(а): ${created} нови, ${updated} обновени` +
           (failed ? `, ${failed} с грешка${firstError ? ` (${firstError})` : ""}` : "") +
-          ".",
+          "." +
+          (keptUnsubscribed
+            ? ` ${keptUnsubscribed} вече отписани останаха отписани.`
+            : "") +
+          (importTriggerAutomations
+            ? " Автоматизациите са пуснати."
+            : " Автоматизациите не са пуснати."),
       );
       setImportPreview(null);
       setImportSkipped([]);
+      setImportSegmentUsage([]);
+      setImportNewSegments([]);
       router.refresh();
     } catch (err) {
       setImportNote(
@@ -615,6 +642,14 @@ export function SubscribersManager({
           <code className="text-xs">en</code> and adds the <code className="text-xs">en</code> tag.
           Големи файлове минават на части — няма ограничение за размера.
         </p>
+        <p className="mb-4 text-sm text-ink-soft">
+          <strong>MailerLite експорт</strong> (CSV с табулации) се приема директно: всяка
+          група от колоната <strong>Groups</strong> става сегмент — съществуващ, ако името
+          съвпада, иначе нов в групата „{MAILERLITE_SEGMENT_GROUP}“. Статусите bounced,
+          junk и unconfirmed се внасят като отписани. Допълнителните полета (Проблем,
+          Килограми, Company…) отиват в бележките. При повторен файл празните клетки не
+          изтриват данни, а отписаните тук не се записват отново.
+        </p>
 
         <Field
           label="Default segments"
@@ -629,13 +664,38 @@ export function SubscribersManager({
           />
         </Field>
 
+        <label
+          className={cn(
+            "mt-4 flex cursor-pointer items-start gap-3 rounded-xl border p-3",
+            importTriggerAutomations
+              ? "border-coral-300 bg-coral-300/10"
+              : "border-ink/10 bg-cream/40",
+          )}
+        >
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={importTriggerAutomations}
+            disabled={pending || importing}
+            onChange={(e) => setImportTriggerAutomations(e.target.checked)}
+          />
+          <span className="text-sm">
+            <span className="font-semibold">Пусни автоматизациите след импорта</span>
+            <span className="mt-0.5 block text-xs text-ink-soft">
+              {importTriggerAutomations
+                ? "Хората влизат в автоматизациите за новите си сегменти и за нови абонати (според настройката „Импорт“/„Нови“ на всяка автоматизация) — ще получат писмата им."
+                : "Хората само получават сегментите си — никакви писма от автоматизации. За стари абонати от MailerLite обикновено това е правилното."}
+            </span>
+          </span>
+        </label>
+
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-semibold hover:bg-ink/5">
             <Upload className="h-4 w-4" />
             Choose file
             <input
               type="file"
-              accept=".xlsx,.xls,.csv"
+              accept=".xlsx,.xls,.csv,.tsv,.txt"
               className="sr-only"
               disabled={pending || importing}
               onChange={(e) => {
@@ -664,6 +724,9 @@ export function SubscribersManager({
                 <Upload className="h-4 w-4" />
               )}
               Import {importPreview.length} row{importPreview.length === 1 ? "" : "s"}
+              <span className="font-normal opacity-80">
+                {importTriggerAutomations ? "· с автоматизации" : "· без автоматизации"}
+              </span>
             </button>
           )}
         </div>
@@ -700,6 +763,36 @@ export function SubscribersManager({
               ` · ${importSkipped.length} row(s) skipped`}
           </p>
         )}
+        {importPreview && importPreview.length > 0 && !importProgress &&
+          importSegmentUsage.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                Сегменти от файла
+                {importNewSegments.length > 0 &&
+                  ` · ${importNewSegments.length} нови`}
+              </p>
+              <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                {importSegmentUsage.map((usage) => (
+                  <li
+                    key={usage.key}
+                    title={usage.key}
+                    className={cn(
+                      "rounded-full border px-2.5 py-0.5 text-xs",
+                      usage.isNew
+                        ? "border-coral-300 bg-coral-300/15 text-coral-700"
+                        : "border-forest-100 bg-forest-50 text-forest-700",
+                    )}
+                  >
+                    {usage.name}{" "}
+                    <span className="[font-variant-numeric:tabular-nums] opacity-70">
+                      {usage.count}
+                    </span>
+                    {usage.isNew && <span className="ml-1 font-semibold">нов</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         {importSkipped.length > 0 && (
           <ul className="mt-2 text-xs text-coral-600">
             {importSkipped.slice(0, 5).map((s) => (
