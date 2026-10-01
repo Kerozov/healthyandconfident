@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
-import { getPublicSiteContent } from "@/lib/site/content";
+import { getPublicSiteContent, productsBesidePrograms } from "@/lib/site/content";
 import { getSiteContactConfig } from "@/lib/site/contact-config";
-import { EventsStrip } from "@/components/site/sections/events-strip";
 import { Hero } from "@/components/site/sections/hero";
 import { ProofStrip } from "@/components/site/sections/proof-strip";
+import { UpcomingEvents } from "@/components/site/sections/upcoming-events";
 import { Programs } from "@/components/site/sections/programs";
 import { MorePrograms } from "@/components/site/sections/more-programs";
 import { GuidesSection } from "@/components/site/sections/guides";
@@ -20,9 +20,10 @@ import { HomeJsonLd } from "@/components/seo/json-ld";
 
 /**
  * The home page is a sales page, in the order a stranger needs it: the promise
- * and who it is for, proof in numbers, the offers, then everything that answers
- * „will it work for me?“ — before and after, method, who Vessie is, questions —
- * and a close that keeps even the not-yet-ready in touch with a free menu.
+ * and who it is for, proof in numbers, what is coming up soon, the offers, then
+ * everything that answers „will it work for me?“ — before and after, method,
+ * who Vessie is, questions — and a close that keeps even the not-yet-ready in
+ * touch with a free menu.
  */
 export default async function HomePage({
   params,
@@ -39,33 +40,42 @@ export default async function HomePage({
   ]);
   const productsSection = site.sections.products;
   const guidesSection = site.sections.guides;
+  // An offer that already has a programme card is not sold a second time below it.
+  const extraProducts = productsBesidePrograms(
+    site.products,
+    site.programCards,
+    site.ctaPlacements,
+    l,
+  );
 
   return (
     <>
       <HomeJsonLd dict={dict} locale={l} />
+      <Hero dict={dict} locale={l} />
+      <ProofStrip dict={dict} />
       {site.events.length > 0 && (
-        <EventsStrip
+        <UpcomingEvents
           dict={dict}
           locale={l}
+          section={site.sections.events}
           events={site.events}
           offersById={site.offersById}
         />
       )}
-      <Hero dict={dict} locale={l} />
-      <ProofStrip dict={dict} />
       <Programs
         dict={dict}
         locale={l}
         section={site.sections.programs}
         cards={site.programCards}
       >
-        {productsSection && site.products.length > 0 ? (
+        {productsSection && extraProducts.length > 0 ? (
           <MorePrograms
             locale={l}
             section={productsSection}
-            products={site.products}
+            products={extraProducts}
             fallbackTitle={dict.programs.moreTitle}
             wasLabel={dict.programs.wasLabel}
+            cta={dict.shop.cta}
           />
         ) : (
           <div id="shop" className="sr-only" />

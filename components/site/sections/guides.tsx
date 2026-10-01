@@ -29,9 +29,11 @@ export function GuidesSection({
     <section id="guides" className="section-pad scroll-mt-24 bg-white">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow">
-            <BookOpen className="h-4 w-4" aria-hidden /> {dict.guides.eyebrow}
-          </span>
+          {dict.guides.eyebrow.trim().toLowerCase() !== title.trim().toLowerCase() && (
+            <span className="eyebrow">
+              <BookOpen className="h-4 w-4" aria-hidden /> {dict.guides.eyebrow}
+            </span>
+          )}
           <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl text-balance">
             {title}
           </h2>

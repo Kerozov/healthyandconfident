@@ -23,7 +23,9 @@ export function PriceTag({
 
   if (!labelHasAmount(text)) {
     return (
-      <p className={cn("text-sm font-semibold text-forest-700", className)}>{text}</p>
+      <p className={cn("text-sm font-semibold text-forest-700 first-letter:uppercase", className)}>
+        {text}
+      </p>
     );
   }
 

@@ -106,8 +106,8 @@ export const en: Dictionary = {
       "Results vary from person to person and depend on each client's starting point and consistency.",
   },
   programs: {
-    eyebrow: "Programs",
-    title: "Choose where to start",
+    eyebrow: "Choose your start",
+    title: "Programs",
     subtitle:
       "Three clear paths — depending on how much you want to lose and how much support you need.",
     items: [
@@ -374,7 +374,7 @@ export const en: Dictionary = {
     whatsappText: "Message us",
   },
   events: {
-    eyebrow: "Event",
+    eyebrow: "Coming up",
     cta: "View details",
   },
   shop: {

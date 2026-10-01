@@ -16,7 +16,8 @@ import type { Locale } from "@/i18n/config";
 import { mergeSiteSections, type SiteContent } from "@/lib/site/defaults";
 import { stripeForLocale } from "@/lib/site/locale-stripe";
 import { placementStripeForLocale } from "@/lib/site/cta-placements";
-import { programCardForLocale } from "@/lib/site/program-cards";
+import { filterProgramCardsForLocale, programCardForLocale } from "@/lib/site/program-cards";
+import { productButtonHref } from "@/lib/site/share-links";
 import { withLivePrice } from "@/lib/site/price-format";
 import { getLivePrices } from "@/lib/stripe/live-prices";
 import { resolveProgramSlug } from "@/lib/programs/types";
@@ -54,6 +55,23 @@ async function withLivePriceLabels<T extends SiteProduct | SiteGuide>(rows: T[])
 
 const PROGRAM_PAGE_HREF = /^(?:\/(?:bg|en))?\/programs\/([^/?#]+)/i;
 
+/** The programme page a link opens — `/bg/programs/21-dni` → its id — or `null`. */
+function programIdOfHref(href: string) {
+  const segment = PROGRAM_PAGE_HREF.exec(href.trim())?.[1];
+  return segment ? resolveProgramSlug(segment) : null;
+}
+
+/** The prices on the programme page a card's button opens, in card order. */
+function programCardPagePriceIds(
+  card: SiteProgramCard,
+  placements: Record<string, SiteCtaPlacement>,
+  locale: Locale,
+): string[] {
+  const programId = programIdOfHref(programCardForLocale(card, locale).href);
+  const landing = programId ? getProgramLanding(locale, programId) : null;
+  return landing ? programPricingPriceIds(landing, placements, locale) : [];
+}
+
 /**
  * The Stripe price a programme card sells: its own button's, or — when that
  * button only links to the programme page — the first price on that page.
@@ -65,10 +83,39 @@ function programCardPriceId(
 ): string {
   const own = placementStripeForLocale(placements[card.placement_key], locale).stripe_price_id;
   if (own) return own;
-  const segment = PROGRAM_PAGE_HREF.exec(programCardForLocale(card, locale).href.trim())?.[1];
-  const programId = segment ? resolveProgramSlug(segment) : null;
-  const landing = programId ? getProgramLanding(locale, programId) : null;
-  return landing ? (programPricingPriceIds(landing, placements, locale)[0] ?? "") : "";
+  return programCardPagePriceIds(card, placements, locale)[0] ?? "";
+}
+
+/**
+ * Shop products that are not already on a programme card. The same offer is
+ * often saved twice — once as a card, once as a product — and the home page
+ * would sell it two blocks apart. A product is the same offer when it charges
+ * a price the card leads to, or opens the same programme page.
+ */
+export function productsBesidePrograms(
+  products: SiteProduct[],
+  cards: SiteProgramCard[],
+  placements: Record<string, SiteCtaPlacement>,
+  locale: Locale,
+): SiteProduct[] {
+  const shown = filterProgramCardsForLocale(cards, locale);
+  const prices = new Set(
+    shown
+      .flatMap((card) => [
+        placementStripeForLocale(placements[card.placement_key], locale).stripe_price_id,
+        ...programCardPagePriceIds(card, placements, locale),
+      ])
+      .filter(Boolean),
+  );
+  const pages = new Set(
+    shown.map((card) => programIdOfHref(programCardForLocale(card, locale).href)).filter(Boolean),
+  );
+  return products.filter((product) => {
+    const price = stripeForLocale(product, locale).stripe_price_id;
+    if (price && prices.has(price)) return false;
+    const page = programIdOfHref(productButtonHref(product, locale));
+    return !(page && pages.has(page));
+  });
 }
 
 async function withLiveCardPrices(

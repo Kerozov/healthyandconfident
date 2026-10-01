@@ -7,7 +7,7 @@ import type { Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
 /** Sections that already show the offer — the bar steps aside while they are on screen. */
-const OFFER_SECTION_IDS = ["programs", "guides", "contact"];
+const OFFER_SECTION_IDS = ["events", "programs", "guides", "contact"];
 
 /**
  * Phones only: once the hero's buttons have scrolled away, the way to the

@@ -7,6 +7,7 @@ import { CtaLink } from "@/components/site/cta-link";
 import { CardImage } from "@/components/site/card-image";
 import { PriceTag } from "@/components/site/price-tag";
 import { SectionLink } from "@/components/site/section-link";
+import { SiteImage } from "@/components/site/site-image";
 import { mediaAlt } from "@/lib/site/media-gallery";
 import {
   filterProgramCardsForLocale,
@@ -14,6 +15,9 @@ import {
   programCardHref,
 } from "@/lib/site/program-cards";
 import { cn } from "@/lib/utils";
+
+/** Vessie's portrait from the hero — a face next to „write to me“. */
+const HELP_PORTRAIT = "/images/3.jpg";
 
 export function Programs({
   dict,
@@ -60,9 +64,11 @@ export function Programs({
       <div id="challenge-21" className="sr-only" />
       <Container className="min-w-0">
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow">
-            <Star className="h-4 w-4" aria-hidden /> {programs.eyebrow}
-          </span>
+          {programs.eyebrow.trim().toLowerCase() !== title.toLowerCase() && (
+            <span className="eyebrow">
+              <Star className="h-4 w-4" aria-hidden /> {programs.eyebrow}
+            </span>
+          )}
           <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl text-balance">
             {title}
           </h2>
@@ -71,7 +77,7 @@ export function Programs({
 
         <div
           className={cn(
-            "mx-auto mt-12 grid w-full min-w-0 grid-cols-1 gap-6 lg:items-stretch",
+            "mx-auto mt-12 grid w-full min-w-0 grid-cols-1 gap-6",
             items.length === 1 && "max-w-md",
             items.length === 2 && "max-w-4xl md:grid-cols-2",
             items.length >= 3 && "md:grid-cols-2 lg:grid-cols-3",
@@ -96,16 +102,27 @@ export function Programs({
 
         {children}
 
-        <div className="mx-auto mt-10 flex max-w-2xl flex-col items-center justify-center gap-2 rounded-2xl border border-forest-100 bg-white px-5 py-4 text-center text-sm sm:flex-row sm:gap-3">
-          <span className="text-slate-800">{programs.helpText}</span>
-          <SectionLink
-            href="#contact"
-            locale={locale}
-            className="inline-flex items-center gap-1.5 font-semibold text-forest-600 underline-offset-4 hover:underline"
-          >
-            <MessageCircle className="h-4 w-4" aria-hidden />
-            {programs.helpCta}
-          </SectionLink>
+        <div className="mx-auto mt-12 flex max-w-xl items-center gap-4 rounded-2xl bg-white p-4 shadow-card ring-1 ring-forest-100 sm:p-5">
+          <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-2 ring-forest-100">
+            <SiteImage
+              src={HELP_PORTRAIT}
+              alt=""
+              fill
+              sizes="56px"
+              imageClassName="object-cover object-[center_30%]"
+            />
+          </span>
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-800">{programs.helpText}</p>
+            <SectionLink
+              href="#contact"
+              locale={locale}
+              className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-forest-600 underline-offset-4 hover:underline"
+            >
+              <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
+              {programs.helpCta}
+            </SectionLink>
+          </div>
         </div>
       </Container>
     </section>
@@ -125,22 +142,31 @@ function ProgramCard({
   locale: Locale;
   wasLabel: string;
 }) {
+  // Every card keeps the same build — picture, name, promise, what is inside,
+  // price and one button — so the three can be compared at a glance. A
+  // recommended card only gets a stronger frame and a filled button; it never
+  // grows or shifts, which would push the others out of line.
+  const badge = p.badge && (
+    <span
+      className={cn(
+        "inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow-sm",
+        p.highlight ? "bg-forest-500 text-white" : "bg-white/95 text-forest-700",
+      )}
+    >
+      {p.highlight && <Star className="h-3.5 w-3.5 fill-white" aria-hidden />}
+      {p.badge}
+    </span>
+  );
+
   return (
     <article
       className={cn(
-        "relative flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-3xl bg-white transition-shadow",
+        "flex min-w-0 w-full max-w-full flex-col overflow-hidden rounded-3xl bg-white transition-shadow",
         p.highlight
-          ? "shadow-soft ring-2 ring-forest-500 lg:-my-3"
+          ? "shadow-soft ring-2 ring-forest-500"
           : "shadow-card ring-1 ring-forest-100 hover:shadow-soft",
       )}
     >
-      {p.highlight && p.badge && (
-        <p className="flex items-center justify-center gap-1.5 bg-forest-500 py-2 text-xs font-bold uppercase tracking-wider text-white">
-          <Star className="h-3.5 w-3.5 fill-white" aria-hidden />
-          {p.badge}
-        </p>
-      )}
-
       {p.image && (
         <div className="relative">
           <CardImage
@@ -148,30 +174,24 @@ function ProgramCard({
             alt={mediaAlt(p.image, locale) || p.title}
             className="aspect-[16/10]"
           />
-          {!p.highlight && p.badge && (
-            <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-forest-700 shadow-sm">
-              {p.badge}
-            </span>
-          )}
+          {badge && <div className="absolute left-4 top-4">{badge}</div>}
         </div>
       )}
 
       <div className="flex flex-1 flex-col p-6">
-        {!p.image && !p.highlight && p.badge && (
-          <span className="mb-3 w-fit rounded-full bg-forest-50 px-3 py-1 text-xs font-semibold text-forest-700">
-            {p.badge}
-          </span>
-        )}
+        {!p.image && badge && <div className="mb-4">{badge}</div>}
         {p.duration && (
           <p className="text-xs font-semibold uppercase tracking-wider text-forest-600">
             {p.duration}
           </p>
         )}
-        <h3 className="mt-1.5 font-display text-2xl font-semibold leading-tight text-slate-800">
+        <h3 className="mt-1.5 font-display text-2xl font-semibold leading-tight text-slate-800 text-balance">
           {p.title}
         </h3>
         {p.description && (
-          <p className="mt-3 text-sm leading-relaxed text-ink-soft">{p.description}</p>
+          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-soft">
+            {p.description}
+          </p>
         )}
         {p.features.length > 0 && (
           <ul className="mt-5 space-y-2.5 text-sm text-slate-800">
@@ -186,7 +206,10 @@ function ProgramCard({
 
         <div className="mt-auto pt-6">
           <div className="border-t border-forest-100 pt-5">
-            <PriceTag label={p.price} wasLabel={wasLabel} />
+            {/* Same height with or without an amount, so the buttons line up. */}
+            <div className="flex min-h-8 items-end">
+              <PriceTag label={p.price} wasLabel={wasLabel} size="lg" />
+            </div>
             <CtaLink
               placementKey={placementKey}
               href={href}
