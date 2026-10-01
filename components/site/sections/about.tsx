@@ -41,7 +41,7 @@ export function About({ dict, locale }: { dict: Dictionary; locale: Locale }) {
 
         <div>
           <p className="eyebrow">{about.eyebrow}</p>
-          <h2 className="mt-3 font-display text-3xl font-semibold leading-tight text-slate-800 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold leading-tight text-slate-800 sm:text-4xl text-balance">
             {about.title}
           </h2>
           <div className="mt-5 space-y-4 text-base leading-relaxed text-ink-soft">

@@ -39,15 +39,19 @@ export function Hero({ dict, locale }: { dict: Dictionary; locale: Locale }) {
                 src={HERO_IMAGE}
                 alt=""
                 fill
+                priority
                 sizes="44px"
                 imageClassName="object-cover object-[center_15%]"
               />
             </span>
             <p className="eyebrow">{hero.eyebrow}</p>
           </div>
-          <p className="eyebrow hidden lg:inline-flex">{hero.eyebrow}</p>
+          {/* `.eyebrow` sets its own display, so the breakpoint toggle lives on a wrapper. */}
+          <div className="hidden lg:block">
+            <p className="eyebrow">{hero.eyebrow}</p>
+          </div>
 
-          <h1 className="mt-4 font-display text-[2.05rem] font-semibold leading-[1.1] tracking-tight text-slate-800 sm:text-5xl lg:text-[3.4rem]">
+          <h1 className="mt-4 font-display text-[2.05rem] font-semibold leading-[1.1] tracking-tight text-slate-800 sm:text-5xl lg:text-[3.4rem] text-balance">
             {hero.title}
             <span className="whitespace-nowrap text-forest-500">{hero.titleAccent}</span>
             {hero.titleAfter}

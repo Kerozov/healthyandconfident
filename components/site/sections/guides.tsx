@@ -32,7 +32,7 @@ export function GuidesSection({
           <span className="eyebrow">
             <BookOpen className="h-4 w-4" aria-hidden /> {dict.guides.eyebrow}
           </span>
-          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl text-balance">
             {title}
           </h2>
           <p className="mt-4 text-ink-soft">{dict.guides.subtitle}</p>

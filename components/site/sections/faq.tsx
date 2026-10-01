@@ -5,13 +5,13 @@ import { Container } from "@/components/ui/container";
 import { SectionLink } from "@/components/site/section-link";
 
 export function Faq({ dict, locale }: { dict: Dictionary; locale: Locale }) {
-  const { faq, programs } = dict;
+  const { faq } = dict;
 
   return (
     <section id="faq" className="section-pad scroll-mt-24 bg-white">
       <Container className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
         <div className="lg:sticky lg:top-28 lg:self-start">
-          <h2 className="font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
+          <h2 className="font-display text-3xl font-semibold text-slate-800 sm:text-4xl text-balance">
             {faq.title}
           </h2>
           <p className="mt-4 text-ink-soft">{faq.subtitle}</p>
@@ -21,7 +21,7 @@ export function Faq({ dict, locale }: { dict: Dictionary; locale: Locale }) {
             className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-forest-600 underline-offset-4 hover:underline"
           >
             <MessageCircle className="h-4 w-4" aria-hidden />
-            {programs.helpCta}
+            {faq.contactCta}
           </SectionLink>
         </div>
 

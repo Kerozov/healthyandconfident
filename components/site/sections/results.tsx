@@ -54,7 +54,7 @@ export function Results({
           <p className="eyebrow">
             <Heart className="h-4 w-4" aria-hidden /> {results.eyebrow}
           </p>
-          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl text-balance">
             {results.title}
           </h2>
           <p className="mt-4 text-ink-soft">{results.subtitle}</p>

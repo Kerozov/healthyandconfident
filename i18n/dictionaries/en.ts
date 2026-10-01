@@ -311,6 +311,7 @@ export const en: Dictionary = {
   faq: {
     title: "Frequently asked questions",
     subtitle: "Answers to what people ask me most before we start.",
+    contactCta: "Another question? Message me",
     items: [
       {
         q: "Is this just another diet?",

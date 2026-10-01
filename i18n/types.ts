@@ -159,6 +159,7 @@ export type Dictionary = {
   faq: {
     title: string;
     subtitle: string;
+    contactCta: string;
     items: FaqItem[];
   };
   finalCta: {

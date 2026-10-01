@@ -23,7 +23,7 @@ export function Method({ dict, locale }: { dict: Dictionary; locale: Locale }) {
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <p className="eyebrow">{method.eyebrow}</p>
-          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl text-balance">
             {method.title}
           </h2>
           <p className="mt-4 text-ink-soft">{method.subtitle}</p>

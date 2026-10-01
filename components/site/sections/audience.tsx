@@ -20,7 +20,7 @@ export function Audience({ dict, locale }: { dict: Dictionary; locale: Locale })
       <Container className="max-w-5xl">
         <div className="text-center">
           <p className="eyebrow">{audience.eyebrow}</p>
-          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold text-slate-800 sm:text-4xl text-balance">
             {audience.title}
           </h2>
         </div>

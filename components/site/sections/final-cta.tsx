@@ -66,13 +66,13 @@ export function FinalCta({
   ].filter((row): row is Exclude<typeof row, "" | false> => Boolean(row));
 
   return (
-    <section id="contact" className="section-pad scroll-mt-24 bg-slate-800 text-white">
+    <section id="contact" className="section-pad scroll-mt-24 border-b border-white/10 bg-slate-900 text-white">
       {/* The free-menu banner and lead form that used to sit here. */}
       <div id="free-menu" className="sr-only" />
       <div id="lead" className="sr-only" />
       <Container className="grid items-start gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-16">
         <div>
-          <h2 className="font-display text-3xl font-semibold leading-tight sm:text-4xl lg:text-[2.75rem]">
+          <h2 className="font-display text-3xl font-semibold leading-tight sm:text-4xl lg:text-[2.75rem] text-balance">
             {finalCta.title}
           </h2>
           <p className="mt-4 max-w-lg text-lg text-slate-300">{finalCta.subtitle}</p>

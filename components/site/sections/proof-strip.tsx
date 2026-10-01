@@ -19,7 +19,7 @@ export function ProofStrip({ dict }: { dict: Dictionary }) {
           <p className="eyebrow">{proof.eyebrow}</p>
           <h2
             id="proof-title"
-            className="mt-2 font-display text-2xl font-semibold text-slate-800 sm:text-3xl"
+            className="mt-2 font-display text-2xl font-semibold text-slate-800 sm:text-3xl text-balance"
           >
             {proof.title}
           </h2>
