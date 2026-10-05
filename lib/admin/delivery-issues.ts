@@ -38,8 +38,10 @@ export type DeliveryIssue = {
   reason: string;
   /** When it should have gone / was attempted. */
   at: string | null;
-  /** False when sending again cannot help (unsubscribed, not on the list). */
+  /** False when sending again cannot help (unsubscribed, not on the list, bounced). */
   canSend: boolean;
+  /** Why it cannot be sent, when `canSend` is false and it is not itself a bounce. */
+  blocked: string | null;
 };
 
 export type DeliveryIssuesReport = {
@@ -124,14 +126,16 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
   let ignoredCount = 0;
   /** automation|email pairs that already have any row — never "missing". */
   const hasRow = new Set<string>();
+  /** Bounced or complained anywhere — mailing them again only hurts the sender. */
+  const deadAddresses = new Set<string>();
   const subscriberEmails = new Set<string>();
 
-  function push(issue: Omit<DeliveryIssue, "name" | "canSend">) {
+  function push(issue: Omit<DeliveryIssue, "name" | "canSend" | "blocked">) {
     if (ignored.has(`${issue.automationId}|${issue.email}`)) {
       ignoredCount += 1;
       return;
     }
-    issues.push({ ...issue, name: null, canSend: true });
+    issues.push({ ...issue, name: null, canSend: true, blocked: null });
     subscriberEmails.add(issue.email);
   }
 
@@ -152,6 +156,9 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
     const email = row.email.trim().toLowerCase();
     hasRow.add(`${automation.id}|${email}`);
     const bounced = row.status === "sent" || row.status === "scheduled";
+    if (bounced && (row.recipient_status === "bounced" || row.recipient_status === "complained")) {
+      deadAddresses.add(email);
+    }
     push({
       automationId: automation.id,
       automationName: automation.name,
@@ -230,11 +237,16 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
   for (const step of automations.filter((a) => a.enabled && a.after_automation_id)) {
     const parent = byId.get(step.after_automation_id!);
     if (!parent) continue;
-    const parents = await fetchAllRows<{ email: string; sent_at: string; scheduled_for: string | null }>(
+    const parents = await fetchAllRows<{
+      email: string;
+      sent_at: string;
+      scheduled_for: string | null;
+      recipient_status: string | null;
+    }>(
       (f, t) => {
         let q = supabase
           .from("automation_deliveries")
-          .select("email, sent_at, scheduled_for")
+          .select("email, sent_at, scheduled_for, recipient_status")
           .eq("automation_id", parent.id)
           .eq("status", "sent")
           .order("id")
@@ -246,6 +258,8 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
     const delayMs = (step.delay_days ?? 0) * DAY_MS + (step.delay_minutes ?? 0) * 60_000;
     const now = Date.now();
     const due = parents
+      // A previous step that bounced never reached them — the next one would not either.
+      .filter((p) => p.recipient_status !== "bounced" && p.recipient_status !== "complained" && p.recipient_status !== "failed")
       .map((p) => {
         const parentAt = new Date(p.scheduled_for ?? p.sent_at).getTime();
         const dueAt = step.send_date ? new Date(step.send_date).getTime() : parentAt + delayMs;
@@ -313,7 +327,15 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
   for (const issue of issues) {
     const sub = subscribers.get(issue.email);
     issue.name = sub?.name ?? null;
-    issue.canSend = sub?.status === "subscribed" && issue.kind !== "bounced";
+    if (issue.kind === "bounced") {
+      issue.canSend = false;
+    } else if (deadAddresses.has(issue.email)) {
+      issue.canSend = false;
+      issue.blocked = "адресът е върнат (bounce) на друг имейл — провери го";
+    } else if (sub?.status !== "subscribed") {
+      issue.canSend = false;
+      issue.blocked = sub ? "отписан" : "не е в абонатите";
+    }
   }
 
   issues.sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));

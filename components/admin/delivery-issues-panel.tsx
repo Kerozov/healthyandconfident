@@ -13,11 +13,7 @@ import type {
   DeliveryIssuesReport,
 } from "@/lib/admin/delivery-issues";
 import { Card } from "@/components/admin/fields";
-import {
-  DEFAULT_SEND_PACING_MINUTES,
-  SEND_PACING_OPTIONS,
-  pacingDurationLabel,
-} from "@/lib/automation/send-pacing";
+import { requestAutomationSync } from "@/lib/admin/automation-sync-client";
 import { cn, formatDate } from "@/lib/utils";
 
 const KIND_LABELS: Record<DeliveryIssueKind, string> = {
@@ -60,9 +56,9 @@ export function DeliveryIssuesPanel({
   const [report, setReport] = useState<DeliveryIssuesReport | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<DeliveryIssueKind | "all">("all");
-  const [pacing, setPacing] = useState<number>(DEFAULT_SEND_PACING_MINUTES);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [, startTransition] = useTransition();
@@ -76,10 +72,40 @@ export function DeliveryIssuesPanel({
     setLoading(false);
   }, [period]);
 
+  /**
+   * Missing / failed / skipped are written at send time and always current.
+   * Bounces only arrive from the worker — pulled here in the background (a
+   * plain fetch, so buttons stay usable), and the list reloads if any came in.
+   * Needs the automations screen, same as sending.
+   */
+  const syncBounces = useCallback(async () => {
+    if (!canSend) return;
+    setSyncing(true);
+    try {
+      let synced = 0;
+      for (let i = 0; i < 3; i++) {
+        const res = await requestAutomationSync();
+        synced += res.synced;
+        if (!res.ok || res.remaining === 0) break;
+      }
+      if (synced > 0) {
+        const res = await getDeliveryIssuesReport(period);
+        if (res.ok) setReport(res.report);
+      }
+    } finally {
+      setSyncing(false);
+    }
+  }, [canSend, period]);
+
+  const refresh = useCallback(async () => {
+    await load();
+    void syncBounces();
+  }, [load, syncBounces]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
-  }, [load]);
+    void refresh();
+  }, [refresh]);
 
   const groups = useMemo<Group[]>(() => {
     if (!report) return [];
@@ -114,17 +140,12 @@ export function DeliveryIssuesPanel({
   function send(group: Group, issues: DeliveryIssue[], key: string) {
     const emails = issues.filter((i) => i.canSend).map((i) => i.email);
     if (emails.length === 0) return;
-    // One person goes now; a group goes at the chosen pace.
-    const spacingMinutes = emails.length > 1 ? pacing : 0;
-    const spread = pacingDurationLabel(emails.length, spacingMinutes);
+    // Each person gets only the one step they missed — no pacing needed here.
     if (
       emails.length > 1 &&
       !confirm(
         `Да изпратя „${group.automationName}“ на ${emails.length} души, които не са го получили?\n\n` +
-          (spread
-            ? `Темпо: ${SEND_PACING_OPTIONS.find((o) => o.minutes === spacingMinutes)?.label.toLowerCase()} — последният тръгва след ${spread}.`
-            : "Всички тръгват наведнъж.") +
-          "\nСледващите стъпки от поредицата идват след него със своите закъснения.",
+          "Всеки получава само тази стъпка. Следващите от поредицата идват след нея със своите закъснения.",
       )
     ) {
       return;
@@ -137,7 +158,6 @@ export function DeliveryIssuesPanel({
         emails: emails.join("\n"),
         resend: false,
         continueChain: true,
-        spacingMinutes,
       });
       setNote({ ok: res.ok, text: res.message ?? (res.ok ? "Изпратено." : "Неуспешно.") });
       await load();
@@ -183,20 +203,20 @@ export function DeliveryIssuesPanel({
       action={
         <button
           type="button"
-          onClick={() => void load()}
-          disabled={loading || busy}
+          onClick={() => void refresh()}
+          disabled={loading || busy || syncing}
           className="inline-flex h-9 items-center gap-2 rounded-full border border-ink/15 px-3 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
         >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          Провери пак
+          <RefreshCw className={cn("h-4 w-4", (loading || syncing) && "animate-spin")} />
+          {syncing ? "Обновявам доставките…" : "Провери пак"}
         </button>
       }
     >
       <p className="-mt-3 mb-4 text-sm text-ink-soft">
         Хора, до които автоматизация не е стигнала в избрания период, и защо. „Без запис“ значи,
         че автоматизацията изобщо не е тръгнала за тях (напр. грешка при записването).
-        „Изпрати“ на ред праща на един човек веднага; „Изпрати на всички“ ги разпределя
-        във времето според темпото. Поредицата продължава след това със своите закъснения.
+        „Изпрати“ праща пропуснатата стъпка сега, а поредицата продължава след нея със своите
+        закъснения. Върнати адреси (bounce) не могат да се изпращат.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -211,23 +231,6 @@ export function DeliveryIssuesPanel({
             className="h-10 w-full rounded-full border border-ink/15 bg-white pl-9 pr-4 text-sm text-ink outline-none placeholder:text-ink-soft/50 focus:border-forest-400 focus:ring-2 focus:ring-forest-400/20"
           />
         </label>
-        {canSend && (
-          <label className="flex items-center gap-2 text-xs text-ink-soft sm:ml-auto sm:order-last">
-            Темпо при „Изпрати на всички“
-            <select
-              value={pacing}
-              onChange={(e) => setPacing(Number(e.target.value))}
-              disabled={busy}
-              className="h-8 rounded-full border border-ink/15 bg-white px-2 text-xs text-ink"
-            >
-              {SEND_PACING_OPTIONS.map((o) => (
-                <option key={o.minutes} value={o.minutes}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         {(["all", "missing", "failed", "skipped", "bounced"] as const).map((k) => {
           const count = k === "all" ? total : kindCounts[k];
           if (k !== "all" && count === 0) return null;
@@ -334,7 +337,9 @@ export function DeliveryIssuesPanel({
                           <p className="mt-0.5 text-xs text-ink-soft">
                             {issue.reason}
                             {issue.at && ` · ${formatDate(issue.at, "bg")}`}
-                            {!issue.canSend && issue.kind !== "bounced" && " · не е активен абонат"}
+                            {issue.blocked && (
+                              <span className="font-medium text-coral-600"> · {issue.blocked}</span>
+                            )}
                           </p>
                         </div>
                         <div className="flex shrink-0 gap-1.5">
