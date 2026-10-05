@@ -7,6 +7,13 @@ on:
       - "supabase/migrations/**"
       - ".github/workflows/supabase-migrate.yml"
 
+# Two runs pushing at once both see the same migration as pending and race to
+# apply it; the loser fails on the duplicate schema_migrations row. Queue runs
+# instead — never cancel one mid-push.
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+
 jobs:
   migrate:
     runs-on: ubuntu-latest
