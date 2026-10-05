@@ -10,6 +10,7 @@ import type {
   AutomatedEmail,
   Automation,
   AutomationDelivery,
+  DeliveryIssueIgnore,
   CampaignDelivery,
   SiteSection,
   SiteEvent,
@@ -106,6 +107,7 @@ export type Database = {
       automated_emails: TableShape<AutomatedEmail>;
       automations: TableShape<Automation>;
       automation_deliveries: TableShape<AutomationDelivery>;
+      delivery_issue_ignores: TableShape<DeliveryIssueIgnore>;
       form_templates: TableShape<FormTemplateRecord>;
       form_submissions: TableShape<FormSubmissionRecord>;
       form_invitations: TableShape<FormInvitation>;

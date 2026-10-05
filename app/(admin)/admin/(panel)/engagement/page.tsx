@@ -4,6 +4,7 @@ import { getEmailStats } from "@/lib/admin/email-stats";
 import { parseStatsPeriod } from "@/lib/admin/stats-periods";
 import { EmailStatsDashboard } from "@/components/admin/email-stats-dashboard";
 import { StatsToolbar } from "@/components/admin/stats-toolbar";
+import { DeliveryIssuesPanel } from "@/components/admin/delivery-issues-panel";
 import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,8 @@ export default async function AdminEngagementPage({
         stats={stats}
         canOpenAutomations={canOpenAutomations}
       />
+      {/* Sending again is an automations action — viewers without it only see and ignore. */}
+      <DeliveryIssuesPanel period={period} canSend={canOpenAutomations} />
     </div>
   );
 }

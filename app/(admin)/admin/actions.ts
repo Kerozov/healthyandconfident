@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { automationEmailContent } from "@/lib/automation/content";
+import { automationEmailContent, automationSmsBody } from "@/lib/automation/content";
 import { after } from "next/server";
 import {
   AdminAccessError,
@@ -1252,6 +1252,355 @@ export async function resendAutomationToNonOpeners(
     ok: true,
     message: `Resent to ${emails.length} non-opener(s). Track progress under Campaigns.`,
   };
+}
+
+// ── Manual "send now" for one automation step ───────────────
+export type SendAutomationNowInput = {
+  /** emails = typed addresses; audience = groups/segments; all = every subscriber. */
+  mode: "emails" | "audience" | "all";
+  emails?: string;
+  segment_keys?: string[];
+  group_ids?: string[];
+  /** Only subscribers in this language (audience / all). */
+  locale?: "bg" | "en" | "";
+  /** Also people who already got (or have queued) this step. */
+  resend?: boolean;
+  /** Lay out the steps after this one, timed from now. */
+  continueChain?: boolean;
+};
+
+const MANUAL_SEND_MAX_TYPED = 500;
+const MANUAL_SEND_CONCURRENCY = 6;
+const MANUAL_SEND_BUDGET_MS = 45_000;
+
+type ManualRecipient = {
+  id: string | null;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  locale: "bg" | "en";
+  tags: string[];
+  source: string | null;
+};
+
+type ManualSubscriberRow = {
+  id: string;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  locale: string | null;
+  tags: string[] | null;
+  source: string | null;
+};
+
+function parseTypedEmails(raw: string): { valid: string[]; invalid: string[] } {
+  const parts = uniqueNormalized(raw.split(/[\s,;]+/));
+  const valid: string[] = [];
+  const invalid: string[] = [];
+  for (const part of parts) (TEST_EMAIL_RE.test(part) ? valid : invalid).push(part);
+  return { valid, invalid };
+}
+
+async function loadManualSubscribers(emails: string[]): Promise<Map<string, ManualSubscriberRow>> {
+  const supabase = getAdminClient();
+  const out = new Map<string, ManualSubscriberRow>();
+  for (const batch of chunkArray(emails, 200)) {
+    const { data, error } = await supabase
+      .from("subscribers")
+      .select("id, email, name, phone, locale, tags, source")
+      .in("email", batch);
+    if (error) throw new Error(error.message);
+    for (const row of (data as ManualSubscriberRow[] | null) ?? []) {
+      out.set(row.email.trim().toLowerCase(), row);
+    }
+  }
+  return out;
+}
+
+/**
+ * Who a manual send goes to. Typed addresses are taken as they are — someone
+ * not (yet) on the list still gets it, in Bulgarian; an unsubscribed address
+ * is skipped at send time. Groups and "all" are subscribed people only.
+ */
+async function resolveManualRecipients(
+  input: SendAutomationNowInput,
+): Promise<{ recipients: ManualRecipient[]; invalid: string[]; label: string } | { error: string }> {
+  let emails: string[];
+  let invalid: string[] = [];
+  let label: string;
+
+  if (input.mode === "emails") {
+    const parsed = parseTypedEmails(input.emails ?? "");
+    if (parsed.valid.length === 0) return { error: "Въведи поне един валиден имейл." };
+    if (parsed.valid.length > MANUAL_SEND_MAX_TYPED) {
+      return {
+        error: `Най-много ${MANUAL_SEND_MAX_TYPED} адреса наведнъж — за повече избери група.`,
+      };
+    }
+    emails = parsed.valid;
+    invalid = parsed.invalid;
+    label = emails.length === 1 ? emails[0] : `${emails.length} адреса`;
+  } else {
+    const segmentKeys = input.mode === "audience" ? input.segment_keys ?? [] : [];
+    const groupIds = input.mode === "audience" ? input.group_ids ?? [] : [];
+    if (input.mode === "audience" && segmentKeys.length === 0 && groupIds.length === 0) {
+      return { error: "Избери поне една група или сегмент." };
+    }
+    const audience = await resolveAudience({
+      mode: "segment",
+      segment_keys: segmentKeys,
+      group_ids: groupIds,
+      locale: input.locale || "",
+    });
+    emails = audience.emails;
+    label = input.mode === "all" ? "всички абонати" : audience.label;
+  }
+
+  const subscribers = await loadManualSubscribers(emails);
+  const recipients = emails.map((email): ManualRecipient => {
+    const sub = subscribers.get(email);
+    return {
+      id: sub?.id ?? null,
+      email,
+      name: sub?.name ?? null,
+      phone: sub?.phone ?? null,
+      locale: sub?.locale === "en" ? "en" : "bg",
+      tags: sub?.tags ?? [],
+      source: sub?.source ?? null,
+    };
+  });
+  return { recipients, invalid, label };
+}
+
+async function emailsWithLiveDelivery(automationId: string, emails: string[]): Promise<Set<string>> {
+  const supabase = getAdminClient();
+  const out = new Set<string>();
+  for (const batch of chunkArray(emails, 200)) {
+    const { data, error } = await supabase
+      .from("automation_deliveries")
+      .select("email")
+      .eq("automation_id", automationId)
+      .in("status", ["sent", "scheduled"])
+      .in("email", batch);
+    if (error) throw new Error(error.message);
+    for (const row of (data as { email: string }[] | null) ?? []) {
+      out.add(row.email.trim().toLowerCase());
+    }
+  }
+  return out;
+}
+
+/** Either language counts — each falls back to the other. */
+function automationHasContent(automation: Automation): boolean {
+  return automation.channel === "sms"
+    ? Boolean(automationSmsBody(automation, "bg"))
+    : Boolean(automationEmailContent(automation, "bg"));
+}
+
+async function loadAutomationForManualSend(
+  id: string,
+): Promise<{ automation: Automation } | { error: string }> {
+  const { data, error } = await getAdminClient()
+    .from("automations")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  const automation = data as Automation | null;
+  if (!automation) return { error: "Автоматизацията не е намерена." };
+  if (!automationHasContent(automation)) {
+    return { error: `„${automation.name}“ няма текст — добави го и запази, преди да изпращаш.` };
+  }
+  return { automation };
+}
+
+/** Count for the dialog before anything goes out. */
+export async function previewAutomationSendNow(
+  automationId: string,
+  input: SendAutomationNowInput,
+): Promise<
+  | { ok: true; total: number; already: number; invalid: string[]; label: string }
+  | { ok: false; message: string }
+> {
+  await requireAdmin("automations");
+  const loaded = await loadAutomationForManualSend(automationId);
+  if ("error" in loaded) return { ok: false, message: loaded.error };
+  try {
+    const resolved = await resolveManualRecipients(input);
+    if ("error" in resolved) return { ok: false, message: resolved.error };
+    const live = await emailsWithLiveDelivery(
+      automationId,
+      resolved.recipients.map((r) => r.email),
+    );
+    return {
+      ok: true,
+      total: resolved.recipients.length,
+      already: live.size,
+      invalid: resolved.invalid,
+      label: resolved.label,
+    };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Send one step right now to whoever is picked — a person, a few typed
+ * addresses, groups, or everyone. No trigger, no trigger or audience checks.
+ * Every send is a delivery row of the step, so it shows in its report. A big
+ * list that runs out of time is finished by pressing again: people who already
+ * have the step are left out unless "resend" is on.
+ */
+export async function sendAutomationNow(
+  automationId: string,
+  input: SendAutomationNowInput,
+): Promise<ActionResult & { remaining?: number }> {
+  const guard = await guardAction("automations", {
+    action: "send",
+    summary: "Ръчно изпращане на автоматизация",
+  });
+  if (!guard.ok) return guard;
+
+  const { isNotificationWorkerConfigured } = await import("@/lib/worker/config");
+  if (!isNotificationWorkerConfigured()) {
+    return { ok: false, message: "NOTIFICATION_WORKER_URL / API_KEY не са зададени — нищо не е изпратено." };
+  }
+
+  const loaded = await loadAutomationForManualSend(automationId);
+  if ("error" in loaded) return { ok: false, message: loaded.error };
+  const { automation } = loaded;
+
+  const supabase = getAdminClient();
+  let resolved: Awaited<ReturnType<typeof resolveManualRecipients>>;
+  let segments: Segment[];
+  let groups: SegmentGroup[];
+  try {
+    const [res, { data: segmentRows, error: segError }, { data: groupRows, error: groupError }] =
+      await Promise.all([
+        resolveManualRecipients(input),
+        supabase.from("segments").select("*"),
+        supabase.from("segment_groups").select("*"),
+      ]);
+    const loadError = segError ?? groupError;
+    if (loadError) return { ok: false, message: loadError.message };
+    resolved = res;
+    segments = (segmentRows as Segment[]) ?? [];
+    groups = (groupRows as SegmentGroup[]) ?? [];
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
+  if ("error" in resolved) return { ok: false, message: resolved.error };
+  if (resolved.recipients.length === 0) {
+    return { ok: false, message: "Няма абонати в този избор." };
+  }
+
+  const { sendAutomationStepNow } = await import("@/lib/automation/run");
+  const counts = { sent: 0, scheduled: 0, already: 0, skipped: 0, failed: 0 };
+  const deadline = Date.now() + MANUAL_SEND_BUDGET_MS;
+  const queue = [...resolved.recipients];
+  let attempted = 0;
+
+  async function worker() {
+    while (queue.length > 0 && Date.now() < deadline) {
+      const r = queue.shift()!;
+      attempted += 1;
+      try {
+        const outcome = await sendAutomationStepNow(
+          automation,
+          {
+            email: r.email,
+            name: r.name,
+            phone: r.phone,
+            locale: r.locale,
+            subscriberId: r.id,
+            tags: r.tags,
+            isNew: false,
+            source: r.source ?? undefined,
+          },
+          {
+            segments,
+            groups,
+            resend: Boolean(input.resend),
+            continueChain: Boolean(input.continueChain),
+          },
+        );
+        counts[outcome] += 1;
+      } catch (err) {
+        counts.failed += 1;
+        console.error(`[automation] manual send ${automation.name} ${r.email}:`, err);
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: MANUAL_SEND_CONCURRENCY }, worker));
+
+  const remaining = resolved.recipients.length - attempted;
+  const parts = [`изпратени ${counts.sent}`];
+  if (counts.scheduled > 0) parts.push(`насрочени ${counts.scheduled}`);
+  if (counts.already > 0) parts.push(`вече го имат ${counts.already}`);
+  if (counts.skipped > 0) parts.push(`пропуснати ${counts.skipped}`);
+  if (counts.failed > 0) parts.push(`неуспешни ${counts.failed}`);
+  let message = `„${automation.name}“ → ${resolved.label}: ${parts.join(" · ")}.`;
+  if (remaining > 0) message += ` Остават ${remaining} — натисни „Изпрати“ пак за останалите.`;
+  if (counts.skipped > 0 || counts.failed > 0) message += " Причините са в отчета на стъпката.";
+  if (resolved.invalid.length > 0) {
+    message += ` Невалидни адреси (пропуснати): ${resolved.invalid.slice(0, 5).join(", ")}${resolved.invalid.length > 5 ? "…" : ""}.`;
+  }
+
+  revalidatePath("/admin/automations");
+  return {
+    ok: counts.failed === 0 && counts.sent + counts.scheduled + counts.already > 0,
+    message,
+    remaining,
+  };
+}
+
+// ── "Didn't receive" list (Statistics) ─────────────────────
+export async function getDeliveryIssuesReport(
+  period: number,
+): Promise<
+  | { ok: true; report: import("@/lib/admin/delivery-issues").DeliveryIssuesReport }
+  | { ok: false; message: string }
+> {
+  await requireAdmin(["engagement", "automations"] as const);
+  try {
+    const { getDeliveryIssues } = await import("@/lib/admin/delivery-issues");
+    const { parseStatsPeriod } = await import("@/lib/admin/stats-periods");
+    return { ok: true, report: await getDeliveryIssues(parseStatsPeriod(String(period))) };
+  } catch (err) {
+    console.error("[delivery issues]", err instanceof Error ? err.message : err);
+    return { ok: false, message: "Списъкът не можа да се зареди." };
+  }
+}
+
+/** Hide (or show again) people from the "didn't receive" list of one step. */
+export async function setDeliveryIssuesIgnored(input: {
+  automationId: string;
+  emails: string[];
+  ignored: boolean;
+}): Promise<ActionResult> {
+  const guard = await guardAction(["engagement", "automations"], {
+    action: "update",
+    summary: input.ignored ? "Игнорира неполучили" : "Върна неполучили",
+  });
+  if (!guard.ok) return guard;
+  const emails = uniqueNormalized(input.emails);
+  if (emails.length === 0) return { ok: true };
+  const supabase = getAdminClient();
+  for (const batch of chunkArray(emails, 200)) {
+    const { error } = input.ignored
+      ? await supabase.from("delivery_issue_ignores").upsert(
+          batch.map((email) => ({ automation_id: input.automationId, email })),
+          { onConflict: "automation_id,email", ignoreDuplicates: true },
+        )
+      : await supabase
+          .from("delivery_issue_ignores")
+          .delete()
+          .eq("automation_id", input.automationId)
+          .in("email", batch);
+    if (error) return { ok: false, message: error.message };
+  }
+  revalidatePath("/admin/engagement");
+  return { ok: true };
 }
 
 // ── Subscribers ─────────────────────────────────────────────

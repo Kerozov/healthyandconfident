@@ -74,6 +74,7 @@ import { AutomationFlowView, flattenAutomationsForDisplay, TRIGGER_SECTION_LABEL
 import { Field, Input, Select, Card } from "@/components/admin/fields";
 import { SmsComposeFields } from "@/components/admin/sms-compose-fields";
 import { TestEmailSender } from "@/components/admin/test-email-sender";
+import { AutomationSendNowDialog } from "@/components/admin/automation-send-now-dialog";
 import { buildSmsBody, checkSmsCompose, splitMessageAndLink } from "@/lib/sms/compose-validation";
 import { TabList } from "@/components/admin/ui";
 import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
@@ -515,6 +516,8 @@ export function AutomationsManager({
   /** Email content copied for a campaign (or another automation). */
   const copiedEmail = useCopiedEmail();
   const [copiedNotice, setCopiedNotice] = useState<string | null>(null);
+  /** Step whose "send now" dialog is open. */
+  const [sendNowFor, setSendNowFor] = useState<AutomationRow | null>(null);
 
   /**
    * Counters live here, not in the server payload: the flow tab shows none of
@@ -1222,6 +1225,18 @@ export function AutomationsManager({
               >
                 Отказ
               </button>
+              {editingId !== "new" && automations.some((a) => a.id === editingId) && (
+                <button
+                  type="button"
+                  onClick={() => setSendNowFor(automations.find((a) => a.id === editingId)!)}
+                  disabled={pending}
+                  title="Изпраща запазената версия — запази промените първо"
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
+                >
+                  <Send className="h-4 w-4" />
+                  Изпрати сега
+                </button>
+              )}
               {editingId !== "new" && (
                 <button
                   type="button"
@@ -1920,6 +1935,7 @@ export function AutomationsManager({
             onDeleteAutomation={(a) => remove(a.id, a.name)}
             onCopyAutomation={copyAutomation}
             onPasteAfterAutomation={pasteAutomation}
+            onSendNowAutomation={setSendNowFor}
             copiedId={clipboard?.id ?? null}
             copiedName={clipboard?.name ?? null}
           />
@@ -2139,6 +2155,15 @@ export function AutomationsManager({
                     )}
                   >
                     {a.enabled ? "Enabled" : "Disabled"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSendNowFor(a)}
+                    disabled={pending}
+                    title="Изпрати сега до конкретни хора, група или всички"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-forest-700 hover:bg-forest-500/10 disabled:opacity-40"
+                  >
+                    <Send className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
@@ -2401,6 +2426,19 @@ export function AutomationsManager({
       </div>
       )}
       </div>
+      {sendNowFor && (
+        <AutomationSendNowDialog
+          automation={sendNowFor}
+          segments={segments}
+          groups={groups}
+          hasNextSteps={automations.some((x) => x.after_automation_id === sendNowFor.id)}
+          onClose={() => setSendNowFor(null)}
+          onSent={() => {
+            if (statsById) void loadStats();
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

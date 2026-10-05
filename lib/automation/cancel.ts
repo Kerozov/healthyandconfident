@@ -20,7 +20,7 @@ type DeliveryCancelRow = {
   channel: string;
 };
 
-async function cancelWorkerJob(
+export async function cancelWorkerJob(
   workerJobId: string | null,
   channel: string,
 ): Promise<boolean> {

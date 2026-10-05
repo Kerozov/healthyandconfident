@@ -20,6 +20,7 @@ import {
   ClipboardPaste,
   ClipboardList,
   Tags,
+  Send,
 } from "lucide-react";
 import type {
   Automation,
@@ -483,6 +484,7 @@ type FlowActions = {
   onDelete?: (automation: AutomationRow) => void;
   onCopy?: (automation: AutomationRow) => void;
   onPasteAfter?: (automation: AutomationRow) => void;
+  onSendNow?: (automation: AutomationRow) => void;
   copiedId?: string | null;
   copiedName?: string | null;
   forms?: FormTemplateRecord[];
@@ -501,6 +503,7 @@ function TreeBranch({
   onDelete,
   onCopy,
   onPasteAfter,
+  onSendNow,
   copiedId,
   copiedName,
   forms,
@@ -529,7 +532,7 @@ function TreeBranch({
             onSelect={onSelect}
             forms={forms}
           />
-          {(onAddAfter || onDelete || onCopy || onPasteAfter) && (
+          {(onAddAfter || onDelete || onCopy || onPasteAfter || onSendNow) && (
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
               {onCopy && (
                 <button
@@ -577,6 +580,20 @@ function TreeBranch({
                   Следваща стъпка
                 </button>
               )}
+              {onSendNow && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSendNow(node.automation);
+                  }}
+                  title="Изпрати тази стъпка сега до конкретни хора, група или всички"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-forest-300 bg-white px-3 py-1.5 text-xs font-semibold text-forest-800 shadow-sm hover:border-forest-400 hover:bg-forest-50"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Изпрати сега
+                </button>
+              )}
               {onDelete && (
                 <button
                   type="button"
@@ -621,6 +638,7 @@ function TreeBranch({
             onDelete={onDelete}
             onCopy={onCopy}
             onPasteAfter={onPasteAfter}
+            onSendNow={onSendNow}
             copiedId={copiedId}
             copiedName={copiedName}
             forms={forms}
@@ -653,6 +671,7 @@ function TreeBranch({
                   onDelete={onDelete}
                   onCopy={onCopy}
                   onPasteAfter={onPasteAfter}
+                  onSendNow={onSendNow}
                   copiedId={copiedId}
                   copiedName={copiedName}
                   forms={forms}
@@ -677,6 +696,7 @@ function TriggerSection({
   onDelete,
   onCopy,
   onPasteAfter,
+  onSendNow,
   copiedId,
   copiedName,
   forms,
@@ -732,6 +752,7 @@ function TriggerSection({
               onDelete={onDelete}
               onCopy={onCopy}
               onPasteAfter={onPasteAfter}
+              onSendNow={onSendNow}
               copiedId={copiedId}
               copiedName={copiedName}
               forms={forms}
@@ -753,6 +774,7 @@ export function AutomationFlowView({
   onDeleteAutomation,
   onCopyAutomation,
   onPasteAfterAutomation,
+  onSendNowAutomation,
   copiedId,
   copiedName,
   forms,
@@ -766,6 +788,7 @@ export function AutomationFlowView({
   onDeleteAutomation?: (automation: AutomationRow) => void;
   onCopyAutomation?: (automation: AutomationRow) => void;
   onPasteAfterAutomation?: (automation: AutomationRow) => void;
+  onSendNowAutomation?: (automation: AutomationRow) => void;
   copiedId?: string | null;
   copiedName?: string | null;
   forms?: FormTemplateRecord[];
@@ -825,6 +848,7 @@ export function AutomationFlowView({
             onDelete={onDeleteAutomation}
             onCopy={onCopyAutomation}
             onPasteAfter={onPasteAfterAutomation}
+            onSendNow={onSendNowAutomation}
             copiedId={copiedId}
             copiedName={copiedName}
             forms={forms}

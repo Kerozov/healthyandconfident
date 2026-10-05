@@ -215,6 +215,14 @@ export type AutomationDelivery = {
   last_synced_at: string | null;
 };
 
+/** Migration 078 — a "didn't receive" issue hidden from Statistics. */
+export type DeliveryIssueIgnore = {
+  automation_id: string;
+  email: string;
+  ignored_at: string;
+  ignored_by: string | null;
+};
+
 export type AutomationStats = {
   sent_count: number;
   scheduled_count: number;

@@ -45,6 +45,7 @@ import {
   type WorkerBatchResultItem,
 } from "@/lib/worker/email";
 import { sendSms, scheduleSms } from "@/lib/worker/sms";
+import { cancelWorkerJob } from "@/lib/automation/cancel";
 
 export type AutomationRunContext = {
   email: string;
@@ -508,6 +509,8 @@ async function submitStep(
   sendAt: string,
   sendNow: boolean,
   existing: DeliveryRow | null,
+  /** A manual send is a new job every time — the trigger key would return the old one. */
+  idempotencyKey?: string,
 ): Promise<StepOutcome> {
   const email = ctx.email.trim().toLowerCase();
   if (await isEmailUnsubscribed(email)) {
@@ -516,10 +519,12 @@ async function submitStep(
   }
 
   const locale: Locale = ctx.locale === "en" ? "en" : "bg";
-  const key = automationJobIdempotencyKey(automation.id, {
-    email,
-    subscriberId: ctx.subscriberId,
-  });
+  const key =
+    idempotencyKey ??
+    automationJobIdempotencyKey(automation.id, {
+      email,
+      subscriberId: ctx.subscriberId,
+    });
   const hadPrevious = Boolean(existing);
 
   if (automation.channel === "sms") {
@@ -761,6 +766,79 @@ export async function retryFailedAutomation(
     return "failed";
   }
   return deliverStep(automation, ctx, sendAt, run, existing);
+}
+
+export type ManualSendOutcome = StepOutcome | "already";
+
+/**
+ * Send one step right now to one person, by hand from the admin — no trigger,
+ * no trigger checks, no audience checks: whoever was picked gets it. Writes the
+ * same delivery row as an automatic send, so it shows up in the step's report.
+ *
+ * Without `resend`, someone who already has this step (sent or queued) is left
+ * alone — that is what makes a big send safe to run again for the rest. With
+ * it, a queued copy is cancelled first so the person does not get it twice.
+ * `continueChain` lays out the following steps from now, the same way a real
+ * trigger would; steps the person already has are skipped.
+ */
+export async function sendAutomationStepNow(
+  automation: Automation,
+  ctx: AutomationRunContext,
+  opts: {
+    segments: Segment[];
+    groups: SegmentGroup[];
+    resend: boolean;
+    continueChain: boolean;
+  },
+): Promise<ManualSendOutcome> {
+  const email = ctx.email.trim().toLowerCase();
+  const run: ChainRunState = {
+    segments: opts.segments,
+    groups: opts.groups,
+    visited: new Set([automation.id]),
+  };
+
+  let existing: DeliveryRow | null;
+  try {
+    existing = await loadDelivery(automation.id, email);
+  } catch (err) {
+    await recordFailure(automation, ctx, errorMessage(err, "Грешка при ръчно изпращане"));
+    return "failed";
+  }
+  if (isLiveDelivery(existing)) {
+    if (!opts.resend) return "already";
+    if (existing?.status === "scheduled" && existing.worker_job_id) {
+      const canceled = await cancelWorkerJob(existing.worker_job_id, automation.channel).catch(
+        () => false,
+      );
+      // Sending anyway would mail them twice once the queued job fires.
+      if (!canceled) return "already";
+    }
+  }
+
+  const baseKey = automationJobIdempotencyKey(automation.id, {
+    email,
+    subscriberId: ctx.subscriberId,
+  });
+  let outcome: StepOutcome;
+  try {
+    outcome = await submitStep(
+      automation,
+      ctx,
+      new Date().toISOString(),
+      true,
+      existing,
+      `${baseKey}-m${Date.now().toString(36)}`,
+    );
+  } catch (err) {
+    await recordFailure(automation, ctx, errorMessage(err, "Неуспешно изпращане"));
+    return "failed";
+  }
+
+  if (opts.continueChain && (outcome === "sent" || outcome === "scheduled")) {
+    await scheduleChainedFromParent(automation.id, new Date().toISOString(), ctx, run);
+  }
+  return outcome;
 }
 
 type GateResult =
