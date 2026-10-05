@@ -23,6 +23,7 @@ import { automationEmailContent, automationSmsBody } from "@/lib/automation/cont
 import {
   scheduledAtAfterDays,
   scheduledAtAfterMinutes,
+  scheduledAtOnDate,
 } from "@/lib/datetime";
 import { computeAutomationSendAt } from "@/lib/automation/send-at";
 import {
@@ -246,6 +247,7 @@ export const AUTOMATION_SKIP_REASONS = {
   noEmailContent: "Няма текст на имейла (нито на BG, нито на EN).",
   noSmsContent: "Няма текст на SMS (нито на BG, нито на EN).",
   stepDisabled: "Стъпката е изключена — веригата спира тук.",
+  fixedDatePassed: "Датата на стъпката вече е минала — пропусната при ръчното изпращане, за да не пристигне извън контекст.",
 } as const;
 
 function audienceSkipReason(tags: string[]): string {
@@ -306,6 +308,11 @@ export type ChainRunState = {
   groups: SegmentGroup[];
   /** Steps handled for this person in this run — also stops a chain that loops back on itself. */
   visited: Set<string>;
+  /**
+   * Manual (late) sends only: a step on a fixed date that has already passed
+   * would otherwise go out at once, right on top of the step before it.
+   */
+  skipPastFixedDates?: boolean;
 };
 
 async function loadDelivery(
@@ -637,6 +644,16 @@ async function runChainStep(
       return "skipped";
     }
 
+    if (
+      run.skipPastFixedDates &&
+      step.send_date &&
+      new Date(scheduledAtOnDate(step.send_date, step.send_time ?? "09:00")).getTime() <=
+        parentAt.getTime()
+    ) {
+      await recordSkip(step, ctx, AUTOMATION_SKIP_REASONS.fixedDatePassed, existing);
+      return "skipped";
+    }
+
     sendAt = computeChainedSendAt(step, parentAt);
   } catch (err) {
     await recordFailure(step, ctx, errorMessage(err, "Грешка при подготовка на стъпката"));
@@ -771,6 +788,26 @@ export async function retryFailedAutomation(
 export type ManualSendOutcome = StepOutcome | "already";
 
 /**
+ * Open/click tracking belongs to the job that was sent. A resend over a row
+ * that already went out would otherwise show the new email as opened.
+ */
+async function clearDeliveryTracking(automationId: string, email: string): Promise<void> {
+  const { error } = await getAdminClient()
+    .from("automation_deliveries")
+    .update({
+      recipient_status: null,
+      opened_at: null,
+      delivered_at: null,
+      click_count: 0,
+      first_clicked_at: null,
+      last_synced_at: null,
+    })
+    .eq("automation_id", automationId)
+    .eq("email", email);
+  if (error) console.error(`[automation] clear tracking ${automationId} ${email}:`, error.message);
+}
+
+/**
  * Send one step right now to one person, by hand from the admin — no trigger,
  * no trigger checks, no audience checks: whoever was picked gets it. Writes the
  * same delivery row as an automatic send, so it shows up in the step's report.
@@ -789,6 +826,8 @@ export async function sendAutomationStepNow(
     groups: SegmentGroup[];
     resend: boolean;
     continueChain: boolean;
+    /** Later than now = queued for then (spreading a big send out). */
+    sendAt?: string;
   },
 ): Promise<ManualSendOutcome> {
   const email = ctx.email.trim().toLowerCase();
@@ -796,7 +835,14 @@ export async function sendAutomationStepNow(
     segments: opts.segments,
     groups: opts.groups,
     visited: new Set([automation.id]),
+    skipPastFixedDates: true,
   };
+  const requested = opts.sendAt ? new Date(opts.sendAt) : null;
+  const sendAt =
+    requested && !Number.isNaN(requested.getTime()) && requested.getTime() > Date.now()
+      ? requested.toISOString()
+      : new Date().toISOString();
+  const sendNow = new Date(sendAt).getTime() <= Date.now() + 1000;
 
   let existing: DeliveryRow | null;
   try {
@@ -825,8 +871,8 @@ export async function sendAutomationStepNow(
     outcome = await submitStep(
       automation,
       ctx,
-      new Date().toISOString(),
-      true,
+      sendAt,
+      sendNow,
       existing,
       `${baseKey}-m${Date.now().toString(36)}`,
     );
@@ -835,8 +881,16 @@ export async function sendAutomationStepNow(
     return "failed";
   }
 
-  if (opts.continueChain && (outcome === "sent" || outcome === "scheduled")) {
-    await scheduleChainedFromParent(automation.id, new Date().toISOString(), ctx, run);
+  if (outcome === "sent" || outcome === "scheduled") {
+    if (isLiveDelivery(existing)) await clearDeliveryTracking(automation.id, email);
+    if (opts.continueChain) {
+      await scheduleChainedFromParent(
+        automation.id,
+        sendNow ? new Date().toISOString() : sendAt,
+        ctx,
+        run,
+      );
+    }
   }
   return outcome;
 }

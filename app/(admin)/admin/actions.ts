@@ -107,7 +107,7 @@ import type {
   SiteProduct,
 } from "@/lib/supabase/types";
 import { slugify, chunkArray } from "@/lib/utils";
-import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
+import { formatScheduledAt, parseScheduledAt, SCHEDULE_TIMEZONE } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, EmailHeaderSize, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { expandAudienceKeys, isDescendantGroup } from "@/lib/segments/hierarchy";
 import {
@@ -1267,11 +1267,14 @@ export type SendAutomationNowInput = {
   resend?: boolean;
   /** Lay out the steps after this one, timed from now. */
   continueChain?: boolean;
+  /** Minutes between two recipients; 0 = all now. */
+  spacingMinutes?: number;
 };
 
 const MANUAL_SEND_MAX_TYPED = 500;
 const MANUAL_SEND_CONCURRENCY = 6;
 const MANUAL_SEND_BUDGET_MS = 45_000;
+const MANUAL_SEND_MAX_SPACING_MINUTES = 60;
 
 type ManualRecipient = {
   id: string | null;
@@ -1496,14 +1499,35 @@ export async function sendAutomationNow(
 
   const { sendAutomationStepNow } = await import("@/lib/automation/run");
   const counts = { sent: 0, scheduled: 0, already: 0, skipped: 0, failed: 0 };
-  const deadline = Date.now() + MANUAL_SEND_BUDGET_MS;
-  const queue = [...resolved.recipients];
+
+  // Left out up front, so a paced send gives its time slots only to people
+  // who actually get it.
+  let targets = resolved.recipients;
+  if (!input.resend) {
+    try {
+      const live = await emailsWithLiveDelivery(automation.id, targets.map((r) => r.email));
+      targets = targets.filter((r) => !live.has(r.email));
+      counts.already = live.size;
+    } catch (err) {
+      return { ok: false, message: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  const spacingMs =
+    Math.min(MANUAL_SEND_MAX_SPACING_MINUTES, Math.max(0, Math.floor(input.spacingMinutes ?? 0))) *
+    60_000;
+  const startAt = Date.now();
+  const deadline = startAt + MANUAL_SEND_BUDGET_MS;
+  const queue = targets.map((r, slot) => ({ r, slot }));
   let attempted = 0;
+  let lastAt = 0;
 
   async function worker() {
     while (queue.length > 0 && Date.now() < deadline) {
-      const r = queue.shift()!;
+      const { r, slot } = queue.shift()!;
       attempted += 1;
+      const at = startAt + slot * spacingMs;
+      lastAt = Math.max(lastAt, at);
       try {
         const outcome = await sendAutomationStepNow(
           automation,
@@ -1522,6 +1546,7 @@ export async function sendAutomationNow(
             groups,
             resend: Boolean(input.resend),
             continueChain: Boolean(input.continueChain),
+            sendAt: slot > 0 && spacingMs > 0 ? new Date(at).toISOString() : undefined,
           },
         );
         counts[outcome] += 1;
@@ -1533,14 +1558,29 @@ export async function sendAutomationNow(
   }
   await Promise.all(Array.from({ length: MANUAL_SEND_CONCURRENCY }, worker));
 
-  const remaining = resolved.recipients.length - attempted;
-  const parts = [`изпратени ${counts.sent}`];
-  if (counts.scheduled > 0) parts.push(`насрочени ${counts.scheduled}`);
+  const remaining = targets.length - attempted;
+  const parts = [`изпратени сега ${counts.sent}`];
+  if (counts.scheduled > 0) {
+    const last = new Intl.DateTimeFormat("bg-BG", {
+      timeZone: SCHEDULE_TIMEZONE,
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(lastAt));
+    parts.push(
+      spacingMs > 0
+        ? `насрочени постепенно ${counts.scheduled} (последният ≈ ${last})`
+        : `насрочени ${counts.scheduled}`,
+    );
+  }
   if (counts.already > 0) parts.push(`вече го имат ${counts.already}`);
   if (counts.skipped > 0) parts.push(`пропуснати ${counts.skipped}`);
   if (counts.failed > 0) parts.push(`неуспешни ${counts.failed}`);
   let message = `„${automation.name}“ → ${resolved.label}: ${parts.join(" · ")}.`;
-  if (remaining > 0) message += ` Остават ${remaining} — натисни „Изпрати“ пак за останалите.`;
+  if (remaining > 0) {
+    message += ` Остават ${remaining} — натисни „Изпрати“ пак за останалите${spacingMs > 0 ? " (темпото започва отначало от този момент)" : ""}.`;
+  }
   if (counts.skipped > 0 || counts.failed > 0) message += " Причините са в отчета на стъпката.";
   if (resolved.invalid.length > 0) {
     message += ` Невалидни адреси (пропуснати): ${resolved.invalid.slice(0, 5).join(", ")}${resolved.invalid.length > 5 ? "…" : ""}.`;
@@ -1548,7 +1588,7 @@ export async function sendAutomationNow(
 
   revalidatePath("/admin/automations");
   return {
-    ok: counts.failed === 0 && counts.sent + counts.scheduled + counts.already > 0,
+    ok: counts.failed === 0 && (counts.sent + counts.scheduled > 0 || counts.already > 0),
     message,
     remaining,
   };

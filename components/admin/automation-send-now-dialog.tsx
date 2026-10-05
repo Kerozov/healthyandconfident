@@ -11,6 +11,11 @@ import type { Automation, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
 import { Field, Select } from "@/components/admin/fields";
 import { cn } from "@/lib/utils";
+import {
+  DEFAULT_SEND_PACING_MINUTES,
+  SEND_PACING_OPTIONS,
+  pacingDurationLabel,
+} from "@/lib/automation/send-pacing";
 
 type Mode = SendAutomationNowInput["mode"];
 
@@ -48,6 +53,7 @@ export function AutomationSendNowDialog({
   const [locale, setLocale] = useState<"" | "bg" | "en">("");
   const [resend, setResend] = useState(false);
   const [continueChain, setContinueChain] = useState(false);
+  const [pacing, setPacing] = useState<number>(DEFAULT_SEND_PACING_MINUTES);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [result, setResult] = useState<{ ok: boolean; message?: string; remaining?: number } | null>(
     null,
@@ -64,6 +70,7 @@ export function AutomationSendNowDialog({
     locale,
     resend,
     continueChain,
+    spacingMinutes: pacing,
   };
 
   useEffect(() => {
@@ -93,9 +100,13 @@ export function AutomationSendNowDialog({
   function send() {
     if (!preview) return;
     const count = resend ? preview.total : preview.total - preview.already;
+    const spread = pacingDurationLabel(count, pacing);
     if (
       count > 1 &&
-      !confirm(`Да изпратя „${automation.name}“ на ${count} души сега?`)
+      !confirm(
+        `Да изпратя „${automation.name}“ на ${count} души?\n\n` +
+          (spread ? `Разпределени във времето — последният тръгва след ${spread}.` : "Всички тръгват наведнъж."),
+      )
     ) {
       return;
     }
@@ -111,6 +122,7 @@ export function AutomationSendNowDialog({
   }
 
   const toSend = preview ? (resend ? preview.total : preview.total - preview.already) : 0;
+  const spread = pacingDurationLabel(toSend, pacing);
   const canCheck =
     mode === "emails"
       ? emails.trim().length > 0
@@ -232,6 +244,28 @@ export function AutomationSendNowDialog({
             </Field>
           )}
 
+          <Field
+            label="Темпо"
+            hint="За повече от един човек — изпращане едно по едно, за да не тръгне всичко наведнъж."
+            htmlFor="send-now-pacing"
+          >
+            <Select
+              id="send-now-pacing"
+              value={pacing}
+              onChange={(e) => {
+                setPacing(Number(e.target.value));
+                setResult(null);
+              }}
+              disabled={busy}
+            >
+              {SEND_PACING_OPTIONS.map((o) => (
+                <option key={o.minutes} value={o.minutes}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
           <div className="space-y-2">
             <label className="flex items-start gap-2 text-sm text-ink">
               <input
@@ -284,6 +318,9 @@ export function AutomationSendNowDialog({
                   {preview.already} вече я имат —{" "}
                   {resend ? "ще я получат пак." : "ще бъдат пропуснати."}
                 </p>
+              )}
+              {spread && toSend > 1 && (
+                <p className="mt-1 text-ink-soft">Последният тръгва след {spread}.</p>
               )}
               {preview.invalid.length > 0 && (
                 <p className="mt-1 text-coral-600">

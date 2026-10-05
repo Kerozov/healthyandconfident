@@ -13,6 +13,11 @@ import type {
   DeliveryIssuesReport,
 } from "@/lib/admin/delivery-issues";
 import { Card } from "@/components/admin/fields";
+import {
+  DEFAULT_SEND_PACING_MINUTES,
+  SEND_PACING_OPTIONS,
+  pacingDurationLabel,
+} from "@/lib/automation/send-pacing";
 import { cn, formatDate } from "@/lib/utils";
 
 const KIND_LABELS: Record<DeliveryIssueKind, string> = {
@@ -57,6 +62,7 @@ export function DeliveryIssuesPanel({
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<DeliveryIssueKind | "all">("all");
+  const [pacing, setPacing] = useState<number>(DEFAULT_SEND_PACING_MINUTES);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [, startTransition] = useTransition();
@@ -108,10 +114,17 @@ export function DeliveryIssuesPanel({
   function send(group: Group, issues: DeliveryIssue[], key: string) {
     const emails = issues.filter((i) => i.canSend).map((i) => i.email);
     if (emails.length === 0) return;
+    // One person goes now; a group goes at the chosen pace.
+    const spacingMinutes = emails.length > 1 ? pacing : 0;
+    const spread = pacingDurationLabel(emails.length, spacingMinutes);
     if (
       emails.length > 1 &&
       !confirm(
-        `Да изпратя „${group.automationName}“ на ${emails.length} души, които не са го получили? Следващите стъпки от поредицата тръгват след него.`,
+        `Да изпратя „${group.automationName}“ на ${emails.length} души, които не са го получили?\n\n` +
+          (spread
+            ? `Темпо: ${SEND_PACING_OPTIONS.find((o) => o.minutes === spacingMinutes)?.label.toLowerCase()} — последният тръгва след ${spread}.`
+            : "Всички тръгват наведнъж.") +
+          "\nСледващите стъпки от поредицата идват след него със своите закъснения.",
       )
     ) {
       return;
@@ -124,6 +137,7 @@ export function DeliveryIssuesPanel({
         emails: emails.join("\n"),
         resend: false,
         continueChain: true,
+        spacingMinutes,
       });
       setNote({ ok: res.ok, text: res.message ?? (res.ok ? "Изпратено." : "Неуспешно.") });
       await load();
@@ -181,7 +195,8 @@ export function DeliveryIssuesPanel({
       <p className="-mt-3 mb-4 text-sm text-ink-soft">
         Хора, до които автоматизация не е стигнала в избрания период, и защо. „Без запис“ значи,
         че автоматизацията изобщо не е тръгнала за тях (напр. грешка при записването).
-        „Изпрати“ праща стъпката сега и продължава поредицата след нея.
+        „Изпрати“ на ред праща на един човек веднага; „Изпрати на всички“ ги разпределя
+        във времето според темпото. Поредицата продължава след това със своите закъснения.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -196,6 +211,23 @@ export function DeliveryIssuesPanel({
             className="h-10 w-full rounded-full border border-ink/15 bg-white pl-9 pr-4 text-sm text-ink outline-none placeholder:text-ink-soft/50 focus:border-forest-400 focus:ring-2 focus:ring-forest-400/20"
           />
         </label>
+        {canSend && (
+          <label className="flex items-center gap-2 text-xs text-ink-soft sm:ml-auto sm:order-last">
+            Темпо при „Изпрати на всички“
+            <select
+              value={pacing}
+              onChange={(e) => setPacing(Number(e.target.value))}
+              disabled={busy}
+              className="h-8 rounded-full border border-ink/15 bg-white px-2 text-xs text-ink"
+            >
+              {SEND_PACING_OPTIONS.map((o) => (
+                <option key={o.minutes} value={o.minutes}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {(["all", "missing", "failed", "skipped", "bounced"] as const).map((k) => {
           const count = k === "all" ? total : kindCounts[k];
           if (k !== "all" && count === 0) return null;
