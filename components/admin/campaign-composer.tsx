@@ -14,6 +14,17 @@ import { EmailTemplatePreview } from "@/components/admin/email-template-preview"
 import { EmailBuilder } from "@/components/admin/email-builder";
 import { Field, Input } from "@/components/admin/fields";
 import { SmsComposeFields } from "@/components/admin/sms-compose-fields";
+import { TestEmailSender } from "@/components/admin/test-email-sender";
+import {
+  CopyEmailButton,
+  PasteEmailButton,
+  useCopiedEmail,
+} from "@/components/admin/email-clipboard";
+import {
+  copiedVersion,
+  pickCopiedVersion,
+  type CopiedEmail,
+} from "@/lib/email/content-clipboard";
 import { buildSmsBody, checkSmsCompose } from "@/lib/sms/compose-validation";
 import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
 import { cn } from "@/lib/utils";
@@ -28,6 +39,7 @@ export function CampaignComposer({
   workerConfigured,
   tab,
   onClose,
+  initialEmail = null,
 }: {
   segments: Segment[];
   groups: SegmentGroup[];
@@ -38,24 +50,61 @@ export function CampaignComposer({
   workerConfigured: boolean;
   tab: "email" | "sms";
   onClose: () => void;
+  /** Opens the composer already filled with a copied email. */
+  initialEmail?: CopiedEmail | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; message?: string } | null>(null);
+  const copiedEmail = useCopiedEmail();
 
-  const [email, setEmail] = useState({
-    subject: "",
-    html: "",
-    cta_label: "",
-    cta_url: "",
-    attachment_path: "",
-    attachment_filename: "",
-    hero_image_url: "",
-    signature_enabled: true,
-    audience: { ...EMPTY_AUDIENCE } as AudienceInput,
-    scheduled_at: "",
+  const [email, setEmail] = useState(() => {
+    const base = {
+      subject: "",
+      html: "",
+      cta_label: "",
+      cta_url: "",
+      attachment_path: "",
+      attachment_filename: "",
+      hero_image_url: "",
+      signature_enabled: true,
+      audience: { ...EMPTY_AUDIENCE } as AudienceInput,
+      scheduled_at: "",
+    };
+    const version = initialEmail ? pickCopiedVersion(initialEmail, "bg") : null;
+    return version && initialEmail
+      ? { ...base, ...version, signature_enabled: initialEmail.signature_enabled }
+      : base;
   });
-  const [showButton, setShowButton] = useState(false);
+  const [showButton, setShowButton] = useState(() =>
+    Boolean(email.cta_label && email.cta_url),
+  );
+  const [pasteNote, setPasteNote] = useState<string | null>(() =>
+    initialEmail ? `Поставено от ${initialEmail.source || "копие"} „${initialEmail.name}“.` : null,
+  );
+
+  /**
+   * Fills subject, body (blocks and buttons included), end button, hero image
+   * and attachment. Audience and schedule stay as they are — those belong to
+   * this campaign, not to the email that was copied.
+   */
+  function pasteEmail(copied: CopiedEmail, locale?: "bg" | "en") {
+    const target = locale ?? (email.audience.locale === "en" ? "en" : "bg");
+    const version = pickCopiedVersion(copied, target);
+    if (!version) return;
+    if (
+      (email.html.trim() || email.subject.trim()) &&
+      !confirm("Да заменя ли текущата тема и текст с копирания имейл?")
+    ) {
+      return;
+    }
+    setEmail({ ...email, ...version, signature_enabled: copied.signature_enabled });
+    setShowButton(Boolean(version.cta_label && version.cta_url));
+    const which = version === copied.en ? "EN" : "BG";
+    setPasteNote(
+      `Поставено от ${copied.source || "копие"} „${copied.name}“ (${which} версия).`,
+    );
+  }
   const [sms, setSms] = useState({
     message: "",
     link: "",
@@ -161,6 +210,46 @@ export function CampaignComposer({
           >
             Отказ
           </button>
+          {isEmail && (
+            <CopyEmailButton
+              size="md"
+              disabled={pending}
+              build={() => {
+                const locale = email.audience.locale === "en" ? "en" : "bg";
+                const version = copiedVersion({
+                  ...email,
+                  cta_label: showButton ? email.cta_label : "",
+                  cta_url: showButton ? email.cta_url : "",
+                });
+                if (!version) return null;
+                return {
+                  v: 1,
+                  source: "кампания",
+                  name: email.subject.trim() || "кампания",
+                  copiedAt: new Date().toISOString(),
+                  signature_enabled: email.signature_enabled,
+                  bg: locale === "bg" ? version : null,
+                  en: locale === "en" ? version : null,
+                };
+              }}
+            />
+          )}
+          {isEmail && (
+            <TestEmailSender
+              disabled={pending || !workerConfigured}
+              content={{
+                subject: email.subject,
+                html: email.html,
+                cta_label: showButton ? email.cta_label : undefined,
+                cta_url: showButton ? email.cta_url : undefined,
+                locale: email.audience.locale === "en" ? "en" : "bg",
+                attachment_path: email.attachment_path || undefined,
+                attachment_filename: email.attachment_filename || undefined,
+                hero_image_url: email.hero_image_url || undefined,
+                signature_enabled: email.signature_enabled,
+              }}
+            />
+          )}
           {result && !result.ok && (
             <p className="text-sm text-coral-600">{result.message}</p>
           )}
@@ -177,6 +266,38 @@ export function CampaignComposer({
           <div className="min-w-0 space-y-5 xl:col-span-7">
             <WorkspacePanel title="Съдържание">
               <div className="space-y-4">
+                {(copiedEmail || pasteNote) && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-forest-400/60 bg-forest-50/60 px-3 py-2">
+                    <PasteEmailButton
+                      copied={copiedEmail}
+                      onPaste={(copied) => pasteEmail(copied)}
+                      disabled={pending}
+                    />
+                    {copiedEmail?.bg && copiedEmail?.en && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => pasteEmail(copiedEmail, "bg")}
+                          disabled={pending}
+                          className="h-8 rounded-full px-2.5 text-xs font-semibold text-forest-800 hover:bg-forest-100 disabled:opacity-50"
+                        >
+                          BG версия
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => pasteEmail(copiedEmail, "en")}
+                          disabled={pending}
+                          className="h-8 rounded-full px-2.5 text-xs font-semibold text-forest-800 hover:bg-forest-100 disabled:opacity-50"
+                        >
+                          EN версия
+                        </button>
+                      </>
+                    )}
+                    {pasteNote && (
+                      <p className="min-w-0 flex-1 text-xs text-forest-900">{pasteNote}</p>
+                    )}
+                  </div>
+                )}
                 <Field label="Тема">
                   <Input
                     value={email.subject}
@@ -297,8 +418,13 @@ export function CampaignComposer({
           </div>
 
           <div className="min-w-0 xl:col-span-5">
-            <div className="xl:sticky xl:top-4">
-              <WorkspacePanel title="Преглед" description="Точно както ще го види абонатът.">
+            {/* One screen tall and sticky: the preview stays in view while the builder scrolls. */}
+            <div className="xl:sticky xl:top-4 xl:h-[calc(var(--workspace-body-height,100dvh)-2rem)]">
+              <WorkspacePanel
+                title="Преглед"
+                description="Точно както ще го види абонатът."
+                className="xl:flex xl:h-full xl:flex-col"
+              >
                 <EmailTemplatePreview
                   bodyHtml={email.html}
                   ctaLabel={showButton ? email.cta_label : ""}
@@ -308,6 +434,8 @@ export function CampaignComposer({
                   guides={guides}
                   forms={forms}
                   heroImageUrl={email.hero_image_url}
+                  height="fill"
+                  className="h-[40rem] xl:h-auto xl:min-h-0 xl:flex-1"
                 />
               </WorkspacePanel>
             </div>

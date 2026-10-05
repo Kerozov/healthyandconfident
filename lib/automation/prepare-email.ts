@@ -7,41 +7,51 @@ import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
 import { unsubscribeLinkForEmail } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
+import { automationEmailContent } from "@/lib/automation/content";
 import { computeAutomationSendAt } from "@/lib/automation/send-at";
 import { automationJobIdempotencyKey } from "@/lib/automation/idempotency";
 import type { Locale } from "@/lib/supabase/types";
 
-export type PreparedEmailJob = {
-  automationId: string;
-  automationName: string;
+export type AutomationEmailAttachment = {
+  filename: string;
+  url: string;
+  contentType: string;
+};
+
+/** Subject + finished HTML for one recipient — what the worker gets. */
+export type AutomationEmailMessage = {
   subject: string;
   html: string;
+  attachments?: AutomationEmailAttachment[];
+};
+
+export type PreparedEmailJob = AutomationEmailMessage & {
+  automationId: string;
+  automationName: string;
   recipients: string[];
   sendAt: string;
   idempotencyKey: string;
   sendNow: boolean;
-  attachments?: {
-    filename: string;
-    url: string;
-    contentType: string;
-  }[];
 };
 
-/** Build one email job payload for the worker batch endpoint. */
-export async function prepareEmailAutomationJob(
+/**
+ * Render one automation email for one person. The batch, the single-job path
+ * and the chain steps all build it here, so a step can never go out differently
+ * depending on which path reached it. `null` only when there is no body in
+ * either language (see automationEmailContent).
+ */
+export async function buildAutomationEmailMessage(
   automation: Automation,
   ctx: AutomationRunContext,
-): Promise<PreparedEmailJob | null> {
+): Promise<AutomationEmailMessage | null> {
   const email = ctx.email.trim().toLowerCase();
   const locale: Locale = ctx.locale === "en" ? "en" : "bg";
 
-  const subjectRaw =
-    locale === "en" ? automation.subject_en : automation.subject_bg;
-  const htmlRaw = locale === "en" ? automation.html_en : automation.html_bg;
-  if (!subjectRaw.trim() || !htmlRaw.trim()) return null;
+  const content = automationEmailContent(automation, locale);
+  if (!content) return null;
 
-  const subject = renderEmailTemplate(subjectRaw, { name: ctx.name, email });
-  const renderedHtml = renderEmailTemplate(htmlRaw, { name: ctx.name, email });
+  const subject = renderEmailTemplate(content.subject, { name: ctx.name, email });
+  const renderedHtml = renderEmailTemplate(content.html, { name: ctx.name, email });
   const attachmentPath =
     locale === "en" ? automation.attachment_path_en : automation.attachment_path_bg;
   const attachmentFilename =
@@ -86,6 +96,22 @@ export async function prepareEmailAutomationJob(
     includeSignature: automation.signature_enabled !== false,
   });
 
+  return {
+    subject,
+    html,
+    attachments: attachments.length ? attachments : undefined,
+  };
+}
+
+/** Build one email job payload for the worker batch endpoint. */
+export async function prepareEmailAutomationJob(
+  automation: Automation,
+  ctx: AutomationRunContext,
+): Promise<PreparedEmailJob | null> {
+  const message = await buildAutomationEmailMessage(automation, ctx);
+  if (!message) return null;
+
+  const email = ctx.email.trim().toLowerCase();
   const sendAt = computeAutomationSendAt(automation);
   const sendNow =
     !automation.send_date &&
@@ -94,10 +120,9 @@ export async function prepareEmailAutomationJob(
     new Date(sendAt).getTime() <= Date.now() + 1000;
 
   return {
+    ...message,
     automationId: automation.id,
     automationName: automation.name,
-    subject,
-    html,
     recipients: [email],
     sendAt,
     idempotencyKey: automationJobIdempotencyKey(automation.id, {
@@ -105,7 +130,6 @@ export async function prepareEmailAutomationJob(
       subscriberId: ctx.subscriberId,
     }),
     sendNow,
-    attachments: attachments.length ? attachments : undefined,
   };
 }
 

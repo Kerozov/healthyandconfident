@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition, useCallback } from "react";
+import { useMemo, useState, useTransition, useCallback, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -21,6 +22,9 @@ import {
   Copy,
   ClipboardCopy,
   ClipboardPaste,
+  Users,
+  Megaphone,
+  X,
 } from "lucide-react";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import type {
@@ -46,11 +50,30 @@ import {
   resendAutomationToNonOpeners,
 } from "@/app/(admin)/admin/actions";
 import { AutomationReportPanel } from "@/components/admin/automation-report-panel";
-import type { AutomationReport } from "@/lib/admin/automation-report";
+import type {
+  AutomationRecipientFilter,
+  AutomationReport,
+} from "@/lib/admin/automation-report";
+import {
+  requestAutomationSync,
+  type AutomationSyncResult,
+} from "@/lib/admin/automation-sync-client";
+import {
+  CopyEmailButton,
+  PasteEmailButton,
+  useCopiedEmail,
+} from "@/components/admin/email-clipboard";
+import {
+  copiedEmailFromAutomation,
+  writeCopiedEmail,
+  type CopiedEmail,
+  type CopiedEmailVersion,
+} from "@/lib/email/content-clipboard";
 import { AudienceTargetChecklist } from "@/components/admin/segment-checklist";
 import { AutomationFlowView, flattenAutomationsForDisplay, TRIGGER_SECTION_LABELS } from "@/components/admin/automation-flow";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
 import { SmsComposeFields } from "@/components/admin/sms-compose-fields";
+import { TestEmailSender } from "@/components/admin/test-email-sender";
 import { buildSmsBody, checkSmsCompose, splitMessageAndLink } from "@/lib/sms/compose-validation";
 import { TabList } from "@/components/admin/ui";
 import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
@@ -296,13 +319,18 @@ function Metric({
   label,
   value,
   tone,
+  onClick,
+  active,
 }: {
   label: string;
   value: React.ReactNode;
   tone?: "good" | "bad" | "muted" | "warn";
+  /** Opens the recipient list filtered to exactly these people. */
+  onClick?: () => void;
+  active?: boolean;
 }) {
-  return (
-    <div className="min-w-[64px]">
+  const body = (
+    <>
       <p
         className={cn(
           "font-display text-lg font-semibold leading-none",
@@ -317,6 +345,47 @@ function Metric({
       <p className="mt-1 text-[11px] uppercase tracking-wider text-ink-soft/60">
         {label}
       </p>
+    </>
+  );
+  if (!onClick) return <div className="min-w-[64px]">{body}</div>;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Виж кои са — ${label.toLowerCase()}`}
+      className={cn(
+        "-mx-2 -my-1 min-w-[64px] rounded-lg px-2 py-1 text-left transition-colors hover:bg-forest-50",
+        active && "bg-forest-50 ring-1 ring-forest-400/50",
+      )}
+    >
+      {body}
+    </button>
+  );
+}
+
+const VIEW_STORAGE_KEY = "admin:automations-view";
+
+/** How many times one visit keeps pulling opens while a backlog is left. */
+const MAX_BACKGROUND_SYNC_RUNS = 5;
+
+function SummaryTile({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-ink/10 bg-white px-3 py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft/70">
+        {label}
+      </p>
+      <p className="mt-1 font-display text-xl font-semibold leading-none text-ink">
+        {value}
+      </p>
+      {sub && <p className="mt-1 text-[11px] text-ink-soft">{sub}</p>}
     </div>
   );
 }
@@ -434,11 +503,18 @@ export function AutomationsManager({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [report, setReport] = useState<AutomationReport | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [reportFilter, setReportFilter] = useState<AutomationRecipientFilter>("all");
+  const [syncingReport, setSyncingReport] = useState(false);
+  /** Guards against a slow report landing after another one was opened. */
+  const reportRequest = useRef(0);
   const [viewTab, setViewTab] = useState<"list" | "flow">("flow");
   const [contentLocale, setContentLocale] = useState<"bg" | "en">("bg");
   const [smsLinks, setSmsLinks] = useState({ bg: "", en: "" });
   /** Copied automation, waiting to be pasted somewhere in the flow. */
   const [clipboard, setClipboard] = useState<{ id: string; name: string } | null>(null);
+  /** Email content copied for a campaign (or another automation). */
+  const copiedEmail = useCopiedEmail();
+  const [copiedNotice, setCopiedNotice] = useState<string | null>(null);
 
   /**
    * Counters live here, not in the server payload: the flow tab shows none of
@@ -463,15 +539,90 @@ export function AutomationsManager({
     }
   }, []);
 
-  /** Pulls fresh tracking from the worker — only reachable from the list tab. */
+  /**
+   * Opens come from the worker. Pulled in the background whenever the list is
+   * opened, so the counters fill in on their own instead of waiting for
+   * "Обнови"; a big backlog is worked through over a few runs.
+   */
+  const backgroundSync = useRef<Promise<AutomationSyncResult> | null>(null);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncedAt, setSyncedAt] = useState<Date | null>(null);
+
+  const syncInBackground = useCallback((): Promise<AutomationSyncResult> => {
+    if (backgroundSync.current) return backgroundSync.current;
+    setSyncingAll(true);
+    const run = (async () => {
+      let total: AutomationSyncResult = { ok: true, synced: 0, total: 0, remaining: 0 };
+      for (let i = 0; i < MAX_BACKGROUND_SYNC_RUNS; i++) {
+        const res = await requestAutomationSync();
+        total = {
+          ok: res.ok,
+          synced: total.synced + res.synced,
+          total: total.total + res.total,
+          remaining: res.remaining,
+        };
+        if (res.synced > 0) await loadStats();
+        if (!res.ok || res.remaining === 0) break;
+      }
+      setSyncedAt(new Date());
+      return total;
+    })().finally(() => {
+      backgroundSync.current = null;
+      setSyncingAll(false);
+    });
+    backgroundSync.current = run;
+    return run;
+  }, [loadStats]);
+
+  const openList = useCallback(() => {
+    void loadStats().then(() => syncInBackground());
+  }, [loadStats, syncInBackground]);
+
+  // The last view sticks — whoever works from the list lands on it next time.
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+    } catch {
+      /* storage blocked — stay on the flow */
+    }
+    if (stored === "list") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setViewTab("list");
+      openList();
+    }
+  }, [openList]);
+
+  /** Manual full refresh — re-asks the worker about everyone not yet opened. */
   const refreshAll = useCallback(() => {
     setNote(null);
     startTransition(async () => {
       const res = await syncAllAutomations();
       if (res.message) setNote(res.message);
       await loadStats();
+      setSyncedAt(new Date());
     });
   }, [loadStats]);
+
+  const emailTotals = useMemo(() => {
+    if (!statsById) return null;
+    let sent = 0;
+    let delivered = 0;
+    let opened = 0;
+    let clickers = 0;
+    let scheduled = 0;
+    let bounced = 0;
+    for (const a of automations) {
+      if (a.channel !== "email") continue;
+      sent += a.sent_count;
+      delivered += a.delivered_count;
+      opened += a.opened_count;
+      clickers += a.unique_clickers_count;
+      scheduled += a.scheduled_count;
+      bounced += a.bounced_count;
+    }
+    return { sent, delivered, opened, clickers, scheduled, bounced };
+  }, [automations, statsById]);
 
   const otherAutomations = automations
     .filter((a) => (editingId === "new" ? true : a.id !== editingId))
@@ -636,9 +787,17 @@ export function AutomationsManager({
 
   function remove(id: string, name: string) {
     const childCount = automations.filter((a) => a.after_automation_id === id).length;
+    const parentId = automations.find((a) => a.id === id)?.after_automation_id;
+    const parentName = parentId
+      ? automations.find((a) => a.id === parentId)?.name
+      : undefined;
     const childNote =
       childCount > 0
-        ? `\n\nИма ${childCount} следващ${childCount === 1 ? "а стъпка" : "и стъпки"} — те ще останат, но без връзка към тази.`
+        ? `\n\nИма ${childCount} следващ${childCount === 1 ? "а стъпка" : "и стъпки"} — ${
+            parentName
+              ? `ще продължат след „${parentName}“.`
+              : "ще станат начало на верига и ще тръгват направо от тригера."
+          }`
         : "";
     if (!confirm(`Изтриване на „${name}“?${childNote}`)) return;
     setError(null);
@@ -744,19 +903,128 @@ export function AutomationsManager({
     });
   }
 
-  async function toggleDeliveries(automationId: string) {
-    if (expandedId === automationId) {
-      setExpandedId(null);
-      setReport(null);
-      return;
-    }
+  /**
+   * The per-person list: shown at once from what is stored, then refreshed
+   * with whatever opens the worker has seen since the last check.
+   */
+  async function openRecipients(
+    automationId: string,
+    filter: AutomationRecipientFilter = "all",
+  ) {
+    setReportFilter(filter);
+    if (expandedId === automationId && (report || loadingReport)) return;
+
+    const requestId = ++reportRequest.current;
+    const isCurrent = () => reportRequest.current === requestId;
     setExpandedId(automationId);
     setLoadingReport(true);
     setReport(null);
-    const res = await getAutomationDeliveriesReport(automationId);
+    setSyncingReport(false);
+    try {
+      const res = await getAutomationDeliveriesReport(automationId);
+      if (isCurrent()) setReport(res.ok ? res.report : null);
+    } catch {
+      if (isCurrent()) setReport(null);
+    } finally {
+      if (isCurrent()) setLoadingReport(false);
+    }
+    if (!isCurrent()) return;
+
+    setSyncingReport(true);
+    try {
+      const sync = await (backgroundSync.current ?? requestAutomationSync(automationId));
+      if (!isCurrent() || sync.synced === 0) return;
+      const fresh = await getAutomationDeliveriesReport(automationId);
+      if (isCurrent() && fresh.ok) setReport(fresh.report);
+      void loadStats();
+    } catch {
+      /* keep what is on screen */
+    } finally {
+      if (isCurrent()) setSyncingReport(false);
+    }
+  }
+
+  function closeRecipients() {
+    reportRequest.current += 1;
+    setExpandedId(null);
+    setReport(null);
     setLoadingReport(false);
-    setReport(res.ok ? res.report : null);
-    await loadStats();
+    setSyncingReport(false);
+  }
+
+  function toggleDeliveries(automationId: string) {
+    if (expandedId === automationId) closeRecipients();
+    else void openRecipients(automationId);
+  }
+
+  /** One language of the editor's form as a copied-email version. */
+  function applyCopiedVersion(
+    target: typeof EMPTY_FORM,
+    locale: "bg" | "en",
+    version: CopiedEmailVersion,
+  ): typeof EMPTY_FORM {
+    return locale === "en"
+      ? {
+          ...target,
+          subject_en: version.subject,
+          html_en: version.html,
+          cta_label_en: version.cta_label,
+          cta_url_en: version.cta_url,
+          attachment_path_en: version.attachment_path,
+          attachment_filename_en: version.attachment_filename,
+          hero_image_url_en: version.hero_image_url,
+        }
+      : {
+          ...target,
+          subject_bg: version.subject,
+          html_bg: version.html,
+          cta_label_bg: version.cta_label,
+          cta_url_bg: version.cta_url,
+          attachment_path_bg: version.attachment_path,
+          attachment_filename_bg: version.attachment_filename,
+          hero_image_url_bg: version.hero_image_url,
+        };
+  }
+
+  /**
+   * Both languages land in their own tab when the copy has both; a single
+   * language (e.g. from a campaign) goes into the tab that is open now.
+   */
+  function pasteEmailIntoForm(copied: CopiedEmail) {
+    const hasContent = [form.subject_bg, form.html_bg, form.subject_en, form.html_en].some(
+      (v) => v.trim(),
+    );
+    if (hasContent && !confirm("Да заменя ли текущото съдържание с копирания имейл?")) {
+      return;
+    }
+    let next = { ...form, signature_enabled: copied.signature_enabled };
+    if (copied.bg && copied.en) {
+      next = applyCopiedVersion(next, "bg", copied.bg);
+      next = applyCopiedVersion(next, "en", copied.en);
+    } else {
+      const version = copied.bg ?? copied.en;
+      if (version) next = applyCopiedVersion(next, contentLocale, version);
+    }
+    setForm(next);
+    setNote(`Поставено съдържание от ${copied.source || "копие"} „${copied.name}“ — запази, за да остане.`);
+  }
+
+  function emailCopiedFromList(copied: CopiedEmail) {
+    setCopiedNotice(copied.name);
+  }
+
+  /** Copy + straight into a new campaign that opens already filled. */
+  function campaignFromAutomation(a: AutomationRow) {
+    const copied = copiedEmailFromAutomation(a);
+    if (!copied) {
+      setError(`„${a.name}“ няма текст на имейла за копиране.`);
+      return;
+    }
+    if (!writeCopiedEmail(copied)) {
+      setError("Браузърът не позволи копиране — провери дали не е в частен режим.");
+      return;
+    }
+    router.push("/admin/campaigns?paste=1");
   }
 
   const triggerMeta = TRIGGER_OPTIONS.find((t) => t.value === form.trigger_event);
@@ -855,6 +1123,32 @@ export function AutomationsManager({
         </div>
       )}
 
+      {copiedNotice && copiedEmail && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-forest-400/60 bg-forest-50/60 px-4 py-3">
+          <ClipboardCopy className="h-4 w-4 shrink-0 text-forest-700" aria-hidden />
+          <p className="min-w-0 flex-1 text-sm text-forest-900">
+            Имейлът <strong>{copiedNotice}</strong> е копиран — темата, текстът с
+            бутоните, главният бутон, снимката и прикаченият файл. Постави го в нова
+            кампания или в друга автоматизация („Постави“ в съдържанието).
+          </p>
+          <Link
+            href="/admin/campaigns?paste=1"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-forest-600 px-4 text-xs font-semibold text-cream hover:bg-forest-700"
+          >
+            <Megaphone className="h-3.5 w-3.5" />
+            Нова кампания с него
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCopiedNotice(null)}
+            aria-label="Скрий"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 bg-white text-ink-soft hover:bg-ink/5"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <TabList
         aria-label="Изглед на автоматизациите"
         active={viewTab}
@@ -862,9 +1156,14 @@ export function AutomationsManager({
           if (editingId) closeEditor();
           const next = id as "list" | "flow";
           setViewTab(next);
+          try {
+            window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+          } catch {
+            /* ignore */
+          }
           // First visit to the list tab is what pays for the counters.
           if (next === "list" && statsById === null && !loadingStats) {
-            void loadStats();
+            openList();
           }
         }}
         contentId="automations-view-panel"
@@ -934,6 +1233,48 @@ export function AutomationsManager({
                   Дублирай
                 </button>
               )}
+              {form.channel === "email" && (
+                <CopyEmailButton
+                  size="md"
+                  disabled={pending}
+                  build={() => copiedEmailFromAutomation(form)}
+                  onCopied={(copied) =>
+                    setNote(
+                      `Копирано „${copied.name}“ — отвори Кампании → „Нова кампания с него“, или го постави в друга автоматизация.`,
+                    )
+                  }
+                />
+              )}
+              {form.channel === "email" && (
+                <TestEmailSender
+                  disabled={pending}
+                  content={
+                    contentLocale === "en"
+                      ? {
+                          subject: form.subject_en || form.name,
+                          html: form.html_en,
+                          cta_label: form.cta_label_en,
+                          cta_url: form.cta_url_en,
+                          locale: "en",
+                          attachment_path: form.attachment_path_en,
+                          attachment_filename: form.attachment_filename_en,
+                          hero_image_url: form.hero_image_url_en,
+                          signature_enabled: form.signature_enabled,
+                        }
+                      : {
+                          subject: form.subject_bg || form.name,
+                          html: form.html_bg,
+                          cta_label: form.cta_label_bg,
+                          cta_url: form.cta_url_bg,
+                          locale: "bg",
+                          attachment_path: form.attachment_path_bg,
+                          attachment_filename: form.attachment_filename_bg,
+                          hero_image_url: form.hero_image_url_bg,
+                          signature_enabled: form.signature_enabled,
+                        }
+                  }
+                />
+              )}
               {error && (
                 <p className="w-full text-sm text-coral-600 sm:w-auto sm:flex-1">{error}</p>
               )}
@@ -952,7 +1293,7 @@ export function AutomationsManager({
           }
         >
           <div className="grid min-w-0 gap-5 xl:grid-cols-12">
-            <div className="min-w-0 space-y-5 xl:col-span-4 2xl:col-span-3">
+            <div className="min-w-0 space-y-5 xl:col-span-4">
             <WorkspacePanel title="Основни настройки">
             <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1113,7 +1454,7 @@ export function AutomationsManager({
             )}
             </div>
 
-            <div className="min-w-0 space-y-5 xl:col-span-8 2xl:col-span-4">
+            <div className="min-w-0 space-y-5 xl:col-span-8">
             <WorkspacePanel title="Аудитория">
               <p className="mb-3 text-xs leading-relaxed text-ink-soft">
                 {form.trigger_event === "segment_entry"
@@ -1344,10 +1685,24 @@ export function AutomationsManager({
             </WorkspacePanel>
             </div>
 
-            <div className="min-w-0 space-y-5 xl:col-span-12 2xl:col-span-5">
+            <div className="min-w-0 space-y-5 xl:col-span-12">
             {form.channel === "email" ? (
               <WorkspacePanel title="Съдържание на имейла">
               <div className="space-y-3">
+                {copiedEmail && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-forest-400/60 bg-forest-50/60 px-3 py-2">
+                    <PasteEmailButton
+                      copied={copiedEmail}
+                      onPaste={pasteEmailIntoForm}
+                      disabled={pending}
+                    />
+                    <p className="min-w-0 flex-1 text-xs text-forest-900">
+                      {copiedEmail.bg && copiedEmail.en
+                        ? "Попълва BG и EN версията."
+                        : `Попълва ${contentLocale === "en" ? "English" : "Български"} таба.`}
+                    </p>
+                  </div>
+                )}
                 <div className="inline-flex w-full gap-1 rounded-xl border border-ink/15 bg-cream-2/40 p-1 sm:w-auto">
                   {(
                     [
@@ -1386,7 +1741,7 @@ export function AutomationsManager({
                 </label>
 
                 {contentLocale === "bg" ? (
-                  <div className="grid min-w-0 gap-4 xl:grid-cols-2 2xl:grid-cols-1">
+                  <div className="grid min-w-0 gap-4 xl:grid-cols-2">
                   <div className="min-w-0 space-y-3">
                     <Field label="Тема">
                       <Input
@@ -1437,20 +1792,24 @@ export function AutomationsManager({
                     </Field>
                   </div>
                   <div className="min-w-0">
-                    <EmailTemplatePreview
-                      bodyHtml={form.html_bg}
-                      ctaLabel={form.cta_label_bg}
-                      ctaUrl={form.cta_url_bg}
-                      locale="bg"
-                      products={products}
-                      guides={guides}
-                      forms={forms}
-                      heroImageUrl={form.hero_image_url_bg}
-                    />
+                    <div className="xl:sticky xl:top-4 xl:h-[calc(var(--workspace-body-height,100dvh)-2rem)]">
+                      <EmailTemplatePreview
+                        bodyHtml={form.html_bg}
+                        ctaLabel={form.cta_label_bg}
+                        ctaUrl={form.cta_url_bg}
+                        locale="bg"
+                        products={products}
+                        guides={guides}
+                        forms={forms}
+                        heroImageUrl={form.hero_image_url_bg}
+                        height="fill"
+                        className="h-[40rem] xl:h-full"
+                      />
+                    </div>
                   </div>
                   </div>
                 ) : (
-                  <div className="grid min-w-0 gap-4 xl:grid-cols-2 2xl:grid-cols-1">
+                  <div className="grid min-w-0 gap-4 xl:grid-cols-2">
                   <div className="min-w-0 space-y-3">
                     <Field label="Subject">
                       <Input
@@ -1502,16 +1861,20 @@ export function AutomationsManager({
                     </Field>
                   </div>
                   <div className="min-w-0">
-                    <EmailTemplatePreview
-                      bodyHtml={form.html_en}
-                      ctaLabel={form.cta_label_en}
-                      ctaUrl={form.cta_url_en}
-                      locale="en"
-                      products={products}
-                      guides={guides}
-                      forms={forms}
-                      heroImageUrl={form.hero_image_url_en}
-                    />
+                    <div className="xl:sticky xl:top-4 xl:h-[calc(var(--workspace-body-height,100dvh)-2rem)]">
+                      <EmailTemplatePreview
+                        bodyHtml={form.html_en}
+                        ctaLabel={form.cta_label_en}
+                        ctaUrl={form.cta_url_en}
+                        locale="en"
+                        products={products}
+                        guides={guides}
+                        forms={forms}
+                        heroImageUrl={form.hero_image_url_en}
+                        height="fill"
+                        className="h-[40rem] xl:h-full"
+                      />
+                    </div>
                   </div>
                   </div>
                 )}
@@ -1569,6 +1932,59 @@ export function AutomationsManager({
             Зареждам статистиките…
           </p>
         )}
+        {emailTotals && emailTotals.sent + emailTotals.scheduled > 0 && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <SummaryTile
+                label="Изпратени имейли"
+                value={emailTotals.sent}
+                sub={
+                  emailTotals.scheduled > 0
+                    ? `+ ${emailTotals.scheduled} насрочени`
+                    : "от всички автоматизации"
+                }
+              />
+              <SummaryTile
+                label="Отворили"
+                value={`${pct(emailTotals.opened, emailTotals.sent)}%`}
+                sub={`${emailTotals.opened} от ${emailTotals.sent}`}
+              />
+              <SummaryTile
+                label="Кликнали"
+                value={`${pct(emailTotals.clickers, emailTotals.sent)}%`}
+                sub={`${emailTotals.clickers} човека`}
+              />
+              <SummaryTile
+                label="Доставени"
+                value={`${pct(emailTotals.delivered, emailTotals.sent)}%`}
+                sub={
+                  emailTotals.bounced > 0
+                    ? `${emailTotals.bounced} върнати`
+                    : `${emailTotals.delivered} от ${emailTotals.sent}`
+                }
+              />
+            </div>
+            <p className="flex items-center gap-1.5 text-xs text-ink-soft">
+              {syncingAll ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Обновявам отварянията от worker-а — числата се попълват сами…
+                </>
+              ) : syncedAt ? (
+                <>
+                  Отварянията са обновени в{" "}
+                  {syncedAt.toLocaleTimeString("bg-BG", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                  . Кликни число на някоя автоматизация, за да видиш кои са хората.
+                </>
+              ) : (
+                "Кликни число на някоя автоматизация, за да видиш кои са хората."
+              )}
+            </p>
+          </div>
+        )}
         {automations.length === 0 ? (
           <div className="rounded-2xl border border-ink/10 bg-white p-8 text-center">
             <p className="text-sm text-ink-soft">
@@ -1623,6 +2039,11 @@ export function AutomationsManager({
                 : null;
             const rowBusy = busyId === a.id && pending;
             const isExpanded = expandedId === a.id;
+            const activeFilter = isExpanded ? reportFilter : null;
+            const hasDeliveries =
+              a.sent_count + a.scheduled_count + a.failed_count > 0;
+            const hasEmailBody =
+              a.channel === "email" && Boolean(a.html_bg?.trim() || a.html_en?.trim());
             const canResend =
               a.channel === "email" &&
               a.sent_count > 0 &&
@@ -1770,9 +2191,20 @@ export function AutomationsManager({
 
               {(a.sent_count > 0 || a.scheduled_count > 0 || a.failed_count > 0) && (
                 <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-ink/10 pt-4">
-                  <Metric label="Изпратени" value={a.sent_count} />
+                  <Metric
+                    label="Изпратени"
+                    value={a.sent_count}
+                    onClick={() => void openRecipients(a.id, "sent")}
+                    active={activeFilter === "sent"}
+                  />
                   {a.scheduled_count > 0 && (
-                    <Metric label="Насрочени" value={a.scheduled_count} tone="warn" />
+                    <Metric
+                      label="Насрочени"
+                      value={a.scheduled_count}
+                      tone="warn"
+                      onClick={() => void openRecipients(a.id, "scheduled")}
+                      active={activeFilter === "scheduled"}
+                    />
                   )}
                   {a.channel === "email" && (
                     <>
@@ -1789,6 +2221,8 @@ export function AutomationsManager({
                           </span>
                         }
                         tone="good"
+                        onClick={() => void openRecipients(a.id, "delivered")}
+                        active={activeFilter === "delivered"}
                       />
                       <Metric
                         label="Отворили"
@@ -1803,8 +2237,16 @@ export function AutomationsManager({
                           </span>
                         }
                         tone="good"
+                        onClick={() => void openRecipients(a.id, "opened")}
+                        active={activeFilter === "opened"}
                       />
-                      <Metric label="Неотворили" value={a.not_opened_count} tone="muted" />
+                      <Metric
+                        label="Неотворили"
+                        value={a.not_opened_count}
+                        tone="muted"
+                        onClick={() => void openRecipients(a.id, "not_opened")}
+                        active={activeFilter === "not_opened"}
+                      />
                       <Metric
                         label="Кликнали"
                         value={
@@ -1818,6 +2260,8 @@ export function AutomationsManager({
                           </span>
                         }
                         tone={a.unique_clickers_count > 0 ? "good" : "muted"}
+                        onClick={() => void openRecipients(a.id, "clicked")}
+                        active={activeFilter === "clicked"}
                       />
                       {(a.total_clicks ?? 0) > 0 && (
                         <Metric label="Кликове общо" value={a.total_clicks} tone="good" />
@@ -1825,10 +2269,22 @@ export function AutomationsManager({
                     </>
                   )}
                   {a.bounced_count > 0 && (
-                    <Metric label="Върнати" value={a.bounced_count} tone="bad" />
+                    <Metric
+                      label="Върнати"
+                      value={a.bounced_count}
+                      tone="bad"
+                      onClick={() => void openRecipients(a.id, "bounced")}
+                      active={activeFilter === "bounced"}
+                    />
                   )}
                   {a.failed_count > 0 && (
-                    <Metric label="Грешки" value={a.failed_count} tone="bad" />
+                    <Metric
+                      label="Грешки"
+                      value={a.failed_count}
+                      tone="bad"
+                      onClick={() => void openRecipients(a.id, "failed")}
+                      active={activeFilter === "failed"}
+                    />
                   )}
                   {a.channel === "email" && a.sent_count > 0 && (
                     <div className="ml-auto flex min-w-[120px] flex-1 items-center gap-3">
@@ -1843,28 +2299,65 @@ export function AutomationsManager({
                 </div>
               )}
 
-              {(a.sent_count > 0 || a.scheduled_count > 0) && (
-                <button
-                  type="button"
-                  onClick={() => toggleDeliveries(a.id)}
-                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft hover:text-ink"
-                >
-                  {isExpanded ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
+              {(hasDeliveries || hasEmailBody) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {hasDeliveries && (
+                    <button
+                      type="button"
+                      onClick={() => toggleDeliveries(a.id)}
+                      aria-expanded={isExpanded}
+                      className={cn(
+                        "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors",
+                        isExpanded
+                          ? "bg-forest-600 text-cream hover:bg-forest-700"
+                          : "bg-forest-500/10 text-forest-700 hover:bg-forest-500/20",
+                      )}
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      {isExpanded ? "Скрий получателите" : "Получатели — кой получи, отвори, кликна"}
+                      {isExpanded ? (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      )}
+                    </button>
                   )}
-                  {isExpanded ? "Скрий" : "Виж"} детайлната статистика
-                </button>
+                  {hasEmailBody && (
+                    <>
+                      <CopyEmailButton
+                        build={() => copiedEmailFromAutomation(a)}
+                        onCopied={emailCopiedFromList}
+                        disabled={pending}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => campaignFromAutomation(a)}
+                        disabled={pending}
+                        title="Отваря нова кампания, попълнена с този имейл — избираш само аудитория и кога"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3 text-xs font-semibold text-ink-soft hover:bg-ink/5 disabled:opacity-50"
+                      >
+                        <Megaphone className="h-3.5 w-3.5" />
+                        Кампания от него
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
 
               {isExpanded && (
                 loadingReport ? (
-                  <p className="mt-4 rounded-2xl bg-cream-2/40 p-4 text-sm text-ink-soft">
-                    Зареждам статистиката…
+                  <p className="mt-4 flex items-center gap-2 rounded-2xl bg-cream-2/40 p-4 text-sm text-ink-soft">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Зареждам получателите…
                   </p>
                 ) : report ? (
-                  <AutomationReportPanel report={report} automationName={a.name} />
+                  <AutomationReportPanel
+                    report={report}
+                    automationName={a.name}
+                    filter={reportFilter}
+                    onFilterChange={setReportFilter}
+                    syncing={syncingReport}
+                  />
                 ) : (
                   <p className="mt-4 rounded-2xl bg-cream-2/40 p-4 text-sm text-ink-soft">
                     Статистиката не можа да се зареди.

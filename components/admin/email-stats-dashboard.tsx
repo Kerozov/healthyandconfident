@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type { EmailStatsOverview } from "@/lib/admin/email-stats";
 import type { AutomationReport } from "@/lib/admin/automation-report";
 import { getAutomationDeliveriesReport } from "@/app/(admin)/admin/actions";
+import { requestAutomationSync } from "@/lib/admin/automation-sync-client";
 import { AutomationReportPanel } from "@/components/admin/automation-report-panel";
 import { formatNumber, formatPercent } from "@/lib/money";
 import { cn, formatDate } from "@/lib/utils";
@@ -82,6 +83,17 @@ export function EmailStatsDashboard({
       setReportError(true);
     } finally {
       setLoadingReport(false);
+    }
+    // The report is what is stored; pull newer opens from the worker after it.
+    const sync = await requestAutomationSync(id);
+    if (sync.synced > 0) {
+      const fresh = await getAutomationDeliveriesReport(id).catch(() => null);
+      // Only if the same automation is still open — another may have been picked meanwhile.
+      if (fresh?.ok) {
+        setReport((current) =>
+          current?.automationId === fresh.report.automationId ? fresh.report : current,
+        );
+      }
     }
   }
 

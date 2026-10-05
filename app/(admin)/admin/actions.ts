@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { automationEmailContent } from "@/lib/automation/content";
+import { after } from "next/server";
 import {
   AdminAccessError,
   AdminSessionUnavailableError,
@@ -54,7 +56,7 @@ import { importSubscriberBatch } from "@/lib/admin/import-run";
 import type { ImportSubscriberRow } from "@/lib/admin/import-subscribers";
 import { buildBrandedEmail } from "@/lib/email/compose";
 import { getEmailFooterConfig, invalidateEmailFooterCache } from "@/lib/email/footer-config";
-import { footerConfigFromRow } from "@/lib/email/footer-defaults";
+import { footerConfigFromRow, normalizeHeaderSize } from "@/lib/email/footer-defaults";
 import { resolveSignatureCatalogHrefs } from "@/lib/email/hydrate-signature-links";
 import {
   parseSignatureLinks,
@@ -64,6 +66,7 @@ import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import {
   campaignCtaRedirectUrl,
   isSafeCtaTarget,
+  resolveCtaTarget,
 } from "@/lib/email/cta-redirect";
 import {
   filterSubscribedEmails,
@@ -72,6 +75,8 @@ import {
 import { cancelAutomationScheduledJobs } from "@/lib/automation/cancel";
 import {
   syncAutomationDeliveries,
+  syncDeliveries,
+  type DeliverySyncResult,
 } from "@/lib/automation/sync";
 import {
   syncCampaignDeliveries,
@@ -103,7 +108,7 @@ import type {
 } from "@/lib/supabase/types";
 import { slugify, chunkArray } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt } from "@/lib/datetime";
-import type { AudienceInput, CampaignStatus, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
+import type { AudienceInput, CampaignStatus, EmailHeaderSize, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { expandAudienceKeys, isDescendantGroup } from "@/lib/segments/hierarchy";
 import {
   createImageUploadTicket,
@@ -383,6 +388,7 @@ export async function saveEmailFooter(input: {
   header_subtitle: string;
   header_image_url?: string;
   header_image_full_width: boolean;
+  header_size: EmailHeaderSize;
   header_bg_color: string;
   copyright_enabled: boolean;
 }): Promise<ActionResult> {
@@ -423,6 +429,7 @@ export async function saveEmailFooter(input: {
       header_subtitle: input.header_subtitle,
       header_image_url: input.header_image_url?.trim() || null,
       header_image_full_width: input.header_image_full_width,
+      header_size: normalizeHeaderSize(input.header_size),
       header_bg_color: input.header_bg_color || "#2D7A47",
       copyright_enabled: input.copyright_enabled,
       updated_at: new Date().toISOString(),
@@ -532,11 +539,74 @@ async function validateFormSubmitAutomation(
   return null;
 }
 
-async function validateAutomationInput(input: AutomationInput): Promise<string | null> {
+function validateAutomationContent(
+  input: Pick<
+    AutomationInput,
+    "enabled" | "channel" | "subject_bg" | "subject_en" | "html_bg" | "html_en" | "sms_bg" | "sms_en"
+  >,
+): string | null {
+  if (!input.enabled) return null;
+  if (input.channel === "sms") {
+    if (!input.sms_bg?.trim() && !input.sms_en?.trim()) {
+      return "Включена SMS автоматизация трябва да има текст — иначе не се изпраща и следващите стъпки спират.";
+    }
+    return null;
+  }
+  const hasSubject = Boolean(input.subject_bg?.trim() || input.subject_en?.trim());
+  const hasBody = Boolean(input.html_bg?.trim() || input.html_en?.trim());
+  if (!hasSubject || !hasBody) {
+    return "Включена автоматизация трябва да има заглавие (тема) и текст на имейла — иначе не се изпраща и следващите стъпки спират.";
+  }
+  return null;
+}
+
+/**
+ * A step placed after itself or after one of its own later steps can never be
+ * reached — nothing outside the loop leads into it.
+ */
+async function validateAutomationChain(
+  id: string | null,
+  afterId: string | null | undefined,
+): Promise<string | null> {
+  const parentId = afterId?.trim() || null;
+  if (!parentId) return null;
+  if (id && parentId === id) return "Стъпката не може да е след самата себе си.";
+
+  const supabase = getAdminClient();
+  const { data, error } = await supabase
+    .from("automations")
+    .select("id, after_automation_id");
+  if (error) return `Неуспешна проверка на веригата: ${error.message}`;
+  const parentOf = new Map(
+    ((data as { id: string; after_automation_id: string | null }[] | null) ?? []).map(
+      (row) => [row.id, row.after_automation_id],
+    ),
+  );
+  if (!parentOf.has(parentId)) return "Стъпката, след която е поставена, вече я няма.";
+  if (!id) return null;
+
+  const seen = new Set<string>();
+  let cur: string | null = parentId;
+  while (cur && !seen.has(cur)) {
+    if (cur === id) {
+      return "Тази стъпка не може да е след своя следваща стъпка — веригата ще се затвори в кръг и няма да тръгне.";
+    }
+    seen.add(cur);
+    cur = parentOf.get(cur) ?? null;
+  }
+  return null;
+}
+
+async function validateAutomationInput(
+  input: AutomationInput,
+  id: string | null = null,
+): Promise<string | null> {
   return (
+    validateAutomationContent(input) ||
     validatePurchaseAutomation(input) ||
     validateSegmentEntryAutomation(input) ||
-    (await validateFormSubmitAutomation(input))
+    (await validateFormSubmitAutomation(input)) ||
+    (await validateAutomationChain(id, input.after_automation_id))
   );
 }
 
@@ -556,6 +626,22 @@ function automationOriginsPayload(input: AutomationInput) {
     subscriber_origins,
     new_subscribers_only: deriveNewSubscribersOnly(subscriber_origins),
   };
+}
+
+/**
+ * A chain step switched on (or saved while on) also reaches people who are
+ * already part-way through the sequence — otherwise only future signups got it.
+ * Runs after the response; the daily cron picks up whatever this run misses.
+ */
+function catchUpChainStepLater(id: string) {
+  after(async () => {
+    try {
+      const { catchUpAutomationChains } = await import("@/lib/automation/catch-up");
+      await catchUpAutomationChains({ automationIds: [id] });
+    } catch (err) {
+      console.error(`[automation] catch-up ${id}:`, err);
+    }
+  });
 }
 
 export async function createAutomation(
@@ -596,8 +682,10 @@ export async function createAutomation(
     .select("id")
     .single();
   if (error) return { ok: false, message: error.message };
+  const createdId = (data as { id: string }).id;
+  if (input.enabled && input.after_automation_id) catchUpChainStepLater(createdId);
   revalidatePath("/admin/automations");
-  return { ok: true, id: (data as { id: string }).id };
+  return { ok: true, id: createdId };
 }
 
 export async function updateAutomation(
@@ -606,7 +694,7 @@ export async function updateAutomation(
 ): Promise<ActionResult> {
   const guard = await guardAction("automations", { action: "update", summary: "Обнови автоматизация" });
   if (!guard.ok) return guard;
-  const validationErr = await validateAutomationInput(input);
+  const validationErr = await validateAutomationInput(input, id);
   if (validationErr) return { ok: false, message: validationErr };
   const supabase = getAdminClient();
   const origins = automationOriginsPayload(input);
@@ -638,6 +726,7 @@ export async function updateAutomation(
     })
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
+  if (input.enabled && input.after_automation_id) catchUpChainStepLater(id);
   revalidatePath("/admin/automations");
   return { ok: true };
 }
@@ -769,8 +858,36 @@ export async function deleteAutomation(id: string): Promise<ActionResult> {
     // Still delete the rule even if worker cancel fails.
   }
   const supabase = getAdminClient();
+  const { data: doomed } = await supabase
+    .from("automations")
+    .select("after_automation_id")
+    .eq("id", id)
+    .maybeSingle();
+  const grandparentId =
+    (doomed as { after_automation_id: string | null } | null)?.after_automation_id ?? null;
+
+  // Steps after this one move up to its parent. The foreign key alone would
+  // turn them into chain starts that fire straight on the trigger.
+  const { error: relinkError } = await supabase
+    .from("automations")
+    .update({ after_automation_id: grandparentId, updated_at: new Date().toISOString() })
+    .eq("after_automation_id", id);
+  if (relinkError) return { ok: false, message: relinkError.message };
+
   const { error } = await supabase.from("automations").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
+
+  // People already past the parent get the moved-up steps from their new parent.
+  if (grandparentId) {
+    const { data: moved } = await supabase
+      .from("automations")
+      .select("id")
+      .eq("after_automation_id", grandparentId)
+      .eq("enabled", true);
+    for (const child of (moved as { id: string }[] | null) ?? []) {
+      catchUpChainStepLater(child.id);
+    }
+  }
   revalidatePath("/admin/automations");
   return { ok: true };
 }
@@ -781,10 +898,36 @@ export async function toggleAutomationEnabled(
 ): Promise<ActionResult> {
   const guard = await guardAction("automations", { action: "update", summary: "Превключи автоматизация" });
   if (!guard.ok) return guard;
-  if (!enabled) {
+  const supabase = getAdminClient();
+  if (enabled) {
+    // Same checks as saving: a step switched on with no text goes nowhere and
+    // takes every step after it down with it.
+    const { data: row, error: readError } = await supabase
+      .from("automations")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (readError || !row) {
+      return { ok: false, message: readError?.message || "Автоматизацията не е намерена." };
+    }
+    const automation = row as Automation;
+    const validationErr = await validateAutomationInput(
+      {
+        ...automation,
+        enabled: true,
+        attachment_path_bg: automation.attachment_path_bg ?? undefined,
+        attachment_filename_bg: automation.attachment_filename_bg ?? undefined,
+        attachment_path_en: automation.attachment_path_en ?? undefined,
+        attachment_filename_en: automation.attachment_filename_en ?? undefined,
+        hero_image_url_bg: automation.hero_image_url_bg ?? undefined,
+        hero_image_url_en: automation.hero_image_url_en ?? undefined,
+      },
+      id,
+    );
+    if (validationErr) return { ok: false, message: validationErr };
+  } else {
     await cancelAutomationScheduledJobs(id);
   }
-  const supabase = getAdminClient();
   const { error } = await supabase
     .from("automations")
     .update({
@@ -793,8 +936,47 @@ export async function toggleAutomationEnabled(
     })
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
+  if (enabled) catchUpChainStepLater(id);
   revalidatePath("/admin/automations");
   return { ok: true };
+}
+
+/**
+ * Run the daily catch-up now: queue sequence steps people missed and retry
+ * failed first emails. Every outcome lands on the delivery rows (report).
+ */
+export async function runAutomationCatchUpNow(): Promise<ActionResult> {
+  const guard = await guardAction("automations", {
+    action: "send",
+    summary: "Навакса пропуснати стъпки от автоматизации",
+  });
+  if (!guard.ok) return guard;
+  try {
+    const { catchUpAutomationChains } = await import("@/lib/automation/catch-up");
+    const r = await catchUpAutomationChains({ timeBudgetMs: 50_000 });
+    revalidatePath("/admin/automations");
+    if (r.notice) return { ok: false, message: r.notice };
+    const parts = [
+      `проверени ${r.candidates}`,
+      `изпратени ${r.sent}`,
+      `насрочени ${r.scheduled}`,
+      `пропуснати ${r.skipped}`,
+    ];
+    if (r.failed > 0) parts.push(`неуспешни ${r.failed}`);
+    if (r.errors > 0) parts.push(`грешки ${r.errors}`);
+    return {
+      ok: r.errors === 0 && r.failed === 0,
+      message:
+        `Наваксване: ${parts.join(" · ")}.` +
+        (r.timedOut ? " Не стигна времето — пусни го отново за останалите." : "") +
+        (r.skipped > 0 || r.failed > 0 ? " Причините са в отчета на всяка стъпка." : ""),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: `Наваксването спря: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
 }
 
 export async function diagnoseAutomationsForEmail(
@@ -897,44 +1079,41 @@ export async function getAutomationStatsMap(): Promise<
   return getAutomationStats();
 }
 
+function deliverySyncMessage(result: DeliverySyncResult): string {
+  if (result.total === 0) return "Всичко е актуално — няма нови отваряния за проверка.";
+  const left =
+    result.remaining > 0 ? ` Остават ${result.remaining} — натисни „Обнови“ пак.` : "";
+  return `Проверени ${result.total - result.remaining} получатели, обновени ${result.synced}.${left}`;
+}
+
 export async function syncAutomation(id: string): Promise<ActionResult> {
   const guard = await guardAction("automations", { action: "sync", summary: "Синхронизира автоматизация" });
   if (!guard.ok) return guard;
-  const result = await syncAutomationDeliveries(id);
-  revalidatePath("/admin/automations");
-  return {
-    ok: true,
-    message: `Synced ${result.synced} of ${result.total} delivery(ies).`,
-  };
+  const result = await syncAutomationDeliveries(id, { force: true, timeBudgetMs: 40_000 });
+  return { ok: true, message: deliverySyncMessage(result) };
 }
 
 export async function syncAllAutomations(): Promise<ActionResult> {
   const guard = await guardAction("automations", { action: "sync", summary: "Синхронизира всички автоматизации" });
   if (!guard.ok) return guard;
-  const supabase = getAdminClient();
-  const { data } = await supabase.from("automations").select("id");
-  const ids = ((data as { id: string }[]) ?? []).map((r) => r.id);
-
-  let synced = 0;
-  for (const id of ids) {
-    const result = await syncAutomationDeliveries(id);
-    synced += result.synced;
-  }
-
-  revalidatePath("/admin/automations");
-  return {
-    ok: true,
-    message: `Synced ${synced} delivery(ies) across ${ids.length} automation(s).`,
-  };
+  // One queue over every automation, oldest-checked first — a per-rule loop
+  // spent the whole budget on the first big rule and never reached the rest.
+  const result = await syncDeliveries(null, { force: true, timeBudgetMs: 40_000 });
+  return { ok: true, message: deliverySyncMessage(result) };
 }
 
+/**
+ * Local data only — answers in one round of queries. Fresh opens come from the
+ * worker through `/api/admin/automations/sync`, which the screen calls right
+ * after showing this; syncing first used to make the panel wait on hundreds of
+ * worker calls and time out with nothing on screen.
+ */
 export async function getAutomationDeliveriesReport(
   automationId: string,
 ): Promise<
   { ok: true; report: AutomationReport } | { ok: false; message: string }
 > {
   await requireAdmin("automations");
-  await syncAutomationDeliveries(automationId);
 
   const { data: row } = await getAdminClient()
     .from("automations")
@@ -943,9 +1122,13 @@ export async function getAutomationDeliveriesReport(
     .maybeSingle();
   const channel = (row as { channel: AutomationChannel } | null)?.channel ?? "email";
 
-  const report = await getAutomationReport(automationId, channel);
-  revalidatePath("/admin/automations");
-  return { ok: true, report };
+  try {
+    const report = await getAutomationReport(automationId, channel);
+    return { ok: true, report };
+  } catch (err) {
+    console.error("[automation report]", err instanceof Error ? err.message : err);
+    return { ok: false, message: "Статистиката не можа да се зареди." };
+  }
 }
 
 export async function resendAutomationToNonOpeners(
@@ -972,7 +1155,8 @@ export async function resendAutomationToNonOpeners(
     };
   }
 
-  await syncAutomationDeliveries(automationId);
+  // Fresh opens matter here: whoever opened since the last check must not get it again.
+  await syncAutomationDeliveries(automationId, { force: true, timeBudgetMs: 30_000 });
   const deliveries = await getAutomationDeliveries(automationId);
 
   const nonOpeners = deliveries.filter(
@@ -1022,9 +1206,10 @@ export async function resendAutomationToNonOpeners(
   }
 
   for (const [locale, localeEmails] of byLocale) {
-    const subjectTpl =
-      locale === "en" ? automation.subject_en : automation.subject_bg;
-    const htmlTpl = locale === "en" ? automation.html_en : automation.html_bg;
+    const content = automationEmailContent(automation, locale);
+    if (!content) continue;
+    const subjectTpl = content.subject;
+    const htmlTpl = content.html;
     const sampleEmail = localeEmails[0] ?? "";
     const subject = renderEmailTemplate(subjectTpl, {
       name: null,
@@ -2088,6 +2273,130 @@ export async function sendEmailCampaign(input: {
     hero_image_url: input.hero_image_url,
     signature_enabled: input.signature_enabled,
   });
+}
+
+const TEST_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Send the email being edited to a few hand-typed addresses, as a preview in a
+ * real inbox. Nothing is written: no campaign row, no deliveries, no stats — and
+ * the editor keeps its content. The main button links straight to its target
+ * so test clicks never land in the click counts.
+ */
+export async function sendTestEmail(input: {
+  to: string;
+  subject: string;
+  html: string;
+  cta_label?: string;
+  cta_url?: string;
+  locale?: "bg" | "en";
+  attachment_path?: string;
+  attachment_filename?: string;
+  hero_image_url?: string;
+  signature_enabled?: boolean;
+}): Promise<ActionResult> {
+  const guard = await guardAction(["campaigns", "automations"], {
+    action: "send",
+    summary: "Изпрати тестов имейл",
+  });
+  if (!guard.ok) return guard;
+
+  const recipients = [
+    ...new Set(
+      input.to
+        .split(/[\s,;]+/)
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+  if (recipients.length === 0) {
+    return { ok: false, message: "Въведи имейл за теста." };
+  }
+  if (recipients.length > 5) {
+    return { ok: false, message: "Най-много 5 адреса за тест." };
+  }
+  const invalid = recipients.find((email) => !TEST_EMAIL_RE.test(email));
+  if (invalid) {
+    return { ok: false, message: `Невалиден имейл: ${invalid}` };
+  }
+  if (!input.html.trim()) {
+    return { ok: false, message: "Имейлът няма съдържание." };
+  }
+  const ctaLabel = input.cta_label?.trim() ?? "";
+  const ctaUrl = input.cta_url?.trim() ?? "";
+  if (ctaUrl && !isSafeCtaTarget(ctaUrl)) {
+    return { ok: false, message: "Невалиден линк на бутона." };
+  }
+
+  const locale = input.locale === "en" ? "en" : "bg";
+  const subject = `[Тест] ${input.subject.trim() || "(без тема)"}`.slice(0, 250);
+  const supabase = getAdminClient();
+  const { data: subs } = await supabase
+    .from("subscribers")
+    .select("id, email, name")
+    .in("email", recipients);
+  const subByEmail = new Map(
+    ((subs as { id: string; email: string; name: string | null }[] | null) ?? []).map((s) => [
+      s.email.toLowerCase(),
+      s,
+    ]),
+  );
+
+  let failed = 0;
+  let lastError = "";
+  for (const email of recipients) {
+    const sub = subByEmail.get(email);
+    const vars = { name: sub?.name, email };
+    try {
+      const { bodyHtml, attachments } = await buildEmailBodyForRecipient({
+        html: renderEmailTemplate(input.html, vars),
+        locale,
+        email,
+        subscriberId: sub?.id ?? null,
+        attachmentPath: input.attachment_path,
+        attachmentFilename: input.attachment_filename,
+      });
+      const html = await buildBrandedEmail({
+        bodyHtml,
+        locale,
+        cta: ctaLabel && ctaUrl ? { label: ctaLabel, href: resolveCtaTarget(ctaUrl) } : null,
+        vars,
+        unsubscribeHref: unsubscribeLinkForEmail(email, locale),
+        heroImageUrl: input.hero_image_url,
+        recipient: { email, subscriberId: sub?.id ?? null },
+        includeSignature: input.signature_enabled !== false,
+      });
+      const res = await sendEmail({
+        subject: renderEmailTemplate(subject, vars),
+        html,
+        recipients: [email],
+        attachments: attachments.length ? attachments : undefined,
+      });
+      if (!res.jobId || res.status === "failed" || (res.failed ?? 0) > 0) {
+        failed += 1;
+      }
+    } catch (error) {
+      failed += 1;
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  if (failed === recipients.length) {
+    return {
+      ok: false,
+      message: `Тестът не беше изпратен${lastError ? `: ${lastError}` : "."}`,
+    };
+  }
+  if (failed > 0) {
+    return {
+      ok: true,
+      message: `Тестът е изпратен до ${recipients.length - failed} от ${recipients.length} адреса.`,
+    };
+  }
+  return {
+    ok: true,
+    message: `Тестът е изпратен до ${recipients.join(", ")}.`,
+  };
 }
 
 /** Pull authoritative status + open tracking from the worker into our DB. */

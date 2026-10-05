@@ -116,7 +116,9 @@ export type AutomationRecipientFilter =
   | "clicked"
   | "bounced"
   | "failed"
-  | "scheduled";
+  | "skipped"
+  | "scheduled"
+  | "unsubscribed";
 
 export const RECIPIENT_FILTERS: AutomationRecipientFilter[] = [
   "all",
@@ -127,7 +129,9 @@ export const RECIPIENT_FILTERS: AutomationRecipientFilter[] = [
   "not_opened",
   "bounced",
   "failed",
+  "skipped",
   "scheduled",
+  "unsubscribed",
 ];
 
 export const RECIPIENT_FILTER_LABELS: Record<AutomationRecipientFilter, string> = {
@@ -139,7 +143,9 @@ export const RECIPIENT_FILTER_LABELS: Record<AutomationRecipientFilter, string> 
   clicked: "Кликнали",
   bounced: "Върнати",
   failed: "Грешка",
+  skipped: "Пропуснати",
   scheduled: "Насрочени",
+  unsubscribed: "Отписали се",
 };
 
 export const RECIPIENT_STATE_LABELS: Record<AutomationRecipientState, string> = {
@@ -175,8 +181,12 @@ export function matchesRecipientFilter(
       return row.bounced;
     case "failed":
       return row.failed;
+    case "skipped":
+      return row.status === "skipped";
     case "scheduled":
       return row.status === "scheduled";
+    case "unsubscribed":
+      return row.subscriberStatus === "unsubscribed";
   }
 }
 

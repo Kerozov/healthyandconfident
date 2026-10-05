@@ -2,7 +2,7 @@ import { siteConfig } from "@/lib/site";
 import { renderEmailHeroImage } from "@/lib/email/hero-image";
 import { DEFAULT_EMAIL_FOOTER } from "@/lib/email/footer-defaults";
 import { renderEmailSignatureAndFooter } from "@/lib/email/footer-html";
-import type { EmailFooterConfig } from "@/lib/supabase/types";
+import type { EmailFooterConfig, EmailHeaderSize } from "@/lib/supabase/types";
 
 export type EmailCta = {
   label: string;
@@ -48,6 +48,24 @@ function isSafeHref(href: string): boolean {
   return false;
 }
 
+/** Header band dimensions per size — compact keeps the content near the top. */
+const HEADER_SIZES: Record<
+  EmailHeaderSize,
+  {
+    padding: string;
+    title: number;
+    tagline: number;
+    subtitle: number;
+    gap: number;
+    logoHeight: number;
+    logoGap: number;
+  }
+> = {
+  compact: { padding: "14px 24px", title: 20, tagline: 13, subtitle: 12, gap: 4, logoHeight: 48, logoGap: 8 },
+  normal: { padding: "24px 28px", title: 24, tagline: 14, subtitle: 12, gap: 6, logoHeight: 72, logoGap: 12 },
+  large: { padding: "36px 28px", title: 28, tagline: 15, subtitle: 13, gap: 10, logoHeight: 96, logoGap: 16 },
+};
+
 function headerBand(footer: EmailFooterConfig): string {
   if (footer.header_enabled === false) return "";
 
@@ -57,6 +75,7 @@ function headerBand(footer: EmailFooterConfig): string {
   const subtitle = (footer.header_subtitle ?? "").trim();
   const imageUrl = footer.header_image_url?.trim() ?? "";
   const fullWidth = Boolean(footer.header_image_full_width);
+  const size = HEADER_SIZES[footer.header_size] ?? HEADER_SIZES.large;
 
   const hasText = Boolean(title || tagline || subtitle);
   if (!imageUrl && !hasText) return "";
@@ -64,7 +83,7 @@ function headerBand(footer: EmailFooterConfig): string {
   const image = imageUrl
     ? fullWidth
       ? `<img src="${escapeHtml(imageUrl)}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none" />`
-      : `<img src="${escapeHtml(imageUrl)}" alt="" width="160" style="display:block;margin:0 auto 16px;width:auto;max-width:180px;max-height:96px;height:auto;border:0;outline:none" />`
+      : `<img src="${escapeHtml(imageUrl)}" alt="" width="160" style="display:block;margin:0 auto ${size.logoGap}px;width:auto;max-width:180px;max-height:${size.logoHeight}px;height:auto;border:0;outline:none" />`
     : "";
 
   if (fullWidth && imageUrl && !hasText) {
@@ -77,9 +96,9 @@ function headerBand(footer: EmailFooterConfig): string {
   }
 
   const textBlock = hasText
-    ? `${title ? `<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:600;color:#ffffff;line-height:1.2">${escapeHtml(title)}</p>` : ""}
-            ${tagline ? `<p style="margin:${title ? "10px" : "0"} 0 0;font-size:15px;color:rgba(255,255,255,0.9);line-height:1.4">${escapeHtml(tagline)}</p>` : ""}
-            ${subtitle ? `<p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.75);line-height:1.4">${escapeHtml(subtitle)}</p>` : ""}`
+    ? `${title ? `<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:${size.title}px;font-weight:600;color:#ffffff;line-height:1.2">${escapeHtml(title)}</p>` : ""}
+            ${tagline ? `<p style="margin:${title ? `${size.gap}px` : "0"} 0 0;font-size:${size.tagline}px;color:rgba(255,255,255,0.9);line-height:1.4">${escapeHtml(tagline)}</p>` : ""}
+            ${subtitle ? `<p style="margin:${Math.min(size.gap, 6)}px 0 0;font-size:${size.subtitle}px;color:rgba(255,255,255,0.75);line-height:1.4">${escapeHtml(subtitle)}</p>` : ""}`
     : "";
 
   const fullWidthRow =
@@ -100,7 +119,7 @@ function headerBand(footer: EmailFooterConfig): string {
     logoInBand || textBlock
       ? `
         <tr>
-          <td style="background-color:${escapeHtml(bg)};padding:36px 28px;text-align:center">
+          <td style="background-color:${escapeHtml(bg)};padding:${size.padding};text-align:center">
             ${logoInBand}
             ${textBlock}
           </td>

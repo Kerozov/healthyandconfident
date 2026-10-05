@@ -1,4 +1,4 @@
-import type { EmailFooterConfig, Locale } from "@/lib/supabase/types";
+import type { EmailFooterConfig, EmailHeaderSize, Locale } from "@/lib/supabase/types";
 import { publicSiteOrigin } from "@/lib/site";
 import { parseSignatureLinks } from "@/lib/email/signature-links";
 
@@ -10,6 +10,7 @@ const HEADER_DEFAULTS = {
   header_tagline: "Healthy & Confident",
   header_image_url: null as string | null,
   header_image_full_width: false,
+  header_size: "large" as EmailHeaderSize,
   header_bg_color: "#2D7A47",
   copyright_enabled: true,
 } as const;
@@ -92,8 +93,13 @@ export function footerConfigFromRow(
     header_image_url: row.header_image_url ?? defaults.header_image_url,
     header_image_full_width:
       row.header_image_full_width ?? defaults.header_image_full_width,
+    header_size: normalizeHeaderSize(row.header_size),
     header_bg_color: row.header_bg_color || defaults.header_bg_color,
     copyright_enabled: row.copyright_enabled ?? defaults.copyright_enabled,
     signature_links: parseSignatureLinks(row.signature_links),
   };
+}
+
+export function normalizeHeaderSize(value: unknown): EmailHeaderSize {
+  return value === "compact" || value === "normal" ? value : "large";
 }

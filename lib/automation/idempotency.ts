@@ -44,6 +44,7 @@ export function deliveryStatusFromWorkerResult(
 
   const isSent =
     item.status === "sent" ||
+    item.status === "partial" ||
     item.dispatch === "immediate" ||
     (item.sent ?? 0) > 0;
   if (isSent) return "sent";

@@ -16,7 +16,12 @@ export const dynamic = "force-dynamic";
 // Aggregates a large table — the platform default (seconds) cuts the report off.
 export const maxDuration = 60;
 
-export default async function AdminCampaignsPage() {
+export default async function AdminCampaignsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ paste?: string }>;
+}) {
+  const { paste } = await searchParams;
   const [emailCampaigns, smsCampaigns, segments, groups, products, guides, forms, subscriberTags] =
     await Promise.all([
       getEmailCampaigns(),
@@ -47,6 +52,7 @@ export default async function AdminCampaignsPage() {
           forms={forms}
           subscriberTags={subscriberTags}
           workerConfigured={workerConfigured}
+          pasteOnOpen={paste === "1"}
         />
     </div>
   );

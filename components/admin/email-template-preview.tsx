@@ -22,6 +22,7 @@ export function EmailTemplatePreview({
   forms = [],
   heroImageUrl = "",
   height = 620,
+  className,
 }: {
   bodyHtml: string;
   ctaLabel: string;
@@ -31,8 +32,12 @@ export function EmailTemplatePreview({
   guides?: SiteGuide[];
   forms?: FormTemplateRecord[];
   heroImageUrl?: string;
-  /** Preview viewport height in px. */
-  height?: number;
+  /**
+   * Preview viewport height in px, or "fill" to stretch to the height the
+   * caller gives the root (via `className`) — used by the sticky preview column.
+   */
+  height?: number | "fill";
+  className?: string;
 }) {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
 
@@ -90,7 +95,13 @@ export function EmailTemplatePreview({
   ]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-ink/10 bg-ink/5">
+    <div
+      className={cn(
+        "overflow-hidden rounded-xl border border-ink/10 bg-ink/5",
+        height === "fill" && "flex flex-col",
+        className,
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-white px-3 py-2">
         <p className="text-xs font-medium text-ink-soft">
           Преглед — header и footer се добавят автоматично
@@ -115,9 +126,10 @@ export function EmailTemplatePreview({
       <div
         className={cn(
           "overflow-y-auto",
+          height === "fill" && "min-h-0 flex-1",
           device === "mobile" && "flex justify-center bg-ink/10 p-3",
         )}
-        style={{ height }}
+        style={height === "fill" ? undefined : { height }}
       >
         <iframe
           title="Email preview"

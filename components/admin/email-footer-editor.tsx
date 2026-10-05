@@ -2,11 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Save, Check } from "lucide-react";
-import type { EmailFooterConfig, SiteProduct } from "@/lib/supabase/types";
+import type { EmailFooterConfig, EmailHeaderSize, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { saveEmailFooter } from "@/app/(admin)/admin/actions";
 import { composeBrandedEmail } from "@/lib/email/layout";
-import { footerConfigFromRow } from "@/lib/email/footer-defaults";
+import { footerConfigFromRow, normalizeHeaderSize } from "@/lib/email/footer-defaults";
 import { Field, Input, Textarea, Card } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { SignatureLinksEditor } from "@/components/admin/signature-links-editor";
@@ -23,6 +23,7 @@ type FormState = {
   header_subtitle: string;
   header_image_url: string;
   header_image_full_width: boolean;
+  header_size: EmailHeaderSize;
   header_bg_color: string;
   copyright_enabled: boolean;
   signature_enabled: boolean;
@@ -46,6 +47,12 @@ type FormState = {
   preferences_url: string;
 };
 
+const HEADER_SIZE_OPTIONS: { id: EmailHeaderSize; label: string }[] = [
+  { id: "compact", label: "Компактна" },
+  { id: "normal", label: "Средна" },
+  { id: "large", label: "Голяма" },
+];
+
 function toForm(config: EmailFooterConfig): FormState {
   return {
     header_enabled: config.header_enabled !== false,
@@ -54,6 +61,7 @@ function toForm(config: EmailFooterConfig): FormState {
     header_subtitle: config.header_subtitle ?? "",
     header_image_url: config.header_image_url ?? "",
     header_image_full_width: Boolean(config.header_image_full_width),
+    header_size: normalizeHeaderSize(config.header_size),
     header_bg_color: config.header_bg_color || "#2D7A47",
     copyright_enabled: config.copyright_enabled !== false,
     signature_enabled: config.signature_enabled,
@@ -93,6 +101,7 @@ function toConfig(
     header_subtitle: form.header_subtitle,
     header_image_url: form.header_image_url.trim() || null,
     header_image_full_width: form.header_image_full_width,
+    header_size: form.header_size,
     header_bg_color: form.header_bg_color || "#2D7A47",
     copyright_enabled: form.copyright_enabled,
     signature_enabled: form.signature_enabled,
@@ -183,6 +192,28 @@ export function EmailFooterEditor({
 
         {form.header_enabled && (
           <div className="space-y-4 rounded-xl border border-ink/10 bg-cream-2/20 p-4">
+            <Field
+              label="Височина на лентата"
+              hint="Компактна = съдържанието на имейла започва по-нагоре."
+            >
+              <div className="inline-flex rounded-xl border border-ink/15 bg-white p-0.5">
+                {HEADER_SIZE_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={form.header_size === option.id}
+                    onClick={() => set("header_size", option.id)}
+                    className={
+                      form.header_size === option.id
+                        ? "rounded-lg bg-forest-600 px-3 py-1.5 text-sm font-semibold text-cream"
+                        : "rounded-lg px-3 py-1.5 text-sm font-medium text-ink-soft hover:bg-cream"
+                    }
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </Field>
             <ImageUploadField
               label="Снимка / лого в header"
               hint="Празно = само текст. Малко лого в лентата, или пълна ширина отдолу."

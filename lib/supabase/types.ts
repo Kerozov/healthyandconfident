@@ -113,10 +113,13 @@ export type EmailFooterConfig = {
   header_subtitle: string;
   header_image_url: string | null;
   header_image_full_width: boolean;
+  header_size: EmailHeaderSize;
   header_bg_color: string;
   copyright_enabled: boolean;
   updated_at: string;
 };
+
+export type EmailHeaderSize = "compact" | "normal" | "large";
 
 export type AutomationTrigger =
   | "purchase"

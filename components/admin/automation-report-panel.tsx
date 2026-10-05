@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Download, ExternalLink, Search, UserMinus } from "lucide-react";
+import {
+  Check,
+  ClipboardCopy,
+  Download,
+  ExternalLink,
+  Loader2,
+  Search,
+  UserMinus,
+} from "lucide-react";
 import { Meter, RankedBars, TimeSeriesChart } from "@/components/admin/charts";
 import {
   RECIPIENT_FILTERS,
@@ -153,13 +161,27 @@ function Rate({
 export function AutomationReportPanel({
   report,
   automationName,
+  filter: controlledFilter,
+  onFilterChange,
+  syncing = false,
 }: {
   report: AutomationReport;
   automationName: string;
+  /** Set from outside when a counter in the list was clicked. */
+  filter?: AutomationRecipientFilter;
+  onFilterChange?: (filter: AutomationRecipientFilter) => void;
+  /** Fresh opens are being pulled from the worker right now. */
+  syncing?: boolean;
 }) {
-  const [filter, setFilter] = useState<AutomationRecipientFilter>("all");
+  const [ownFilter, setOwnFilter] = useState<AutomationRecipientFilter>("all");
+  const filter = controlledFilter ?? ownFilter;
+  const setFilter = (next: AutomationRecipientFilter) => {
+    setOwnFilter(next);
+    onFilterChange?.(next);
+  };
   const [query, setQuery] = useState("");
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [copied, setCopied] = useState(false);
 
   const { totals, counts } = report;
   const isEmail = report.channel === "email";
@@ -174,6 +196,20 @@ export function AutomationReportPanel({
   }, [report.recipients, filter, query]);
 
   const shown = filtered.slice(0, visible);
+
+  /** The addresses in the current view, one per line — pastes into any list. */
+  async function copyEmails() {
+    const emails = [
+      ...new Set(filtered.map((row) => row.email.trim().toLowerCase()).filter(Boolean)),
+    ];
+    try {
+      await navigator.clipboard.writeText(emails.join("\n"));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked — the CSV export still works */
+    }
+  }
   const hasTimeline =
     report.timeline.length > 1 &&
     report.timeline.some((p) => p.sent + p.opened + p.clicks > 0);
@@ -260,6 +296,14 @@ export function AutomationReportPanel({
           {totals.failed > 0 && (
             <Rate label="Грешки" value={`${totals.failed}`} tone="bad" />
           )}
+          {totals.skipped > 0 && (
+            <Rate
+              label="Пропуснати"
+              value={`${totals.skipped}`}
+              sub="причината е до всеки човек"
+              tone="bad"
+            />
+          )}
           {totals.unsubscribed > 0 && (
             <Rate
               label="Отписали се"
@@ -283,6 +327,17 @@ export function AutomationReportPanel({
           <> · последна реакция {when(report.lastActivityAt)}</>
         )}
         <span className="text-ink-soft/60"> · часовете са софийско време</span>
+        {syncing ? (
+          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gold-400/15 px-2 py-0.5 text-[11px] font-medium text-gold-600">
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+            обновявам отварянията…
+          </span>
+        ) : report.lastSyncedAt ? (
+          <span className="text-ink-soft/60">
+            {" "}
+            · отваряния към {when(report.lastSyncedAt)}
+          </span>
+        ) : null}
       </p>
 
       {hasTimeline && (
@@ -374,6 +429,20 @@ export function AutomationReportPanel({
               className="h-9 w-full rounded-full border border-ink/15 bg-white pl-9 pr-3 text-sm outline-none focus:border-forest-500"
             />
           </div>
+          <button
+            type="button"
+            onClick={copyEmails}
+            disabled={filtered.length === 0}
+            title="Копира имейлите от текущия филтър — по един на ред"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 text-xs font-semibold text-ink-soft hover:bg-ink/5 disabled:opacity-40"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-forest-600" />
+            ) : (
+              <ClipboardCopy className="h-4 w-4" />
+            )}
+            {copied ? "Копирано" : "Копирай имейлите"}
+          </button>
           <button
             type="button"
             onClick={() => downloadCsv(automationName, filtered)}

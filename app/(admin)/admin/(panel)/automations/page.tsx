@@ -3,9 +3,13 @@ import { getFormTemplates } from "@/lib/admin/forms-data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { AutomationsManager } from "@/components/admin/automations-manager";
 import { AutomationDiagnostics } from "@/components/admin/automation-diagnostics";
+import { AutomationHealthPanel } from "@/components/admin/automation-health";
+import { checkAutomationHealth } from "@/lib/automation/health";
 import { Alert, PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
+// Server actions run under the page's limit — "Обнови" syncs for up to 40s.
+export const maxDuration = 60;
 
 export default async function AdminAutomationsPage() {
   const [automations, segments, groups, products, guides, forms] = await Promise.all([
@@ -17,6 +21,10 @@ export default async function AdminAutomationsPage() {
     getFormTemplates(),
   ]);
   const workerOk = isNotificationWorkerConfigured();
+  const healthIssues = checkAutomationHealth(automations, {
+    formIds: new Set(forms.map((f) => f.id)),
+  });
+  const cronConfigured = Boolean(process.env.CRON_SECRET?.trim());
 
   return (
     <div>
@@ -31,6 +39,8 @@ export default async function AdminAutomationsPage() {
           </Alert>
         )}
       </PageHeader>
+
+      <AutomationHealthPanel issues={healthIssues} cronConfigured={cronConfigured} />
 
       <AutomationsManager
           automations={automations}

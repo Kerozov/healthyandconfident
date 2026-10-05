@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
  * against the left edge, which left the wide screens unused and made long forms
  * unreadable. This takes over the viewport instead: sticky title bar, one wide
  * scrolling body the caller lays out in columns, and a sticky action bar.
+ *
+ * The body publishes its visible height as `--workspace-body-height`, so a
+ * sticky column (the email preview) can size itself to exactly one screen.
  */
 export function WorkspaceEditor({
   title,
@@ -35,6 +38,16 @@ export function WorkspaceEditor({
     return () => {
       document.body.style.overflow = previous;
     };
+  }, []);
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const observer = new ResizeObserver(() => {
+      body.style.setProperty("--workspace-body-height", `${body.clientHeight}px`);
+    });
+    observer.observe(body);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
