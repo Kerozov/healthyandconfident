@@ -23,12 +23,11 @@ export const en: Dictionary = {
   },
   nav: {
     items: [
-      { label: "About", href: "#about" },
-      { label: "Method", href: "#method" },
-      { label: "Meals", href: "#food" },
       { label: "Programs", href: "#programs" },
       { label: "Results", href: "#results" },
-      { label: "Reviews", href: "#google-reviews" },
+      { label: "Method", href: "#method" },
+      { label: "About", href: "#about" },
+      { label: "FAQ", href: "#faq" },
       { label: "Blog", href: "/en/blog" },
       { label: "Contact", href: "#contact" },
     ],
@@ -36,113 +35,97 @@ export const en: Dictionary = {
   },
   hero: {
     eyebrow: "Holistic Nutritionist · NHS Diabetes Practitioner",
-    title: "Get slimmer, happier and",
-    titleAccent: "confident — for good",
+    title: "Lose ",
+    titleAccent: "5–15 kg",
+    titleAfter: " for good — without hunger or another diet",
     subtitle:
-      "An empowering long-term diet and lifestyle change for people with insulin resistance and Type 2 Diabetes — aiming for lasting healthy weight loss and remission. No restrictions. No another diet. Just real food, the right mindset and skilful support.",
+      "For busy women with insulin resistance, pre-diabetes or Type 2 Diabetes. Delicious family food, a clear structure and real support — a method from England with a 94% success rate.",
     bullets: [
-      "Lasting healthy weight loss — without deprivation",
-      "Balanced blood sugar & more energy",
-      "Type 2 Diabetes remission — proven approach",
-      "More confidence, clarity and calm",
+      "Your first 3–5 kg in just 21 days",
+      "Stable blood sugar and more energy",
+      "No calorie counting, hours in the kitchen or special shops",
     ],
-    primaryCta: "Start your transformation",
-    freeMenuCta: "Get your free menu",
-    secondaryCta: "See real meals",
-    freeMenuStrip: {
-      title: "Free 2-day menu",
-      subtitle: "Tasty, balanced and easy — drop your email below.",
-    },
-    stats: [
-      { value: "10+", label: "years in medicine & nutrition" },
-      { value: "100s", label: "clients transformed" },
-      { value: "15", label: "countries served online" },
-    ],
+    primaryCta: "Choose your starting point",
+    freeMenuCta: "Free 2-day menu",
+    ratingLabel: "5.0 on Google",
+    trustLine: "hundreds of clients in 15 countries",
+    award: "National award for contribution to fighting insulin resistance",
+    successValue: "94%",
+    successLabel: "client success rate",
     imageAlt: "Vessie Nay, Holistic Nutritionist",
   },
-  problems: {
-    title: "You are in the right place if you struggle with",
-    subtitle:
-      "If at least two of these sound familiar, we can change that together — step by step.",
+  proof: {
+    eyebrow: "Results, not promises",
+    title: "Real clients. Real numbers.",
     items: [
-      { icon: "Activity", text: "Insulin resistance & high blood sugar" },
-      { icon: "HeartPulse", text: "Pre-diabetes or Type 2 Diabetes" },
-      { icon: "Scale", text: "Extra weight that won't shift" },
-      { icon: "BatteryLow", text: "Tiredness & low energy" },
-      { icon: "Wind", text: "Bloating & a heavy feeling" },
-      { icon: "Cookie", text: "Cravings you can't control" },
-      { icon: "Brain", text: "Brain fog & poor focus" },
-      { icon: "Sparkles", text: "Low self-esteem & confidence" },
-    ],
-    note: "There is a lot of pressure on the NHS and waiting times can be long. You don't have to do it alone — or wait.",
-  },
-  outcomes: {
-    title: "Imagine, just a few months from now",
-    subtitle: "This is what we achieve together.",
-    items: [
-      "Feeling genuinely confident again",
-      "Thinking clearly, no more brain fog",
-      "Dropping a few dress sizes",
-      "Liking your image in the mirror",
-      "Healthy blood sugar levels",
-      "More energy and a flatter tummy",
-      "Enjoying meals without worrying about your waistline",
-      "Getting compliments for how you look",
-    ],
-  },
-  about: {
-    eyebrow: "About me",
-    title: "Hi, I'm Vessie — and I do this with my heart",
-    paragraphs: [
-      "I'm a Holistic Nutritionist B.Med.Sc. (Hons), NHS Diabetes Practitioner, and Weight-loss & Mindset Coach. I graduated from Medical University more than 20 years ago.",
-      "I learned how vital good health is the hard way — diagnosed with a life-threatening thyroid condition in my early 30s. That journey is why I'm wholeheartedly prepared to share both my knowledge and my experience with you.",
-      "As a holistic nutritionist I look at the whole person — mental, emotional, social and environmental — not just a meal plan. I won't offer you yet another diet, but so much more: healing and adding goodness to your life. We focus on a positive mindset, nourishment and a real sense of well-being.",
+      {
+        value: "−19.5 kg",
+        label: "in 4.5 months",
+        name: "Slavina",
+        note: "while caring for her new baby",
+      },
+      {
+        value: "−15 kg",
+        label: "in just over 2 months",
+        name: "Rosi",
+        note: "and no longer insulin resistant",
+      },
+      {
+        value: "Remission",
+        label: "of Type 2 Diabetes in 6 months",
+        name: "Patricia",
+        note: "“I feel calm about my two children.”",
+      },
+      {
+        value: "−31 cm",
+        label: "off her measurements",
+        name: "Kati",
+        note: "reached her goal of 58 kg",
+      },
+      {
+        value: "−28 cm",
+        label: "in 21 days",
+        name: "Hrisi",
+        note: "mostly from her tummy",
+      },
+      {
+        value: "−5 kg",
+        label: "in 6 weeks",
+        name: "Desislava",
+        note: "with her blood sugar under control",
+      },
     ],
     credentials: [
-      "B.Med.Sc. (Hons), Medical University graduate",
-      "NHS Type 2 Diabetes Practitioner",
-      "Weight-loss & Mindset Coach",
-      "Cambridge DEP — weight management",
+      "B.Med.Sc. (Hons)",
+      "NHS Diabetes Practitioner",
+      "Cambridge DEP",
+      "10+ years of experience",
+      "Clients in 15 countries",
     ],
-    cta: "Work with me",
-  },
-  method: {
-    title: "A whole-person method that actually lasts",
-    subtitle: "Three pillars — through structured online programs, with group support.",
-    pillars: [
-      {
-        title: "The right food & supplements",
-        text: "Healthy, tasty meals that balance blood sugar, calm cravings and support your liver and thyroid — no hours in the kitchen, no special shops.",
-      },
-      {
-        title: "Emotional healing & mindset",
-        text: "Release stress and emotional eating, build the structure and self-belief that make results stick for life.",
-      },
-      {
-        title: "Structure, motivation & support",
-        text: "Clear step-by-step guidance and accountability, based on experience with hundreds of patients on the path to remission.",
-      },
-    ],
+    disclaimer:
+      "Results vary from person to person and depend on each client's starting point and consistency.",
   },
   programs: {
-    title: "Perfect solutions for you",
-    subtitle: "Three options — programs and a special product.",
+    eyebrow: "Choose your start",
+    title: "Programs",
+    subtitle:
+      "Three clear paths — depending on how much you want to lose and how much support you need.",
     items: [
       {
-        badge: "Summer package",
-        title: "Summer — slim and calm",
-        duration: "60 days of access",
-        price: "€36",
+        badge: "Great start",
+        title: "21 Days Slimmer & Happier",
+        duration: "21 days",
+        price: "",
         description:
-          "Enjoy the sea, the ice cream and the evenings with friends — without guilt, and without starting over in September.",
+          "Lose 3–5 kg in 21 days and learn to eat balanced, delicious food for life.",
         features: [
-          "Guides for restaurants, hotels, all inclusive and barbecues",
-          "12 easy summer recipes plus a snack guide and mocktails",
-          "SOS audio practices for the moments you slip",
+          "Quick recipes and menus",
+          "Videos on building your plate",
+          "A clear daily structure",
         ],
-        cta: "I want my calm summer",
-        href: "/programs/lyato",
-        image: "/images/11.jpg",
+        cta: "Join now",
+        href: "/programs/21-dni",
+        image: "/images/7.jpg",
       },
       {
         badge: "Most popular",
@@ -150,24 +133,24 @@ export const en: Dictionary = {
         duration: "3 months",
         price: "group program",
         description:
-          "Lose 5–15 kg sustainably and tackle insulin resistance with full support.",
+          "Lose 5–15 kg for good and get on top of insulin resistance — with full support.",
         features: [
-          "Whole-family friendly meals",
-          "No hours in the kitchen",
+          "Weekly group sessions on Zoom",
+          "Delicious family-friendly menu",
           "Structure, motivation and support",
         ],
         cta: "Apply now",
         href: "/programs/3-mes",
         highlight: true,
-        image: "/images/7.jpg",
+        image: "/images/6.jpg",
       },
       {
-        badge: "7–10 min/day",
+        badge: "Just 7–10 min a day",
         title: "Reprogram Your Appetite",
-        duration: "daily",
-        price: "affordable",
+        duration: "monthly club",
+        price: "",
         description:
-          "Release stress, blocks and cravings for chocolate and carbs — just 7–10 minutes a day.",
+          "Let go of stress, emotional eating and cravings for sweets and pastries.",
         features: [
           "Short daily practices",
           "Life without constant cravings",
@@ -178,91 +161,42 @@ export const en: Dictionary = {
         image: "/images/12.jpg",
       },
     ],
+    trustLine: "Secure payment via Stripe · confirmation and access by email",
+    helpText: "Not sure which program is right for you?",
+    helpCta: "Message me — I'll help you choose",
+    moreTitle: "More programs",
+    wasLabel: "instead of",
   },
-  foodGallery: {
-    eyebrow: "Real menu",
-    title: "This is what you actually eat on the programs",
+  guides: {
+    eyebrow: "Guides",
+    title: "Guides & handbooks",
     subtitle:
-      "No hunger, no sad salads, no “diet food”. Colourful, filling, delicious meals — family-friendly and quick to make.",
-    featuredAlt: "Collage of real meals from Vessie Nay's programs",
-    featuredCaption: "A small taste of the menu — salads, soups, sides and mains",
-    featuredNote:
-      "Every photo is from the real recipes and menus clients receive in the programs.",
-    highlights: [
-      "Delicious and filling — no deprivation",
-      "Easy recipes for busy days",
-      "Family-friendly meals",
-      "No specialist shops required",
-    ],
-    cta: "See programs",
-    ctaSecondary: "Real results",
+      "Short PDF guides with recipes and clear steps — a small first step to feel the method this week.",
+    cta: "Get the guide",
+    badge: "PDF guide",
   },
   results: {
-    eyebrow: "Trust & results",
-    title: "Before & after — real transformations",
+    eyebrow: "Transformations",
+    title: "Before & after — real clients",
     subtitle:
-      "94% success rate with Vessie's clients. See what the journey looks like — with tasty food, structure and support, not starvation.",
-    beforeAfterCaption: "Before and after collage — a real client result from the program",
-    stats: [
-      { value: "94%", label: "client success rate" },
-      { value: "5–15", label: "kg lost sustainably in 3 months" },
-      { value: "10+", label: "years of experience" },
-    ],
-    bullets: [
-      "Lasting weight loss without hunger or yo-yo dieting",
-      "More stable blood sugar and higher energy",
-      "Confidence back — and your favourite clothes fitting again",
-      "Personal support from a certified specialist",
-    ],
-    cta: "See the programs",
-    awardsTitle: "Recognition & credibility",
-    clientsTitle: "Happy, confident clients",
-    clientsSubtitle:
-      "After real results — more energy, confidence and joy in everyday life.",
+      "No hunger and no yo-yo — just delicious food, a clear structure and support.",
     beforeLabel: "Before",
     afterLabel: "After",
-    clientCaptions: [
-      "Active, healthy lifestyle",
-      "More confidence after transformation",
-      "Confidence and a healthy lifestyle",
-      "Energy and joy every day",
+    collageCaption: "Valya — now FREE of insulin resistance, lighter and more confident for good",
+    pairCaptions: [
+      "Ani — after a lot of stress. Today 30 kg lighter, with more energy and self-belief",
+      "A new shape and new confidence",
+      "A couple after the “LIVE without resistance” programme",
     ],
-  },
-  testimonials: {
-    title: "What people say",
-    subtitle: "Real words from real clients.",
-    items: [
-      {
-        name: "Anna",
-        location: "United Kingdom",
-        age: "41, mum of 2",
-        quote:
-          "The Happier & Slimmer Program has completely changed my life. I've lost 9 kg in a few months. I have so much energy, my skin is glowing, I feel confident and so much happier. Vessie helped me believe in myself.",
-      },
-      {
-        name: "Jane",
-        location: "United Kingdom",
-        age: "39, account manager",
-        quote:
-          "Not craving junk food any more is so motivating and liberating. Following the Happier & Slimmer program was the best decision for my health and self-esteem.",
-      },
-      {
-        name: "Kate",
-        location: "United Kingdom",
-        age: "46, team leader",
-        quote:
-          "What I like most about Vessie is her attentiveness and how she tailors her advice to my needs. I have a lot of energy and sleep like a baby now.",
-      },
-    ],
+    videosTitle: "Hear it from them",
+    playLabel: "Play video",
+    cta: "I want results like these — message me",
   },
   googleReviews: {
-    title: "Google Reviews",
-    subtitle:
-      "Real ratings from Vessie Nay's clients — published directly on Google.",
+    title: "Google reviews",
     aggregateRating: "5.0",
     reviewCount: "12+",
     reviewCountLabel: "Google reviews",
-    verifiedLabel: "Verified Google reviews",
     postedOnLabel: "Google",
     ctaLabel: "See all reviews on Google",
     items: [
@@ -296,6 +230,74 @@ export const en: Dictionary = {
       },
     ],
   },
+  audience: {
+    eyebrow: "Who it's for",
+    title: "Is this for you?",
+    yesTitle: "Yes, if:",
+    yes: [
+      "You have insulin resistance, pre-diabetes or Type 2 Diabetes",
+      "The weight won't shift, however hard you try",
+      "You feel bloated and run out of energy by the afternoon",
+      "Sweets and pastries keep calling your name",
+      "You're tired of yo-yo diets",
+      "You want food the whole family will eat",
+    ],
+    noTitle: "No, if:",
+    no: [
+      "You're looking for a pill or a 7-day miracle",
+      "You want to starve yourself and count calories",
+      "You can't give yourself 15–30 minutes a day",
+    ],
+    cta: "See the programs",
+  },
+  method: {
+    eyebrow: "The method",
+    title: "Three pillars that make results last",
+    subtitle:
+      "The latest in medicine plus the psychology of success. That's why it works where diets don't.",
+    highlight: "The first programme in Bulgaria built on a new, different method",
+    pillars: [
+      {
+        title: "A flatter tummy",
+        text: "Lose the fat and speed up your metabolism — with support for your liver and thyroid.",
+      },
+      {
+        title: "Balanced blood sugar",
+        text: "Stable blood sugar for more energy and a better mood — no crashes, no cravings.",
+      },
+      {
+        title: "A new mindset",
+        text: "A clear structure, motivation and support, so you never have to start again on Monday.",
+      },
+    ],
+    foodTitle: "This is what you eat on the programs",
+    foodNote:
+      "No hunger, no sad salads. Every photo is from the real menus clients receive.",
+    highlights: [
+      "Delicious and filling",
+      "Easy recipes for busy days",
+      "Family-friendly",
+      "No specialist shops",
+    ],
+  },
+  about: {
+    eyebrow: "About me",
+    title: "Hi, I'm Vessie Nay",
+    paragraphs: [
+      "I'm a Holistic Nutritionist with a medical degree (B.Med.Sc. Hons) and an NHS Diabetes Practitioner in England. I specialise in insulin resistance, Type 2 Diabetes and lasting weight loss.",
+      "I've helped hundreds of patients and clients in 15 countries lose weight without hunger and get their blood sugar under control — instead of relying on medication alone.",
+    ],
+    credentials: [
+      "B.Med.Sc. (Hons), Medical University graduate",
+      "NHS Type 2 Diabetes Practitioner",
+      "Cambridge DEP — weight management",
+      "Speaker & motivational team coach",
+    ],
+    award: "National award for contribution to fighting insulin resistance",
+    cta: "See the programs",
+    communityCta: "Join the community",
+    communityHref: "/{locale}/programs/klub",
+  },
   leadMagnet: {
     title: "Free: your colourful 2-day slimming menu",
     subtitle:
@@ -307,40 +309,53 @@ export const en: Dictionary = {
     success: "Check your inbox — your menu is on the way! 🎉",
     error: "Something went wrong. Please try again.",
   },
-  bioBanner: {
-    title: "Vessie Nay",
-    credentials: [
-      "Holistic Nutritionist, B.Med.Sc. (Hons)",
-      "Insulin Resistance Specialist",
-      "Type 2 Diabetes, Cambridge DEP (overweight & sustainable weight loss)",
-      "Speaker & motivational team coach — banks, colleges, private companies & more",
-    ],
-    invite:
-      "Welcome to my space — daily tips, menus, advice and practical tricks:",
-    cta: "Join the community",
-    href: "/{locale}/programs/klub",
-  },
   faq: {
     title: "Frequently asked questions",
-    subtitle: "Everything you might be wondering before we start.",
+    subtitle: "Answers to what people ask me most before we start.",
+    contactCta: "Another question? Message me",
     items: [
       {
         q: "Is this just another diet?",
-        a: "No. We don't focus on restriction or deprivation. We add the right food, supplements, mindset and support so the results last for life.",
+        a: "No. No hunger, no bans and no calorie counting. You add the right food, a clear structure, motivation and support — that's why the results last for life.",
+      },
+      {
+        q: "Will it work if I have insulin resistance, Hashimoto's or I'm in menopause?",
+        a: "Yes — the programs are built for exactly this: insulin resistance, pre-diabetes and Type 2 Diabetes, an underactive thyroid, Hashimoto's, fatty liver and menopause. The whole method is built around stable blood sugar.",
+      },
+      {
+        q: "Which program should I choose?",
+        a: "For a quick, easy start — “21 Days Slimmer & Happier”. If you have more than 5 kg to lose or insulin resistance — the 3-month “Live Without Resistance” with group support. If cravings and emotional eating are your main struggle — the “Reprogram Your Appetite” club.",
+      },
+      {
+        q: "How much time do I need each day?",
+        a: "15–30 minutes a day for food and movement. The 3-month program also has one weekly Zoom session (about an hour) — from the comfort of your home.",
+      },
+      {
+        q: "Do I need to spend hours cooking or buy expensive products?",
+        a: "No. Recipes are quick, filling and use everyday supermarket ingredients — the whole family enjoys them.",
       },
       {
         q: "Can it really help with Type 2 Diabetes?",
         a: "Yes — my approach is built around lasting blood-sugar balance and diabetes remission, drawing on my work as an NHS Diabetes Practitioner with hundreds of patients.",
       },
       {
-        q: "How do the programs work?",
-        a: "Online — with menus, structure and support. Live Without Resistance includes weekly group Zoom sessions from home. There are no 1:1 consultations — pick the program that fits you.",
-      },
-      {
-        q: "Do I need to spend hours cooking?",
-        a: "No. Recipes are quick, filling and family-friendly, with no need for special shops or complicated ingredients.",
+        q: "How do the programs work and how do I get access?",
+        a: "Everything is online. After payment you get a confirmation and access by email — menus, recipes, videos and a clear structure, plus group Zoom sessions with me.",
       },
     ],
+  },
+  finalCta: {
+    title: "The first step is the hardest. Let's take it together.",
+    subtitle: "Choose a program today — or start for free with the 2-day menu.",
+    primaryCta: "Choose your starting point",
+    freeMenuTitle: "Not ready yet?",
+    freeMenuText:
+      "Get the free 2-day menu and try the method at home — tasty, balanced and easy.",
+    freeMenuCta: "Send me the menu",
+    contactTitle: "Got a question? Message me directly",
+  },
+  stickyCta: {
+    label: "Choose your starting point",
   },
   blog: {
     title: "The Healthy & Confident blog",
@@ -353,20 +368,14 @@ export const en: Dictionary = {
     related: "Keep reading",
   },
   contact: {
-    title: "Let's do it together",
-    subtitle:
-      "See the programs or send me a message. I'll help you get slimmer, happier and confident — you deserve it. ❤",
     messengerLabel: "Messenger",
     messengerText: "Message us",
     phoneLabel: "Mobile (Viber / WhatsApp)",
     whatsappLabel: "Viber / WhatsApp",
     whatsappText: "Message us",
-    cta: "See the programs",
   },
   events: {
-    eyebrow: "Events",
-    title: "Upcoming events",
-    subtitle: "Sign up for upcoming webinars, meetups and trainings.",
+    eyebrow: "Coming up",
     cta: "View details",
   },
   shop: {
@@ -374,40 +383,6 @@ export const en: Dictionary = {
     title: "Buy online",
     subtitle: "Choose a product and pay securely via Stripe.",
     cta: "View product",
-  },
-  guides: {
-    eyebrow: "Guides",
-    title: "Guides & handbooks",
-    subtitle: "Practical PDF guides for meals, side dishes and healthy living.",
-    cta: "View the guide",
-  },
-  videos: {
-    eyebrow: "Videos",
-    title: "Inspiring stories",
-    subtitle: "Real reviews and results from Vessie's clients.",
-  },
-  challenge21: {
-    title: "Where to start?",
-    subtitle:
-      "Step 1 — Master balanced eating. Lose 3–5 kg sustainably in 21 days — no more yo-yo dieting!",
-    discount: "-52%",
-    cardLine1: "Lose 3–5 kg for good — end the diets",
-    cardLine2: "21-day challenge",
-    cardSignature: "With Vessie Nay",
-    bullets: [
-      "Lose 3–5 kg sustainably and learn the magic of BALANCED, delicious eating",
-      "Learn how to combine foods for a slimmer figure",
-      "Say goodbye to bloating — your favourite clothes will fit again",
-      "More energy for work and family",
-      "Support for insulin resistance and Type 2 Diabetes",
-      "No typical diets and no drowning in information overload",
-      "Learn how to eat for life",
-      "Recipes for every meal included",
-      "Videos on balanced eating plus bonuses",
-      "Easy, tasty and family-friendly",
-      "Step-by-step support and structure",
-    ],
-    cta: "21 days · 52% off · Get it today",
   },
   footer: {
     tagline:
@@ -433,7 +408,7 @@ export const en: Dictionary = {
         links: [
           { label: "All programmes", href: "/en/programs" },
           { label: "Summer — slim and calm", href: "/en/programs/lyato" },
-          { label: "Balanced Nutrition 21 Days", href: "/en#challenge-21" },
+          { label: "21 Days Slimmer & Happier", href: "/en/programs/21-dni" },
           { label: "Live Without Resistance", href: "/en/programs/3-mes" },
           { label: "Reprogram Your Appetite", href: "/en/programs/klub" },
         ],

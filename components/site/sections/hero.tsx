@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { ArrowRight, Award, Check } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
@@ -6,133 +6,135 @@ import { buttonVariants } from "@/components/ui/button";
 import { OpenMenuButton } from "@/components/site/open-menu-button";
 import { SectionLink } from "@/components/site/section-link";
 import { SiteImage } from "@/components/site/site-image";
-import { mediaAlt } from "@/lib/site/media-gallery";
+import { StarRow } from "@/components/site/star-row";
 import { cn } from "@/lib/utils";
 
-const HERO_IMAGE = "/images/5.jpg";
+/** The professional portrait — the first face a cold visitor meets. */
+const HERO_IMAGE = "/images/3.jpg";
 
-function HeroSuccessOverlay({ locale }: { locale: Locale }) {
-  const label =
-    locale === "bg" ? "доказан успех при клиентите" : "proven client success";
-
-  return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/95 via-slate-900/55 to-transparent px-4 pb-4 pt-20 sm:px-5 sm:pb-5 sm:pt-24">
-      <div className="flex items-end gap-3 sm:gap-4">
-        <p className="font-display text-[2.75rem] font-semibold tabular-nums leading-none text-white sm:text-5xl">
-          94<span className="text-gold-300">%</span>
-        </p>
-        <p className="mb-1 max-w-[9.5rem] text-[11px] font-medium leading-snug text-slate-200/95 sm:mb-1.5 sm:max-w-[11rem] sm:text-xs">
-          {label}
-        </p>
-      </div>
-      <div
-        className="mt-3 h-1 overflow-hidden rounded-full bg-white/15 sm:mt-3.5"
-        role="presentation"
-        aria-hidden
-      >
-        <div className="h-full w-[94%] rounded-full bg-gradient-to-r from-gold-500 via-gold-400 to-gold-300 shadow-[0_0_12px_rgba(212,168,67,0.45)]" />
-      </div>
-    </div>
-  );
-}
-
-export function Hero({
-  dict,
-  locale,
-}: {
-  dict: Dictionary;
-  locale: Locale;
-}) {
+/**
+ * Above the fold: who it is for, the outcome, three reasons it is easy, one
+ * clear next step — and a free menu for anyone not ready to buy yet.
+ */
+export function Hero({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const { hero } = dict;
 
-  const headline =
-    locale === "bg" ? (
-      <>
-        Свали трайно <span className="text-forest-500">5–15 кг</span> и се почувствай уверена
-      </>
-    ) : (
-      <>
-        {hero.title} <span className="text-forest-500">{hero.titleAccent}</span>
-      </>
-    );
-
   return (
-    <section className="section-pad bg-cream pt-6 sm:pt-10">
-      <Container className="grid items-start gap-8 lg:grid-cols-2 lg:gap-16">
-        <div className="order-1 max-w-xl animate-fade-up lg:order-1">
-          <p className="eyebrow">{hero.eyebrow}</p>
+    <section className="relative overflow-hidden bg-cream pb-12 pt-6 sm:pb-16 sm:pt-10 lg:pb-20 lg:pt-14">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-32 -top-24 h-96 w-96 rounded-full bg-forest-200/40 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-gold-400/15 blur-3xl"
+      />
 
-          <h1 className="mt-3 font-display text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-slate-800 sm:mt-4 sm:text-4xl sm:leading-[1.12] lg:text-[3.25rem]">
-            {headline}
+      <Container className="relative grid items-center gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-14">
+        <div className="max-w-xl animate-fade-up">
+          {/* On a phone the portrait sits below the buttons, so a face greets the visitor here. */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">
+              <SiteImage
+                src={HERO_IMAGE}
+                alt=""
+                fill
+                priority
+                sizes="44px"
+                imageClassName="object-cover object-[center_15%]"
+              />
+            </span>
+            <p className="eyebrow">{hero.eyebrow}</p>
+          </div>
+          {/* `.eyebrow` sets its own display, so the breakpoint toggle lives on a wrapper. */}
+          <div className="hidden lg:block">
+            <p className="eyebrow">{hero.eyebrow}</p>
+          </div>
+
+          <h1 className="mt-4 font-display text-[2.05rem] font-semibold leading-[1.1] tracking-tight text-slate-800 sm:text-5xl lg:text-[3.4rem] text-balance">
+            {hero.title}
+            <span className="whitespace-nowrap text-forest-500">{hero.titleAccent}</span>
+            {hero.titleAfter}
           </h1>
 
-          <p className="mt-5 text-base leading-relaxed text-ink-soft sm:mt-6 sm:text-lg">
+          <p className="mt-5 text-base leading-relaxed text-ink-soft sm:text-lg">
             {hero.subtitle}
           </p>
 
-          <ul className="mt-5 space-y-2 sm:mt-6 sm:space-y-2.5">
-            {hero.bullets.slice(0, 4).map((b) => (
-              <li key={b} className="flex items-start gap-2.5 text-sm text-slate-800">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-forest-500" strokeWidth={2.5} />
-                <span>{b}</span>
+          <ul className="mt-6 space-y-2.5">
+            {hero.bullets.map((bullet) => (
+              <li key={bullet} className="flex items-start gap-3 text-[15px] font-medium text-slate-800">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-forest-500 text-white">
+                  <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+                </span>
+                {bullet}
               </li>
             ))}
           </ul>
 
-          <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <SectionLink
               href="#programs"
               locale={locale}
               className={cn(
                 buttonVariants({ variant: "primary", size: "lg" }),
-                "w-full rounded-full sm:w-auto",
+                "h-14 w-full rounded-full px-8 text-base shadow-lg shadow-slate-800/15 sm:w-auto",
               )}
             >
               {hero.primaryCta}
+              <ArrowRight className="h-4 w-4" aria-hidden />
             </SectionLink>
             <OpenMenuButton
               source="hero"
               variant="outline"
               size="lg"
-              className="w-full rounded-full sm:w-auto"
+              className="h-14 w-full rounded-full sm:w-auto"
             >
               {hero.freeMenuCta}
             </OpenMenuButton>
           </div>
 
-          <dl className="mt-8 hidden gap-6 border-t border-forest-100 pt-8 sm:mt-10 sm:flex sm:flex-wrap sm:gap-8 lg:flex">
-            {hero.stats.map((s) => (
-              <div key={s.label}>
-                <dt className="font-display text-2xl font-semibold text-slate-800">{s.value}</dt>
-                <dd className="mt-1 max-w-[8rem] text-xs leading-snug text-ink-soft">{s.label}</dd>
-              </div>
-            ))}
-          </dl>
+          <p className="mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-ink-soft">
+            <StarRow rating={5} />
+            <span className="font-semibold text-slate-800">{hero.ratingLabel}</span>
+            <span aria-hidden className="text-forest-300">·</span>
+            <span>{hero.trustLine}</span>
+          </p>
         </div>
 
-        <div className="order-2 mx-auto w-full max-w-sm sm:max-w-md lg:order-2 lg:max-w-none">
-          <figure className="group">
-            <div
-              className={cn(
-                "relative overflow-hidden rounded-2xl shadow-soft ring-1 ring-forest-100/80",
-                "aspect-[3/4] w-full sm:aspect-[4/5]",
-              )}
-            >
-              <SiteImage
-                src={HERO_IMAGE}
-                alt={mediaAlt(HERO_IMAGE, locale) || hero.imageAlt}
-                fill
-                priority
-                sizes="(max-width: 640px) 90vw, (max-width: 1024px) 85vw, 480px"
-                imageClassName="object-cover object-[center_18%] transition duration-700 group-hover:scale-[1.02]"
-              />
-              <HeroSuccessOverlay locale={locale} />
-            </div>
-            <figcaption className="mt-4 text-center text-sm font-medium text-slate-700 sm:text-base lg:text-left">
-              {hero.imageAlt}
+        <figure className="relative mx-auto w-full max-w-sm sm:max-w-md lg:max-w-none">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-cream-2 shadow-soft ring-1 ring-forest-100">
+            <SiteImage
+              src={HERO_IMAGE}
+              alt={hero.imageAlt}
+              fill
+              priority
+              sizes="(max-width: 640px) 90vw, (max-width: 1024px) 28rem, 34rem"
+              imageClassName="object-cover object-[center_20%]"
+            />
+            <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent px-5 pb-5 pt-24 sm:px-6 sm:pb-6">
+              <div className="flex items-end gap-3">
+                <p className="font-display text-5xl font-semibold leading-none tabular-nums text-white">
+                  {hero.successValue.replace("%", "")}
+                  <span className="text-gold-400">%</span>
+                </p>
+                <p className="mb-1 max-w-[10rem] text-xs font-medium leading-snug text-slate-100">
+                  {hero.successLabel}
+                </p>
+              </div>
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/15" aria-hidden>
+                <div className="h-full w-[94%] rounded-full bg-gradient-to-r from-gold-500 to-gold-400" />
+              </div>
             </figcaption>
-          </figure>
-        </div>
+          </div>
+
+          <div className="absolute -top-3 left-3 flex max-w-[15rem] items-center gap-2.5 rounded-2xl bg-white/95 px-3.5 py-2.5 shadow-lg ring-1 ring-forest-100 backdrop-blur sm:-left-5 sm:top-6">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-400/25 text-gold-600">
+              <Award className="h-4 w-4" aria-hidden />
+            </span>
+            <p className="text-[11px] font-semibold leading-snug text-slate-800">{hero.award}</p>
+          </div>
+        </figure>
       </Container>
     </section>
   );

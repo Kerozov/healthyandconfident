@@ -1,32 +1,30 @@
 import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
-import { getPublicSiteContent } from "@/lib/site/content";
+import { getPublicSiteContent, productsBesidePrograms } from "@/lib/site/content";
 import { getSiteContactConfig } from "@/lib/site/contact-config";
 import { Hero } from "@/components/site/sections/hero";
-import { SuccessProof } from "@/components/site/sections/success-proof";
-import { Marquee } from "@/components/site/sections/marquee";
-import { TrustFeatures } from "@/components/site/sections/trust-features";
-import { About } from "@/components/site/sections/about";
-import { FoodShowcase } from "@/components/site/sections/food-showcase";
-import { Problems } from "@/components/site/sections/problems";
-import { Method } from "@/components/site/sections/method";
+import { ProofStrip } from "@/components/site/sections/proof-strip";
+import { UpcomingEvents } from "@/components/site/sections/upcoming-events";
 import { Programs } from "@/components/site/sections/programs";
-import { BioCommunityBanner } from "@/components/site/sections/home-banners";
-import { TransformationResults } from "@/components/site/sections/transformation-results";
-import { Outcomes } from "@/components/site/sections/outcomes";
-import { Testimonials } from "@/components/site/sections/testimonials";
-import { GoogleReviews } from "@/components/site/sections/google-reviews";
-import { Challenge21Section } from "@/components/site/sections/challenge-21";
-import { VideosSection } from "@/components/site/sections/videos";
-import { EventsSection } from "@/components/site/sections/events";
+import { MorePrograms } from "@/components/site/sections/more-programs";
 import { GuidesSection } from "@/components/site/sections/guides";
-import { ShopSection } from "@/components/site/sections/shop";
-import { FreeMenuBanner } from "@/components/site/sections/free-menu-banner";
+import { Results } from "@/components/site/sections/results";
+import { Audience } from "@/components/site/sections/audience";
+import { Method } from "@/components/site/sections/method";
+import { About } from "@/components/site/sections/about";
 import { Faq } from "@/components/site/sections/faq";
-import { Contact } from "@/components/site/sections/contact";
+import { FinalCta } from "@/components/site/sections/final-cta";
+import { StickyCta } from "@/components/site/sticky-cta";
 import { HomeJsonLd } from "@/components/seo/json-ld";
 
+/**
+ * The home page is a sales page, in the order a stranger needs it: the promise
+ * and who it is for, proof in numbers, what is coming up soon, the offers, then
+ * everything that answers „will it work for me?“ — before and after, method,
+ * who Vessie is, questions — and a close that keeps even the not-yet-ready in
+ * touch with a free menu.
+ */
 export default async function HomePage({
   params,
 }: {
@@ -40,25 +38,50 @@ export default async function HomePage({
     getPublicSiteContent(),
     getSiteContactConfig(),
   ]);
-  const eventsSection = site.sections.events;
   const productsSection = site.sections.products;
   const guidesSection = site.sections.guides;
-  const videosSection = site.sections.videos;
+  // An offer that already has a programme card is not sold a second time below it.
+  const extraProducts = productsBesidePrograms(
+    site.products,
+    site.programCards,
+    site.ctaPlacements,
+    l,
+  );
 
   return (
     <>
       <HomeJsonLd dict={dict} locale={l} />
-      {eventsSection && site.events.length > 0 && (
-        <EventsSection
+      <Hero dict={dict} locale={l} />
+      <ProofStrip dict={dict} />
+      {site.events.length > 0 && (
+        <UpcomingEvents
           dict={dict}
           locale={l}
-          section={eventsSection}
+          section={site.sections.events}
           events={site.events}
           offersById={site.offersById}
         />
       )}
-      <Hero dict={dict} locale={l} />
-      <SuccessProof dict={dict} />
+      <Programs
+        dict={dict}
+        locale={l}
+        section={site.sections.programs}
+        cards={site.programCards}
+        messengerUrl={contactConfig.messenger_url}
+      >
+        {productsSection && extraProducts.length > 0 ? (
+          <MorePrograms
+            locale={l}
+            section={productsSection}
+            products={extraProducts}
+            fallbackTitle={dict.programs.moreTitle}
+            wasLabel={dict.programs.wasLabel}
+            cta={dict.shop.cta}
+          />
+        ) : (
+          <div id="shop" className="sr-only" />
+        )}
+      </Programs>
       {guidesSection && site.guides.length > 0 && (
         <GuidesSection
           dict={dict}
@@ -67,43 +90,25 @@ export default async function HomePage({
           guides={site.guides}
         />
       )}
-      <Marquee locale={l} />
-      <TrustFeatures locale={l} />
-      <About dict={dict} locale={l} />
-      <FoodShowcase dict={dict} locale={l} />
-      <Problems dict={dict} />
-      <Method dict={dict} locale={l} />
-      <Programs
+      <Results
         dict={dict}
         locale={l}
-        section={site.sections.programs}
-        cards={site.programCards}
+        videosSection={site.sections.videos}
+        videos={site.videos}
+        messengerUrl={contactConfig.messenger_url}
       />
-      <BioCommunityBanner dict={dict} locale={l} />
-      <TransformationResults dict={dict} locale={l} />
-      <Outcomes dict={dict} locale={l} />
-      <Testimonials dict={dict} locale={l} />
-      {productsSection && site.products.length > 0 && (
-        <ShopSection
-          dict={dict}
-          locale={l}
-          section={productsSection}
-          products={site.products}
-        />
-      )}
-      <GoogleReviews dict={dict} />
-      <Challenge21Section dict={dict} locale={l} />
-      {videosSection && site.videos.length > 0 && (
-        <VideosSection
-          dict={dict}
-          locale={l}
-          section={videosSection}
-          videos={site.videos}
-        />
-      )}
-      <FreeMenuBanner dict={dict} locale={l} />
-      <Faq dict={dict} />
-      <Contact dict={dict} locale={l} contactConfig={contactConfig} />
+      <Audience dict={dict} locale={l} />
+      <Method dict={dict} locale={l} />
+      <About dict={dict} locale={l} />
+      <Faq dict={dict} locale={l} />
+      <FinalCta dict={dict} locale={l} contactConfig={contactConfig} />
+      <StickyCta
+        locale={l}
+        label={dict.stickyCta.label}
+        leaveRoomForChat={
+          contactConfig.messenger_enabled && Boolean(contactConfig.messenger_url.trim())
+        }
+      />
     </>
   );
 }

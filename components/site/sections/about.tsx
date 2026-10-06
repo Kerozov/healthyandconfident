@@ -1,109 +1,91 @@
-import { BadgeCheck, Star } from "lucide-react";
+import { Award, BadgeCheck } from "lucide-react";
 import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaAlt } from "@/lib/site/media-gallery";
-import { cn } from "@/lib/utils";
 
-/** Main portrait + two accents — each file used once (no duplicate award thumbs). */
-const MAIN = "/images/3.jpg";
-const ACCENTS = ["/images/1.jpg", "/images/4.jpg"] as const;
+const PORTRAIT = "/images/5.jpg";
+/** On stage, receiving the national award. */
+const AWARD_PHOTO = "/images/1.jpg";
 
-export function About({
-  dict,
-  locale,
-}: {
-  dict: Dictionary;
-  locale: Locale;
-}) {
+export function About({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const { about } = dict;
 
   return (
     <section id="about" className="section-pad scroll-mt-24 bg-cream-2">
-      <Container className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
-        <div className="mx-auto w-full max-w-md lg:max-w-none">
-          <div className="relative">
-            <figure
-              className={cn(
-                "relative aspect-[4/5] overflow-hidden rounded-3xl bg-white",
-                "shadow-soft ring-1 ring-white/80",
-              )}
-            >
+      <Container className="grid items-center gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:gap-16">
+        <div className="relative mx-auto w-full max-w-sm pb-10 pr-10 sm:max-w-md lg:max-w-none">
+          <figure className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-white shadow-soft ring-1 ring-white/80">
+            <SiteImage
+              src={PORTRAIT}
+              alt={mediaAlt(PORTRAIT, locale)}
+              fill
+              sizes="(max-width: 1024px) 85vw, 440px"
+              imageClassName="object-cover object-[center_15%]"
+            />
+          </figure>
+          <figure className="absolute bottom-0 right-0 w-[42%] overflow-hidden rounded-2xl bg-white shadow-xl ring-4 ring-cream-2">
+            <div className="relative aspect-[3/4]">
               <SiteImage
-                src={MAIN}
-                alt={mediaAlt(MAIN, locale)}
+                src={AWARD_PHOTO}
+                alt={mediaAlt(AWARD_PHOTO, locale)}
                 fill
-                sizes="(max-width: 1024px) 85vw, 420px"
-                imageClassName="object-cover object-[center_12%]"
+                sizes="200px"
+                imageClassName="object-cover object-[center_60%]"
               />
-            </figure>
-
-            <div className="relative z-10 -mt-10 grid grid-cols-2 gap-3 px-4 sm:-mt-12 sm:gap-4 sm:px-6">
-              {ACCENTS.map((src, index) => (
-                <figure
-                  key={src}
-                  className={cn(
-                    "relative aspect-[4/5] overflow-hidden rounded-2xl bg-white",
-                    "shadow-lg ring-4 ring-cream-2",
-                    index === 0 && "sm:translate-y-1",
-                    index === 1 && "sm:-translate-y-1",
-                  )}
-                >
-                  <SiteImage
-                    src={src}
-                    alt={mediaAlt(src, locale)}
-                    fill
-                    sizes="(max-width: 1024px) 42vw, 200px"
-                    imageClassName={cn(
-                      "object-cover",
-                      index === 0 ? "object-center" : "object-[center_15%]",
-                    )}
-                  />
-                </figure>
-              ))}
             </div>
-          </div>
+          </figure>
         </div>
 
         <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="eyebrow">{about.eyebrow}</span>
-            <span className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 shadow-sm">
-              <Star className="h-3.5 w-3.5 fill-gold-500 text-gold-500" /> 5.0 Google
-            </span>
-            <span className="inline-flex items-center rounded-md bg-forest-500/10 px-2.5 py-1 text-xs font-bold text-forest-600">
-              94% успех
-            </span>
-          </div>
-          <h2 className="mt-4 font-display text-3xl font-semibold leading-tight text-slate-800 sm:text-4xl">
+          <p className="eyebrow">{about.eyebrow}</p>
+          <h2 className="mt-3 font-display text-3xl font-semibold leading-tight text-slate-800 sm:text-4xl text-balance">
             {about.title}
           </h2>
-          <div className="mt-6 space-y-4 text-base leading-relaxed text-ink-soft">
-            {about.paragraphs.map((p, i) => (
-              <p key={i}>{p}</p>
+          <div className="mt-5 space-y-4 text-base leading-relaxed text-ink-soft">
+            {about.paragraphs.map((p) => (
+              <p key={p}>{p}</p>
             ))}
           </div>
 
-          <ul className="mt-8 space-y-3">
-            {about.credentials.map((c) => (
-              <li key={c} className="flex items-start gap-3 text-sm text-slate-800">
-                <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-forest-500" />
-                {c}
+          <ul className="mt-6 grid gap-2.5 sm:grid-cols-2">
+            {about.credentials.map((line) => (
+              <li key={line} className="flex items-start gap-2.5 text-sm text-slate-800">
+                <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-forest-500" aria-hidden />
+                {line}
               </li>
             ))}
           </ul>
 
-          <CtaLink
-            placementKey="about_cta"
-            href={`/${locale}#contact`}
-            variant="forest"
-            className="mt-8 rounded-lg px-8"
-            size="lg"
-          >
-            {about.cta}
-          </CtaLink>
+          <p className="mt-6 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-sm font-semibold text-slate-800 shadow-card ring-1 ring-gold-400/40">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold-400/25 text-gold-600">
+              <Award className="h-5 w-5" aria-hidden />
+            </span>
+            {about.award}
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <CtaLink
+              placementKey="about_cta"
+              href={`/${locale}#programs`}
+              variant="primary"
+              size="lg"
+              className="w-full rounded-full sm:w-auto"
+            >
+              {about.cta}
+            </CtaLink>
+            <CtaLink
+              placementKey="bio_banner_cta"
+              href={about.communityHref.replace("{locale}", locale)}
+              variant="outline"
+              size="lg"
+              className="w-full rounded-full sm:w-auto"
+            >
+              {about.communityCta}
+            </CtaLink>
+          </div>
         </div>
       </Container>
     </section>

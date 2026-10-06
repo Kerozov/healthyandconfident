@@ -11,14 +11,8 @@ export const CLIENT_TRANSFORMATION_PAIRS = [
     before: "/images/15-before.jpg",
     after: "/images/15-after.jpg",
   },
+  {
+    before: "/images/21-days-before.jpg",
+    after: "/images/21-days-after.jpg",
+  },
 ] as const;
-
-/** Flat list: before, after, before, after — for grids. */
-export const CLIENT_TRANSFORMATION_IMAGES = CLIENT_TRANSFORMATION_PAIRS.flatMap((pair) => [
-  pair.before,
-  pair.after,
-]);
-
-export function isTransformationBeforeImage(src: string): boolean {
-  return src.includes("-before");
-}

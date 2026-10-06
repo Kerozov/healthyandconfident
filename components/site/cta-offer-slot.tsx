@@ -45,6 +45,7 @@ export function EventOfferSlot({
   event,
   offersById,
   locale,
+  compact = false,
   className = "mt-4",
 }: {
   event: {
@@ -55,6 +56,7 @@ export function EventOfferSlot({
   };
   offersById: Record<string, SiteProduct>;
   locale: Locale;
+  compact?: boolean;
   className?: string;
 }) {
   if (!event.offer_enabled) return null;
@@ -69,6 +71,7 @@ export function EventOfferSlot({
       offer={offer}
       locale={locale}
       headline={resolveOfferHeadline(locale, offer, headline)}
+      compact={compact}
       className={className}
     />
   );
