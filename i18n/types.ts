@@ -132,6 +132,8 @@ export type Dictionary = {
     eyebrow: string;
     title: string;
     subtitle: string;
+    /** One standout claim under the subtitle. */
+    highlight: string;
     pillars: { title: string; text: string }[];
     foodTitle: string;
     foodNote: string;

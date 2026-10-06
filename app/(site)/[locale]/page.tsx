@@ -67,6 +67,7 @@ export default async function HomePage({
         locale={l}
         section={site.sections.programs}
         cards={site.programCards}
+        messengerUrl={contactConfig.messenger_url}
       >
         {productsSection && extraProducts.length > 0 ? (
           <MorePrograms
@@ -94,6 +95,7 @@ export default async function HomePage({
         locale={l}
         videosSection={site.sections.videos}
         videos={site.videos}
+        messengerUrl={contactConfig.messenger_url}
       />
       <Audience dict={dict} locale={l} />
       <Method dict={dict} locale={l} />

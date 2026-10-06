@@ -182,15 +182,15 @@ export const en: Dictionary = {
       "No hunger and no yo-yo — just delicious food, a clear structure and support.",
     beforeLabel: "Before",
     afterLabel: "After",
-    collageCaption: "A real client — lighter and more confident, for good",
+    collageCaption: "Valya — now FREE of insulin resistance, lighter and more confident for good",
     pairCaptions: [
-      "A program client — more energy and self-belief",
-      "A client — a new shape and new confidence",
-      "A couple after the 21-day challenge",
+      "Ani — after a lot of stress. Today 30 kg lighter, with more energy and self-belief",
+      "A new shape and new confidence",
+      "A couple after the “LIVE without resistance” programme",
     ],
     videosTitle: "Hear it from them",
     playLabel: "Play video",
-    cta: "I want results like these",
+    cta: "I want results like these — message me",
   },
   googleReviews: {
     title: "Google reviews",
@@ -255,6 +255,7 @@ export const en: Dictionary = {
     title: "Three pillars that make results last",
     subtitle:
       "The latest in medicine plus the psychology of success. That's why it works where diets don't.",
+    highlight: "The first programme in Bulgaria built on a new, different method",
     pillars: [
       {
         title: "A flatter tummy",

@@ -27,11 +27,14 @@ export function Results({
   locale,
   videosSection,
   videos,
+  messengerUrl,
 }: {
   dict: Dictionary;
   locale: Locale;
   videosSection?: SiteSection;
   videos: SiteVideo[];
+  /** Where „write to me“ goes when the admin has not pointed the button elsewhere. */
+  messengerUrl: string;
 }) {
   const { results, googleReviews } = dict;
 
@@ -198,7 +201,7 @@ export function Results({
         <div className="mt-12 flex justify-center">
           <CtaLink
             placementKey="outcomes_cta"
-            href={`/${locale}#programs`}
+            href={messengerUrl}
             variant="primary"
             size="lg"
             className="h-14 w-full rounded-full px-10 text-base sm:w-auto"

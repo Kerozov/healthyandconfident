@@ -27,6 +27,9 @@ export function Method({ dict, locale }: { dict: Dictionary; locale: Locale }) {
             {method.title}
           </h2>
           <p className="mt-4 text-ink-soft">{method.subtitle}</p>
+          <p className="mt-5 font-display text-xl font-semibold text-forest-600 sm:text-2xl text-balance">
+            {method.highlight}
+          </p>
         </div>
 
         <ol className="mt-12 grid gap-5 md:grid-cols-3">

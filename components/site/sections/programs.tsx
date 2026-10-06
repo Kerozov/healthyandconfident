@@ -6,9 +6,9 @@ import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { CardImage } from "@/components/site/card-image";
 import { PriceTag } from "@/components/site/price-tag";
-import { SectionLink } from "@/components/site/section-link";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaAlt } from "@/lib/site/media-gallery";
+import { externalLinkProps } from "@/lib/site/external-link";
 import {
   filterProgramCardsForLocale,
   programCardForLocale,
@@ -24,11 +24,14 @@ export function Programs({
   locale,
   section,
   cards,
+  messengerUrl,
   children,
 }: {
   dict: Dictionary;
   locale: Locale;
   section?: SiteSection;
+  /** „Not sure which one?“ opens a chat with Vessie here. */
+  messengerUrl: string;
   /** Admin-managed cards. Empty (or table not migrated) falls back to the dictionary. */
   cards?: SiteProgramCard[];
   /** Extra offers shown under the cards, inside the same section (home page). */
@@ -114,14 +117,14 @@ export function Programs({
           </span>
           <div className="min-w-0">
             <p className="font-semibold text-slate-800">{programs.helpText}</p>
-            <SectionLink
-              href="#contact"
-              locale={locale}
+            <a
+              href={messengerUrl}
+              {...externalLinkProps(messengerUrl)}
               className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-forest-600 underline-offset-4 hover:underline"
             >
               <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
               {programs.helpCta}
-            </SectionLink>
+            </a>
           </div>
         </div>
       </Container>

@@ -4,6 +4,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { Programs } from "@/components/site/sections/programs";
 import { getSiteProgramCards } from "@/lib/site/content";
+import { getSiteContactConfig } from "@/lib/site/contact-config";
 import { programsListPath } from "@/lib/site/product-placement";
 import { publicSiteOrigin } from "@/lib/site";
 
@@ -41,11 +42,19 @@ export default async function ProgramsIndexPage({
   const dict = getDictionary(l);
   // No section toggle here: that switch hides the block on the home page, not
   // this page, which is the programme list itself.
-  const cards = await getSiteProgramCards();
+  const [cards, contactConfig] = await Promise.all([
+    getSiteProgramCards(),
+    getSiteContactConfig(),
+  ]);
 
   return (
     <div className="bg-cream pt-6">
-      <Programs dict={dict} locale={l} cards={cards} />
+      <Programs
+        dict={dict}
+        locale={l}
+        cards={cards}
+        messengerUrl={contactConfig.messenger_url}
+      />
     </div>
   );
 }
