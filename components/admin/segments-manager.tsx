@@ -4,15 +4,19 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import type { Segment, SegmentGroup } from "@/lib/supabase/types";
+import type { AudienceCount } from "@/lib/segments/hierarchy";
 import { createSegment, deleteSegment, updateSegment } from "@/app/(admin)/admin/actions";
 import { Field, Input, Card, Select } from "@/components/admin/fields";
+import { AudienceCountBadge } from "@/components/admin/audience-count-badge";
 
 export function SegmentsManager({
   segments,
   groups,
+  countBySegmentKey,
 }: {
   segments: Segment[];
   groups: SegmentGroup[];
+  countBySegmentKey: Record<string, AudienceCount>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -147,7 +151,10 @@ export function SegmentsManager({
               className="flex flex-wrap items-center justify-between gap-4 px-4 py-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{segment.name}</p>
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
+                  {segment.name}
+                  <AudienceCountBadge count={countBySegmentKey[segment.key]} />
+                </p>
                 <p className="text-xs text-ink-soft">
                   <code>{segment.key}</code>
                   {segment.group_id

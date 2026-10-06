@@ -1,4 +1,5 @@
 import { getSubscribers, getSegments, getSegmentGroups } from "@/lib/admin/data";
+import { countAudience } from "@/lib/segments/hierarchy";
 import { SubscribersManager } from "@/components/admin/subscribers-manager";
 import { SegmentsManager } from "@/components/admin/segments-manager";
 import { GroupsManager } from "@/components/admin/groups-manager";
@@ -17,6 +18,8 @@ export default async function AdminSubscribersPage() {
     getFunnelBrandSyncStatus(),
   ]);
 
+  const audienceCounts = countAudience(subscribers, groups, segments);
+
   const subscriberTags = [
     ...new Set(
       subscribers.flatMap((s) => s.tags ?? []).filter((t) => t && t !== "all"),
@@ -31,8 +34,12 @@ export default async function AdminSubscribersPage() {
       />
       <div className="space-y-8">
         <FunnelBrandSync status={funnelBrandStatus} />
-        <GroupsManager groups={groups} />
-        <SegmentsManager segments={segments} groups={groups} />
+        <GroupsManager groups={groups} countByGroupId={audienceCounts.byGroupId} />
+        <SegmentsManager
+          segments={segments}
+          groups={groups}
+          countBySegmentKey={audienceCounts.bySegmentKey}
+        />
         <SubscribersManager
           subscribers={subscribers}
           segments={segments}

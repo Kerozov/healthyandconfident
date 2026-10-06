@@ -1,4 +1,50 @@
-import type { Segment, SegmentGroup } from "@/lib/supabase/types";
+import type { Segment, SegmentGroup, Subscriber } from "@/lib/supabase/types";
+
+export type AudienceCount = { subscribed: number; unsubscribed: number };
+
+/**
+ * People per group (segment key) and per segment (segment group, with its
+ * nested sub-segments). Matches the subscriber list filter: a person counts
+ * once per row even when they carry several of its tags.
+ */
+export function countAudience(
+  subscribers: Pick<Subscriber, "tags" | "status">[],
+  groups: SegmentGroup[],
+  segments: Segment[],
+): {
+  bySegmentKey: Record<string, AudienceCount>;
+  byGroupId: Record<string, AudienceCount>;
+} {
+  const keysByGroup = groups.map(
+    (group) => [group.id, new Set(getSegmentKeysForGroup(group.id, groups, segments))] as const,
+  );
+  const bySegmentKey: Record<string, AudienceCount> = {};
+  const byGroupId: Record<string, AudienceCount> = {};
+  for (const segment of assignableSegments(segments)) {
+    bySegmentKey[segment.key] = { subscribed: 0, unsubscribed: 0 };
+  }
+  for (const group of groups) {
+    byGroupId[group.id] = { subscribed: 0, unsubscribed: 0 };
+  }
+
+  for (const subscriber of subscribers) {
+    const field = subscriber.status === "subscribed" ? "subscribed" : "unsubscribed";
+    const tags = new Set(subscriber.tags ?? []);
+    for (const tag of tags) {
+      if (bySegmentKey[tag]) bySegmentKey[tag][field]++;
+    }
+    for (const [groupId, keys] of keysByGroup) {
+      for (const tag of tags) {
+        if (keys.has(tag)) {
+          byGroupId[groupId][field]++;
+          break;
+        }
+      }
+    }
+  }
+
+  return { bySegmentKey, byGroupId };
+}
 
 export function assignableSegments(segments: Segment[]): Segment[] {
   return segments.filter((s) => s.key !== "all");

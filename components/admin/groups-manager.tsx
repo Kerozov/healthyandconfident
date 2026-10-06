@@ -9,6 +9,7 @@ import {
   getDescendantGroupIds,
   getSegmentKeysForGroup,
   isDescendantGroup,
+  type AudienceCount,
 } from "@/lib/segments/hierarchy";
 import {
   createSegmentGroup,
@@ -16,6 +17,7 @@ import {
   updateSegmentGroup,
 } from "@/app/(admin)/admin/actions";
 import { Field, Input, Card, Select } from "@/components/admin/fields";
+import { AudienceCountBadge } from "@/components/admin/audience-count-badge";
 
 function validParentOptions(groupId: string | null, groups: SegmentGroup[]): SegmentGroup[] {
   return groups.filter(
@@ -25,7 +27,13 @@ function validParentOptions(groupId: string | null, groups: SegmentGroup[]): Seg
   );
 }
 
-export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
+export function GroupsManager({
+  groups,
+  countByGroupId,
+}: {
+  groups: SegmentGroup[];
+  countByGroupId: Record<string, AudienceCount>;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -142,13 +150,16 @@ export function GroupsManager({ groups }: { groups: SegmentGroup[] }) {
                 style={{ paddingLeft: 16 + depth * 20 }}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">
-                    {depth > 0 && (
-                      <span className="mr-1 text-ink-soft/50">↳</span>
-                    )}
-                    {group.name}
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
+                    <span>
+                      {depth > 0 && (
+                        <span className="mr-1 text-ink-soft/50">↳</span>
+                      )}
+                      {group.name}
+                    </span>
+                    <AudienceCountBadge count={countByGroupId[group.id]} />
                     {childCount > 0 && (
-                      <span className="ml-2 text-xs font-normal text-ink-soft">
+                      <span className="text-xs font-normal text-ink-soft">
                         ({childCount} подсегмент{childCount === 1 ? "" : "а"})
                       </span>
                     )}

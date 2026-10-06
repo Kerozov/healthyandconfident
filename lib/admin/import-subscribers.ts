@@ -233,6 +233,37 @@ function createSegmentResolver(segments: Segment[]) {
   };
 }
 
+/**
+ * Splits a Groups cell. With "," as the separator, neighbouring parts that
+ * together name an existing segment ("Октомври, Ноември, Декември 2026") stay
+ * one group.
+ */
+function splitGroupLabels(
+  value: string,
+  separator: ";" | ",",
+  isKnown: (label: string) => boolean,
+): string[] {
+  const parts = value
+    .split(separator)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (separator === ";") return parts;
+
+  const labels: string[] = [];
+  for (let start = 0; start < parts.length; ) {
+    let end = start + 1;
+    for (let j = parts.length; j > start + 1; j -= 1) {
+      if (isKnown(parts.slice(start, j).join(", "))) {
+        end = j;
+        break;
+      }
+    }
+    labels.push(parts.slice(start, end).join(", "));
+    start = end;
+  }
+  return labels;
+}
+
 export function resolveSegmentTokens(
   value: string,
   segments: Segment[],
@@ -396,10 +427,17 @@ export function parseImportRows(
   const segmentNames = new Map(segments.map((s) => [s.key, s.name]));
   const newSegments = new Map<string, ImportNewSegment>();
   const usage = new Map<string, number>();
+  const isKnown = (label: string) => resolve(label)?.existing === true;
 
-  rawRows.forEach((raw, index) => {
+  const mappedRows = rawRows.map(mapRow);
+  // MailerLite separates groups with ";" and keeps commas inside group names.
+  // A file without a single ";" in its Groups column separates them with commas.
+  const groupSeparator = mappedRows.some((m) => m.fields.groups?.includes(";"))
+    ? ";"
+    : ",";
+
+  mappedRows.forEach((mapped, index) => {
     const line = index + 2;
-    const mapped = mapRow(raw);
     const row = mapped.fields;
     const email = row.email?.trim().toLowerCase() ?? "";
 
@@ -420,10 +458,7 @@ export function parseImportRows(
       delete row.name;
     }
 
-    const groupLabels = (row.groups ?? "")
-      .split(";")
-      .map((label) => label.trim())
-      .filter(Boolean);
+    const groupLabels = splitGroupLabels(row.groups ?? "", groupSeparator, isKnown);
     const tagLabels = (row.tags ?? "")
       .split(/[,|;]/)
       .map((label) => label.trim())
