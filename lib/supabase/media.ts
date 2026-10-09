@@ -1,6 +1,7 @@
 import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { MediaFolder } from "@/lib/media/folders";
+import { cdnUrl } from "@/lib/storage/cdn-url";
 
 export type { MediaFolder } from "@/lib/media/folders";
 
@@ -69,8 +70,9 @@ async function signUpload(
     };
   }
 
-  const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(path)
-    .data.publicUrl;
+  const publicUrl = cdnUrl(
+    supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl,
+  );
 
   return {
     ok: true,

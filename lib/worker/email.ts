@@ -5,12 +5,23 @@ import {
   requireNotificationWorkerConfig,
   workerCancelSucceeded,
 } from "@/lib/worker/config";
+import { cdnUrl, rewriteStorageUrls } from "@/lib/storage/cdn-url";
 
 /**
  * Email adapter for notification-worker (ZeptoMail under the hood).
  *
  * Env: see lib/worker/config.ts (NOTIFICATION_WORKER_*)
  */
+
+/**
+ * Last stop before the worker: any Storage URL still pointing at Supabase
+ * (old content, a pasted link) goes out as the cached `/files` URL instead.
+ * Each email open and each per-job attachment fetch would otherwise be paid
+ * out of the Supabase egress quota.
+ */
+function withCdnUrls<T extends { url: string }>(attachments: T[]): T[] {
+  return attachments.map((att) => ({ ...att, url: cdnUrl(att.url) }));
+}
 
 type SendArgs = {
   subject: string;
@@ -275,11 +286,11 @@ export async function sendEmail(args: SendArgs): Promise<WorkerSendResult> {
     "/api/v1/send",
     {
       subject: args.subject,
-      html: args.html,
+      html: rewriteStorageUrls(args.html),
       recipients: args.recipients,
       from: args.from || from,
       replyTo: args.replyTo || replyTo,
-      attachments: args.attachments?.length ? args.attachments : undefined,
+      attachments: args.attachments?.length ? withCdnUrls(args.attachments) : undefined,
       idempotencyKey: args.idempotencyKey,
       merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
     },
@@ -302,14 +313,14 @@ export async function submitEmailJobsBatch(
       replyTo,
       jobs: jobs.map((job) => ({
         subject: job.subject,
-        html: job.html,
+        html: rewriteStorageUrls(job.html),
         recipients: job.recipients,
         sendAt: job.sendAt,
         idempotencyKey: job.idempotencyKey,
         // Must ride along: this is the path automations actually take, so dropping
         // it sent lead-magnet emails with no PDF while the single-job fallback
         // attached one.
-        attachments: job.attachments?.length ? job.attachments : undefined,
+        attachments: job.attachments?.length ? withCdnUrls(job.attachments) : undefined,
       })),
     },
     { retry: jobs.every((job) => Boolean(job.idempotencyKey)) },
@@ -322,13 +333,13 @@ export async function scheduleEmail(args: ScheduleArgs): Promise<WorkerSendResul
     "/api/v1/schedule",
     {
       subject: args.subject,
-      html: args.html,
+      html: rewriteStorageUrls(args.html),
       recipients: args.recipients,
       from: args.from || from,
       replyTo: args.replyTo || replyTo,
       sendAt: args.sendAt,
       idempotencyKey: args.idempotencyKey,
-      attachments: args.attachments?.length ? args.attachments : undefined,
+      attachments: args.attachments?.length ? withCdnUrls(args.attachments) : undefined,
       merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
     },
     { retry: Boolean(args.idempotencyKey) },

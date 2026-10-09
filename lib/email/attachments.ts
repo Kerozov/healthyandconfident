@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Locale } from "@/lib/supabase/types";
+import { cdnUrl } from "@/lib/storage/cdn-url";
 
 const BUCKET = "media";
 
@@ -13,7 +14,7 @@ export type WorkerAttachment = {
 
 export function publicUrlForStoragePath(path: string): string {
   const supabase = getAdminClient();
-  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  return cdnUrl(supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl);
 }
 
 export function workerAttachmentsFromStored(
