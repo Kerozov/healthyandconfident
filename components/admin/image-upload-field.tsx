@@ -7,6 +7,7 @@ import {
   putToSignedUrl,
   uploadErrorText,
 } from "@/lib/admin/upload-to-storage";
+import { compressImage } from "@/lib/admin/compress-image";
 import type { MediaFolder } from "@/lib/media/folders";
 import { Field } from "@/components/admin/fields";
 import { CardImage } from "@/components/site/card-image";
@@ -14,10 +15,11 @@ import { cn } from "@/lib/utils";
 
 /** One image to Storage; resolves to its public URL or a message to show. */
 export async function uploadSiteImage(
-  file: File,
+  original: File,
   folder: MediaFolder,
 ): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
   try {
+    const file = await compressImage(original);
     // The file never crosses the Server Action boundary — only its name,
     // type and size do, so the 4 MB body limit cannot bite.
     const res = await createSiteImageUpload(

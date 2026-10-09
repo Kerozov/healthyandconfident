@@ -29,7 +29,9 @@ export async function putToSignedUrl(
   file: File,
 ): Promise<StorageUploadResult> {
   const body = new FormData();
-  body.append("cacheControl", "3600");
+  // Keys are UUIDs and never overwritten (x-upsert: false), so a year-long
+  // cache is safe — repeat visitors and email clients stop re-downloading.
+  body.append("cacheControl", "31536000");
   body.append("", file);
 
   let res: Response;
