@@ -13,6 +13,9 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
 
+// Admin saves revalidate these paths; this is the safety net for anything else.
+export const revalidate = 3600;
+
 export async function generateStaticParams() {
   const slugs = await getAllPublishedSlugs();
   return slugs.map((s) => ({ locale: s.locale, slug: s.slug }));

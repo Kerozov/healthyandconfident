@@ -6,6 +6,9 @@ import { getPublishedPosts } from "@/lib/blog";
 import { Container } from "@/components/ui/container";
 import { BlogCard } from "@/components/site/blog-card";
 
+// Admin saves revalidate these paths; this is the safety net for anything else.
+export const revalidate = 3600;
+
 export async function generateMetadata({
   params,
 }: {

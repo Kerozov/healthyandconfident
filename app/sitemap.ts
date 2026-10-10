@@ -15,6 +15,8 @@ import {
   programsListPath,
 } from "@/lib/site/product-placement";
 
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = publicSiteOrigin();
   const now = new Date();
