@@ -595,6 +595,7 @@ export function CampaignComposer({
                 className="xl:flex xl:h-full xl:flex-col"
               >
                 <EmailTemplatePreview
+                  subject={email.subject}
                   bodyHtml={email.html}
                   ctaLabel={showButton ? email.cta_label : ""}
                   ctaUrl={showButton ? email.cta_url : ""}

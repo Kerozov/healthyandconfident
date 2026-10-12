@@ -38,6 +38,8 @@ import { Field, Input, Textarea, Select, Card } from "@/components/admin/fields"
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { EmailAttachmentPicker } from "@/components/admin/email-attachment-picker";
 import { EmailBuilder } from "@/components/admin/email-builder";
+import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
+import { TestEmailSender } from "@/components/admin/test-email-sender";
 import { normalizeFormFields } from "@/lib/forms/answer-tags";
 import {
   BUILTIN_FIELD_DEFAULTS,
@@ -845,6 +847,57 @@ export function FormsManager({
                 Главният бутон в имейла води към формата с персонален линк. Допълнителни
                 бутони добавяй с „Бутон“ над текста.
               </p>
+              <div className="md:col-span-2 space-y-3 rounded-xl border border-ink/10 bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-ink">Преглед и тест</p>
+                  <div className="inline-flex rounded-lg border border-ink/15 p-0.5">
+                    {(["bg", "en"] as const).map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => setPreviewLocale(loc)}
+                        className={cn(
+                          "rounded-md px-2.5 py-1 text-xs font-semibold",
+                          previewLocale === loc ? "bg-ink text-white" : "text-ink-soft hover:bg-ink/5",
+                        )}
+                      >
+                        {loc.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <EmailTemplatePreview
+                  subject={
+                    (previewLocale === "en" ? form.email_subject_en : form.email_subject_bg) ||
+                    form.name
+                  }
+                  bodyHtml={previewLocale === "en" ? form.email_intro_en : form.email_intro_bg}
+                  ctaLabel={previewLocale === "en" ? "Open form" : "Отвори формата"}
+                  ctaUrl={`/${previewLocale}/forms/${savedSlug || "preview"}`}
+                  locale={previewLocale}
+                  heroImageUrl={form.hero_image_url}
+                  height={520}
+                />
+                <TestEmailSender
+                  disabled={pending}
+                  content={{
+                    subject:
+                      (previewLocale === "en" ? form.email_subject_en : form.email_subject_bg) ||
+                      form.name,
+                    html: previewLocale === "en" ? form.email_intro_en : form.email_intro_bg,
+                    cta_label: previewLocale === "en" ? "Open form" : "Отвори формата",
+                    cta_url: `/${previewLocale}/forms/${savedSlug}`,
+                    locale: previewLocale,
+                    attachment_path: form.attachment_path || undefined,
+                    attachment_filename: form.attachment_filename || undefined,
+                    hero_image_url: form.hero_image_url || undefined,
+                  }}
+                />
+                <p className="text-xs text-ink-soft">
+                  В теста бутонът води към публичната форма — истинските покани носят
+                  личен линк за всеки човек.
+                </p>
+              </div>
               <div className="md:col-span-2 space-y-4 rounded-xl border border-ink/10 bg-cream/30 p-4">
                 <ImageUploadField
                   label="Банер в началото на имейла"

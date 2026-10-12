@@ -1842,6 +1842,7 @@ export function AutomationsManager({
                   <div className="min-w-0">
                     <div className="xl:sticky xl:top-4 xl:h-[calc(var(--workspace-body-height,100dvh)-2rem)]">
                       <EmailTemplatePreview
+                        subject={form.subject_bg || form.name}
                         bodyHtml={form.html_bg}
                         ctaLabel={form.cta_label_bg}
                         ctaUrl={form.cta_url_bg}
@@ -1911,6 +1912,7 @@ export function AutomationsManager({
                   <div className="min-w-0">
                     <div className="xl:sticky xl:top-4 xl:h-[calc(var(--workspace-body-height,100dvh)-2rem)]">
                       <EmailTemplatePreview
+                        subject={form.subject_en || form.name}
                         bodyHtml={form.html_en}
                         ctaLabel={form.cta_label_en}
                         ctaUrl={form.cta_url_en}

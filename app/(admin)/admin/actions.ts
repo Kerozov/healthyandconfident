@@ -2755,7 +2755,9 @@ export async function sendTestEmail(input: {
         locale,
         cta: ctaLabel && ctaUrl ? { label: ctaLabel, href: resolveCtaTarget(ctaUrl) } : null,
         vars,
-        unsubscribeHref: unsubscribeLinkForEmail(email, locale),
+        // A test must not be able to unsubscribe anyone, the admin included:
+        // the link opens the plain unsubscribe help page.
+        unsubscribeHref: `${publicSiteOrigin()}/${locale}/unsubscribe`,
         heroImageUrl: input.hero_image_url,
         recipient: { email, subscriberId: sub?.id ?? null },
         includeSignature: input.signature_enabled !== false,
@@ -3312,16 +3314,20 @@ export async function sendSmsCampaign(input: {
   }
 
   try {
+    // A key on every send lets the worker client retry a provider hiccup
+    // without texting anyone twice.
+    const idempotencyKey = `sms-campaign-${crypto.randomUUID()}`;
     const res = scheduledAt
       ? await scheduleSms({
           body: input.message,
           recipients: audience.phones,
           sendAt: scheduledAt,
-          idempotencyKey: `sms-${Date.now()}`,
+          idempotencyKey,
         })
       : await sendSms({
           body: input.message,
           recipients: audience.phones,
+          idempotencyKey,
         });
 
     const invalidNote =
