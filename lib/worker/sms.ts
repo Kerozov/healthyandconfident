@@ -59,25 +59,56 @@ function getConfig() {
   return { url, key };
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+/**
+ * One retry on a network error, 429 or 5xx — the provider's hiccups used to
+ * fail a whole SMS send. Only when the job carries an idempotency key: the
+ * worker then recognises the repeat, while a timed-out send without one may
+ * already have gone out and a blind retry would text people twice.
+ */
+async function post<T>(
+  path: string,
+  body: Record<string, unknown> & { idempotencyKey?: string },
+): Promise<T> {
   const { url, key } = getConfig();
-  const res = await fetch(`${url}${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
+  const attempts = body.idempotencyKey ? 2 : 1;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const canRetry = attempt < attempts - 1;
+    let res: Response;
+    try {
+      res = await fetch(`${url}${path}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      });
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Worker SMS request failed");
+      if (canRetry) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        continue;
+      }
+      throw lastError;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) return data as T;
     const err = data as { error?: string; errors?: string[] };
-    throw new Error(
+    lastError = new Error(
       err.error || err.errors?.join("; ") || `Worker SMS request failed (${res.status})`,
     );
+    if (canRetry && (res.status === 429 || res.status >= 500)) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      continue;
+    }
+    throw lastError;
   }
-  return data as T;
+
+  throw lastError ?? new Error("Worker SMS request failed");
 }
 
 /** Send now — worker processes immediately. */

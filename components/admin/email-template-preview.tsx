@@ -10,7 +10,23 @@ import { normalizeEmailBodyHtml } from "@/lib/email/normalize-body";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import { useStripeCatalog } from "@/components/admin/stripe-locale-picker";
+import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
+
+/** The first words of the body, the way an inbox shows them next to the subject. */
+function inboxSnippet(html: string): string {
+  return html
+    .replace(/<(style|script)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&[a-z]+;|&#\d+;/gi, " ")
+    .replace(/\{\{\s*name\s*\}\}/gi, "Мария")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 110);
+}
 
 export function EmailTemplatePreview({
   bodyHtml,
@@ -23,6 +39,7 @@ export function EmailTemplatePreview({
   heroImageUrl = "",
   height = 620,
   className,
+  subject,
 }: {
   bodyHtml: string;
   ctaLabel: string;
@@ -38,6 +55,8 @@ export function EmailTemplatePreview({
    */
   height?: number | "fill";
   className?: string;
+  /** When given, an inbox row on top shows sender, subject and the opening words. */
+  subject?: string;
 }) {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
 
@@ -94,6 +113,11 @@ export function EmailTemplatePreview({
     stripeCatalog.items,
   ]);
 
+  const snippet = useMemo(
+    () => (subject === undefined ? "" : inboxSnippet(bodyHtml)),
+    [subject, bodyHtml],
+  );
+
   return (
     <div
       className={cn(
@@ -123,6 +147,18 @@ export function EmailTemplatePreview({
           </DeviceButton>
         </div>
       </div>
+      {subject !== undefined && (
+        <div className="border-b border-ink/10 bg-white px-3 py-2.5" aria-label="Както изглежда във входящата поща">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="truncate text-sm font-semibold text-ink">{siteConfig.brand}</span>
+            <span className="shrink-0 text-[11px] text-ink-soft">сега</span>
+          </div>
+          <p className="truncate text-sm text-ink">
+            <span className="font-semibold">{subject.trim() || "(без тема)"}</span>
+            {snippet && <span className="text-ink-soft"> — {snippet}</span>}
+          </p>
+        </div>
+      )}
       <div
         className={cn(
           "overflow-y-auto",
