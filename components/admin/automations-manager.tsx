@@ -74,6 +74,7 @@ import { AutomationFlowView, flattenAutomationsForDisplay, TRIGGER_SECTION_LABEL
 import { Field, Input, Select, Card } from "@/components/admin/fields";
 import { SmsComposeFields } from "@/components/admin/sms-compose-fields";
 import { TestEmailSender } from "@/components/admin/test-email-sender";
+import { TestSmsSender } from "@/components/admin/test-sms-sender";
 import { AutomationSendNowDialog } from "@/components/admin/automation-send-now-dialog";
 import { buildSmsBody, checkSmsCompose, splitMessageAndLink } from "@/lib/sms/compose-validation";
 import { TabList } from "@/components/admin/ui";
@@ -708,6 +709,28 @@ export function AutomationsManager({
     openEdit(a);
   }
 
+  /**
+   * What the editor held when it opened. X, Escape and „Отказ“ used to drop a
+   * half-written email or SMS without a word; now they ask first when the
+   * form differs from this.
+   */
+  const editorBaseline = useRef<string | null>(null);
+  useEffect(() => {
+    editorBaseline.current = editingId ? JSON.stringify({ form, smsLinks }) : null;
+    // Only when an editor opens or switches — not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId]);
+
+  function requestCloseEditor() {
+    const dirty =
+      editorBaseline.current !== null &&
+      editorBaseline.current !== JSON.stringify({ form, smsLinks });
+    if (dirty && !confirm("Има незапазени промени. Да затворя ли без да ги запазя?")) {
+      return;
+    }
+    closeEditor();
+  }
+
   function closeEditor() {
     setEditingId(null);
     setForm(EMPTY_FORM);
@@ -1206,7 +1229,7 @@ export function AutomationsManager({
               {form.channel}
             </span>
           }
-          onClose={closeEditor}
+          onClose={requestCloseEditor}
           footer={
             <>
               <button
@@ -1220,7 +1243,7 @@ export function AutomationsManager({
               </button>
               <button
                 type="button"
-                onClick={closeEditor}
+                onClick={requestCloseEditor}
                 className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5"
               >
                 Отказ
@@ -1288,6 +1311,16 @@ export function AutomationsManager({
                           signature_enabled: form.signature_enabled,
                         }
                   }
+                />
+              )}
+              {form.channel === "sms" && (
+                <TestSmsSender
+                  disabled={pending}
+                  {...(contentLocale === "en" && (form.sms_en.trim() || smsLinks.en.trim())
+                    ? { message: form.sms_en, link: smsLinks.en }
+                    : form.sms_bg.trim() || smsLinks.bg.trim()
+                      ? { message: form.sms_bg, link: smsLinks.bg }
+                      : { message: form.sms_en, link: smsLinks.en })}
                 />
               )}
               {error && (

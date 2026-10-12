@@ -136,13 +136,25 @@ export function estimatePreparedLength(message: string, link?: string): number {
   return estimateShortenedLength(body);
 }
 
+/** `{{name}}` / `{{email}}` (any spelling of braces the renderer would touch). */
+export function hasSmsMergeTags(text: string): boolean {
+  return /\{\{\s*\w+\s*\}\}/.test(text);
+}
+
+export const SMS_CAMPAIGN_MERGE_TAG_ERROR =
+  "SMS кампаниите пращат един и същи текст на всички — {{name}} и {{email}} биха стигнали до хората буквално. Махни ги или ползвай автоматизация.";
+
 export function checkSmsCompose(
   message: string,
   link?: string,
   templateVars?: Record<string, string>,
+  options: { allowMergeTags?: boolean } = {},
 ): SmsComposeCheck {
   const errors: string[] = [];
   const warnings: string[] = [];
+  if (options.allowMergeTags === false && hasSmsMergeTags(message)) {
+    errors.push(SMS_CAMPAIGN_MERGE_TAG_ERROR);
+  }
   const expanded = expandSmsTemplate(message.trim(), templateVars);
   const normalizedLink = normalizeTrackedLink(link ?? "");
   const preparedForSend = buildSmsBody(expanded, normalizedLink ?? undefined);

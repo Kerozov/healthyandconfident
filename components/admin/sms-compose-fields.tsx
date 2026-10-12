@@ -19,6 +19,8 @@ type SmsComposeFieldsProps = {
   linkLabel?: string;
   linkHint?: string;
   showPreview?: boolean;
+  /** Campaigns send one text to everyone, so `{{name}}` cannot be filled in. */
+  allowMergeTags?: boolean;
 };
 
 export function SmsComposeFields({
@@ -32,8 +34,9 @@ export function SmsComposeFields({
   linkLabel = "Tracked link",
   linkHint = "Пълен https:// адрес — worker-ът го съкращава автоматично (~24 символа).",
   showPreview = true,
+  allowMergeTags = true,
 }: SmsComposeFieldsProps) {
-  const check = checkSmsCompose(message, link, templateVars);
+  const check = checkSmsCompose(message, link, templateVars, { allowMergeTags });
 
   return (
     <div className="space-y-4">

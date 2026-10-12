@@ -47,7 +47,12 @@ import {
   type RecipientRow,
 } from "@/lib/worker/email";
 import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
-import { checkSmsCompose } from "@/lib/sms/compose-validation";
+import {
+  buildSmsBody,
+  checkSmsCompose,
+  normalizeTrackedLink,
+  SMS_TEMPLATE_SAMPLE,
+} from "@/lib/sms/compose-validation";
 import { runAutomations } from "@/lib/automation/send";
 import { applyEnglishRecipientTag } from "@/i18n/subscriber-locale";
 import { ensureSubscriberSegmentKeys } from "@/lib/segments/ensure";
@@ -2788,6 +2793,113 @@ export async function sendTestEmail(input: {
   };
 }
 
+/** Digits with an optional leading +; spaces, dashes, dots and brackets dropped. */
+function cleanTestPhone(raw: string): string | null {
+  const compact = raw.replace(/[\s\-().]/g, "");
+  return /^\+?\d{8,15}$/.test(compact) ? compact : null;
+}
+
+/**
+ * Send the SMS being edited to a few hand-typed numbers. Like the test email:
+ * no campaign row, nothing in the stats, and the editor keeps its text.
+ * `{{name}}` / `{{email}}` are filled from a subscriber with that number when
+ * there is one, so automations can be checked as a real contact would see them.
+ */
+export async function sendTestSms(input: {
+  to: string;
+  message: string;
+  link?: string;
+  /** Campaign texts go out unpersonalised, so tags there are an error. */
+  allowMergeTags?: boolean;
+}): Promise<ActionResult> {
+  const guard = await guardAction(["campaigns", "automations"], {
+    action: "send",
+    summary: "Изпрати тестов SMS",
+  });
+  if (!guard.ok) return guard;
+
+  const typed = [
+    ...new Set(
+      input.to
+        .split(/[,;\n]+/)
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ];
+  if (typed.length === 0) {
+    return { ok: false, message: "Въведи телефон за теста." };
+  }
+  if (typed.length > 3) {
+    return { ok: false, message: "Най-много 3 номера за тест." };
+  }
+  const phones: string[] = [];
+  for (const value of typed) {
+    const phone = cleanTestPhone(value);
+    if (!phone) return { ok: false, message: `Невалиден номер: ${value}` };
+    phones.push(phone);
+  }
+
+  const check = checkSmsCompose(input.message, input.link, undefined, {
+    allowMergeTags: input.allowMergeTags !== false,
+  });
+  if (!check.ok) {
+    return { ok: false, message: check.errors[0] ?? "SMS-ът не минава проверката." };
+  }
+  const template = buildSmsBody(input.message, normalizeTrackedLink(input.link ?? "") ?? undefined);
+
+  const supabase = getAdminClient();
+  const { data: subs } = await supabase
+    .from("subscribers")
+    .select("email, name, phone")
+    .in("phone", phones);
+  const subByPhone = new Map(
+    ((subs as { email: string; name: string | null; phone: string | null }[] | null) ?? []).map(
+      (s) => [s.phone ?? "", s],
+    ),
+  );
+
+  let failed = 0;
+  let lastError = "";
+  for (const phone of phones) {
+    const sub = subByPhone.get(phone);
+    const body = renderEmailTemplate(template, {
+      name: sub?.name ?? SMS_TEMPLATE_SAMPLE.name,
+      email: sub?.email ?? SMS_TEMPLATE_SAMPLE.email,
+    });
+    try {
+      const res = await sendSms({
+        body,
+        recipients: [phone],
+        idempotencyKey: `sms-test-${phone}-${Date.now()}`,
+      });
+      if ((res.invalid ?? 0) > 0) {
+        failed += 1;
+        lastError = `номерът ${phone} не е приет`;
+      } else if (!res.jobId || res.status === "failed" || (res.failed ?? 0) > 0) {
+        failed += 1;
+        lastError = res.errors?.join("; ") ?? lastError;
+      }
+    } catch (error) {
+      failed += 1;
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  if (failed === phones.length) {
+    return {
+      ok: false,
+      message: `Тестовият SMS не беше изпратен${lastError ? `: ${lastError}` : "."}`,
+    };
+  }
+  if (failed > 0) {
+    return {
+      ok: true,
+      message: `Тестовият SMS е изпратен до ${phones.length - failed} от ${phones.length} номера.`,
+    };
+  }
+  return { ok: true, message: `Тестовият SMS е изпратен до ${phones.join(", ")}.` };
+}
+
 /** Pull authoritative status + open tracking from the worker into our DB. */
 export async function syncEmailCampaign(id: string): Promise<ActionResult> {
   const guard = await guardAction("campaigns", { action: "sync", summary: "Синхронизира кампания" });
@@ -3192,7 +3304,9 @@ export async function sendSmsCampaign(input: {
     return { ok: false, message: "Invalid schedule time." };
   }
 
-  const smsCheck = checkSmsCompose(input.message);
+  const smsCheck = checkSmsCompose(input.message, undefined, undefined, {
+    allowMergeTags: false,
+  });
   if (!smsCheck.ok) {
     return { ok: false, message: smsCheck.errors.join(" ") };
   }
