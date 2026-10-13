@@ -72,11 +72,8 @@ function bgProfessionalServiceSchema(origin: string) {
     "Диабет тип 2",
   ],
   priceRange: "€€",
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "5.0",
-    reviewCount: "3",
-  },
+  // No aggregateRating: Google treats a business rating itself as a
+  // self-serving review and can issue a manual action for it.
 };
 }
 

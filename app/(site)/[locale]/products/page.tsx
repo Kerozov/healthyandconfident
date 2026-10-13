@@ -7,7 +7,7 @@ import { filterProductsForLocale } from "@/lib/site/product-locale";
 import { productsListPath } from "@/lib/site/product-placement";
 import { CatalogIndex } from "@/components/site/catalog-index";
 import { ShopProductGrid } from "@/components/site/sections/shop-grid";
-import { publicSiteOrigin } from "@/lib/site";
+import { publicSiteOrigin, pageOpenGraph } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +31,7 @@ export async function generateMetadata({
         en: "/en/products",
       },
     },
+    openGraph: pageOpenGraph(locale, productsListPath(locale), dict.shop.title, dict.shop.subtitle),
   };
 }
 

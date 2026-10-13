@@ -17,7 +17,7 @@ export const siteConfig = {
   googleReviewsUrl:
     process.env.NEXT_PUBLIC_GOOGLE_REVIEWS_URL ??
     "https://www.google.com/search?q=Vessie+Nay+Healthy+and+Confident+reviews",
-  // Default OG image (place a real asset in /public/og)
+  /** 1200×630 share card — regenerate with scripts/generate-brand-images.tsx */
   ogImage: "/og/default.jpg",
 } as const;
 
@@ -29,4 +29,26 @@ export function publicSiteOrigin(): string {
     /\/$/,
     "",
   );
+}
+
+/**
+ * Open Graph for a page that has no image of its own. Next replaces a parent's
+ * `openGraph` wholesale, so a page that sets none would share the home page's
+ * title and URL instead of its own.
+ */
+export function pageOpenGraph(
+  locale: "bg" | "en",
+  path: string,
+  title: string,
+  description?: string,
+) {
+  return {
+    type: "website" as const,
+    locale: locale === "bg" ? "bg_BG" : "en_GB",
+    siteName: siteConfig.brand,
+    url: `${publicSiteOrigin()}${path}`,
+    title: `${title} · ${siteConfig.brand}`,
+    description,
+    images: [{ url: siteConfig.ogImage, width: 1200, height: 630 }],
+  };
 }

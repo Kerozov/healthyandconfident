@@ -37,6 +37,9 @@ export async function generateMetadata({
     alternates: { canonical: `/${locale}/blog/${slug}` },
     openGraph: {
       type: "article",
+      url: `${publicSiteOrigin()}/${locale}/blog/${slug}`,
+      locale: locale === "bg" ? "bg_BG" : "en_GB",
+      siteName: siteConfig.brand,
       title: post.seo_title || post.title,
       description: post.seo_description || post.excerpt,
       publishedTime: post.published_at || undefined,

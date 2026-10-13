@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageOpenGraph } from "@/lib/site";
 import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
@@ -24,6 +25,7 @@ export async function generateMetadata({
       canonical: `/${locale}/blog`,
       languages: { bg: "/bg/blog", en: "/en/blog" },
     },
+    openGraph: pageOpenGraph(locale, `/${locale}/blog`, dict.blog.title, dict.blog.subtitle),
   };
 }
 

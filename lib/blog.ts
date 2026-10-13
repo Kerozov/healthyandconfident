@@ -46,14 +46,14 @@ export async function getPostBySlug(
 }
 
 export async function getAllPublishedSlugs(): Promise<
-  { locale: Locale; slug: string }[]
+  { locale: Locale; slug: string; updated_at: string | null }[]
 > {
   const supabase = publicClientOrNull();
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("blog_posts")
-    .select("locale, slug")
+    .select("locale, slug, updated_at")
     .eq("status", "published");
   if (error) throw new Error(`Blog slugs query failed: ${error.message}`);
-  return (data as { locale: Locale; slug: string }[]) ?? [];
+  return (data as { locale: Locale; slug: string; updated_at: string | null }[]) ?? [];
 }

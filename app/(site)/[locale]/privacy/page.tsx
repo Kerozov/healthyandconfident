@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n";
 import { LegalDocument } from "@/components/site/legal-document";
-import { publicSiteOrigin } from "@/lib/site";
+import { publicSiteOrigin, pageOpenGraph } from "@/lib/site";
 import { legalPath } from "@/lib/site/legal";
 
 export async function generateMetadata({
@@ -26,6 +26,7 @@ export async function generateMetadata({
         en: "/en/privacy",
       },
     },
+    openGraph: pageOpenGraph(locale, legalPath(locale, "privacy"), dict.legal.privacy.title, dict.legal.privacy.description),
   };
 }
 

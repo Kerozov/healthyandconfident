@@ -6,7 +6,7 @@ import { Programs } from "@/components/site/sections/programs";
 import { getSiteProgramCards } from "@/lib/site/content";
 import { getSiteContactConfig } from "@/lib/site/contact-config";
 import { programsListPath } from "@/lib/site/product-placement";
-import { publicSiteOrigin } from "@/lib/site";
+import { publicSiteOrigin, pageOpenGraph } from "@/lib/site";
 
 export async function generateMetadata({
   params,
@@ -28,6 +28,7 @@ export async function generateMetadata({
         en: "/en/programs",
       },
     },
+    openGraph: pageOpenGraph(locale, programsListPath(locale), dict.programs.title, dict.programs.subtitle),
   };
 }
 

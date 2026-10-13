@@ -7,7 +7,7 @@ import { filterGuidesForLocale } from "@/lib/site/guide-catalog";
 import { guidesListPath } from "@/lib/site/product-placement";
 import { CatalogIndex } from "@/components/site/catalog-index";
 import { GuidesGrid } from "@/components/site/sections/guides-grid";
-import { publicSiteOrigin } from "@/lib/site";
+import { publicSiteOrigin, pageOpenGraph } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +31,7 @@ export async function generateMetadata({
         en: "/en/guides",
       },
     },
+    openGraph: pageOpenGraph(locale, guidesListPath(locale), dict.guides.title, dict.guides.subtitle),
   };
 }
 

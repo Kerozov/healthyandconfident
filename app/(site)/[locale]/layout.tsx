@@ -73,12 +73,9 @@ export async function generateMetadata({
       description: dict.meta.description,
       images: [{ url: siteConfig.ogImage, width: 1200, height: 630, alt: dict.meta.ogAlt }],
     },
-    twitter: {
-      card: "summary_large_image",
-      title: dict.meta.title,
-      description: dict.meta.description,
-      images: [siteConfig.ogImage],
-    },
+    // Card type only: X falls back to each page's og:* tags. A full block here
+    // would be inherited by every page that sets no `twitter` of its own.
+    twitter: { card: "summary_large_image" },
     robots: { index: true, follow: true },
     ...(domainVerification
       ? { verification: { other: { "facebook-domain-verification": domainVerification } } }
