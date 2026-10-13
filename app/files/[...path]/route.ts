@@ -4,8 +4,8 @@ import { STORAGE_PUBLIC_PREFIX } from "@/lib/storage/cdn-url";
  * Cached proxy in front of Supabase Storage — see `lib/storage/cdn-url.ts`.
  *
  * Keys are UUIDs that are never overwritten, so a successful response is
- * immutable: browsers and Vercel's CDN keep it for a year and Supabase only
- * sees the first request per CDN region.
+ * immutable: browsers and Vercel's CDN keep it for a year, and the upstream
+ * fetch is kept in the Data Cache so Supabase sees roughly one request per file.
  */
 const BUCKETS = new Set(["media"]);
 
@@ -29,11 +29,15 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
+  // The CDN cache is per region and wiped on every deploy, so on its own it
+  // still sent each file to Supabase 10–20 times a day. The Data Cache is
+  // shared by all regions and survives deploys; only 200s are stored, and
+  // Vercel skips items over 2 MB (those fall through to Supabase as before).
   let upstream: Response;
   try {
     upstream = await fetch(
       STORAGE_PUBLIC_PREFIX + path.map(encodeURIComponent).join("/"),
-      { cache: "no-store" },
+      { cache: "force-cache", next: { revalidate: false } },
     );
   } catch {
     return new Response("Storage unreachable", {
