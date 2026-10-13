@@ -28,7 +28,7 @@ function dateTile(date: string, locale: Locale) {
 
 /**
  * What is coming up — a webinar, a live, a questionnaire — as one calm card
- * per item, just before the programmes: a free first step for whoever is not
+ * per item, at the very top of the home page: a free first step for whoever is not
  * ready to buy yet. A dated event drops off the page once its day has passed,
  * so the site never invites anyone to something that is over.
  */
@@ -61,7 +61,7 @@ export function UpcomingEvents({
     <section
       id="events"
       aria-label={eyebrow}
-      className="scroll-mt-24 bg-cream pt-12 sm:pt-16 lg:pt-20"
+      className="scroll-mt-24 bg-cream pt-6 sm:pt-10 lg:pt-14"
     >
       <Container>
         <div className="mx-auto grid max-w-5xl gap-5">

@@ -19,8 +19,8 @@ import { StickyCta } from "@/components/site/sticky-cta";
 import { HomeJsonLd } from "@/components/seo/json-ld";
 
 /**
- * The home page is a sales page, in the order a stranger needs it: the promise
- * and who it is for, proof in numbers, what is coming up soon, the offers, then
+ * The home page is a sales page: what is coming up soon (webinars to sign up
+ * for) sits first, then the promise and who it is for, proof in numbers, the offers, then
  * everything that answers „will it work for me?“ — before and after, method,
  * who Vessie is, questions — and a close that keeps even the not-yet-ready in
  * touch with a free menu.
@@ -51,8 +51,6 @@ export default async function HomePage({
   return (
     <>
       <HomeJsonLd dict={dict} locale={l} />
-      <Hero dict={dict} locale={l} />
-      <ProofStrip dict={dict} />
       {site.events.length > 0 && (
         <UpcomingEvents
           dict={dict}
@@ -62,6 +60,8 @@ export default async function HomePage({
           offersById={site.offersById}
         />
       )}
+      <Hero dict={dict} locale={l} />
+      <ProofStrip dict={dict} />
       <Programs
         dict={dict}
         locale={l}
