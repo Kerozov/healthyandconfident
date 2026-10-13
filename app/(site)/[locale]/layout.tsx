@@ -14,6 +14,10 @@ import {
 } from "@/lib/meta/config";
 import { siteConfig, publicSiteOrigin } from "@/lib/site";
 import { MetaPixel } from "@/components/site/meta-pixel";
+import {
+  GoogleTagManagerHead,
+  GoogleTagManagerNoScript,
+} from "@/components/site/google-tag-manager";
 import { SiteHeader } from "@/components/site/site-header";
 import { Footer } from "@/components/site/footer";
 import { MessengerWidget } from "@/components/site/messenger-widget";
@@ -105,7 +109,11 @@ export default async function SiteLayout({
       lang={localeHtmlLang[l]}
       className={`${geistSans.variable} ${fraunces.variable}`}
     >
+      <head>
+        <GoogleTagManagerHead />
+      </head>
       <body className="min-h-screen pb-[env(safe-area-inset-bottom)]">
+        <GoogleTagManagerNoScript />
         <OfferPopupProvider
           placements={site.ctaPlacements}
           offersById={site.offersById}
