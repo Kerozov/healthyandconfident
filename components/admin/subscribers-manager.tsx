@@ -50,6 +50,15 @@ import {
 import { activityInterestLabelsFromTags, isActivityTag } from "@/lib/site/activity-tags";
 import { PersonEmailsTable } from "@/components/admin/person-emails-table";
 
+/** Older rows only have `name` — prefill the edit form by splitting it once. */
+function subscriberNameParts(s: Subscriber): { first: string; last: string } {
+  if (s.first_name || s.last_name) {
+    return { first: s.first_name ?? "", last: s.last_name ?? "" };
+  }
+  const [first = "", ...rest] = (s.name ?? "").trim().split(/\s+/);
+  return { first, last: rest.join(" ") };
+}
+
 export function SubscribersManager({
   subscribers,
   segments,
@@ -84,7 +93,8 @@ export function SubscribersManager({
 
   const [add, setAdd] = useState({
     email: "",
-    name: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     locale: "bg" as "bg" | "en",
     tagKeys: [] as string[],
@@ -94,6 +104,8 @@ export function SubscribersManager({
   const [editing, setEditing] = useState<Subscriber | null>(null);
   const [editTagKeys, setEditTagKeys] = useState<string[]>([]);
   const [editExtraTags, setEditExtraTags] = useState("");
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
   const [editHealth, setEditHealth] = useState<HealthSelection>({
     insulinResistance: false,
     diabetes: false,
@@ -308,7 +320,8 @@ export function SubscribersManager({
     startTransition(async () => {
       const res = await addSubscriber({
         email: add.email,
-        name: add.name || undefined,
+        first_name: add.firstName || undefined,
+        last_name: add.lastName || undefined,
         phone: add.phone || undefined,
         locale: add.locale,
         tags: mergeTags(add.tagKeys, parseTagList(add.extraTags)),
@@ -319,7 +332,8 @@ export function SubscribersManager({
       }
       setAdd({
         email: "",
-        name: "",
+        firstName: "",
+        lastName: "",
         phone: "",
         locale: "bg",
         tagKeys: [],
@@ -331,6 +345,9 @@ export function SubscribersManager({
 
   function openEditSegments(s: Subscriber) {
     setEditing(s);
+    const names = subscriberNameParts(s);
+    setEditFirstName(names.first);
+    setEditLastName(names.last);
     const known = new Set([...segmentKeySet, ...customTagOptions]);
     setEditHealth(healthSelectionFromTags(s.tags));
     setEditTagKeys(s.tags.filter((t) => known.has(t)));
@@ -342,6 +359,8 @@ export function SubscribersManager({
     startTransition(async () => {
       const res = await updateSubscriber({
         id: editing.id,
+        first_name: editFirstName,
+        last_name: editLastName,
         tags: applyHealthSelectionToTags(
           mergeTags(editTagKeys, parseTagList(editExtraTags)),
           editHealth,
@@ -532,7 +551,7 @@ export function SubscribersManager({
     <div className="space-y-6">
       <Card title="Add subscriber manually">
         <form onSubmit={submitAdd} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-6">
             <div className="md:col-span-2">
               <Field label="Email">
                 <Input
@@ -543,10 +562,16 @@ export function SubscribersManager({
                 />
               </Field>
             </div>
-            <Field label="Name">
+            <Field label="First name">
               <Input
-                value={add.name}
-                onChange={(e) => setAdd({ ...add, name: e.target.value })}
+                value={add.firstName}
+                onChange={(e) => setAdd({ ...add, firstName: e.target.value })}
+              />
+            </Field>
+            <Field label="Last name">
+              <Input
+                value={add.lastName}
+                onChange={(e) => setAdd({ ...add, lastName: e.target.value })}
               />
             </Field>
             <Field label="Phone">
@@ -816,7 +841,23 @@ export function SubscribersManager({
       </Card>
 
       {editing && (
-        <Card title={`Групи и интерес — ${editing.email}`}>
+        <Card title={`Редакция — ${editing.email}`}>
+          <div className="mb-4 grid gap-4 md:grid-cols-2">
+            <Field label="Име">
+              <Input
+                value={editFirstName}
+                onChange={(e) => setEditFirstName(e.target.value)}
+                disabled={pending}
+              />
+            </Field>
+            <Field label="Фамилия">
+              <Input
+                value={editLastName}
+                onChange={(e) => setEditLastName(e.target.value)}
+                disabled={pending}
+              />
+            </Field>
+          </div>
           <div className="rounded-xl border border-forest-100 bg-cream/40 p-4">
             <p className="text-sm font-semibold text-slate-800">Здравна група</p>
             <p className="mt-1 text-xs text-ink-soft">
@@ -905,7 +946,7 @@ export function SubscribersManager({
               disabled={pending}
               className="inline-flex h-10 items-center rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
             >
-              Save tags
+              Save
             </button>
             <button
               onClick={() => setEditing(null)}

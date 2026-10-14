@@ -88,6 +88,7 @@ import {
   getCampaignClickCountsByEmail,
 } from "@/lib/campaign/sync-deliveries";
 import { renderEmailTemplate } from "@/lib/automation/template";
+import { fullNameFromParts } from "@/lib/site/health-tags";
 import { deriveNewSubscribersOnly } from "@/lib/automation/subscriber-origins";
 import {
   normalizeAutomationTrigger,
@@ -1651,7 +1652,8 @@ export async function setDeliveryIssuesIgnored(input: {
 // ── Subscribers ─────────────────────────────────────────────
 export async function addSubscriber(input: {
   email: string;
-  name?: string;
+  first_name?: string;
+  last_name?: string;
   phone?: string;
   locale: "bg" | "en";
   tags?: string[];
@@ -1660,6 +1662,9 @@ export async function addSubscriber(input: {
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
   const email = input.email.trim().toLowerCase();
+  const firstName = input.first_name?.trim() || null;
+  const lastName = input.last_name?.trim() || null;
+  const name = fullNameFromParts(firstName ?? "", lastName ?? "");
   const locale = input.locale;
   const tags = applyEnglishRecipientTag(
     Array.from(
@@ -1688,7 +1693,9 @@ export async function addSubscriber(input: {
   const { error } = await supabase.from("subscribers").upsert(
     {
       email,
-      name: input.name || null,
+      name,
+      first_name: firstName,
+      last_name: lastName,
       phone: input.phone || null,
       locale,
       source: "manual",
@@ -1716,7 +1723,7 @@ export async function addSubscriber(input: {
   try {
     await runAutomations({
       email,
-      name: input.name ?? null,
+      name,
       phone: input.phone ?? null,
       locale: input.locale,
       subscriberId: (row as { id: string } | null)?.id ?? null,
@@ -1784,6 +1791,8 @@ export async function updateSubscriber(input: {
   tags?: string[];
   status?: "subscribed" | "unsubscribed";
   notes?: string;
+  first_name?: string;
+  last_name?: string;
 }): Promise<ActionResult> {
   const guard = await guardAction("subscribers", { action: "update", summary: "Обнови абонат" });
   if (!guard.ok) return guard;
@@ -1811,6 +1820,13 @@ export async function updateSubscriber(input: {
   }
   if (input.status) patch.status = input.status;
   if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.first_name !== undefined || input.last_name !== undefined) {
+    const firstName = input.first_name?.trim() ?? "";
+    const lastName = input.last_name?.trim() ?? "";
+    patch.first_name = firstName || null;
+    patch.last_name = lastName || null;
+    patch.name = fullNameFromParts(firstName, lastName);
+  }
 
   const { error } = await supabase
     .from("subscribers")
@@ -1841,7 +1857,7 @@ export async function updateSubscriber(input: {
       try {
         await runAutomations({
           email: row.email as string,
-          name: existing?.name ?? null,
+          name: patch.name !== undefined ? patch.name : (existing?.name ?? null),
           phone: existing?.phone ?? null,
           locale: existing?.locale === "en" ? "en" : "bg",
           subscriberId: input.id,
@@ -1897,6 +1913,106 @@ export async function deleteSubscribers(
 
   revalidatePath("/admin/subscribers");
   return { ok: true, deleted: result.deleted };
+}
+
+// ── Inactive subscribers ────────────────────────────────────
+export type InactiveSubscriber = {
+  id: string;
+  email: string;
+  name: string | null;
+  locale: string | null;
+  tags: string[] | null;
+  created_at: string;
+  sent_count: number;
+  last_sent_at: string | null;
+  last_opened_at: string | null;
+};
+
+function inactiveSince(months: number): Date {
+  const safe = Math.min(36, Math.max(1, Math.round(months) || 3));
+  const since = new Date();
+  since.setMonth(since.getMonth() - safe);
+  return since;
+}
+
+async function loadInactiveSubscribers(months: number): Promise<InactiveSubscriber[]> {
+  const supabase = getAdminClient();
+  const since = inactiveSince(months).toISOString();
+  // An rpc result is capped at 1000 rows like any other read — page it.
+  return fetchAllRows<InactiveSubscriber>((from, to) =>
+    supabase
+      .rpc("inactive_subscribers", { p_since: since })
+      .order("email", { ascending: true })
+      .range(from, to),
+  );
+}
+
+/**
+ * Subscribed people who got email in the last `months` but opened and clicked
+ * nothing. Opens are only as fresh as the last worker sync.
+ */
+export async function getInactiveSubscribers(
+  months: number,
+): Promise<{ ok: true; rows: InactiveSubscriber[] } | { ok: false; message: string }> {
+  const guard = await guardAction("subscribers");
+  if (!guard.ok) return { ok: false, message: guard.message ?? "Няма достъп." };
+  try {
+    return { ok: true, rows: await loadInactiveSubscribers(months) };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "Грешка при зареждане." };
+  }
+}
+
+/**
+ * Unsubscribes the chosen people — but only those still inactive for this
+ * window when the button is pressed, so someone who opened in the meantime stays.
+ */
+export async function unsubscribeInactiveSubscribers(input: {
+  ids: string[];
+  months: number;
+}): Promise<ActionResult & { unsubscribed?: number }> {
+  const guard = await guardAction("subscribers", {
+    action: "update",
+    summary: `Отписа ${input.ids.length} неактивни абоната (${input.months} мес.)`,
+  });
+  if (!guard.ok) return guard;
+
+  const wanted = new Set(input.ids);
+  const targets = (await loadInactiveSubscribers(input.months)).filter((r) =>
+    wanted.has(r.id),
+  );
+  if (targets.length === 0) {
+    return { ok: false, message: "Няма кого да отпишем — списъкът се е променил." };
+  }
+
+  const supabase = getAdminClient();
+  let unsubscribed = 0;
+  for (const batch of chunkArray(targets, 200)) {
+    const { error } = await supabase
+      .from("subscribers")
+      .update({ status: "unsubscribed" })
+      .in(
+        "id",
+        batch.map((r) => r.id),
+      )
+      .eq("status", "subscribed");
+    if (error) {
+      revalidatePath("/admin/subscribers");
+      return { ok: false, message: error.message, unsubscribed };
+    }
+    unsubscribed += batch.length;
+  }
+
+  // Anything already queued for them must not go out after the opt-out.
+  try {
+    const { cancelScheduledMailForEmails } = await import("@/lib/automation/cancel");
+    await cancelScheduledMailForEmails(targets.map((r) => r.email));
+  } catch (err) {
+    console.error("[unsubscribeInactiveSubscribers] cancel:", err);
+  }
+
+  revalidatePath("/admin/subscribers");
+  return { ok: true, unsubscribed };
 }
 
 // ── Segment groups ──────────────────────────────────────────

@@ -18,6 +18,13 @@ export type FulfillPurchaseInput = {
   currency?: string | null;
 };
 
+function splitPurchaseName(
+  full: string | null | undefined,
+): { first: string | null; last: string | null } {
+  const [first, ...rest] = (full ?? "").trim().split(/\s+/).filter(Boolean);
+  return { first: first ?? null, last: rest.join(" ") || null };
+}
+
 /** Webhooks arrive out of order and repeat; the later stage of an order wins. */
 const STATUS_RANK: Record<PurchasePaymentStatus, number> = {
   failed: 0,
@@ -198,9 +205,18 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     guideIds.map((id) => `guide:${id}`),
   );
 
+  // Stripe only gives one "name" field; split it so first/last are filled too,
+  // but never overwrite names the person (or an admin) already set separately.
+  const nameParts = splitPurchaseName(input.name);
+  const namePatch = (row: { first_name?: unknown; last_name?: unknown }) => ({
+    ...(input.name?.trim() ? { name: input.name.trim() } : {}),
+    ...(nameParts.first && !row.first_name ? { first_name: nameParts.first } : {}),
+    ...(nameParts.last && !row.last_name ? { last_name: nameParts.last } : {}),
+  });
+
   let { data: existing } = await supabase
     .from("subscribers")
-    .select("id, tags, name, phone, locale")
+    .select("id, tags, name, first_name, last_name, phone, locale")
     .eq("email", email)
     .maybeSingle();
 
@@ -215,7 +231,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
       .update({
         tags: finalTags,
         status: "subscribed",
-        ...(input.name?.trim() ? { name: input.name.trim() } : {}),
+        ...namePatch(existing),
       })
       .eq("id", existing.id as string);
     if (updateError) {
@@ -228,6 +244,8 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
       .insert({
         email,
         name: input.name?.trim() || null,
+        first_name: nameParts.first,
+        last_name: nameParts.last,
         locale,
         source: "purchase",
         tags: finalTags,
@@ -240,7 +258,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
       // Concurrent webhook/signup — load winner and merge purchase tags.
       const { data: raced } = await supabase
         .from("subscribers")
-        .select("id, tags, name, phone, locale")
+        .select("id, tags, name, first_name, last_name, phone, locale")
         .eq("email", email)
         .maybeSingle();
       if (!raced) {
@@ -257,7 +275,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
         .update({
           tags: finalTags,
           status: "subscribed",
-          ...(input.name?.trim() ? { name: input.name.trim() } : {}),
+          ...namePatch(raced),
         })
         .eq("id", subscriberId);
       if (raceUpdateError) {

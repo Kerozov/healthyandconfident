@@ -6,6 +6,7 @@ import { GroupsManager } from "@/components/admin/groups-manager";
 import { FunnelBrandSync } from "@/components/admin/funnel-brand-sync";
 import { getFunnelBrandSyncStatus } from "@/lib/integrations/funnel-brand-sync";
 import { PageHeader } from "@/components/admin/ui";
+import { SubscribersTabs } from "@/components/admin/subscribers-tabs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -32,23 +33,25 @@ export default async function AdminSubscribersPage() {
         title="Абонати"
         description="Управление на списъка — групи, имейли на човека, Zoom и покупки. Кликни иконата 📊 до имейла за пълен профил и история на имейлите."
       />
-      <div className="space-y-8">
-        <FunnelBrandSync status={funnelBrandStatus} />
-        <GroupsManager groups={groups} countByGroupId={audienceCounts.byGroupId} />
-        <SegmentsManager
-          segments={segments}
-          groups={groups}
-          countBySegmentKey={audienceCounts.bySegmentKey}
-        />
-        <SubscribersManager
-          subscribers={subscribers}
-          segments={segments}
-          groups={groups}
-          subscriberTags={subscriberTags}
-          engagementByEmail={{}}
-          contactByEmail={{}}
-        />
-      </div>
+      <SubscribersTabs>
+        <div className="space-y-8">
+          <FunnelBrandSync status={funnelBrandStatus} />
+          <GroupsManager groups={groups} countByGroupId={audienceCounts.byGroupId} />
+          <SegmentsManager
+            segments={segments}
+            groups={groups}
+            countBySegmentKey={audienceCounts.bySegmentKey}
+          />
+          <SubscribersManager
+            subscribers={subscribers}
+            segments={segments}
+            groups={groups}
+            subscriberTags={subscriberTags}
+            engagementByEmail={{}}
+            contactByEmail={{}}
+          />
+        </div>
+      </SubscribersTabs>
     </div>
   );
 }

@@ -36,10 +36,17 @@ export const FORM_PRESETS: FormPreset[] = [
         label_en: "Basic information",
       },
       {
-        id: fid("name"),
+        id: fid("first_name"),
         type: "text",
         label_bg: "Име",
-        label_en: "Name",
+        label_en: "First name",
+        required: true,
+      },
+      {
+        id: fid("last_name"),
+        type: "text",
+        label_bg: "Фамилия",
+        label_en: "Last name",
         required: true,
       },
       {
@@ -193,10 +200,17 @@ export const FORM_PRESETS: FormPreset[] = [
     },
     fields: [
       {
-        id: fid("name"),
+        id: fid("first_name"),
         type: "text",
-        label_bg: "Име и фамилия",
-        label_en: "Full name",
+        label_bg: "Име",
+        label_en: "First name",
+        required: true,
+      },
+      {
+        id: fid("last_name"),
+        type: "text",
+        label_bg: "Фамилия",
+        label_en: "Last name",
         required: true,
       },
       {

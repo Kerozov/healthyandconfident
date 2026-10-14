@@ -151,6 +151,21 @@ export type Database = {
         Args: Record<string, never>;
         Returns: string[];
       };
+      /** Migration 080 — subscribed people who got mail but opened nothing since `p_since`. */
+      inactive_subscribers: {
+        Args: { p_since: string };
+        Returns: {
+          id: string;
+          email: string;
+          name: string | null;
+          locale: string | null;
+          tags: string[] | null;
+          created_at: string;
+          sent_count: number;
+          last_sent_at: string | null;
+          last_opened_at: string | null;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
