@@ -67,7 +67,8 @@ type Acc = {
 
 function bumpAcc(acc: Acc, opened: boolean, clicks: number) {
   acc.emailsSent += 1;
-  if (opened) acc.emailsOpened += 1;
+  // A click means the email was opened, even when the open pixel was blocked.
+  if (opened || clicks > 0) acc.emailsOpened += 1;
   if (clicks > 0) {
     acc.emailsWithClicks += 1;
     acc.totalClicks += clicks;

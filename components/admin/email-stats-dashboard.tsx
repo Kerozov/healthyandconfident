@@ -10,13 +10,18 @@ import { AutomationReportPanel } from "@/components/admin/automation-report-pane
 import { formatNumber, formatPercent } from "@/lib/money";
 import { cn, formatDate } from "@/lib/utils";
 import { Card } from "@/components/admin/fields";
-import { Badge, DataTable, TabList } from "@/components/admin/ui";
+import { DataTable, TabList } from "@/components/admin/ui";
 import {
   ColumnChart,
+  CountUp,
+  Funnel,
   RankedBars,
   StatTile,
   TimeSeriesChart,
 } from "@/components/admin/charts";
+import { BuyersPill, RateBar } from "@/components/admin/email-stats-parts";
+import { CampaignsTab } from "@/components/admin/email-stats-campaigns";
+import { PeopleTab } from "@/components/admin/email-stats-people";
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
 
@@ -38,12 +43,6 @@ const TRIGGER_LABELS: Record<string, string> = {
 function shortDay(key: string): string {
   // "2026-08-04" → "4.08"
   return `${Number(key.slice(8, 10))}.${key.slice(5, 7)}`;
-}
-
-function RateCell({ value }: { value: number }) {
-  return (
-    <span className="[font-variant-numeric:tabular-nums]">{formatPercent(value)}</span>
-  );
 }
 
 export function EmailStatsDashboard({
@@ -98,75 +97,98 @@ export function EmailStatsDashboard({
   }
 
   const labels = timeline.map((p) => shortDay(p.date));
+  const funnel = stats.peopleFunnel;
+  const pct = (part: number) =>
+    funnel.recipients ? Math.round((part / funnel.recipients) * 1000) / 10 : 0;
 
   return (
     <div className="space-y-8">
+      <section
+        className="animate-fade-up relative overflow-hidden rounded-3xl bg-gradient-to-br from-forest-800 via-forest-700 to-forest-600 p-6 text-cream shadow-lg motion-reduce:animate-none sm:p-8"
+        aria-label="Обобщение за периода"
+      >
+        <div
+          className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-coral-500/25 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-gold-400/20 blur-3xl"
+          aria-hidden
+        />
+        <p className="relative text-xs font-semibold uppercase tracking-[0.2em] text-cream/70">
+          Хората и имейлите за периода
+        </p>
+        <dl className="relative mt-5 grid grid-cols-2 gap-6 lg:grid-cols-4">
+          {[
+            { label: "Получили имейл", value: funnel.recipients, sub: `${formatNumber(totals.sent)} имейла общо` },
+            { label: "Отворили", value: funnel.opened, sub: `${formatPercent(pct(funnel.opened))} от хората` },
+            { label: "Кликнали", value: funnel.clicked, sub: `${formatPercent(pct(funnel.clicked))} от хората` },
+            { label: "Купили до 7 дни", value: funnel.bought, sub: `${formatPercent(pct(funnel.bought))} от хората` },
+          ].map((item, i) => (
+            <div
+              key={item.label}
+              className="animate-fade-up motion-reduce:animate-none"
+              style={{ animationDelay: `${120 + i * 90}ms` }}
+            >
+              <dt className="text-sm text-cream/75">{item.label}</dt>
+              <dd className="mt-1 font-display text-4xl font-semibold [font-variant-numeric:tabular-nums] sm:text-5xl">
+                <CountUp value={item.value} />
+              </dd>
+              <dd className="mt-1 text-xs text-cream/70">{item.sub}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="relative mt-6 text-xs text-cream/60">
+          „Купили“ = платили до 7 дни след имейл. Това е съвпадение по време, не доказателство, че
+          имейлът е довел покупката.
+        </p>
+      </section>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Изпратени имейли"
-          value={formatNumber(totals.sent)}
+          value={<CountUp value={totals.sent} />}
           delta={trends.sent}
           sub={`${formatNumber(totals.uniqueRecipients)} различни получатели`}
+          spark={timeline.map((p) => p.sent)}
         />
         <StatTile
-          label="Отворени"
-          value={formatNumber(totals.opened)}
-          delta={trends.opened}
-          sub={`${formatPercent(totals.openRate)} open rate`}
+          label="Отворени имейли"
+          value={<CountUp value={totals.openRate} suffix="%" decimals={1} />}
+          delta={trends.openRate}
+          sub={`${formatNumber(totals.opened)} отворени · кликът също се брои`}
         />
         <StatTile
           label="Кликове"
-          value={formatNumber(totals.totalClicks)}
+          value={<CountUp value={totals.totalClicks} />}
           delta={trends.clicks}
-          sub={`${formatNumber(totals.withClicks)} имейла с поне 1 клик`}
+          sub={`CTOR ${formatPercent(totals.ctor)} от отворилите`}
         />
         <StatTile
-          label="CTR"
-          value={formatPercent(totals.clickRate)}
-          sub={`CTOR ${formatPercent(totals.ctor)} — от отворилите`}
+          label="Проблеми с доставка"
+          value={<CountUp value={totals.failed + totals.bounced} />}
+          higherIsBetter={false}
+          sub={`${formatNumber(totals.failed)} неуспешни · ${formatNumber(totals.bounced)} върнати · ${formatNumber(totals.scheduled)} чакат`}
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
-          label="Доставени"
-          value={formatPercent(totals.deliveryRate)}
-          sub={`${formatNumber(totals.delivered)} потвърдени доставки`}
-        />
-        <StatTile
-          label="Върнати (bounce)"
-          value={formatPercent(totals.bounceRate)}
-          higherIsBetter={false}
-          sub={`${formatNumber(totals.bounced)} адреса`}
-        />
-        <StatTile
-          label="Неуспешни"
-          value={formatNumber(totals.failed)}
-          higherIsBetter={false}
-          sub={`${formatPercent(totals.failRate)} от опитите`}
-        />
-        <StatTile
-          label="Чакащи"
-          value={formatNumber(totals.scheduled)}
-          sub={`${formatNumber(totals.canceled)} отменени`}
+      <div className="sticky top-0 z-20 -mx-1 bg-cream/85 px-1 py-2 backdrop-blur">
+        <TabList
+          aria-label="Изглед на статистиката"
+          active={tab}
+          onChange={setTab}
+          contentId="email-stats-panel"
+          tabs={[
+            { id: "overview", label: "Общо" },
+            { id: "campaigns", label: "Кампании", count: stats.campaigns.length },
+            { id: "automations", label: "Автоматизации", count: stats.automations.length },
+            { id: "people", label: "Хора", count: stats.people.length },
+            { id: "links", label: "Линкове", count: stats.topLinks.length },
+          ]}
         />
       </div>
 
-      <TabList
-        aria-label="Изглед на статистиката"
-        active={tab}
-        onChange={setTab}
-        contentId="email-stats-panel"
-        tabs={[
-          { id: "overview", label: "Общо" },
-          { id: "campaigns", label: "Кампании", count: stats.campaigns.length },
-          { id: "automations", label: "Автоматизации", count: stats.automations.length },
-          { id: "people", label: "Хора" },
-          { id: "links", label: "Линкове", count: stats.topLinks.length },
-        ]}
-      />
-
-      <div id="email-stats-panel">
+      <div id="email-stats-panel" className="scroll-mt-24">
       {tab === "overview" && (
         <div className="space-y-6">
           <Card title="Активност по дни">
@@ -184,6 +206,33 @@ export function EmailStatsDashboard({
               </p>
             )}
           </Card>
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card title="Пътят на хората — от имейл до покупка">
+              <Funnel
+                steps={[
+                  { label: "Получили имейл", value: funnel.recipients, hint: "поне един изпратен имейл" },
+                  { label: "Отворили поне един", value: funnel.opened },
+                  { label: "Кликнали поне веднъж", value: funnel.clicked },
+                  { label: "Купили до 7 дни след имейл", value: funnel.bought, hint: "съвпадение по време" },
+                ]}
+              />
+            </Card>
+
+            <Card title="Ангажираност на получателите">
+              <RankedBars
+                data={(["hot", "warm", "cold", "none"] as const).map((tier) => ({
+                  id: tier,
+                  label: TIER_LABELS[tier],
+                  value: stats.tiers[tier],
+                }))}
+              />
+              <p className="mt-4 text-xs text-ink-soft">
+                Горещи = отварят над 50% и са кликнали поне 2 пъти. Без реакция = получавали са,
+                но не са отворили. Виж ги поименно в „Хора“.
+              </p>
+            </Card>
+          </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
             <Card title="Кога отварят — час от деня">
@@ -212,46 +261,21 @@ export function EmailStatsDashboard({
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <Card title="Ангажираност на получателите">
-              <RankedBars
-                data={(["hot", "warm", "cold", "none"] as const).map((tier) => ({
-                  id: tier,
-                  label: TIER_LABELS[tier],
-                  value: stats.tiers[tier],
-                }))}
-              />
-              <p className="mt-4 text-xs text-ink-soft">
-                Горещи = отварят над 50% и кликат. Без реакция = получавали са, но не
-                са отворили.
-              </p>
-            </Card>
-
             <Card title="Аудитория">
               <dl className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <dt className="text-ink-soft">Активни абонати</dt>
-                  <dd className="mt-0.5 font-display text-2xl font-semibold text-ink">
-                    {formatNumber(audience.subscribed)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-ink-soft">Нови за периода</dt>
-                  <dd className="mt-0.5 font-display text-2xl font-semibold text-ink">
-                    {formatNumber(audience.newInPeriod)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-ink-soft">Отписани</dt>
-                  <dd className="mt-0.5 font-display text-2xl font-semibold text-ink">
-                    {formatNumber(audience.unsubscribed)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-ink-soft">Спящи</dt>
-                  <dd className="mt-0.5 font-display text-2xl font-semibold text-ink">
-                    {formatNumber(audience.inactive)}
-                  </dd>
-                </div>
+                {[
+                  { label: "Активни абонати", value: audience.subscribed },
+                  { label: "Нови за периода", value: audience.newInPeriod },
+                  { label: "Отписани", value: audience.unsubscribed },
+                  { label: "Спящи", value: audience.inactive },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <dt className="text-ink-soft">{item.label}</dt>
+                    <dd className="mt-0.5 font-display text-2xl font-semibold text-ink [font-variant-numeric:tabular-nums]">
+                      <CountUp value={item.value} />
+                    </dd>
+                  </div>
+                ))}
               </dl>
               <p className="mt-4 text-xs text-ink-soft">
                 Спящи = получили поне 3 имейла за периода и не са отворили нито един.
@@ -264,106 +288,29 @@ export function EmailStatsDashboard({
                 </p>
               )}
             </Card>
-          </div>
 
-          <Card title="Доставяемост по имейл доставчик">
-            {stats.domains.length === 0 ? (
-              <p className="text-sm text-ink-soft">Няма изпратени имейли за периода.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm [font-variant-numeric:tabular-nums]">
-                  <thead>
-                    <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/70">
-                      <th className="py-2 pr-3 font-semibold">Домейн</th>
-                      <th className="py-2 pr-3 font-semibold">Получатели</th>
-                      <th className="py-2 pr-3 font-semibold">Изпратени</th>
-                      <th className="py-2 pr-3 font-semibold">Отворени</th>
-                      <th className="py-2 font-semibold">Open rate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.domains.map((row) => (
-                      <tr key={row.domain} className="border-b border-ink/5 last:border-0">
-                        <td className="py-2 pr-3 font-medium text-ink">{row.domain}</td>
-                        <td className="py-2 pr-3">{formatNumber(row.recipients)}</td>
-                        <td className="py-2 pr-3">{formatNumber(row.sent)}</td>
-                        <td className="py-2 pr-3">{formatNumber(row.opened)}</td>
-                        <td className="py-2">
-                          <RateCell value={row.openRate} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
+            <Card title="Отваряне по имейл доставчик">
+              {stats.domains.length === 0 ? (
+                <p className="text-sm text-ink-soft">Няма изпратени имейли за периода.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {stats.domains.map((row) => (
+                    <li key={row.domain} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
+                      <span className="truncate text-sm font-medium text-ink">{row.domain}</span>
+                      <span className="text-xs text-ink-soft">
+                        {formatNumber(row.recipients)} души · {formatNumber(row.sent)} имейла
+                      </span>
+                      <RateBar value={row.openRate} className="col-span-2" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </div>
         </div>
       )}
 
-      {tab === "campaigns" && (
-        <DataTable
-          empty={
-            stats.campaigns.length === 0 ? (
-              <p>Няма кампании за избрания период.</p>
-            ) : undefined
-          }
-        >
-          {stats.campaigns.length > 0 && (
-            <table className="w-full min-w-[52rem] text-sm [font-variant-numeric:tabular-nums]">
-              <thead>
-                <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft">
-                  <th className="p-4 font-semibold">Тема</th>
-                  <th className="p-4 font-semibold">Изпратени</th>
-                  <th className="p-4 font-semibold">Отворени</th>
-                  <th className="p-4 font-semibold">Кликове</th>
-                  <th className="p-4 font-semibold">CTOR</th>
-                  <th className="p-4 font-semibold">Проблеми</th>
-                  <th className="p-4 font-semibold">Дата</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.campaigns.map((c) => (
-                  <tr key={c.id} className="border-b border-ink/5 last:border-0">
-                    <td className="p-4">
-                      <p className="font-medium text-ink">{c.subject}</p>
-                      <p className="text-xs text-ink-soft">{c.segment}</p>
-                    </td>
-                    <td className="p-4">{formatNumber(c.sent)}</td>
-                    <td className="p-4">
-                      {formatNumber(c.opened)}{" "}
-                      <span className="text-xs text-ink-soft">
-                        (<RateCell value={c.openRate} />)
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      {formatNumber(c.totalClicks)}{" "}
-                      <span className="text-xs text-ink-soft">
-                        (<RateCell value={c.clickRate} />)
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <RateCell value={c.ctor} />
-                    </td>
-                    <td className="p-4">
-                      {c.failed + c.bounced === 0 ? (
-                        <span className="text-ink-soft">—</span>
-                      ) : (
-                        <Badge tone="warning">
-                          {formatNumber(c.failed)} неусп. / {formatNumber(c.bounced)} bounce
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="p-4 text-ink-soft">
-                      {c.sentAt ? formatDate(c.sentAt, "bg") : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </DataTable>
-      )}
+      {tab === "campaigns" && <CampaignsTab campaigns={stats.campaigns} />}
 
       {tab === "automations" && (
         <DataTable
@@ -381,7 +328,7 @@ export function EmailStatsDashboard({
                   <th className="p-4 font-semibold">Изпратени</th>
                   <th className="p-4 font-semibold">Отворени</th>
                   <th className="p-4 font-semibold">Кликове</th>
-                  <th className="p-4 font-semibold">CTOR</th>
+                  <th className="p-4 font-semibold">Купили до 7 дни</th>
                   <th className="p-4 font-semibold">Чакащи</th>
                   <th className="p-4 font-semibold">
                     <span className="sr-only">Детайли</span>
@@ -418,19 +365,15 @@ export function EmailStatsDashboard({
                     </td>
                     <td className="p-4">{formatNumber(a.sent)}</td>
                     <td className="p-4">
-                      {formatNumber(a.opened)}{" "}
-                      <span className="text-xs text-ink-soft">
-                        (<RateCell value={a.openRate} />)
-                      </span>
+                      <RateBar value={a.openRate} />
+                      <span className="text-xs text-ink-soft">{formatNumber(a.opened)} имейла</span>
                     </td>
                     <td className="p-4">
-                      {formatNumber(a.totalClicks)}{" "}
-                      <span className="text-xs text-ink-soft">
-                        (<RateCell value={a.clickRate} />)
-                      </span>
+                      <RateBar value={a.clickRate} tone="sky" />
+                      <span className="text-xs text-ink-soft">{formatNumber(a.totalClicks)} клика</span>
                     </td>
                     <td className="p-4">
-                      <RateCell value={a.ctor} />
+                      <BuyersPill count={a.buyers} />
                     </td>
                     <td className="p-4 text-ink-soft">{formatNumber(a.scheduled)}</td>
                     <td className="p-4 text-right">
@@ -488,23 +431,7 @@ export function EmailStatsDashboard({
         </DataTable>
       )}
 
-      {tab === "people" && (
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Card title="Най-активни по кликове">
-            <PeopleTable rows={stats.topByClicks} metric="clicks" />
-          </Card>
-          <Card title="Най-активни по отваряния">
-            <PeopleTable rows={stats.topByOpens} metric="opens" />
-          </Card>
-          <Card title="Спящи абонати" className="xl:col-span-2">
-            <p className="mb-4 text-sm text-ink-soft">
-              Получили поне 3 имейла и не са отворили нито един. Кандидати за
-              реактивираща кампания или за изчистване на списъка.
-            </p>
-            <PeopleTable rows={stats.inactive} metric="sent" />
-          </Card>
-        </div>
-      )}
+      {tab === "people" && <PeopleTab people={stats.people} />}
 
       {tab === "links" && (
         <div className="grid gap-6 xl:grid-cols-2">
@@ -553,55 +480,6 @@ export function EmailStatsDashboard({
       )}
 
       </div>
-    </div>
-  );
-}
-
-function PeopleTable({
-  rows,
-  metric,
-}: {
-  rows: EmailStatsOverview["topByClicks"];
-  metric: "clicks" | "opens" | "sent";
-}) {
-  if (rows.length === 0) {
-    return <p className="text-sm text-ink-soft">Няма данни за периода.</p>;
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm [font-variant-numeric:tabular-nums]">
-        <thead>
-          <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
-            <th className="py-2 pr-3 font-semibold">Абонат</th>
-            <th className="py-2 pr-3 font-semibold">Изпратени</th>
-            <th className="py-2 pr-3 font-semibold">Отворени</th>
-            <th className="py-2 font-semibold">Кликове</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.email} className="border-b border-ink/5 last:border-0">
-              <td className="py-2.5 pr-3">
-                <span className="font-medium text-ink">{row.name || row.email}</span>
-                {row.name && <p className="text-xs text-ink-soft">{row.email}</p>}
-              </td>
-              <td className={metric === "sent" ? "py-2.5 pr-3 font-semibold" : "py-2.5 pr-3"}>
-                {formatNumber(row.sent)}
-              </td>
-              <td className={metric === "opens" ? "py-2.5 pr-3 font-semibold" : "py-2.5 pr-3"}>
-                {formatNumber(row.opened)}
-                <span className="ml-1 text-xs text-ink-soft">
-                  ({formatPercent(row.openRate)})
-                </span>
-              </td>
-              <td className={metric === "clicks" ? "py-2.5 font-semibold" : "py-2.5"}>
-                {formatNumber(row.clicks)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

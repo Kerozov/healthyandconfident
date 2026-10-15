@@ -7,7 +7,8 @@ import { formatDate } from "@/lib/utils";
 import { Card } from "@/components/admin/fields";
 import { Alert, Badge, DataTable, TabList } from "@/components/admin/ui";
 import {
-  Meter,
+  CountUp,
+  Funnel,
   RankedBars,
   StatTile,
   TimeSeriesChart,
@@ -56,25 +57,25 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Оборот за периода"
-          value={money(totals.grossCents)}
+          value={<CountUp value={totals.grossCents} format={(v) => money(Math.round(v))} />}
           delta={trends.gross}
           sub={`${money(stats.lifetime.grossCents)} за цялото време`}
         />
         <StatTile
           label="Поръчки"
-          value={formatNumber(totals.orders)}
+          value={<CountUp value={totals.orders} />}
           delta={trends.orders}
           sub={`${formatNumber(totals.itemsSold)} продадени продукта`}
         />
         <StatTile
           label="Средна поръчка"
-          value={money(totals.aovCents)}
+          value={<CountUp value={totals.aovCents} format={(v) => money(Math.round(v))} />}
           delta={trends.aov}
           sub="AOV — оборот / поръчки"
         />
         <StatTile
           label="Клиенти"
-          value={formatNumber(totals.customers)}
+          value={<CountUp value={totals.customers} />}
           delta={trends.customers}
           sub={`${formatNumber(totals.newCustomers)} нови · ${formatNumber(totals.returningCustomers)} повторни`}
         />
@@ -165,18 +166,20 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
             </Card>
 
             <Card title="Фуния на плащането">
-              <div className="space-y-4">
-                <Meter
-                  label="Започнати плащания"
-                  value={stats.funnel.checkoutsStarted}
-                  total={Math.max(stats.funnel.checkoutsStarted, 1)}
-                />
-                <Meter
-                  label="Завършени поръчки"
-                  value={stats.funnel.paidOrders}
-                  total={Math.max(stats.funnel.checkoutsStarted, stats.funnel.paidOrders, 1)}
-                />
-              </div>
+              <Funnel
+                steps={[
+                  {
+                    label: "Хора, започнали плащане",
+                    value: stats.funnel.uniqueStarters,
+                    hint: `${formatNumber(stats.funnel.checkoutsStarted)} опита общо`,
+                  },
+                  {
+                    label: "От тях платили",
+                    value: stats.funnel.paidStarters,
+                    hint: "плащане след натискането на бутона",
+                  },
+                ]}
+              />
               <dl className="mt-6 grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <dt className="text-ink-soft">Конверсия</dt>
@@ -192,8 +195,9 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
                 </div>
               </dl>
               <p className="mt-4 text-xs text-ink-soft">
-                Започнатите плащания се броят само когато купувачът е познат контакт
-                (натиснал е бутон за плащане в сайта).
+                Броим хора, не опити. Започнатото плащане се записва само когато
+                купувачът е познат контакт, затова тук не влизат всички{" "}
+                {formatNumber(stats.funnel.paidOrders)} поръчки за периода.
               </p>
             </Card>
           </div>
@@ -247,8 +251,9 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
                 </div>
               </dl>
               <p className="mt-4 text-xs text-ink-soft">
-                Дни от регистрацията до първата покупка (
-                {formatNumber(stats.daysToPurchase.sample)} клиенти).
+                Дни от записването в списъка до първата покупка (
+                {formatNumber(stats.daysToPurchase.sample)} клиенти). Без хората,
+                които са влезли в списъка чрез самото плащане.
               </p>
             </Card>
           </div>

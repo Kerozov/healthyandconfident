@@ -16,6 +16,11 @@ import {
   type StatsRange,
 } from "@/lib/admin/stats-shared";
 import { engagementTier, type EngagementTier } from "@/lib/admin/engagement";
+import {
+  buildPurchaseIndex,
+  purchaseAfterEmail,
+  type PurchaseIndex,
+} from "@/lib/admin/email-attribution";
 
 export type EmailTotals = {
   sent: number;
@@ -69,6 +74,10 @@ export type CampaignStatRow = {
   openRate: number;
   clickRate: number;
   ctor: number;
+  /** Recipients with a paid order within 7 days after this email. */
+  buyers: number | null;
+  /** Per-recipient rows exist, so the campaign can be opened person by person. */
+  hasRecipients: boolean;
 };
 
 export type AutomationStatRow = {
@@ -85,6 +94,7 @@ export type AutomationStatRow = {
   openRate: number;
   clickRate: number;
   ctor: number;
+  buyers: number;
 };
 
 export type LinkStatRow = {
@@ -111,6 +121,9 @@ export type PersonStatRow = {
   clicks: number;
   openRate: number;
   tier: EngagementTier;
+  lastSentAt: string | null;
+  /** Paid within 7 days after one of the period's emails. */
+  bought: boolean;
 };
 
 export type RecentClickRow = {
@@ -145,9 +158,10 @@ export type EmailStatsOverview = {
   opensByHour: { hour: number; opens: number }[];
   opensByWeekday: { weekday: number; opens: number }[];
   tiers: Record<EngagementTier, number>;
-  topByOpens: PersonStatRow[];
-  topByClicks: PersonStatRow[];
-  inactive: PersonStatRow[];
+  /** Every recipient in the period, most engaged first. */
+  people: PersonStatRow[];
+  /** One population (people who got an email) through each step. */
+  peopleFunnel: { recipients: number; opened: number; clicked: number; bought: number };
   recentClicks: RecentClickRow[];
   audience: AudienceStats;
   sms: { sent: number; failed: number; scheduled: number };
@@ -194,7 +208,29 @@ function newAcc(): Acc {
 }
 
 function isOpened(row: DeliveryRow): boolean {
-  return Boolean(row.openedAt) || row.recipientStatus === "opened";
+  // A click means it was opened, even when the open pixel was blocked.
+  return (
+    Boolean(row.openedAt) ||
+    row.recipientStatus === "opened" ||
+    row.recipientStatus === "clicked" ||
+    row.clicks > 0
+  );
+}
+
+function buyersBySource(
+  rows: DeliveryRow[],
+  purchases: PurchaseIndex,
+  kind: DeliveryRow["kind"],
+): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const row of rows) {
+    if (row.kind !== kind || row.status !== "sent") continue;
+    if (!purchaseAfterEmail(purchases, row.email, row.sentAt)) continue;
+    const set = out.get(row.sourceId) ?? new Set<string>();
+    set.add(row.email);
+    out.set(row.sourceId, set);
+  }
+  return out;
 }
 
 function isDelivered(row: DeliveryRow): boolean {
@@ -396,7 +432,9 @@ function buildCampaignRows(
   rows: DeliveryRow[],
   campaigns: CampaignRecord[],
   range: StatsRange,
+  purchases: PurchaseIndex,
 ): CampaignStatRow[] {
+  const buyers = buyersBySource(rows, purchases, "campaign");
   const byCampaign = new Map<string, Acc>();
   for (const row of rows) {
     if (row.kind !== "campaign") continue;
@@ -446,6 +484,9 @@ function buildCampaignRows(
       openRate: totals.openRate,
       clickRate: totals.clickRate,
       ctor: totals.ctor,
+      // Old campaigns without per-recipient rows can't be matched to orders.
+      buyers: acc ? (buyers.get(campaign.id)?.size ?? 0) : null,
+      hasRecipients: Boolean(acc),
     });
   }
 
@@ -455,7 +496,9 @@ function buildCampaignRows(
 function buildAutomationRows(
   rows: DeliveryRow[],
   automations: AutomationRecord[],
+  purchases: PurchaseIndex,
 ): AutomationStatRow[] {
+  const buyers = buyersBySource(rows, purchases, "automation");
   const byAutomation = new Map<string, Acc>();
   for (const row of rows) {
     if (row.kind !== "automation") continue;
@@ -485,6 +528,7 @@ function buildAutomationRows(
       openRate: totals.openRate,
       clickRate: totals.clickRate,
       ctor: totals.ctor,
+      buyers: buyers.get(automation.id)?.size ?? 0,
     });
   }
 
@@ -494,18 +538,29 @@ function buildAutomationRows(
 function buildPeople(
   rows: DeliveryRow[],
   subscribers: Map<string, { id: string; name: string | null }>,
+  purchases: PurchaseIndex,
 ): PersonStatRow[] {
   const byEmail = new Map<string, Acc>();
+  const lastSent = new Map<string, string>();
+  const bought = new Set<string>();
   for (const row of rows) {
     const acc = byEmail.get(row.email) ?? newAcc();
     bump(acc, row);
     byEmail.set(row.email, acc);
+    if (row.status !== "sent") continue;
+    const prev = lastSent.get(row.email);
+    if (!prev || row.sentAt > prev) lastSent.set(row.email, row.sentAt);
+    if (!bought.has(row.email) && purchaseAfterEmail(purchases, row.email, row.sentAt)) {
+      bought.add(row.email);
+    }
   }
 
   return [...byEmail.entries()].map(([email, acc]) => {
     const totals = toTotals(acc);
     const sub = subscribers.get(email);
     return {
+      lastSentAt: lastSent.get(email) ?? null,
+      bought: bought.has(email),
       email,
       name: sub?.name ?? null,
       subscriberId: sub?.id ?? null,
@@ -531,8 +586,14 @@ export async function getEmailStats(
   // Pull the previous window too so trend arrows have a baseline.
   const fetchSince = range.previousSince ?? range.since;
 
-  const [{ email: allRows, sms }, campaignData, automationData, clickRows, subscriberRows] =
-    await Promise.all([
+  const [
+    { email: allRows, sms },
+    campaignData,
+    automationData,
+    clickRows,
+    subscriberRows,
+    purchaseRows,
+  ] = await Promise.all([
       loadDeliveries(fetchSince),
       supabase
         .from("email_campaigns")
@@ -572,7 +633,22 @@ export async function getEmailStats(
           .order("id", { ascending: true })
           .range(from, to),
       ),
+      fetchAllRows<{ email: string; purchased_at: string }>((from, to) => {
+        let q = supabase
+          .from("subscriber_purchases")
+          .select("email, purchased_at")
+          .eq("payment_status", "paid")
+          .order("purchased_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to);
+        if (range.since) q = q.gte("purchased_at", range.since);
+        return q;
+      }),
     ]);
+
+  const purchases = buildPurchaseIndex(
+    purchaseRows.map((p) => ({ email: p.email, purchasedAt: p.purchased_at })),
+  );
 
   const campaigns = (campaignData.data as CampaignRecord[] | null) ?? [];
   const automations = (automationData.data as AutomationRecord[] | null) ?? [];
@@ -592,7 +668,10 @@ export async function getEmailStats(
     ]),
   );
 
-  const people = buildPeople(currentRows, subscriberMap);
+  const people = buildPeople(currentRows, subscriberMap, purchases).filter(
+    // Only scheduled/failed rows — nobody actually got an email.
+    (p) => p.sent > 0,
+  );
 
   const tiers: Record<EngagementTier, number> = { hot: 0, warm: 0, cold: 0, none: 0 };
   for (const person of people) tiers[person.tier] += 1;
@@ -701,20 +780,26 @@ export async function getEmailStats(
       openRate: range.previousSince ? trend(totals.openRate, previous.openRate) : null,
     },
     timeline: buildTimeline(range, currentRows, clickRows),
-    campaigns: buildCampaignRows(currentRows, campaigns, range),
-    automations: buildAutomationRows(currentRows, automations),
+    campaigns: buildCampaignRows(currentRows, campaigns, range, purchases),
+    automations: buildAutomationRows(currentRows, automations, purchases),
     topLinks,
     domains,
     opensByHour: hourBuckets,
     opensByWeekday: weekdayBuckets,
     tiers,
-    topByOpens: [...people]
-      .sort((a, b) => b.opened - a.opened || b.openRate - a.openRate)
-      .slice(0, 15),
-    topByClicks: [...people]
-      .sort((a, b) => b.clicks - a.clicks || b.opened - a.opened)
-      .slice(0, 15),
-    inactive: inactivePeople.slice(0, 20),
+    people: [...people].sort(
+      (a, b) =>
+        Number(b.bought) - Number(a.bought) ||
+        b.clicks - a.clicks ||
+        b.opened - a.opened ||
+        b.sent - a.sent,
+    ),
+    peopleFunnel: {
+      recipients: people.length,
+      opened: people.filter((p) => p.opened > 0).length,
+      clicked: people.filter((p) => p.clicks > 0).length,
+      bought: people.filter((p) => p.bought).length,
+    },
     recentClicks,
     audience,
     sms: {

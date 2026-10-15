@@ -5,7 +5,8 @@ import { formatNumber, formatPercent } from "@/lib/money";
 import { Card } from "@/components/admin/fields";
 import {
   ColumnChart,
-  Meter,
+  CountUp,
+  Funnel,
   RankedBars,
   StatTile,
   TimeSeriesChart,
@@ -35,20 +36,20 @@ export function VisitStatsDashboard({ stats }: { stats: VisitStatsOverview }) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Уникални посетители"
-          value={formatNumber(totals.visitors)}
+          value={<CountUp value={totals.visitors} />}
           delta={trends.visitors}
           sub={`${formatNumber(totals.newVisitors)} нови · ${formatNumber(totals.returningVisitors)} върнали се`}
           spark={spark}
         />
         <StatTile
           label="Посещения (страници)"
-          value={formatNumber(totals.pageviews)}
+          value={<CountUp value={totals.pageviews} />}
           delta={trends.pageviews}
           sub={`${formatNumber(totals.pagesPerSession)} страници на сесия`}
         />
         <StatTile
           label="Сесии"
-          value={formatNumber(totals.sessions)}
+          value={<CountUp value={totals.sessions} />}
           delta={trends.sessions}
           sub={`средно ${formatDuration(totals.avgSessionSeconds)}`}
         />
@@ -78,38 +79,19 @@ export function VisitStatsDashboard({ stats }: { stats: VisitStatsOverview }) {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Фуния — от влизане до покупка">
-          <div className="space-y-4">
-            <Meter
-              label="Посетители"
-              value={funnel.visitors}
-              total={funnel.visitors}
-            />
-            <Meter
-              label="Записали се (lead)"
-              value={funnel.leads}
-              total={funnel.visitors}
-              valueLabel={`${formatNumber(funnel.leads)} · ${formatPercent(
-                funnel.visitors ? Math.round((funnel.leads / funnel.visitors) * 1000) / 10 : 0,
-              )}`}
-            />
-            <Meter
-              label="Започнали плащане"
-              value={funnel.checkouts}
-              total={funnel.visitors}
-              valueLabel={`${formatNumber(funnel.checkouts)} · ${formatPercent(
-                funnel.visitors ? Math.round((funnel.checkouts / funnel.visitors) * 1000) / 10 : 0,
-              )}`}
-            />
-            <Meter
-              label="Платени поръчки"
-              value={funnel.purchases}
-              total={funnel.visitors}
-              valueLabel={`${formatNumber(funnel.purchases)} · ${formatPercent(
-                funnel.visitors ? Math.round((funnel.purchases / funnel.visitors) * 1000) / 10 : 0,
-              )}`}
-            />
-          </div>
+        <Card title="Фуния — от влизане до плащане">
+          <Funnel
+            steps={[
+              { label: "Посетители", value: funnel.visitors, hint: "различни устройства" },
+              { label: "Записали се (lead)", value: funnel.leads },
+              { label: "Започнали плащане", value: funnel.checkouts },
+            ]}
+          />
+          <p className="mt-4 rounded-xl bg-forest-50 px-3 py-2 text-xs text-forest-800">
+            Платени поръчки за периода: <strong>{formatNumber(funnel.purchases)}</strong>. Не
+            са част от фунията, защото плащането не може да се върже с конкретен посетител
+            (част от хората плащат от линк в имейл). Подробно — в „Плащания“.
+          </p>
         </Card>
 
         <Card title="Източници на трафик">

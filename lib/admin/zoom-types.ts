@@ -7,6 +7,8 @@ export type ZoomSessionRow = {
   joinedAt: string | null;
   leftAt: string;
   durationMinutes: number;
+  /** `meeting.ended` = ред за самата среща, не за участник. */
+  zoomEvent?: string | null;
 };
 
 export type ZoomMeetingSummary = {

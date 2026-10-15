@@ -5,6 +5,7 @@ import { chunkArray } from "@/lib/utils";
 import type { Contact, ContactEvent } from "@/lib/contacts/types";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
 import type { FormField } from "@/lib/forms/types";
+import { getZoomReport } from "@/lib/admin/zoom-stats";
 
 export type ContactSummary = {
   contactId: string | null;
@@ -37,6 +38,10 @@ export type PersonZoomSession = {
   leftAt: string;
   durationMinutes: number;
   meetingId: string | null;
+  /** Session topic, when known. */
+  title?: string | null;
+  /** Share of the session the person stayed, 0–100. */
+  stayPct?: number | null;
 };
 
 const EMPTY_CONTACT: ContactSummary = {
@@ -199,11 +204,44 @@ export async function getPersonProfile(email: string): Promise<{
     });
   }
 
-  const zoomSessions = zoomSessionsFromEvents(
-    ((eventRows as ContactEvent[] | null) ?? []).filter(
-      (e) => e.event_type === "zoom_left",
-    ),
-  );
+  // One row per Zoom session (reconnects merged), from the same report as the
+  // Zoom screen. The contact events are the fallback when the report fails.
+  let zoomSessions: PersonZoomSession[];
+  try {
+    const report = await getZoomReport();
+    zoomSessions = [];
+    for (const session of report.sessions) {
+      const attendee = session.attendees.find(
+        (a) =>
+          (contact.contactId && a.contactId === contact.contactId) ||
+          a.email === normalized,
+      );
+      if (!attendee) continue;
+      zoomSessions.push({
+        joinedAt: attendee.firstJoin ?? session.startedAt,
+        leftAt: attendee.lastLeave ?? session.endedAt,
+        durationMinutes: attendee.minutes,
+        meetingId: session.meetingId,
+        title: session.topic,
+        stayPct: attendee.stayPct,
+      });
+    }
+    zoomSessions.sort((a, b) => b.leftAt.localeCompare(a.leftAt));
+    if (zoomSessions.length > 0) {
+      contact.zoomAttended = true;
+      contact.zoomTotalMinutes = zoomSessions.reduce(
+        (sum, z) => sum + z.durationMinutes,
+        0,
+      );
+    }
+  } catch (error) {
+    console.error("[person-profile] zoom report:", error);
+    zoomSessions = zoomSessionsFromEvents(
+      ((eventRows as ContactEvent[] | null) ?? []).filter(
+        (e) => e.event_type === "zoom_left",
+      ),
+    );
+  }
 
   return { contact, purchases, formSubmissions, zoomSessions };
 }

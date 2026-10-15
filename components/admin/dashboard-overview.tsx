@@ -8,7 +8,7 @@ import { AdminTextLink } from "@/components/admin/admin-text-link";
 import { AdminNavLink } from "@/components/admin/admin-navigation";
 import {
   ColumnChart,
-  Meter,
+  CountUp,
   RankedBars,
   StatTile,
   TimeSeriesChart,
@@ -271,11 +271,17 @@ export function DashboardOverviewPanel({
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {access.visits && (
               <TileLink href="/admin/visits">
+                {/* Without the SQL report there is no distinct-visitor count —
+                    show page views under their own name, not as visitors. */}
                 <StatTile
-                  label="Посетители"
-                  value={formatNumber(totals.visitors)}
-                  delta={trend(totals.visitors, previous?.visitors)}
-                  sub={`${formatNumber(totals.pageviews)} отворени страници`}
+                  label={data.detailed ? "Посетители" : "Отворени страници"}
+                  value={<CountUp value={data.detailed ? totals.visitors : totals.pageviews} />}
+                  delta={data.detailed ? trend(totals.visitors, previous?.visitors) : null}
+                  sub={
+                    data.detailed
+                      ? `${formatNumber(totals.pageviews)} отворени страници`
+                      : "броят посетители се появява със справката"
+                  }
                   spark={timeline.map((p) => p.visitors)}
                 />
               </TileLink>
@@ -284,7 +290,7 @@ export function DashboardOverviewPanel({
               <TileLink href="/admin/payments">
                 <StatTile
                   label="Оборот"
-                  value={money(totals.revenueCents)}
+                  value={<CountUp value={totals.revenueCents} format={(v) => money(Math.round(v))} />}
                   delta={trend(totals.revenueCents, previous?.revenueCents)}
                   sub={`${formatNumber(totals.orders)} поръчки`}
                   spark={timeline.map((p) => p.revenueCents)}
@@ -295,7 +301,7 @@ export function DashboardOverviewPanel({
               <TileLink href="/admin/engagement">
                 <StatTile
                   label="Изпратени имейли"
-                  value={formatNumber(totals.emailsSent)}
+                  value={<CountUp value={totals.emailsSent} />}
                   delta={trend(totals.emailsSent, previous?.emailsSent)}
                   sub={`${formatPercent(openRate(totals))} отваряемост`}
                   spark={timeline.map((p) => p.emailsSent)}
@@ -306,7 +312,7 @@ export function DashboardOverviewPanel({
               <TileLink href="/admin/subscribers">
                 <StatTile
                   label="Нови абонати"
-                  value={formatNumber(totals.newSubscribers)}
+                  value={<CountUp value={totals.newSubscribers} />}
                   delta={trend(totals.newSubscribers, previous?.newSubscribers)}
                   sub={`${formatNumber(data.audience.activeSubscribers)} активни от ${formatNumber(
                     data.audience.totalSubscribers,
@@ -407,42 +413,30 @@ export function DashboardOverviewPanel({
                 </Card>
               )}
               {access.visits && (
-                <Card title="Фуния за периода">
-                  <div className="space-y-4">
-                    <Meter
-                      label="Посетители"
-                      value={totals.visitors}
-                      total={totals.visitors || 1}
-                    />
-                    <Meter
-                      label="Записали се"
-                      value={totals.leads}
-                      total={totals.visitors || 1}
-                      valueLabel={`${formatNumber(totals.leads)} · ${formatPercent(
-                        totals.visitors
-                          ? Math.round((totals.leads / totals.visitors) * 1000) / 10
-                          : 0,
-                      )}`}
-                    />
-                    <Meter
-                      label="Започнали плащане"
-                      value={totals.checkouts}
-                      total={totals.visitors || 1}
-                      valueLabel={`${formatNumber(totals.checkouts)} · ${formatPercent(
-                        totals.visitors
-                          ? Math.round((totals.checkouts / totals.visitors) * 1000) / 10
-                          : 0,
-                      )}`}
-                    />
-                    <Meter
-                      label="Платени поръчки"
-                      value={totals.orders}
-                      total={totals.visitors || 1}
-                      valueLabel={`${formatNumber(totals.orders)} · ${money(
-                        totals.revenueCents,
-                      )}`}
-                    />
-                  </div>
+                <Card title="За периода">
+                  <dl className="grid grid-cols-2 gap-4 text-sm">
+                    {[
+                      { label: "Посетители", value: data.detailed ? totals.visitors : null },
+                      { label: "Записвания (lead)", value: totals.leads },
+                      { label: "Започнати плащания", value: totals.checkouts },
+                      { label: "Платени поръчки", value: totals.orders },
+                    ].map((item) => (
+                      <div key={item.label}>
+                        <dt className="text-ink-soft">{item.label}</dt>
+                        <dd className="mt-0.5 font-display text-2xl font-semibold text-ink [font-variant-numeric:tabular-nums]">
+                          {item.value === null ? "—" : <CountUp value={item.value} />}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="mt-4 text-xs text-ink-soft">
+                    Записванията и плащанията тук са брой събития, не хора, затова не ги
+                    делим на посетителите. Точната фуния по хора е в{" "}
+                    <AdminNavLink href="/admin/visits" className="font-medium text-forest-700 hover:underline">
+                      Посещения
+                    </AdminNavLink>
+                    .
+                  </p>
                 </Card>
               )}
             </div>
