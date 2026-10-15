@@ -5,6 +5,7 @@ import {
   dayKey,
   dayKeysInRange,
   fetchAllRows,
+  monthKey,
   inRange,
   rate,
   statsRange,
@@ -13,6 +14,7 @@ import {
   type StatsRange,
 } from "@/lib/admin/stats-shared";
 import { groupOrders, type Order, type PurchaseRecord } from "@/lib/admin/orders";
+import { chunkArray } from "@/lib/utils";
 
 export type PaymentTotals = {
   grossCents: number;
@@ -91,8 +93,12 @@ export type CurrencyStatRow = {
 
 export type CheckoutFunnel = {
   checkoutsStarted: number;
+  /** Different people who started a checkout in the period. */
   uniqueStarters: number;
+  /** Of those, how many paid on or after their first start. */
+  paidStarters: number;
   paidOrders: number;
+  /** paidStarters / uniqueStarters — per person, so it never tops 100%. */
   conversionRate: number;
   abandoned: number;
   failedPayments: number;
@@ -296,7 +302,7 @@ export async function getPaymentStats(
   // Monthly revenue — always all-time, so seasonality is visible.
   const monthMap = new Map<string, { grossCents: number; orders: number }>();
   for (const order of lifetimePaid) {
-    const key = order.purchasedAt.slice(0, 7);
+    const key = monthKey(order.purchasedAt);
     const entry = monthMap.get(key) ?? { grossCents: 0, orders: 0 };
     entry.grossCents += order.totalCents;
     entry.orders += 1;
@@ -476,24 +482,58 @@ export async function getPaymentStats(
     }))
     .sort((a, b) => b.revenueCents - a.revenueCents);
 
+  // Per person: did someone who started a checkout pay afterwards? Counting
+  // orders against start events mixed people who started twice with buyers who
+  // never had a start event, and could go over 100%.
+  const firstStart = new Map<string, string>();
+  for (const event of checkoutEvents) {
+    const prev = firstStart.get(event.contact_id);
+    if (!prev || event.created_at < prev) firstStart.set(event.contact_id, event.created_at);
+  }
+  const contactEmails = new Map<string, string>();
+  for (const batch of chunkArray([...firstStart.keys()], 150)) {
+    const { data } = await supabase.from("contacts").select("id, email").in("id", batch);
+    for (const row of (data as { id: string; email: string }[] | null) ?? []) {
+      contactEmails.set(row.id, row.email.trim().toLowerCase());
+    }
+  }
+  const paidAtByEmail = new Map<string, string[]>();
+  for (const order of allOrders) {
+    if (order.status !== "paid") continue;
+    const list = paidAtByEmail.get(order.email) ?? [];
+    list.push(order.purchasedAt);
+    paidAtByEmail.set(order.email, list);
+  }
+  let paidStarters = 0;
+  for (const [contactId, startedAt] of firstStart) {
+    const email = contactEmails.get(contactId);
+    if (!email) continue;
+    // A few minutes of slack: the start event can land just after Stripe's.
+    const from = new Date(new Date(startedAt).getTime() - 10 * 60 * 1000).toISOString();
+    if ((paidAtByEmail.get(email) ?? []).some((at) => at >= from)) paidStarters += 1;
+  }
+
   const funnel: CheckoutFunnel = {
     checkoutsStarted: checkoutEvents.length,
-    uniqueStarters: new Set(checkoutEvents.map((e) => e.contact_id)).size,
+    uniqueStarters: firstStart.size,
+    paidStarters,
     paidOrders: totals.orders,
-    conversionRate: rate(totals.orders, checkoutEvents.length),
-    abandoned: Math.max(0, checkoutEvents.length - totals.orders),
+    conversionRate: rate(paidStarters, firstStart.size),
+    abandoned: Math.max(0, firstStart.size - paidStarters),
     failedPayments: totals.failedOrders,
   };
 
-  // How long from signup to first purchase.
+  // How long from signup to first purchase. People whose subscriber row was
+  // created by the purchase itself (within half an hour of it) never had a
+  // "before" — counting them as 0 days pulled the average down.
   const gaps: number[] = [];
   for (const [email, firstAt] of firstOrderAtByEmail) {
     const sub = subscriberByEmail.get(email);
     if (!sub) continue;
-    const days = Math.round(
-      (new Date(firstAt).getTime() - new Date(sub.created_at).getTime()) / 86_400_000,
-    );
-    if (days >= 0 && days < 3650) gaps.push(days);
+    const gapMs = new Date(firstAt).getTime() - new Date(sub.created_at).getTime();
+    if (gapMs < 30 * 60 * 1000) continue;
+    const days = Math.round(gapMs / 86_400_000);
+    if (days < 3650) gaps.push(days);
   }
 
   return {

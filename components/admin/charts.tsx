@@ -176,6 +176,8 @@ export function Sparkline({
     >
       <polyline
         points={points}
+        pathLength={1}
+        className="animate-draw-line"
         fill="none"
         stroke={CHART.single}
         strokeWidth={2}
@@ -399,10 +401,15 @@ export function TimeSeriesChart({
                       d={`${path} L${x(count - 1)},${y(0)} L${x(0)},${y(0)} Z`}
                       fill={colors[si]}
                       opacity={0.1}
+                      className="animate-fade-in"
                     />
                   )}
                   <path
+                    key={path}
                     d={path}
+                    pathLength={1}
+                    className="animate-draw-line"
+                    style={{ animationDelay: `${si * 120}ms` }}
                     fill="none"
                     stroke={colors[si]}
                     strokeWidth={2}
@@ -544,6 +551,8 @@ export function ColumnChart({
                 rx={Math.min(4, barW / 2)}
                 fill={CHART.single}
                 opacity={active === null || active === i ? 1 : 0.55}
+                className="animate-grow-y transition-opacity"
+                style={{ animationDelay: `${Math.min(i * 18, 500)}ms` }}
               />
               {i % Math.max(1, Math.ceil(data.length / 12)) === 0 && (
                 <text
@@ -602,7 +611,7 @@ export function RankedBars({
 
   return (
     <ul className="space-y-3">
-      {data.map((row) => (
+      {data.map((row, i) => (
         <li key={row.id}>
           <div className="flex items-baseline justify-between gap-3">
             <span className="min-w-0 truncate text-sm text-ink" title={row.label}>
@@ -614,10 +623,11 @@ export function RankedBars({
           </div>
           <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-forest-50">
             <div
-              className="h-full rounded-full"
+              className="animate-grow-x h-full rounded-full"
               style={{
                 width: `${Math.max(2, (row.value / max) * 100)}%`,
                 backgroundColor: CHART.single,
+                animationDelay: `${Math.min(i * 60, 600)}ms`,
               }}
             />
           </div>
@@ -652,10 +662,117 @@ export function Meter({
       </div>
       <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-forest-100">
         <div
-          className="h-full rounded-full"
+          className="animate-grow-x h-full rounded-full"
           style={{ width: `${pct}%`, backgroundColor: CHART.single }}
         />
       </div>
     </div>
+  );
+}
+
+// ── Animated number ─────────────────────────────────────────
+
+/** Counts up to `value` once it changes; jumps straight there for reduced motion. */
+export function CountUp({
+  value,
+  suffix = "",
+  decimals = 0,
+  format,
+}: {
+  value: number;
+  suffix?: string;
+  decimals?: number;
+  /** Custom formatter (money, for example); gets the in-between values too. */
+  format?: (value: number) => string;
+}) {
+  const [shown, setShown] = React.useState(0);
+  const from = React.useRef(0);
+  React.useEffect(() => {
+    const duration = window.matchMedia?.("(prefers-reduced-motion: reduce)")
+      .matches
+      ? 0
+      : 900;
+    const start = performance.now();
+    const initial = from.current;
+    let frame = 0;
+    const tick = (now: number) => {
+      const t = duration ? Math.min(1, (now - start) / duration) : 1;
+      setShown(initial + (value - initial) * (1 - Math.pow(1 - t, 3)));
+      if (t < 1) frame = requestAnimationFrame(tick);
+      else from.current = value;
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  if (format) return <>{format(shown)}</>;
+  return (
+    <>
+      {shown.toLocaleString("bg-BG", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}
+      {suffix}
+    </>
+  );
+}
+
+// ── Funnel ──────────────────────────────────────────────────
+
+export type FunnelStep = {
+  label: string;
+  value: number;
+  /** One line under the step — what exactly is counted. */
+  hint?: string;
+};
+
+/**
+ * Steps of one population, each a share of the first. Every bar is the brand
+ * olive: the length carries the number, the step-to-step drop is printed.
+ */
+export function Funnel({ steps }: { steps: FunnelStep[] }) {
+  const base = steps[0]?.value ?? 0;
+  if (base === 0) {
+    return <p className="text-sm text-ink-soft">Няма данни за периода.</p>;
+  }
+  return (
+    <ol className="space-y-3">
+      {steps.map((step, i) => {
+        const pct = base > 0 ? (step.value / base) * 100 : 0;
+        const prev = i > 0 ? steps[i - 1].value : null;
+        const stepRate = prev ? Math.round((step.value / prev) * 1000) / 10 : null;
+        return (
+          <li key={step.label} className="animate-fade-up motion-reduce:animate-none" style={{ animationDelay: `${i * 90}ms` }}>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-sm font-medium text-ink">{step.label}</span>
+              <span className="shrink-0 text-sm [font-variant-numeric:tabular-nums]">
+                <span className="font-semibold text-ink">
+                  <CountUp value={step.value} />
+                </span>
+                {i > 0 && (
+                  <span className="ml-2 text-xs text-ink-soft">
+                    {Math.round(pct * 10) / 10}% от всички
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="mt-1.5 h-3 w-full overflow-hidden rounded-full bg-forest-50">
+              <div
+                className="animate-grow-x h-full rounded-full"
+                style={{
+                  width: `${Math.max(step.value > 0 ? 1.5 : 0, pct)}%`,
+                  backgroundColor: CHART.single,
+                  opacity: 1 - i * 0.12,
+                  animationDelay: `${i * 120}ms`,
+                }}
+              />
+            </div>
+            <div className="mt-1 flex flex-wrap justify-between gap-2 text-xs text-ink-soft">
+              <span>{step.hint}</span>
+              {stepRate !== null && <span>{stepRate}% от предната стъпка</span>}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

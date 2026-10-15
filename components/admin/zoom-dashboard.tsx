@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Clock, Repeat, Search, Users, Video } from "lucide-react";
 import { AdminNavLink } from "@/components/admin/admin-navigation";
 import { cn } from "@/lib/utils";
+import { CountUp } from "@/components/admin/charts";
 import type {
   ZoomPerson,
   ZoomReport,
@@ -68,45 +69,6 @@ function useMounted(delay = 0) {
   return mounted;
 }
 
-function CountUp({
-  value,
-  suffix = "",
-  decimals = 0,
-}: {
-  value: number;
-  suffix?: string;
-  decimals?: number;
-}) {
-  const [shown, setShown] = useState(0);
-  const from = useRef(0);
-  useEffect(() => {
-    // Без анимация при „намалено движение“ — стига направо до стойността.
-    const duration = window.matchMedia?.("(prefers-reduced-motion: reduce)")
-      .matches
-      ? 0
-      : 900;
-    const start = performance.now();
-    const initial = from.current;
-    let frame = 0;
-    const tick = (now: number) => {
-      const t = duration ? Math.min(1, (now - start) / duration) : 1;
-      setShown(initial + (value - initial) * (1 - Math.pow(1 - t, 3)));
-      if (t < 1) frame = requestAnimationFrame(tick);
-      else from.current = value;
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [value]);
-  return (
-    <>
-      {shown.toLocaleString("bg-BG", {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      })}
-      {suffix}
-    </>
-  );
-}
 
 function Bar({
   value,

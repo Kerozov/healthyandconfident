@@ -12,6 +12,7 @@ import {
   trend,
   type StatsPeriod,
 } from "@/lib/admin/stats-shared";
+import { chunkArray } from "@/lib/utils";
 import {
   VISIT_DEVICE_LABELS,
   VISIT_SOURCE_LABELS,
@@ -203,6 +204,34 @@ export async function getVisitStats(period: StatsPeriod): Promise<VisitStatsOver
     if (row.event !== "pageview") continue;
     const existing = firstSeen.get(row.visitor_id);
     if (!existing || row.created_at < existing) firstSeen.set(row.visitor_id, row.created_at);
+  }
+  // Only what was fetched is known above. A visitor whose first fetched view is
+  // in this period may still have come before the fetched window — look that up,
+  // or every returning visitor from earlier months reads as "new".
+  if (fetchSince && range.since) {
+    const candidates = [...firstSeen.entries()]
+      .filter(([, first]) => first >= range.since!)
+      .map(([id]) => id);
+    const batches = chunkArray(candidates, 150);
+    for (let i = 0; i < batches.length; i += 4) {
+      const found = await Promise.all(
+        batches.slice(i, i + 4).map((batch) =>
+          fetchAllRows<{ visitor_id: string }>((from, to) =>
+            supabase
+              .from("site_visits")
+              .select("visitor_id")
+              .eq("event", "pageview")
+              .lt("created_at", fetchSince)
+              .in("visitor_id", batch)
+              .order("id", { ascending: true })
+              .range(from, to),
+          ),
+        ),
+      );
+      for (const rows of found) {
+        for (const row of rows) firstSeen.set(row.visitor_id, fetchSince);
+      }
+    }
   }
 
   const purchaseCount = (since: string | null, until: string | null) => {

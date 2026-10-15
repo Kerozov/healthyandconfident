@@ -1,18 +1,11 @@
 "use client";
 
 import { useMemo, useState, useTransition, Fragment } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Download, Upload, Trash2, Tag, UserMinus, UserCheck, X, ChevronUp, BarChart3, Loader2 } from "lucide-react";
 import type { Subscriber, Segment, SegmentGroup } from "@/lib/supabase/types";
-import type { EmailEngagementSummary, EngagementActivityItem, ClickEventItem } from "@/lib/admin/engagement";
-import type { PersonEmailItem } from "@/lib/admin/person-email";
-import type {
-  ContactSummary,
-  PersonFormSubmission,
-  PersonPurchase,
-  PersonZoomSession,
-} from "@/lib/admin/person-profile";
+import type { EmailEngagementSummary } from "@/lib/admin/engagement";
+import type { ContactSummary } from "@/lib/admin/person-profile";
 import {
   SegmentAssignChecklist,
   assignableSegments,
@@ -39,7 +32,7 @@ import {
   type ImportSegmentUsage,
   type ImportSubscriberRow,
 } from "@/lib/admin/import-subscribers";
-import { cn, formatDate, chunkArray } from "@/lib/utils";
+import { cn, chunkArray } from "@/lib/utils";
 import {
   ALL_HEALTH_TAG_KEYS,
   applyHealthSelectionToTags,
@@ -48,7 +41,10 @@ import {
   type HealthSelection,
 } from "@/lib/site/health-tags";
 import { activityInterestLabelsFromTags, isActivityTag } from "@/lib/site/activity-tags";
-import { PersonEmailsTable } from "@/components/admin/person-emails-table";
+import {
+  PersonStatsPanel,
+  type PersonStatsDetail,
+} from "@/components/admin/person-stats-panel";
 
 /** Older rows only have `name` — prefill the edit form by splitting it once. */
 function subscriberNameParts(s: Subscriber): { first: string; last: string } {
@@ -131,18 +127,7 @@ export function SubscribersManager({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [statsEmail, setStatsEmail] = useState<string | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [statsDetail, setStatsDetail] = useState<{
-    summary: EmailEngagementSummary;
-    emails: PersonEmailItem[];
-    activity: EngagementActivityItem[];
-    clickEvents: ClickEventItem[];
-    profile: {
-      contact: ContactSummary;
-      purchases: PersonPurchase[];
-      formSubmissions: PersonFormSubmission[];
-      zoomSessions: PersonZoomSession[];
-    };
-  } | null>(null);
+  const [statsDetail, setStatsDetail] = useState<PersonStatsDetail | null>(null);
 
   const filtered = useMemo(() => {
     let expandedTags: string[] | null = null;
@@ -1289,268 +1274,7 @@ export function SubscribersManager({
                               <Loader2 className="h-4 w-4 animate-spin" /> Зареждане…
                             </p>
                           ) : statsDetail ? (
-                            <div className="space-y-6">
-                              <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                  <p className="font-display text-base font-semibold text-ink">
-                                    Профил: {s.email}
-                                  </p>
-                                  {statsDetail.profile.contact.contactId && (
-                                    <Link
-                                      href={`/admin/contacts/${statsDetail.profile.contact.contactId}`}
-                                      className="mt-1 inline-block text-xs font-medium text-forest-700 hover:underline"
-                                    >
-                                      Отвори journey в Контакти →
-                                    </Link>
-                                  )}
-                                </div>
-                                <span
-                                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                    statsDetail.summary.tier === "hot"
-                                      ? "bg-coral-500/15 text-coral-700"
-                                      : statsDetail.summary.tier === "warm"
-                                        ? "bg-gold-400/25 text-amber-900"
-                                        : statsDetail.summary.tier === "cold"
-                                          ? "bg-sky-100 text-sky-800"
-                                          : "bg-ink/5 text-ink-soft"
-                                  }`}
-                                >
-                                  {statsDetail.summary.tier === "hot"
-                                    ? "Горещ лийд"
-                                    : statsDetail.summary.tier === "warm"
-                                      ? "Топъл"
-                                      : statsDetail.summary.tier === "cold"
-                                        ? "Студен"
-                                        : "Без активност"}
-                                </span>
-                              </div>
-
-                              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                <div className="rounded-xl border border-ink/10 bg-white p-4">
-                                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-                                    Имейли
-                                  </p>
-                                  <p className="mt-2 text-sm">
-                                    <strong>{statsDetail.summary.emailsOpened}</strong>/
-                                    {statsDetail.summary.emailsSent} отворени (
-                                    {statsDetail.summary.openRate}%)
-                                  </p>
-                                  <p className="mt-1 text-xs text-ink-soft">
-                                    {statsDetail.summary.totalClicks} клика на бутони
-                                  </p>
-                                </div>
-                                <div className="rounded-xl border border-ink/10 bg-white p-4">
-                                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-                                    Плащане
-                                  </p>
-                                  <p className="mt-2 text-sm font-medium">
-                                    {statsDetail.profile.contact.paymentStatus === "paid"
-                                      ? "Платил"
-                                      : statsDetail.profile.contact.paymentStatus === "unpaid"
-                                        ? "Неплатил"
-                                        : "Няма contact запис"}
-                                  </p>
-                                  {statsDetail.profile.contact.paidAt && (
-                                    <p className="mt-1 text-xs text-ink-soft">
-                                      {formatDate(statsDetail.profile.contact.paidAt, "bg")}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="rounded-xl border border-ink/10 bg-white p-4">
-                                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-                                    Zoom
-                                  </p>
-                                  <p className="mt-2 text-sm font-medium">
-                                    {statsDetail.profile.contact.zoomAttended
-                                      ? `${statsDetail.profile.contact.zoomTotalMinutes} мин. общо`
-                                      : "Не е участвал"}
-                                  </p>
-                                  {statsDetail.profile.contact.zoomLastJoinedAt && (
-                                    <p className="mt-1 text-xs text-ink-soft">
-                                      Последно:{" "}
-                                      {formatDate(
-                                        statsDetail.profile.contact.zoomLastJoinedAt,
-                                        "bg",
-                                      )}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="rounded-xl border border-ink/10 bg-white p-4">
-                                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-                                    Покупки
-                                  </p>
-                                  <p className="mt-2 text-sm font-medium">
-                                    {statsDetail.profile.purchases.length > 0
-                                      ? `${statsDetail.profile.purchases.length} продукт(а)`
-                                      : "Няма"}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {statsDetail.profile.zoomSessions.length > 0 && (
-                                <div>
-                                  <p className="mb-2 text-sm font-semibold">Zoom сесии</p>
-                                  <div className="overflow-x-auto rounded-xl border border-ink/10 bg-white">
-                                    <table className="w-full text-sm">
-                                      <thead>
-                                        <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
-                                          <th className="px-3 py-2">Влязъл</th>
-                                          <th className="px-3 py-2">Излязъл</th>
-                                          <th className="px-3 py-2">Meeting</th>
-                                          <th className="px-3 py-2">Време</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {statsDetail.profile.zoomSessions.map((session, i) => (
-                                          <tr
-                                            key={`${session.leftAt}-${i}`}
-                                            className="border-b border-ink/5 last:border-0"
-                                          >
-                                            <td className="px-3 py-2 text-xs text-ink-soft">
-                                              {session.joinedAt
-                                                ? formatDate(session.joinedAt, "bg")
-                                                : "—"}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs text-ink-soft">
-                                              {formatDate(session.leftAt, "bg")}
-                                            </td>
-                                            <td className="px-3 py-2 font-mono text-xs text-ink-soft">
-                                              {session.meetingId
-                                                ? session.meetingId.length > 14
-                                                  ? `…${session.meetingId.slice(-10)}`
-                                                  : session.meetingId
-                                                : "—"}
-                                            </td>
-                                            <td className="px-3 py-2 font-medium text-forest-700">
-                                              {session.durationMinutes} мин.
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              )}
-
-                              {statsDetail.profile.purchases.length > 0 && (
-                                <div>
-                                  <p className="mb-2 text-sm font-semibold">Покупки</p>
-                                  <ul className="space-y-2 rounded-xl border border-ink/10 bg-white p-3">
-                                    {statsDetail.profile.purchases.map((purchase) => (
-                                      <li
-                                        key={`${purchase.productTitle}-${purchase.purchasedAt}-${purchase.stripeProductId ?? ""}`}
-                                        className="flex flex-wrap justify-between gap-2 text-sm"
-                                      >
-                                        <span className="font-medium">
-                                          {purchase.productTitle}
-                                          <span
-                                            className={cn(
-                                              "ml-2 rounded-full px-2 py-0.5 text-xs",
-                                              purchase.paymentStatus === "paid"
-                                                ? "bg-forest-500/15 text-forest-700"
-                                                : purchase.paymentStatus === "refunded"
-                                                  ? "bg-gold-400/20 text-amber-900"
-                                                  : "bg-coral-500/15 text-coral-700",
-                                            )}
-                                          >
-                                            {purchase.paymentStatus === "paid"
-                                              ? "Платено"
-                                              : purchase.paymentStatus === "refunded"
-                                                ? "Възстановено"
-                                                : "Неуспешно"}
-                                          </span>
-                                        </span>
-                                        <span className="text-xs text-ink-soft">
-                                          {formatDate(purchase.purchasedAt, "bg")}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {statsDetail.profile.formSubmissions.length > 0 && (
-                                <div>
-                                  <p className="mb-2 text-sm font-semibold">
-                                    Отговори от форми
-                                  </p>
-                                  <div className="space-y-3">
-                                    {statsDetail.profile.formSubmissions.map((form) => (
-                                      <div
-                                        key={`${form.formName}-${form.submittedAt}`}
-                                        className="rounded-xl border border-ink/10 bg-white p-4"
-                                      >
-                                        <div className="flex flex-wrap justify-between gap-2">
-                                          <p className="text-sm font-semibold">
-                                            {form.formName}
-                                          </p>
-                                          <p className="text-xs text-ink-soft">
-                                            {formatDate(form.submittedAt, "bg")}
-                                          </p>
-                                        </div>
-                                        <ul className="mt-2 space-y-1 text-xs">
-                                          {form.rows.map((row) => (
-                                            <li key={`${form.formName}-${row.label}`}>
-                                              <span className="font-medium text-slate-700">
-                                                {row.label}:
-                                              </span>{" "}
-                                              <span className="text-ink-soft">
-                                                {row.value}
-                                              </span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {statsDetail.emails.length > 0 && (
-                                <div>
-                                  <p className="mb-2 text-sm font-semibold">
-                                    Имейли на човека
-                                  </p>
-                                  <p className="mb-3 text-xs text-ink-soft">
-                                    Автоматизации, кампании и напомняния — изпратени,
-                                    планирани и неуспешни.
-                                  </p>
-                                  <PersonEmailsTable emails={statsDetail.emails} />
-                                </div>
-                              )}
-
-                              {statsDetail.clickEvents.length > 0 && (
-                                <div>
-                                  <p className="mb-2 text-sm font-semibold">
-                                    Кликове по линкове
-                                  </p>
-                                  <ul className="space-y-2 rounded-xl border border-ink/10 bg-white p-3">
-                                    {statsDetail.clickEvents.map((click, i) => (
-                                      <li
-                                        key={`${click.clickedAt}-${i}`}
-                                        className="text-xs text-ink-soft"
-                                      >
-                                        <span className="font-medium text-slate-700">
-                                          {click.linkLabel || click.targetUrl || "Линк"}
-                                        </span>
-                                        {" · "}
-                                        {click.sourceTitle} ·{" "}
-                                        {formatDate(click.clickedAt, "bg")}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {statsDetail.emails.length === 0 &&
-                                statsDetail.profile.zoomSessions.length === 0 &&
-                                statsDetail.profile.purchases.length === 0 &&
-                                statsDetail.profile.formSubmissions.length === 0 && (
-                                  <p className="text-sm text-ink-soft">
-                                    Още няма записани имейли или активност за този човек.
-                                  </p>
-                                )}
-                            </div>
+                            <PersonStatsPanel email={s.email} name={s.name} detail={statsDetail} />
                           ) : (
                             <p className="text-sm text-ink-soft">Няма данни.</p>
                           )}

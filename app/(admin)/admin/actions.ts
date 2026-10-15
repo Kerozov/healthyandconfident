@@ -3243,6 +3243,19 @@ export async function getSubscriberEngagementReport(email: string) {
   return { ok: true as const, ...detail, profile };
 }
 
+export async function getCampaignStatsDetail(campaignId: string) {
+  await requireAdmin(["engagement", "campaigns"] as const);
+  const { getCampaignStatsDetail: load } = await import(
+    "@/lib/admin/campaign-stats-detail"
+  );
+  try {
+    return { ok: true as const, detail: await load(campaignId) };
+  } catch (error) {
+    console.error("[stats] campaign detail:", error);
+    return { ok: false as const };
+  }
+}
+
 export async function getSubscribersEngagementSummaries(emails: string[]) {
   await requireAdmin(["engagement", "subscribers"] as const);
   const map = await getEngagementSummaryForEmails(emails);
