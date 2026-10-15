@@ -51,6 +51,8 @@ export type IntegrationSyncState = {
   last_updated: number;
   last_skipped: number;
   last_error: string | null;
+  /** Integration-specific choices, e.g. FunnelBrand's funnel → segment routing. */
+  settings?: Record<string, unknown> | null;
   updated_at: string;
 };
 

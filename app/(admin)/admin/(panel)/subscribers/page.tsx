@@ -35,7 +35,7 @@ export default async function AdminSubscribersPage() {
       />
       <SubscribersTabs>
         <div className="space-y-8">
-          <FunnelBrandSync status={funnelBrandStatus} />
+          <FunnelBrandSync status={funnelBrandStatus} segments={segments} />
           <GroupsManager groups={groups} countByGroupId={audienceCounts.byGroupId} />
           <SegmentsManager
             segments={segments}
