@@ -111,7 +111,7 @@ export function StatTile({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-ink/10 bg-white p-5",
+        "animate-fade-up rounded-2xl border border-ink/10 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md motion-reduce:animate-none",
         className,
       )}
     >

@@ -139,7 +139,7 @@ export function ContactDetailView({
       <section className="rounded-xl border border-ink/10 bg-white p-6">
         <h2 className="font-display text-xl font-semibold">Zoom срещи</h2>
         <p className="mt-1 text-sm text-ink-soft">
-          В кои срещи е участвал и колко минути е останал във всяка.
+          На кои сесии е бил и колко минути е останал на всяка.
         </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[420px] text-left text-sm">
@@ -152,7 +152,7 @@ export function ContactDetailView({
             </thead>
             <tbody>
               {zoomMeetings.map((m) => (
-                <tr key={m.meetingId} className="border-b border-ink/5">
+                <tr key={`${m.meetingId}-${m.lastAt}`} className="border-b border-ink/5">
                   <td className="py-2.5 pr-4">
                     <p className="font-medium">{m.title}</p>
                     <p className="font-mono text-[10px] text-ink-soft">

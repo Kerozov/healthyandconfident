@@ -11,6 +11,7 @@
     "verify:worker": "bun scripts/verify-worker.ts",
     "verify:email": "bun scripts/verify-email-blocks.ts",
     "verify:upload": "bun scripts/verify-upload.ts",
+    "verify:zoom": "bun scripts/verify-zoom-report.ts",
     "backfill:slugs": "bun scripts/backfill-catalog-slugs.ts"
   },
   "dependencies": {

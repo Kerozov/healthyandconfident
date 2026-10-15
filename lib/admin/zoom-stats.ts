@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
+import { fetchAllRows } from "@/lib/admin/stats-shared";
+import { buildZoomReport, type ZoomReport } from "@/lib/admin/zoom-report";
 import { formatMeetingLabel } from "@/lib/admin/zoom-display";
 import type {
   ZoomAttendeeMeeting,
@@ -28,6 +30,7 @@ type SessionDbRow = {
   join_time: string | null;
   leave_time: string;
   duration_minutes: number;
+  zoom_event: string | null;
 };
 
 type AttendeeAcc = {
@@ -49,6 +52,7 @@ function sessionFromDb(row: SessionDbRow): ZoomSessionRow {
     joinedAt: row.join_time,
     leftAt: row.leave_time,
     durationMinutes: row.duration_minutes,
+    zoomEvent: row.zoom_event,
   };
 }
 
@@ -85,16 +89,20 @@ function attendeeFromAcc(
 
 async function loadZoomSessions(): Promise<ZoomSessionRow[]> {
   const supabase = getAdminClient();
-  const { data: zoomRows } = await supabase
-    .from("zoom_session_events")
-    .select(
-      "id, contact_id, meeting_id, email, participant_name, join_time, leave_time, duration_minutes",
-    )
-    .order("leave_time", { ascending: false })
-    .limit(500);
+  // Всички редове — старият таван от 500 режеше по-старите срещи мълчаливо.
+  const zoomRows = await fetchAllRows<SessionDbRow>((from, to) =>
+    supabase
+      .from("zoom_session_events")
+      .select(
+        "id, contact_id, meeting_id, email, participant_name, join_time, leave_time, duration_minutes, zoom_event",
+      )
+      .order("leave_time", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 
-  if (zoomRows && zoomRows.length > 0) {
-    return (zoomRows as SessionDbRow[]).map(sessionFromDb);
+  if (zoomRows.length > 0) {
+    return zoomRows.map(sessionFromDb);
   }
 
   const rows = await loadZoomLeftRowsLegacy();
@@ -142,6 +150,7 @@ function parseSessions(rows: RawRow[]): ZoomSessionRow[] {
       joinedAt: joinTime,
       leftAt: leaveTime,
       durationMinutes,
+      zoomEvent: "participant_left",
     });
   }
 
@@ -155,13 +164,35 @@ async function loadZoomLeftRowsLegacy(): Promise<RawRow[]> {
     .select("id, contact_id, created_at, metadata, contacts(email, name)")
     .eq("event_type", "zoom_left")
     .order("created_at", { ascending: false })
-    .limit(500);
+    .limit(5000);
 
   // The embed resolves through the contact_id FK at runtime; our hand-written
   // Database type declares no relationships, so the cast goes via `unknown`.
   return (data as unknown as RawRow[]) ?? [];
 }
 
+/**
+ * Пълен Zoom отчет: всяка проведена сесия поотделно, кой колко е стоял
+ * (и хората без имейл), и хората през всички сесии.
+ */
+export async function getZoomReport(): Promise<ZoomReport> {
+  const sessions = await loadZoomSessions();
+  return buildZoomReport(
+    sessions.map((s) => ({
+      id: s.eventId,
+      contactId: s.contactId || null,
+      meetingId: s.meetingId,
+      email: s.email || null,
+      name: s.name,
+      joinedAt: s.joinedAt,
+      leftAt: s.leftAt,
+      durationMinutes: s.durationMinutes,
+      zoomEvent: s.zoomEvent ?? null,
+    })),
+  );
+}
+
+/** Старият обобщен изглед по Meeting ID — ползва се от филтъра в Контакти. */
 export async function getZoomOverview(): Promise<ZoomOverview> {
   const sessions = await loadZoomSessions();
 
@@ -295,31 +326,24 @@ export async function getContactZoomMeetings(
   contactId: string,
   email: string,
 ): Promise<ZoomAttendeeMeeting[]> {
-  const [sessions, overview] = await Promise.all([
-    getZoomSessionsForContact(contactId, email),
-    getZoomOverview(),
-  ]);
-  const titles = new Map(overview.meetings.map((m) => [m.meetingId, m.title]));
-  const map = new Map<string, { minutes: number; lastAt: string }>();
-
-  for (const session of sessions) {
-    const row = map.get(session.meetingId) ?? {
-      minutes: 0,
-      lastAt: session.leftAt,
-    };
-    row.minutes += session.durationMinutes;
-    if (session.leftAt > row.lastAt) row.lastAt = session.leftAt;
-    map.set(session.meetingId, row);
+  const normalized = email.trim().toLowerCase();
+  const report = await getZoomReport();
+  const rows: ZoomAttendeeMeeting[] = [];
+  for (const session of report.sessions) {
+    const attendee = session.attendees.find(
+      (a) =>
+        (a.contactId && a.contactId === contactId) ||
+        (normalized && a.email === normalized),
+    );
+    if (!attendee) continue;
+    rows.push({
+      meetingId: session.meetingId,
+      title: session.topic,
+      minutes: attendee.minutes,
+      lastAt: session.startedAt,
+    });
   }
-
-  return [...map.entries()]
-    .map(([meetingId, row]) => ({
-      meetingId,
-      title: titles.get(meetingId) ?? formatMeetingLabel(meetingId),
-      minutes: row.minutes,
-      lastAt: row.lastAt,
-    }))
-    .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+  return rows;
 }
 
 export async function getZoomMeetingOptions(): Promise<
