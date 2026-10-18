@@ -7,9 +7,13 @@ const TEMPLATE_RE = /\{\{(\w+)\}\}/g;
 /** Notifier short links are ~20–25 chars — use 24 for safe UI estimates. */
 export const ESTIMATED_SHORT_URL_LENGTH = 24;
 
-export const SMS_TEMPLATE_SAMPLE = {
-  name: "Мария",
+export const SMS_TEMPLATE_SAMPLE: Record<string, string> = {
+  name: "Мария Иванова",
+  full_name: "Мария Иванова",
+  first_name: "Мария",
+  last_name: "Иванова",
   email: "maria@example.com",
+  phone: "+359888123456",
 };
 
 export type SmsComposeCheck = {

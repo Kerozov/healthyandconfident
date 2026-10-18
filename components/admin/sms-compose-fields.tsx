@@ -1,6 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { Field, Input, Textarea } from "@/components/admin/fields";
+import { MERGE_TAGS } from "@/lib/automation/template";
+import { insertAtCursor } from "@/lib/email/body-buttons";
 import {
   checkSmsCompose,
   containsCyrillic,
@@ -30,18 +33,50 @@ export function SmsComposeFields({
   onLinkChange,
   templateVars,
   messageLabel = "Текст",
-  messageHint = "Обикновен текст. {{name}} и {{email}} се заменят при изпращане.",
+  messageHint = "Обикновен текст. Бутоните отгоре вмъкват име, фамилия, телефон… — заменят се при изпращане.",
   linkLabel = "Tracked link",
   linkHint = "Пълен https:// адрес — worker-ът го съкращава автоматично (~24 символа).",
   showPreview = true,
   allowMergeTags = true,
 }: SmsComposeFieldsProps) {
   const check = checkSmsCompose(message, link, templateVars, { allowMergeTags });
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+
+  function insertTag(tag: string) {
+    const el = messageRef.current;
+    const { value, caret } = insertAtCursor(
+      message,
+      tag,
+      el?.selectionStart ?? message.length,
+      el?.selectionEnd ?? message.length,
+    );
+    onMessageChange(value);
+    requestAnimationFrame(() => {
+      messageRef.current?.focus();
+      messageRef.current?.setSelectionRange(caret, caret);
+    });
+  }
 
   return (
     <div className="space-y-4">
       <Field label={messageLabel} hint={messageHint}>
+        {allowMergeTags && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {MERGE_TAGS.map((t) => (
+              <button
+                key={t.tag}
+                type="button"
+                onClick={() => insertTag(t.tag)}
+                title={`Вмъква ${t.tag} — напр. „${t.sample}“`}
+                className="inline-flex h-7 items-center rounded-full border border-ink/15 bg-white px-2.5 text-[11px] font-semibold text-ink hover:bg-cream"
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
         <Textarea
+          ref={messageRef}
           rows={6}
           value={message}
           onChange={(e) => onMessageChange(e.target.value)}

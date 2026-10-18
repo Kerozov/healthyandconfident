@@ -7,6 +7,7 @@ import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
 import { unsubscribeLinkForEmail } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
+import { templateVarsForContext } from "@/lib/automation/recipient-vars";
 import { automationEmailContent } from "@/lib/automation/content";
 import { computeAutomationSendAt } from "@/lib/automation/send-at";
 import { automationJobIdempotencyKey } from "@/lib/automation/idempotency";
@@ -50,8 +51,9 @@ export async function buildAutomationEmailMessage(
   const content = automationEmailContent(automation, locale);
   if (!content) return null;
 
-  const subject = renderEmailTemplate(content.subject, { name: ctx.name, email });
-  const renderedHtml = renderEmailTemplate(content.html, { name: ctx.name, email });
+  const vars = await templateVarsForContext(ctx);
+  const subject = renderEmailTemplate(content.subject, vars);
+  const renderedHtml = renderEmailTemplate(content.html, vars);
   const attachmentPath =
     locale === "en" ? automation.attachment_path_en : automation.attachment_path_bg;
   const attachmentFilename =
@@ -89,7 +91,7 @@ export async function buildAutomationEmailMessage(
     cta: ctaHref
       ? { label: ctaLabel.trim(), href: ctaHref }
       : null,
-    vars: { name: ctx.name, email },
+    vars,
     unsubscribeHref: unsubscribeLinkForEmail(email, locale),
     heroImageUrl,
     recipient: { email, subscriberId: ctx.subscriberId },

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Mail, Play, Plus, Trash2, User } from "lucide-react";
+import { Loader2, Mail, Phone, Play, Plus, Trash2, User } from "lucide-react";
+import { MERGE_TAGS } from "@/lib/automation/template";
 import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import { productSellableInLocale } from "@/lib/site/product-locale";
@@ -150,7 +151,7 @@ function LinkInput({
   );
 }
 
-/** Textarea with {{name}} / {{email}} insertion at the caret. */
+/** Textarea with `{{first_name}}`, `{{name}}`, `{{phone}}`… insertion at the caret. */
 function TokenTextarea({
   value,
   onChange,
@@ -183,18 +184,24 @@ function TokenTextarea({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
-        <TokenButton
-          disabled={disabled}
-          onClick={() => insert("{{name}}")}
-          icon={<User className="h-3 w-3" />}
-          label="Име"
-        />
-        <TokenButton
-          disabled={disabled}
-          onClick={() => insert("{{email}}")}
-          icon={<Mail className="h-3 w-3" />}
-          label="Имейл"
-        />
+        {MERGE_TAGS.map((t) => (
+          <TokenButton
+            key={t.tag}
+            disabled={disabled}
+            onClick={() => insert(t.tag)}
+            icon={
+              t.tag === "{{email}}" ? (
+                <Mail className="h-3 w-3" />
+              ) : t.tag === "{{phone}}" ? (
+                <Phone className="h-3 w-3" />
+              ) : (
+                <User className="h-3 w-3" />
+              )
+            }
+            label={t.label}
+            title={`Вмъква ${t.tag} — напр. „${t.sample}“`}
+          />
+        ))}
       </div>
       <Textarea
         ref={ref}
@@ -214,17 +221,20 @@ function TokenButton({
   icon,
   onClick,
   disabled,
+  title,
 }: {
   label: string;
   icon: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
+      title={title}
       className="inline-flex h-7 items-center gap-1 rounded-full border border-ink/15 bg-white px-2.5 text-[11px] font-semibold text-ink hover:bg-cream disabled:opacity-50"
     >
       {icon}
@@ -254,7 +264,7 @@ export function EmailBlockEditor({
             value={block.text}
             disabled={disabled}
             onChange={(text) => onChange({ ...block, text })}
-            placeholder={"Здравей, {{name}}!\n\nТекстът ти тук…"}
+            placeholder={"Здравей, {{first_name}}!\n\nТекстът ти тук…"}
             rows={5}
           />
           <div className="flex flex-wrap items-end gap-4">

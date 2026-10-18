@@ -51,7 +51,6 @@ import {
   buildSmsBody,
   checkSmsCompose,
   normalizeTrackedLink,
-  SMS_TEMPLATE_SAMPLE,
 } from "@/lib/sms/compose-validation";
 import { runAutomations } from "@/lib/automation/send";
 import { applyEnglishRecipientTag } from "@/i18n/subscriber-locale";
@@ -87,7 +86,12 @@ import {
   syncCampaignDeliveries,
   getCampaignClickCountsByEmail,
 } from "@/lib/campaign/sync-deliveries";
-import { renderEmailTemplate } from "@/lib/automation/template";
+import {
+  campaignMergeFields,
+  renderEmailTemplate,
+  SAMPLE_TEMPLATE_VARS,
+  templateVarsFromSubscriber,
+} from "@/lib/automation/template";
 import { fullNameFromParts } from "@/lib/site/health-tags";
 import { deriveNewSubscribersOnly } from "@/lib/automation/subscriber-origins";
 import {
@@ -2526,22 +2530,27 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
   const mailLocale = input.locale === "en" ? "en" : "bg";
   const footerConfig = await getEmailFooterConfig(mailLocale);
 
+  type MergeSub = {
+    id: string;
+    email: string;
+    name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    phone: string | null;
+  };
   const { data: subs } = await supabase
     .from("subscribers")
-    .select("id, email, name")
+    .select("id, email, name, first_name, last_name, phone")
     .in("email", emails.slice(0, 300));
   const subByEmail = new Map(
-    ((subs as { id: string; email: string; name: string | null }[] | null) ?? []).map((s) => [
-      s.email.toLowerCase(),
-      s,
-    ]),
+    ((subs as MergeSub[] | null) ?? []).map((s) => [s.email.toLowerCase(), s]),
   );
   for (let i = 300; i < emails.length; i += 300) {
     const { data } = await supabase
       .from("subscribers")
-      .select("id, email, name")
+      .select("id, email, name, first_name, last_name, phone")
       .in("email", emails.slice(i, i + 300));
-    for (const row of (data as { id: string; email: string; name: string | null }[] | null) ?? []) {
+    for (const row of (data as MergeSub[] | null) ?? []) {
       subByEmail.set(row.email.toLowerCase(), row);
     }
   }
@@ -2571,8 +2580,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     for (const email of emails) {
       const sub = subByEmail.get(email);
       merge[email] = {
-        name: sub?.name?.trim() || "there",
-        email,
+        ...campaignMergeFields(templateVarsFromSubscriber(sub, email)),
         sid: sub?.id ?? "",
         unsubscribe_url: unsubscribeLinkForEmail(email, mailLocale) ?? "",
       };
@@ -2843,20 +2851,28 @@ export async function sendTestEmail(input: {
   const supabase = getAdminClient();
   const { data: subs } = await supabase
     .from("subscribers")
-    .select("id, email, name")
+    .select("id, email, name, first_name, last_name, phone")
     .in("email", recipients);
   const subByEmail = new Map(
-    ((subs as { id: string; email: string; name: string | null }[] | null) ?? []).map((s) => [
-      s.email.toLowerCase(),
-      s,
-    ]),
+    (
+      (subs as
+        | {
+            id: string;
+            email: string;
+            name: string | null;
+            first_name: string | null;
+            last_name: string | null;
+            phone: string | null;
+          }[]
+        | null) ?? []
+    ).map((s) => [s.email.toLowerCase(), s]),
   );
 
   let failed = 0;
   let lastError = "";
   for (const email of recipients) {
     const sub = subByEmail.get(email);
-    const vars = { name: sub?.name, email };
+    const vars = templateVarsFromSubscriber(sub, email);
     try {
       const { bodyHtml, attachments } = await buildEmailBodyForRecipient({
         html: renderEmailTemplate(input.html, vars),
@@ -2968,22 +2984,30 @@ export async function sendTestSms(input: {
   const supabase = getAdminClient();
   const { data: subs } = await supabase
     .from("subscribers")
-    .select("email, name, phone")
+    .select("email, name, first_name, last_name, phone")
     .in("phone", phones);
   const subByPhone = new Map(
-    ((subs as { email: string; name: string | null; phone: string | null }[] | null) ?? []).map(
-      (s) => [s.phone ?? "", s],
-    ),
+    (
+      (subs as
+        | {
+            email: string;
+            name: string | null;
+            first_name: string | null;
+            last_name: string | null;
+            phone: string | null;
+          }[]
+        | null) ?? []
+    ).map((s) => [s.phone ?? "", s]),
   );
 
   let failed = 0;
   let lastError = "";
   for (const phone of phones) {
     const sub = subByPhone.get(phone);
-    const body = renderEmailTemplate(template, {
-      name: sub?.name ?? SMS_TEMPLATE_SAMPLE.name,
-      email: sub?.email ?? SMS_TEMPLATE_SAMPLE.email,
-    });
+    const body = renderEmailTemplate(
+      template,
+      sub ? templateVarsFromSubscriber(sub, sub.email) : { ...SAMPLE_TEMPLATE_VARS, phone },
+    );
     try {
       const res = await sendSms({
         body,

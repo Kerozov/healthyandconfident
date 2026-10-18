@@ -1,4 +1,4 @@
-import { renderEmailTemplate } from "@/lib/automation/template";
+import { renderEmailTemplate, type TemplateVars } from "@/lib/automation/template";
 import {
   composeBrandedEmail,
   type EmailCta,
@@ -11,7 +11,7 @@ export async function buildBrandedEmail(input: {
   bodyHtml: string;
   locale?: "bg" | "en";
   cta?: EmailCta | null;
-  vars?: { name?: string | null; email: string };
+  vars?: TemplateVars;
   unsubscribeHref?: string | null;
   footerConfig?: EmailFooterConfig | null;
   heroImageUrl?: string | null;

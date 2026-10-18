@@ -1794,7 +1794,7 @@ export function AutomationsManager({
                 {contentLocale === "bg" ? (
                   <div className="grid min-w-0 gap-4 xl:grid-cols-2">
                   <div className="min-w-0 space-y-3">
-                    <Field label="Тема">
+                    <Field label="Тема" hint="Може и с {{first_name}}, {{last_name}}, {{name}} — напр. „{{first_name}}, имаме нещо за теб“.">
                       <Input
                         value={form.subject_bg}
                         onChange={(e) =>
@@ -1863,7 +1863,7 @@ export function AutomationsManager({
                 ) : (
                   <div className="grid min-w-0 gap-4 xl:grid-cols-2">
                   <div className="min-w-0 space-y-3">
-                    <Field label="Subject">
+                    <Field label="Subject" hint="Merge tags work here too: {{first_name}}, {{last_name}}, {{name}}.">
                       <Input
                         value={form.subject_en}
                         onChange={(e) =>
@@ -1949,7 +1949,7 @@ export function AutomationsManager({
                   onMessageChange={(sms_en) => setForm({ ...form, sms_en })}
                   onLinkChange={(en) => setSmsLinks({ ...smsLinks, en })}
                   messageLabel="SMS — EN"
-                  messageHint="{{name}}, {{email}} — EN версията е по избор."
+                  messageHint="EN версията е по избор."
                 />
               </div>
               </WorkspacePanel>

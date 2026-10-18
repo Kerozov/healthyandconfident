@@ -19,6 +19,7 @@ import { expandAudienceKeys } from "@/lib/segments/hierarchy";
 import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
 import { isEmailUnsubscribed } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
+import { templateVarsForContext } from "@/lib/automation/recipient-vars";
 import { automationEmailContent, automationSmsBody } from "@/lib/automation/content";
 import {
   scheduledAtAfterDays,
@@ -51,6 +52,9 @@ import { cancelWorkerJob } from "@/lib/automation/cancel";
 export type AutomationRunContext = {
   email: string;
   name?: string | null;
+  /** When the caller has them — otherwise read from the subscriber for `{{first_name}}`. */
+  firstName?: string | null;
+  lastName?: string | null;
   phone?: string | null;
   locale?: Locale;
   subscriberId?: string | null;
@@ -540,10 +544,10 @@ async function submitStep(
       await recordSkip(automation, ctx, AUTOMATION_SKIP_REASONS.noPhone, existing);
       return "skipped";
     }
-    const body = renderEmailTemplate(automationSmsBody(automation, locale), {
-      name: ctx.name,
-      email,
-    });
+    const body = renderEmailTemplate(
+      automationSmsBody(automation, locale),
+      await templateVarsForContext(ctx),
+    );
     if (!body.trim()) {
       await recordSkip(automation, ctx, AUTOMATION_SKIP_REASONS.noSmsContent, existing);
       return "skipped";

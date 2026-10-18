@@ -7,6 +7,7 @@ import { expandEmailProductMarkers } from "@/lib/email/products-block";
 import { expandEmailGuideMarkers } from "@/lib/email/guides-block";
 import { expandEmailFormMarkers } from "@/lib/email/forms-block";
 import { normalizeEmailBodyHtml } from "@/lib/email/normalize-body";
+import { renderEmailTemplate, SAMPLE_TEMPLATE_VARS } from "@/lib/automation/template";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import { useStripeCatalog } from "@/components/admin/stripe-locale-picker";
@@ -15,14 +16,13 @@ import { cn } from "@/lib/utils";
 
 /** The first words of the body, the way an inbox shows them next to the subject. */
 function inboxSnippet(html: string): string {
-  return html
+  return renderEmailTemplate(html, SAMPLE_TEMPLATE_VARS)
     .replace(/<(style|script)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&[a-z]+;|&#\d+;/gi, " ")
-    .replace(/\{\{\s*name\s*\}\}/gi, "Мария")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 110);
@@ -78,8 +78,9 @@ export function EmailTemplatePreview({
     const previewHref = new Map(
       forms.map((form) => [form.id.toLowerCase(), `/${locale}/forms/${form.slug}`]),
     );
+    // Tags show as the sample person, the way a real subscriber will see them.
     let expandedBody = normalizeEmailBodyHtml(
-      bodyHtml.trim() || "Съдържание на имейла…",
+      renderEmailTemplate(bodyHtml.trim() || "Съдържание на имейла…", SAMPLE_TEMPLATE_VARS),
     );
     expandedBody = expandEmailProductMarkers(
       expandedBody,
@@ -154,7 +155,9 @@ export function EmailTemplatePreview({
             <span className="shrink-0 text-[11px] text-ink-soft">сега</span>
           </div>
           <p className="truncate text-sm text-ink">
-            <span className="font-semibold">{subject.trim() || "(без тема)"}</span>
+            <span className="font-semibold">
+              {renderEmailTemplate(subject.trim(), SAMPLE_TEMPLATE_VARS) || "(без тема)"}
+            </span>
             {snippet && <span className="text-ink-soft"> — {snippet}</span>}
           </p>
         </div>
