@@ -18,6 +18,7 @@ import {
   Trash2,
   Copy,
   ClipboardPaste,
+  Eye,
   ClipboardList,
   Tags,
   Send,
@@ -485,6 +486,7 @@ type FlowActions = {
   onCopy?: (automation: AutomationRow) => void;
   onPasteAfter?: (automation: AutomationRow) => void;
   onSendNow?: (automation: AutomationRow) => void;
+  onPreview?: (automation: AutomationRow) => void;
   copiedId?: string | null;
   copiedName?: string | null;
   forms?: FormTemplateRecord[];
@@ -504,6 +506,7 @@ function TreeBranch({
   onCopy,
   onPasteAfter,
   onSendNow,
+  onPreview,
   copiedId,
   copiedName,
   forms,
@@ -532,8 +535,24 @@ function TreeBranch({
             onSelect={onSelect}
             forms={forms}
           />
-          {(onAddAfter || onDelete || onCopy || onPasteAfter || onSendNow) && (
+          {(onAddAfter || onDelete || onCopy || onPasteAfter || onSendNow || onPreview) && (
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              {onPreview &&
+                node.automation.channel === "email" &&
+                Boolean(node.automation.html_bg?.trim() || node.automation.html_en?.trim()) && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPreview(node.automation);
+                  }}
+                  title="Виж как изглежда имейлът, без да отваряш редактора"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-50"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Преглед
+                </button>
+              )}
               {onCopy && (
                 <button
                   type="button"
@@ -639,6 +658,7 @@ function TreeBranch({
             onCopy={onCopy}
             onPasteAfter={onPasteAfter}
             onSendNow={onSendNow}
+            onPreview={onPreview}
             copiedId={copiedId}
             copiedName={copiedName}
             forms={forms}
@@ -672,6 +692,7 @@ function TreeBranch({
                   onCopy={onCopy}
                   onPasteAfter={onPasteAfter}
                   onSendNow={onSendNow}
+                  onPreview={onPreview}
                   copiedId={copiedId}
                   copiedName={copiedName}
                   forms={forms}
@@ -697,6 +718,7 @@ function TriggerSection({
   onCopy,
   onPasteAfter,
   onSendNow,
+  onPreview,
   copiedId,
   copiedName,
   forms,
@@ -753,6 +775,7 @@ function TriggerSection({
               onCopy={onCopy}
               onPasteAfter={onPasteAfter}
               onSendNow={onSendNow}
+              onPreview={onPreview}
               copiedId={copiedId}
               copiedName={copiedName}
               forms={forms}
@@ -775,6 +798,7 @@ export function AutomationFlowView({
   onCopyAutomation,
   onPasteAfterAutomation,
   onSendNowAutomation,
+  onPreviewAutomation,
   copiedId,
   copiedName,
   forms,
@@ -789,6 +813,7 @@ export function AutomationFlowView({
   onCopyAutomation?: (automation: AutomationRow) => void;
   onPasteAfterAutomation?: (automation: AutomationRow) => void;
   onSendNowAutomation?: (automation: AutomationRow) => void;
+  onPreviewAutomation?: (automation: AutomationRow) => void;
   copiedId?: string | null;
   copiedName?: string | null;
   forms?: FormTemplateRecord[];
@@ -849,6 +874,7 @@ export function AutomationFlowView({
             onCopy={onCopyAutomation}
             onPasteAfter={onPasteAfterAutomation}
             onSendNow={onSendNowAutomation}
+            onPreview={onPreviewAutomation}
             copiedId={copiedId}
             copiedName={copiedName}
             forms={forms}

@@ -25,6 +25,7 @@ import {
   Users,
   Megaphone,
   X,
+  Eye,
 } from "lucide-react";
 import type { FormTemplateRecord } from "@/lib/forms/types";
 import type {
@@ -76,6 +77,7 @@ import { SmsComposeFields } from "@/components/admin/sms-compose-fields";
 import { TestEmailSender } from "@/components/admin/test-email-sender";
 import { TestSmsSender } from "@/components/admin/test-sms-sender";
 import { AutomationSendNowDialog } from "@/components/admin/automation-send-now-dialog";
+import { AutomationPreviewDialog } from "@/components/admin/automation-preview-dialog";
 import { buildSmsBody, checkSmsCompose, splitMessageAndLink } from "@/lib/sms/compose-validation";
 import { TabList } from "@/components/admin/ui";
 import { WorkspaceEditor, WorkspacePanel } from "@/components/admin/workspace-editor";
@@ -519,6 +521,7 @@ export function AutomationsManager({
   const [copiedNotice, setCopiedNotice] = useState<string | null>(null);
   /** Step whose "send now" dialog is open. */
   const [sendNowFor, setSendNowFor] = useState<AutomationRow | null>(null);
+  const [previewFor, setPreviewFor] = useState<AutomationRow | null>(null);
 
   /**
    * Counters live here, not in the server payload: the flow tab shows none of
@@ -1971,6 +1974,7 @@ export function AutomationsManager({
             onCopyAutomation={copyAutomation}
             onPasteAfterAutomation={pasteAutomation}
             onSendNowAutomation={setSendNowFor}
+            onPreviewAutomation={setPreviewFor}
             copiedId={clipboard?.id ?? null}
             copiedName={clipboard?.name ?? null}
           />
@@ -2384,6 +2388,15 @@ export function AutomationsManager({
                   )}
                   {hasEmailBody && (
                     <>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewFor(a)}
+                        title="Виж как изглежда имейлът, без да отваряш редактора"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3 text-xs font-semibold text-ink-soft hover:bg-ink/5"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        Преглед
+                      </button>
                       <CopyEmailButton
                         build={() => copiedEmailFromAutomation(a)}
                         onCopied={emailCopiedFromList}
@@ -2461,6 +2474,15 @@ export function AutomationsManager({
       </div>
       )}
       </div>
+      {previewFor && (
+        <AutomationPreviewDialog
+          automation={previewFor}
+          products={products}
+          guides={guides}
+          forms={forms}
+          onClose={() => setPreviewFor(null)}
+        />
+      )}
       {sendNowFor && (
         <AutomationSendNowDialog
           automation={sendNowFor}
