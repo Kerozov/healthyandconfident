@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type RefObject } from "react";
-import { Link2, MousePointerClick, X } from "lucide-react";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { Bold, Italic, Link2, MousePointerClick, X } from "lucide-react";
 import { Field, Input, Select } from "@/components/admin/fields";
 import { PROGRAM_LINK_OPTIONS } from "@/lib/site/program-cards";
 import { MARKDOWN_BUTTON_TITLE } from "@/lib/site/markdown-links";
 import { cn } from "@/lib/utils";
+import { toggleMarkdownFormat } from "@/lib/site/markdown-formatting";
 
 const OTHER = "__other__";
 
@@ -30,10 +31,41 @@ export function MarkdownLinkToolbar({
   const [page, setPage] = useState(PROGRAM_LINK_OPTIONS[0]?.value ?? OTHER);
   const [url, setUrl] = useState("");
   const [outline, setOutline] = useState(false);
+  const selection = useRef<{ start: number; end: number } | null>(null);
+
+  function format(marker: "**" | "*") {
+    const el = textareaRef.current;
+    const next = toggleMarkdownFormat(value, el?.selectionStart ?? value.length, el?.selectionEnd ?? value.length, marker);
+    onChange(next.value);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(next.start, next.end);
+    });
+  }
+
+  useEffect(() => {
+    const node = textareaRef.current;
+    if (!node) return;
+    function keydown(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== "b" && key !== "i") return;
+      event.preventDefault();
+      const next = toggleMarkdownFormat(value, node!.selectionStart, node!.selectionEnd, key === "b" ? "**" : "*");
+      onChange(next.value);
+      requestAnimationFrame(() => {
+        node!.focus();
+        node!.setSelectionRange(next.start, next.end);
+      });
+    }
+    node.addEventListener("keydown", keydown);
+    return () => node.removeEventListener("keydown", keydown);
+  }, [textareaRef, value, onChange]);
 
   function open(next: Kind) {
     const el = textareaRef.current;
     const selected = el ? value.slice(el.selectionStart, el.selectionEnd) : "";
+    selection.current = { start: el?.selectionStart ?? value.length, end: el?.selectionEnd ?? value.length };
     setText(selected.trim());
     setKind(next);
   }
@@ -50,8 +82,8 @@ export function MarkdownLinkToolbar({
     let snippet = `[${label}](${href}${title})`;
 
     const el = textareaRef.current;
-    const start = el ? el.selectionStart : value.length;
-    const end = el ? el.selectionEnd : value.length;
+    const start = selection.current?.start ?? (el ? el.selectionStart : value.length);
+    const end = selection.current?.end ?? (el ? el.selectionEnd : value.length);
     const before = value.slice(0, start);
     const after = value.slice(end);
 
@@ -80,6 +112,12 @@ export function MarkdownLinkToolbar({
   return (
     <div className="mb-3 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
+        <ToolbarButton active={false} onClick={() => format("**")}>
+          <Bold className="h-3.5 w-3.5" /> Удебели
+        </ToolbarButton>
+        <ToolbarButton active={false} onClick={() => format("*")}>
+          <Italic className="h-3.5 w-3.5" /> Курсив
+        </ToolbarButton>
         <ToolbarButton active={kind === "link"} onClick={() => open("link")}>
           <Link2 className="h-3.5 w-3.5" /> Линк
         </ToolbarButton>
@@ -197,6 +235,7 @@ function ToolbarButton({
     <button
       type="button"
       onClick={onClick}
+      onMouseDown={(event) => event.preventDefault()}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
         active

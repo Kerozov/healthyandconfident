@@ -3,12 +3,18 @@ import {
   parseImageTitle,
   type ImageLayout,
 } from "@/lib/site/markdown-images";
+import {
+  defaultPostRecommendations,
+  recommendationsFromChunk,
+  recommendationsMarkdown,
+  type PostRecommendations,
+} from "@/lib/site/post-recommendations";
 
 /**
  * A blog post as the editor sees it: text and pictures in the order they
  * appear. It is still saved as plain Markdown in `blog_posts.content` — a
- * picture is just a paragraph holding only `![…](…)` — so old posts open as
- * blocks and the site keeps rendering one Markdown string.
+ * picture is a paragraph holding only `![…](…)`; recommendations use a
+ * `site-content` fence. Existing posts need no migration.
  */
 export type PostImage = {
   src: string;
@@ -21,7 +27,8 @@ export type PostImage = {
 export type PostBlock =
   | { id: string; type: "text"; text: string }
   | { id: string; type: "image"; image: PostImage; layout: ImageLayout }
-  | { id: string; type: "gallery"; images: PostImage[] };
+  | { id: string; type: "gallery"; images: PostImage[] }
+  | { id: string; type: "recommendations"; config: PostRecommendations };
 
 export type PostBlockType = PostBlock["type"];
 
@@ -29,6 +36,7 @@ export const POST_BLOCK_LABELS: Record<PostBlockType, string> = {
   text: "Текст",
   image: "Снимка",
   gallery: "Галерия",
+  recommendations: "Предложения от сайта",
 };
 
 let idCounter = 0;
@@ -48,6 +56,7 @@ export function createPostBlock(type: PostBlockType): PostBlock {
     return { id, type, image: emptyPostImage(), layout: "full" };
   }
   if (type === "gallery") return { id, type, images: [] };
+  if (type === "recommendations") return { id, type, config: defaultPostRecommendations() };
   return { id, type, text: "" };
 }
 
@@ -134,6 +143,12 @@ export function parsePostBlocks(markdown: string): PostBlock[] {
   }
 
   for (const chunk of splitChunks(markdown)) {
+    const config = recommendationsFromChunk(chunk);
+    if (config) {
+      flushText();
+      blocks.push({ id: newPostBlockId(), type: "recommendations", config });
+      continue;
+    }
     const pictures = picturesOnly(chunk);
     if (!pictures) {
       text.push(chunk);
@@ -180,6 +195,7 @@ function pictureMarkdown(image: PostImage, layout: ImageLayout): string {
 
 function blockMarkdown(block: PostBlock): string {
   if (block.type === "text") return block.text.replace(/^\n+|\s+$/g, "");
+  if (block.type === "recommendations") return recommendationsMarkdown(block.config);
   if (block.type === "image") {
     return block.image.src.trim() ? pictureMarkdown(block.image, block.layout) : "";
   }
@@ -196,4 +212,11 @@ export function serializePostBlocks(blocks: PostBlock[]): string {
 
 export function isEmptyPostBlock(block: PostBlock): boolean {
   return !blockMarkdown(block);
+}
+
+/** Recommendation settings must not inflate the article's reading time. */
+export function postReadingContent(markdown: string): string {
+  return splitChunks(markdown)
+    .filter((chunk) => !recommendationsFromChunk(chunk))
+    .join("\n\n");
 }

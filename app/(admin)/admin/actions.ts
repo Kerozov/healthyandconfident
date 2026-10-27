@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { postReadingContent } from "@/lib/site/post-blocks";
 import { automationEmailContent, automationSmsBody } from "@/lib/automation/content";
 import { after } from "next/server";
 import {
@@ -182,7 +183,7 @@ async function guardAction(
 }
 
 function readingMinutes(content: string) {
-  const words = content.trim().split(/\s+/).length;
+  const words = postReadingContent(content).trim().split(/\s+/).length;
   return Math.max(1, Math.round(words / 200));
 }
 

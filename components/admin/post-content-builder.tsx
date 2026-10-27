@@ -6,12 +6,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Copy,
   GripVertical,
   Image as ImageIcon,
   ImagePlus,
   Images,
   Loader2,
   Plus,
+  ShoppingBag,
   Trash2,
   Type,
 } from "lucide-react";
@@ -35,6 +37,9 @@ import {
   type PostImage,
 } from "@/lib/site/post-blocks";
 import { cn } from "@/lib/utils";
+import { PostRecommendationsEditor } from "@/components/admin/post-recommendations-editor";
+import type { PostCatalogItem } from "@/lib/site/post-recommendations";
+import type { Locale } from "@/i18n/config";
 
 type TextBlock = Extract<PostBlock, { type: "text" }>;
 type ImageBlock = Extract<PostBlock, { type: "image" }>;
@@ -44,9 +49,10 @@ const BLOCK_ICONS: Record<PostBlockType, React.ComponentType<{ className?: strin
   text: Type,
   image: ImageIcon,
   gallery: Images,
+  recommendations: ShoppingBag,
 };
 
-const BLOCK_TYPES: PostBlockType[] = ["text", "image", "gallery"];
+const BLOCK_TYPES: PostBlockType[] = ["text", "image", "gallery", "recommendations"];
 
 const LAYOUT_LABELS: Record<ImageLayout, string> = {
   full: "Цяла ширина",
@@ -63,9 +69,19 @@ const LAYOUT_LABELS: Record<ImageLayout, string> = {
 export function PostContentBuilder({
   value,
   onChange,
+  locale,
+  catalog,
+  catalogLoading,
+  catalogError,
+  onReloadCatalog,
 }: {
   value: string;
   onChange: (markdown: string) => void;
+  locale: Locale;
+  catalog: PostCatalogItem[];
+  catalogLoading: boolean;
+  catalogError?: string;
+  onReloadCatalog: () => void;
 }) {
   const [blocks, setBlocks] = useState<PostBlock[]>(() => {
     const parsed = parsePostBlocks(value);
@@ -110,6 +126,20 @@ export function PostContentBuilder({
   function cancelDrag() {
     setDragId(null);
     setDropIndex(null);
+  }
+
+  function splitWithRecommendations(id: string, cursor: number) {
+    const index = latest.current.findIndex((block) => block.id === id);
+    const block = latest.current[index];
+    if (!block || block.type !== "text") return;
+    const recommendations = createPostBlock("recommendations");
+    const after: PostBlock = { id: createPostBlock("text").id, type: "text", text: block.text.slice(cursor) };
+    commit([
+      ...latest.current.slice(0, index),
+      { ...block, text: block.text.slice(0, cursor) }, recommendations, after,
+      ...latest.current.slice(index + 1),
+    ]);
+    setFocusId(recommendations.id);
   }
 
   function commitDrop() {
@@ -158,6 +188,18 @@ export function PostContentBuilder({
                 commit(movePostBlock(latest.current, index, index + direction))
               }
               onRemove={() => removeBlock(block)}
+              onDuplicate={() => {
+                const copy = { ...block, id: createPostBlock(block.type).id };
+                const next = [...latest.current];
+                next.splice(index + 1, 0, copy);
+                commit(next);
+              }}
+              onInsertRecommendations={(cursor) => splitWithRecommendations(block.id, cursor)}
+              locale={locale}
+              catalog={catalog}
+              catalogLoading={catalogLoading}
+              catalogError={catalogError}
+              onReloadCatalog={onReloadCatalog}
             />
           </div>
         ))}
@@ -205,6 +247,13 @@ function BlockCard({
   onUpdate,
   onMove,
   onRemove,
+  onDuplicate,
+  onInsertRecommendations,
+  locale,
+  catalog,
+  catalogLoading,
+  catalogError,
+  onReloadCatalog,
 }: {
   block: PostBlock;
   index: number;
@@ -218,6 +267,13 @@ function BlockCard({
   onUpdate: (fn: (block: PostBlock) => PostBlock) => void;
   onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
+  onDuplicate: () => void;
+  onInsertRecommendations: (cursor: number) => void;
+  locale: Locale;
+  catalog: PostCatalogItem[];
+  catalogLoading: boolean;
+  catalogError?: string;
+  onReloadCatalog: () => void;
 }) {
   const Icon = BLOCK_ICONS[block.type];
   const cardRef = useRef<HTMLDivElement>(null);
@@ -279,6 +335,9 @@ function BlockCard({
           <IconAction label="Изтрий" onClick={onRemove} danger>
             <Trash2 className="h-4 w-4" />
           </IconAction>
+          <IconAction label="Дублирай блока" onClick={onDuplicate}>
+            <Copy className="h-4 w-4" />
+          </IconAction>
         </div>
       </div>
 
@@ -288,6 +347,7 @@ function BlockCard({
             block={block}
             autoFocus={autoFocus}
             onChange={(next) => onUpdate(() => next)}
+            onInsertRecommendations={onInsertRecommendations}
           />
         )}
         {block.type === "image" && (
@@ -314,6 +374,12 @@ function BlockCard({
             onUpdate={(fn) => onUpdate((b) => (b.type === "gallery" ? fn(b) : b))}
           />
         )}
+        {block.type === "recommendations" && (
+          <PostRecommendationsEditor config={block.config}
+            onChange={(config) => onUpdate(() => ({ ...block, config }))}
+            locale={locale} catalog={catalog} loading={catalogLoading}
+            error={catalogError} onReload={onReloadCatalog} />
+        )}
       </div>
     </div>
   );
@@ -325,10 +391,12 @@ function TextBlockEditor({
   block,
   autoFocus,
   onChange,
+  onInsertRecommendations,
 }: {
   block: TextBlock;
   autoFocus: boolean;
   onChange: (next: TextBlock) => void;
+  onInsertRecommendations: (cursor: number) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const lines = block.text.split("\n").length;
@@ -349,6 +417,11 @@ function TextBlockEditor({
         placeholder="Пиши тук — ## заглавие, **удебелен**, - списък…"
         className="field-sizing-content max-h-[70vh] font-mono text-[13px]"
       />
+      <button type="button" onMouseDown={(event) => event.preventDefault()}
+        onClick={() => onInsertRecommendations(ref.current?.selectionStart ?? block.text.length)}
+        className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-forest-500/25 px-3 py-2 text-xs font-medium text-forest-700 hover:bg-forest-50">
+        <ShoppingBag className="h-3.5 w-3.5" /> Вмъкни предложения при курсора
+      </button>
     </>
   );
 }

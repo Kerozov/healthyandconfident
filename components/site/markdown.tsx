@@ -10,6 +10,8 @@ import {
   type ImageLayout,
 } from "@/lib/site/markdown-images";
 import { cn } from "@/lib/utils";
+import { PostRecommendationsBlock } from "@/components/site/post-recommendations";
+import { parsePostRecommendations, type PostCatalogItem } from "@/lib/site/post-recommendations";
 
 /**
  * A link in a post. Most are plain; one whose title says so is drawn as a
@@ -208,12 +210,29 @@ function PostGallery({
 export function Markdown({
   content,
   locale = "bg",
+  catalog,
+  excludePostId,
+  preview = false,
 }: {
   content: string;
   /** Language of the page the post is on — our own links get it in front. */
   locale?: Locale;
+  catalog?: PostCatalogItem[];
+  excludePostId?: string;
+  preview?: boolean;
 }) {
   const components: Components = {
+    pre: ({ node, children }) => {
+      const code = node?.children[0];
+      if (code?.type === "element" && code.tagName === "code" &&
+        Array.isArray(code.properties.className) && code.properties.className.includes("language-site-content")) {
+        const json = code.children.map((child) => child.type === "text" ? child.value : "").join("");
+        const config = parsePostRecommendations(json);
+        return config ? <PostRecommendationsBlock config={config} locale={locale}
+          catalog={catalog} excludePostId={excludePostId} preview={preview} /> : null;
+      }
+      return <pre>{children}</pre>;
+    },
     a: ({ href, title, children }) => (
       <MarkdownLink href={href} title={title} locale={locale}>
         {children}

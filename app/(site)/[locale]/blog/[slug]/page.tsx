@@ -129,7 +129,7 @@ export default async function BlogPostPage({
       )}
 
       <Container className="mt-12 max-w-3xl">
-        <Markdown content={post.content} locale={l} />
+        <Markdown content={post.content} locale={l} excludePostId={post.id} />
       </Container>
 
       {related.length > 0 && (

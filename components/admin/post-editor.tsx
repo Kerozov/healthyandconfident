@@ -12,6 +12,7 @@ import { PostContentBuilder } from "@/components/admin/post-content-builder";
 import { Markdown } from "@/components/site/markdown";
 import { slugify } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { usePostCatalog } from "@/components/site/use-post-catalog";
 
 type ContentMode = "blocks" | "markdown" | "preview";
 
@@ -82,6 +83,8 @@ export function PostEditor({ post }: { post?: BlogPost }) {
   }
 
   const isPublished = form.status === "published";
+  const catalog = usePostCatalog(form.locale as "bg" | "en");
+  const catalogItems = catalog.items.filter((item) => item.key !== `post:${post?.id}`);
 
   return (
     <div className="pb-24 lg:pb-0">
@@ -183,12 +186,20 @@ export function PostEditor({ post }: { post?: BlogPost }) {
               <PostContentBuilder
                 value={form.content}
                 onChange={(content) => set("content", content)}
+                locale={form.locale as "bg" | "en"}
+                catalog={catalogItems}
+                catalogLoading={catalog.loading}
+                catalogError={catalog.error}
+                onReloadCatalog={catalog.reload}
               />
             ) : mode === "preview" ? (
               <div className="min-h-[300px] rounded-xl border border-ink/10 bg-cream-2/40 p-5">
                 <Markdown
                   content={form.content || "_Nothing to preview_"}
                   locale={form.locale as "bg" | "en"}
+                  catalog={catalogItems}
+                  excludePostId={post?.id}
+                  preview
                 />
               </div>
             ) : (
