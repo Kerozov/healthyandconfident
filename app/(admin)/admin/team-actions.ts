@@ -8,6 +8,10 @@ import { logAdminChange } from "@/lib/admin/audit";
 import { hashPassword, verifyPassword, safeEqualSecret } from "@/lib/admin/passwords";
 import { sanitizeAdminScreens } from "@/lib/admin/screens";
 import { normalizeUsername, usernameRules } from "@/lib/admin/usernames";
+import {
+  notificationSettingsPatch,
+  type AdminNotificationSettings,
+} from "@/lib/admin/notification-preferences";
 
 export type TeamActionResult = { ok: boolean; message?: string };
 
@@ -30,7 +34,7 @@ function validPassword(password: string): boolean {
   return password.trim().length >= MIN_PASSWORD;
 }
 
-export async function createAdminProfile(input: {
+export async function createAdminProfile(input: AdminNotificationSettings & {
   displayName: string;
   username: string;
   password: string;
@@ -60,6 +64,9 @@ export async function createAdminProfile(input: {
     return { ok: false, message: "Избери поне един екран, до който профилът има достъп." };
   }
 
+  const notifications = notificationSettingsPatch(input, { role: "member", screens });
+  if (notifications.error) return { ok: false, message: notifications.error };
+
   const password_hash = await hashPassword(input.password);
   const { error } = await getAdminClient().from("admin_users").insert({
     display_name: displayName,
@@ -68,6 +75,7 @@ export async function createAdminProfile(input: {
     role: "member",
     screens,
     active: true,
+    ...notifications.patch,
   });
 
   if (error) {
@@ -87,7 +95,7 @@ export async function createAdminProfile(input: {
   return { ok: true, message: `Профилът „${displayName}“ е създаден.` };
 }
 
-export async function updateAdminProfile(input: {
+export async function updateAdminProfile(input: AdminNotificationSettings & {
   id: string;
   displayName: string;
   username: string;
@@ -126,6 +134,12 @@ export async function updateAdminProfile(input: {
     display_name: displayName,
     username,
   };
+  const notifications = notificationSettingsPatch(input, {
+    role: user.role,
+    screens: sanitizeAdminScreens(input.screens),
+  });
+  if (notifications.error) return { ok: false, message: notifications.error };
+  Object.assign(patch, notifications.patch);
 
   if (user.role === "owner") {
     if (input.active === false) {

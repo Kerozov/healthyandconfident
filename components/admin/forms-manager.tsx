@@ -1023,7 +1023,7 @@ export function FormsManager({
           </Card>
         ) : (
           forms.map((f) => (
-            <div key={f.id} className="rounded-2xl border border-ink/10 bg-white p-5">
+            <div key={f.id} id={`form-${f.id}`} className="scroll-mt-6 rounded-2xl border border-ink/10 bg-white p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">

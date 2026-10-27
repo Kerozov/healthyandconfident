@@ -1,7 +1,8 @@
 import type { AdminAuditLog } from "@/lib/supabase/types";
 import type { AdminScreenKey } from "@/lib/admin/screens";
+import type { AdminNotificationSettings } from "@/lib/admin/notification-preferences";
 
-export type AdminProfilePublic = {
+export type AdminProfilePublic = AdminNotificationSettings & {
   id: string;
   username: string;
   displayName: string;

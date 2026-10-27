@@ -602,6 +602,9 @@ export type AdminUser = {
   role: AdminUserRole;
   screens: string[];
   active: boolean;
+  notification_email: string | null;
+  notify_form_submissions: boolean;
+  notify_new_subscribers: boolean;
   last_login_at: string | null;
   last_seen_at: string | null;
   created_at: string;

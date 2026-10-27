@@ -71,6 +71,7 @@ export type FormTemplateRecord = {
 export type FormSubmissionRecord = {
   id: string;
   form_id: string;
+  invitation_id: string | null;
   subscriber_id: string | null;
   email: string | null;
   answers: Record<string, string | string[] | boolean>;

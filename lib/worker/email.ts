@@ -30,6 +30,8 @@ type SendArgs = {
   from?: string;
   replyTo?: string;
   idempotencyKey?: string;
+  /** Optional caller deadline; omitted for existing campaign/automation sends. */
+  signal?: AbortSignal;
   merge?: Record<string, Record<string, string>>;
   attachments?: {
     filename: string;
@@ -208,13 +210,14 @@ function getConfig() {
 async function post<T>(
   path: string,
   body: unknown,
-  opts: { retry: boolean },
+  opts: { retry: boolean; signal?: AbortSignal },
 ): Promise<T> {
   const { url, key } = getConfig();
   let lastError: Error | null = null;
   const attempts = opts.retry ? 2 : 1;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
+    opts.signal?.throwIfAborted();
     let res: Response;
     try {
       res = await fetch(`${url}${path}`, {
@@ -225,6 +228,7 @@ async function post<T>(
         },
         body: JSON.stringify(body),
         cache: "no-store",
+        signal: opts.signal,
       });
     } catch (error) {
       lastError = error instanceof Error ? error : new Error("Worker request failed");
@@ -233,6 +237,7 @@ async function post<T>(
     }
 
     const data = await res.json().catch(() => ({}));
+    opts.signal?.throwIfAborted();
     if (res.ok) {
       return data as T;
     }
@@ -294,7 +299,7 @@ export async function sendEmail(args: SendArgs): Promise<WorkerSendResult> {
       idempotencyKey: args.idempotencyKey,
       merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
     },
-    { retry: Boolean(args.idempotencyKey) },
+    { retry: Boolean(args.idempotencyKey), signal: args.signal },
   );
 }
 
@@ -342,7 +347,7 @@ export async function scheduleEmail(args: ScheduleArgs): Promise<WorkerSendResul
       attachments: args.attachments?.length ? withCdnUrls(args.attachments) : undefined,
       merge: args.merge && Object.keys(args.merge).length > 0 ? args.merge : undefined,
     },
-    { retry: Boolean(args.idempotencyKey) },
+    { retry: Boolean(args.idempotencyKey), signal: args.signal },
   );
 }
 

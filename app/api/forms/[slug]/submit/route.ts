@@ -13,6 +13,7 @@ import {
 import type { FormField } from "@/lib/forms/types";
 import { runAutomations } from "@/lib/automation/run";
 import { createRateLimiter, requestIp } from "@/lib/util/rate-limit";
+import { notifyFormSubmission } from "@/lib/admin/notifications";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -176,14 +177,22 @@ export async function POST(
     subscriberId = (sub as { id: string } | null)?.id ?? null;
   }
 
+  const submissionId = crypto.randomUUID();
+  const submittedAt = new Date().toISOString();
   const { error: insertError } = await supabase.from("form_submissions").insert({
+    id: submissionId,
     form_id: form.id,
+    invitation_id: invitationId,
     subscriber_id: subscriberId,
     email,
     answers: answers as Record<string, string | string[] | boolean>,
+    submitted_at: submittedAt,
   });
 
   if (insertError) {
+    if (invitationId && insertError.code === "23505") {
+      return NextResponse.json({ error: formError(locale, "already") }, { status: 409 });
+    }
     console.error(`[form-submit] ${form.slug} insert failed:`, insertError.message);
     return NextResponse.json(
       { error: locale === "en" ? "Something went wrong. Please try again." : "Нещо се обърка. Опитай отново." },
@@ -197,6 +206,18 @@ export async function POST(
       .update({ completed_at: new Date().toISOString() })
       .eq("id", invitationId);
   }
+
+  // Staff receive the saved enquiry even when the visitor declines marketing.
+  // Await the worker handoff, just like automations, so serverless cannot drop it.
+  await notifyFormSubmission({
+    form,
+    submission: {
+      id: submissionId,
+      email,
+      answers: answers as Record<string, string | string[] | boolean>,
+      submitted_at: submittedAt,
+    },
+  });
 
   const fixedTags = resolveTagsOnSubmit(form.settings);
   const answerTags = tagsFromMappedAnswers(fields, answers);

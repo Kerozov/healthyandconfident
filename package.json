@@ -10,6 +10,7 @@
     "lint": "eslint",
     "verify:worker": "bun scripts/verify-worker.ts",
     "verify:email": "bun scripts/verify-email-blocks.ts",
+    "verify:notifications": "bun test scripts/admin-notifications.test.js",
     "verify:blog": "bun scripts/verify-blog-blocks.tsx",
     "verify:copy": "bun scripts/verify-site-copy.ts",
     "verify:upload": "bun scripts/verify-upload.ts",

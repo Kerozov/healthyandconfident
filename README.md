@@ -69,6 +69,29 @@ automations do not fire on synced contacts.
 
 Requires migration `049_funnel_brand_sync.sql`.
 
+## Team email notifications
+
+In **Admin → Профили и промени**, add a notification email to each profile and
+enable **Попълнена форма / ново запитване**, **Нов абонат от сайта**, or both.
+Existing profiles start with notifications off. Only active profiles with access
+to the corresponding screen receive emails. Duplicate recipient addresses are
+sent one copy per event.
+
+Form notifications include the submitted answers and a link to the form in the
+admin panel, including when the visitor declines marketing emails. Subscriber
+notifications cover first-time signups through the site's subscription forms;
+repeat signups and imports do not notify. Sending uses the existing notification
+worker. A sending failure is logged and does not reject the saved submission.
+Worker requests for staff alerts have a ten-second deadline. Invitation replies
+are unique per invitation, so concurrent replies cannot create duplicate alerts.
+
+Requires migration `083_admin_email_notifications.sql` before deploying the app.
+The normal migration workflow applies it on push to `main`.
+
+```bash
+bun run verify:notifications  # isolated checks; sends no real emails
+```
+
 ## Reporting & tracking
 
 - **Admin → Посещения** (`/admin/visits`) — unique visitors, sessions, pageviews,

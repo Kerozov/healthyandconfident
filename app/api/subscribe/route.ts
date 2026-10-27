@@ -12,6 +12,7 @@ import { ensureContactForSubscriber } from "@/lib/contacts/ensure";
 import { allowedSignupTags, sanitizeSignupSource } from "@/lib/site/signup-tags";
 import { createRateLimiter, requestIp } from "@/lib/util/rate-limit";
 import type { Locale } from "@/lib/supabase/types";
+import { notifyNewSubscriber } from "@/lib/admin/notifications";
 
 export const dynamic = "force-dynamic";
 /** Enough time to call the notification worker before the response returns. */
@@ -131,6 +132,7 @@ export async function POST(req: Request) {
 
     const isNew = !existing;
     let subscriberId = existing?.id as string | undefined;
+    let createdSubscriber = false;
     const priorTags = existing ? ((existing.tags as string[] | null) ?? []) : [];
     const finalTags = buildFinalTags(
       existing ? priorTags : [],
@@ -202,7 +204,12 @@ export async function POST(req: Request) {
         }
       } else {
         subscriberId = (inserted as { id: string } | null)?.id;
+        createdSubscriber = Boolean(subscriberId);
       }
+    }
+
+    if (createdSubscriber && subscriberId) {
+      await notifyNewSubscriber({ id: subscriberId, email, name, phone, source });
     }
 
     if (!isNew) {
