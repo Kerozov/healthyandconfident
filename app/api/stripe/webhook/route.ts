@@ -60,7 +60,7 @@ async function sendMetaPurchase(
 
 async function handlePaidSession(session: Stripe.Checkout.Session) {
   if (!isSessionPaid(session)) {
-    console.info("[stripe] skip fulfill — not paid yet", session.id, session.payment_status);
+    console.info("[stripe] skip fulfill - not paid yet", session.id, session.payment_status);
     return { ok: true, skipped: "not_paid" };
   }
 

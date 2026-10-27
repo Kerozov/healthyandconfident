@@ -221,7 +221,7 @@ export async function getAutomationReport(
 
   for (const click of clicks) {
     const email = click.email.trim().toLowerCase();
-    const url = click.target_url?.trim() || "—";
+    const url = click.target_url?.trim() || "-";
     const label = click.link_label?.trim() || url;
     const key = linkKey(label, url);
 

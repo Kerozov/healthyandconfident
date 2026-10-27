@@ -9,9 +9,11 @@ import {
 } from "@/lib/site/post-recommendations";
 import { usePostCatalog } from "@/components/site/use-post-catalog";
 import { CardImage } from "@/components/site/card-image";
+import { CtaLink } from "@/components/site/cta-link";
 import { PriceTag } from "@/components/site/price-tag";
 import { externalLinkProps } from "@/lib/site/external-link";
 import { cn, formatDate } from "@/lib/utils";
+import { shortDashes } from "@/lib/site/typography";
 
 const LABELS: Record<Locale, Record<PostCatalogKind, string>> = {
   bg: { product: "Продукт", guide: "Ръководство", program: "Програма", event: "Събитие", video: "Видео", post: "Статия", form: "Форма" },
@@ -70,7 +72,7 @@ export function PostRecommendationsBlock({
     </p>;
   }
 
-  const title = config.title || (locale === "bg" ? "Може да ти е полезно" : "You may also like");
+  const title = shortDashes(config.title) || (locale === "bg" ? "Може да ти е полезно" : "You may also like");
   return (
     <section className="not-prose clear-both my-10 min-w-0" aria-labelledby={headingId}
       aria-roledescription={carousel ? (locale === "bg" ? "Карусел" : "Carousel") : undefined}
@@ -111,12 +113,15 @@ export function PostRecommendationsBlock({
           carousel ? "flex snap-x snap-mandatory overflow-x-auto pb-4" : "grid",
           config.layout === "grid" && config.columns === 2 && "sm:grid-cols-2",
           config.layout === "grid" && config.columns === 3 && "sm:grid-cols-2 lg:grid-cols-3")}>
-        {items.map((item) => <li key={item.key} className={cn("min-w-0",
+        {items.map((item) => {
+          const usePlacement = item.kind === "program" && item.placementKey && !preview;
+          const Card = usePlacement ? "article" : "a";
+          return <li key={item.key} className={cn("min-w-0",
           carousel && "w-[85%] shrink-0 snap-start",
           carousel && config.columns === 1 && "sm:w-full",
           carousel && config.columns === 2 && "sm:w-[calc((100%-1rem)/2)]",
           carousel && config.columns === 3 && "sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]")}>
-          <a href={item.href} {...externalLinkProps(item.href)}
+          <Card href={usePlacement ? undefined : item.href} {...(usePlacement ? {} : externalLinkProps(item.href))}
             onClick={preview ? (event) => event.preventDefault() : undefined}
             className={cn("group flex h-full overflow-hidden rounded-2xl bg-white text-left no-underline shadow-card ring-1 ring-forest-100 transition-shadow hover:shadow-soft focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-forest-500",
               config.layout === "list" ? "flex-row" : "flex-col")}>
@@ -133,11 +138,15 @@ export function PostRecommendationsBlock({
               {item.date && <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-ink-soft"><CalendarDays className="h-3.5 w-3.5" />{formatDate(`${item.date}T12:00:00`, locale)}</p>}
               <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-4">
                 {config.showPrice && item.price && <PriceTag label={item.price} wasLabel={locale === "bg" ? "Преди" : "Was"} size="sm" />}
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-forest-600">{locale === "bg" ? "Виж повече" : "Learn more"}<ArrowRight className="h-4 w-4" /></span>
+                {usePlacement ? <CtaLink placementKey={item.placementKey!} href={item.href} variant="ghost"
+                  className="h-auto whitespace-normal rounded-none p-0 text-left text-sm font-semibold text-forest-600 hover:bg-transparent">
+                  {locale === "bg" ? "Виж повече" : "Learn more"}<ArrowRight className="h-4 w-4" />
+                </CtaLink> : <span className="inline-flex items-center gap-1 text-sm font-semibold text-forest-600">{locale === "bg" ? "Виж повече" : "Learn more"}<ArrowRight className="h-4 w-4" /></span>}
               </div>
             </div>
-          </a>
-        </li>)}
+          </Card>
+        </li>;
+        })}
       </ul>
     </section>
   );

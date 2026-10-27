@@ -79,7 +79,7 @@ export default async function AdminDashboard() {
       {session?.role === "owner" && team ? (
         <section className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <Card
-            title="Екип — последна работа"
+            title="Екип - последна работа"
             action={
               <AdminTextLink
                 href="/admin/team"

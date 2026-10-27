@@ -305,7 +305,7 @@ export function OfferPopupProvider({
 
   const acceptLabel = (() => {
     if (baseProduct) {
-      return locale === "bg" ? "Да, искам и двете — към Stripe" : "Yes, both — go to Stripe";
+      return locale === "bg" ? "Да, искам и двете - към Stripe" : "Yes, both - go to Stripe";
     }
     return offerCta;
   })();

@@ -8,6 +8,7 @@ import { programCardForLocale, programCardHref } from "@/lib/site/program-cards"
 import { resolveMarkdownHref } from "@/lib/site/markdown-links";
 import { parseYoutubeVideoId, youtubeThumbnailUrl } from "@/lib/youtube";
 import type { PostCatalogItem } from "@/lib/site/post-recommendations";
+import { normalizeDisplayText } from "@/lib/site/typography";
 
 export type PublicPostForm = Pick<FormTemplateRecord,
   "id" | "slug" | "enabled" | "title_bg" | "title_en" | "description_bg" | "description_en" | "hero_image_url"
@@ -26,9 +27,9 @@ export function buildPostCatalog(source: PostCatalogSource, locale: Locale, now 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(now);
   const visiblePrograms = source.programs.filter(visible);
   // Match the site's Programs section when there are no visible database cards.
-  const programs = visiblePrograms.length
-    ? visiblePrograms.map((p) => ({ key: `program:${p.id}`, card: programCardForLocale(p, locale) }))
-    : (source.fallbackPrograms ?? []).map((card, index) => ({ key: `program:fallback-${index}`, card }));
+  const programs = source.programs.length
+    ? visiblePrograms.map((p) => ({ key: `program:${p.id}`, placementKey: p.placement_key, card: programCardForLocale(p, locale) }))
+    : (source.fallbackPrograms ?? []).map((card, index) => ({ key: `program:fallback-${index}`, placementKey: `programs_${index}`, card }));
   const items: PostCatalogItem[] = [
     ...source.products.filter(visible).map((p): PostCatalogItem => ({
       key: `product:${p.id}`, kind: "product", title: pick(p.title_bg, p.title_en),
@@ -40,9 +41,9 @@ export function buildPostCatalog(source: PostCatalogSource, locale: Locale, now 
       description: pick(g.description_bg, g.description_en), image: g.image_url || "",
       href: guideButtonHref(g, locale), price: pick(g.price_label_bg, g.price_label_en),
     })),
-    ...programs.map(({ key, card }): PostCatalogItem => {
+    ...programs.map(({ key, placementKey, card }): PostCatalogItem => {
       return {
-        key, kind: "program", title: card.title,
+        key, placementKey, kind: "program", title: card.title,
         description: card.description, image: card.image || "",
         href: programCardHref(card.href, locale), price: card.price,
       };
@@ -75,6 +76,6 @@ export function buildPostCatalog(source: PostCatalogSource, locale: Locale, now 
   ];
   return items.flatMap((item) => {
     const href = resolveMarkdownHref(item.href, locale);
-    return item.title && href ? [{ ...item, href }] : [];
+    return item.title && href ? [normalizeDisplayText({ ...item, href })] : [];
   });
 }

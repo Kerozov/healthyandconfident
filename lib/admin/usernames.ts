@@ -7,5 +7,5 @@ export function normalizeUsername(input: string): string | null {
 }
 
 export function usernameRules(): string {
-  return "3–32 символа, започва с буква, само малки латински букви, цифри, точка, тире и _";
+  return "3-32 символа, започва с буква, само малки латински букви, цифри, точка, тире и _";
 }

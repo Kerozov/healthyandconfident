@@ -24,7 +24,7 @@ function reminderContent(input: {
     return {
       subject: `Reminder: your program spot (day ${input.day})`,
       html: `<p>Hi ${greeting},</p>
-<p>Just a friendly reminder — you started signing up but haven't completed payment yet.</p>
+<p>Just a friendly reminder - you started signing up but haven't completed payment yet.</p>
 <p><a href="${input.ctaUrl}">Complete your registration →</a></p>
 <p>With love,<br/>Vessie</p>`,
     };
@@ -33,7 +33,7 @@ function reminderContent(input: {
   return {
     subject: `Напомняне: място в програмата (ден ${input.day})`,
     html: `<p>Здравей, ${greeting},</p>
-<p>Кратко напомняне — започна записването, но плащането още не е завършено.</p>
+<p>Кратко напомняне - започна записването, но плащането още не е завършено.</p>
 <p><a href="${input.ctaUrl}">Завърши регистрацията →</a></p>
 <p>С обич,<br/>Веси</p>`,
   };

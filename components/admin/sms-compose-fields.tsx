@@ -33,9 +33,9 @@ export function SmsComposeFields({
   onLinkChange,
   templateVars,
   messageLabel = "Текст",
-  messageHint = "Обикновен текст. Бутоните отгоре вмъкват име, фамилия, телефон… — заменят се при изпращане.",
+  messageHint = "Обикновен текст. Бутоните отгоре вмъкват име, фамилия, телефон… - заменят се при изпращане.",
   linkLabel = "Tracked link",
-  linkHint = "Пълен https:// адрес — worker-ът го съкращава автоматично (~24 символа).",
+  linkHint = "Пълен https:// адрес - worker-ът го съкращава автоматично (~24 символа).",
   showPreview = true,
   allowMergeTags = true,
 }: SmsComposeFieldsProps) {
@@ -67,7 +67,7 @@ export function SmsComposeFields({
                 key={t.tag}
                 type="button"
                 onClick={() => insertTag(t.tag)}
-                title={`Вмъква ${t.tag} — напр. „${t.sample}“`}
+                title={`Вмъква ${t.tag} - напр. „${t.sample}“`}
                 className="inline-flex h-7 items-center rounded-full border border-ink/15 bg-white px-2.5 text-[11px] font-semibold text-ink hover:bg-cream"
               >
                 {t.label}

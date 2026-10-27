@@ -146,7 +146,7 @@ export async function testFunnelBrandConnection(): Promise<
     const funnels = ping.funnels.map((f) => `${f.name} (${f.contacts})`).join(", ");
     return {
       ok: true,
-      message: `Връзката работи. Достъп до ${ping.funnels.length} фуния(и): ${funnels || "—"}. Общо ${ping.totalContacts} контакта.`,
+      message: `Връзката работи. Достъп до ${ping.funnels.length} фуния(и): ${funnels || "-"}. Общо ${ping.totalContacts} контакта.`,
     };
   } catch (err) {
     return { ok: false, message: err instanceof Error ? err.message : "Връзката не успя." };

@@ -70,11 +70,11 @@ export function PersonEmailsTable({
                     ? item.openedAt
                       ? formatDate(item.openedAt, "bg")
                       : "Да"
-                    : "—"
-                  : "—"}
+                    : "-"
+                  : "-"}
               </td>
               <td className="px-3 py-2 font-medium text-forest-700">
-                {item.status === "sent" ? item.clicks : "—"}
+                {item.status === "sent" ? item.clicks : "-"}
               </td>
               <td className="max-w-[200px] truncate px-3 py-2 text-xs text-coral-700">
                 {item.error ?? (item.workerJobId ? "" : item.status === "failed" ? "Без worker job" : "")}

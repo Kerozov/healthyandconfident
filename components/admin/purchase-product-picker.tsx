@@ -19,7 +19,7 @@ export function PurchaseProductPicker({
   if (products.length === 0 && guides.length === 0) {
     return (
       <p className="text-sm text-ink-soft">
-        Няма продукти или ръководства — добави ги в Website.
+        Няма продукти или ръководства - добави ги в Website.
       </p>
     );
   }
@@ -80,7 +80,7 @@ export function PurchaseProductPicker({
   return (
     <div className="space-y-2">
       <p className="text-xs text-ink-soft">
-        Задължително избери поне един продукт или наръчник — автоматизацията се пуска само при негова покупка.
+        Задължително избери поне един продукт или наръчник - автоматизацията се пуска само при негова покупка.
       </p>
       <div className="flex flex-col gap-2">
         {products.map((product) => (

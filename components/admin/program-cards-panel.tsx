@@ -191,7 +191,7 @@ function LinkEditor({
             {emptyLabel ? (
               <option value="">{emptyLabel}</option>
             ) : (
-              !custom && !known && value === "" && <option value="">— избери —</option>
+              !custom && !known && value === "" && <option value="">- избери -</option>
             )}
             {PROGRAM_LINK_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -208,7 +208,7 @@ function LinkEditor({
             />
           )}
           <p className="text-xs text-ink-soft">
-            Езикът се добавя автоматично — „/programs/x“ отваря /bg/programs/x на
+            Езикът се добавя автоматично - „/programs/x“ отваря /bg/programs/x на
             българския сайт и /en/programs/x на английския.
           </p>
         </div>
@@ -270,7 +270,7 @@ function OverrideWarning({
           <p>
             Бутонът на тази картичка има <strong>продукт в Stripe</strong> (таб
             „Бутони“ → <code className="text-xs">{placement.key}</code>) и отваря
-            плащане — линкът отдолу не важи, докато продуктът е избран.
+            плащане - линкът отдолу не важи, докато продуктът е избран.
           </p>
         )}
         {notes.length > 0 && (
@@ -421,8 +421,8 @@ export function ProgramCardsPanel({
         section={section}
         onSaved={refresh}
         label="Покажи секцията „Програми“ на началната страница"
-        titleLabelBg="Заглавие на секцията — BG"
-        titleLabelEn="Заглавие на секцията — EN"
+        titleLabelBg="Заглавие на секцията - BG"
+        titleLabelEn="Заглавие на секцията - EN"
         titleHint="Празно поле оставя заглавието от сайта."
       />
 
@@ -438,7 +438,7 @@ export function ProgramCardsPanel({
 
           <ImageUploadField
             label="Снимка на картичката"
-            hint="Снимката не се реже — показва се цялата. Най-добре изглежда хоризонтална 4:3 (1200×900 px); при друг формат празното място се запълва с размазан фон."
+            hint="Снимката не се реже - показва се цялата. Най-добре изглежда хоризонтална 4:3 (1200×900 px); при друг формат празното място се запълва с размазан фон."
             previewFrame="aspect-[4/3]"
             value={form.image_url}
             onChange={(url) => set("image_url", url)}
@@ -446,66 +446,66 @@ export function ProgramCardsPanel({
           />
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Заглавие — BG">
+            <Field label="Заглавие - BG">
               <Input
                 value={form.title_bg}
                 onChange={(e) => set("title_bg", e.target.value)}
               />
             </Field>
-            <Field label="Заглавие — EN" hint="Празно поле показва българското.">
+            <Field label="Заглавие - EN" hint="Празно поле показва българското.">
               <Input
                 value={form.title_en}
                 onChange={(e) => set("title_en", e.target.value)}
               />
             </Field>
 
-            <Field label="Етикет горе вляво — BG" hint="Напр. „Най-избирана“. Празно = без етикет.">
+            <Field label="Етикет горе вляво - BG" hint="Напр. „Най-избирана“. Празно = без етикет.">
               <Input
                 value={form.badge_bg}
                 onChange={(e) => set("badge_bg", e.target.value)}
               />
             </Field>
-            <Field label="Етикет горе вляво — EN">
+            <Field label="Етикет горе вляво - EN">
               <Input
                 value={form.badge_en}
                 onChange={(e) => set("badge_en", e.target.value)}
               />
             </Field>
 
-            <Field label="Продължителност — BG" hint="Напр. „3 месеца“.">
+            <Field label="Продължителност - BG" hint="Напр. „3 месеца“.">
               <Input
                 value={form.duration_bg}
                 onChange={(e) => set("duration_bg", e.target.value)}
               />
             </Field>
-            <Field label="Продължителност — EN">
+            <Field label="Продължителност - EN">
               <Input
                 value={form.duration_en}
                 onChange={(e) => set("duration_en", e.target.value)}
               />
             </Field>
 
-            <Field label="Цена / надпис под нея — BG" hint="Напр. „€36“ или „групова програма“.">
+            <Field label="Цена / надпис под нея - BG" hint="Напр. „€36“ или „групова програма“.">
               <Input
                 value={form.price_bg}
                 onChange={(e) => set("price_bg", e.target.value)}
               />
             </Field>
-            <Field label="Цена / надпис под нея — EN">
+            <Field label="Цена / надпис под нея - EN">
               <Input
                 value={form.price_en}
                 onChange={(e) => set("price_en", e.target.value)}
               />
             </Field>
 
-            <Field label="Описание — BG">
+            <Field label="Описание - BG">
               <Textarea
                 rows={3}
                 value={form.description_bg}
                 onChange={(e) => set("description_bg", e.target.value)}
               />
             </Field>
-            <Field label="Описание — EN">
+            <Field label="Описание - EN">
               <Textarea
                 rows={3}
                 value={form.description_en}
@@ -513,14 +513,14 @@ export function ProgramCardsPanel({
               />
             </Field>
 
-            <Field label="Списък с чекчета — BG" hint="По един ред на точка.">
+            <Field label="Списък с чекчета - BG" hint="По един ред на точка.">
               <Textarea
                 rows={4}
                 value={form.features_bg}
                 onChange={(e) => set("features_bg", e.target.value)}
               />
             </Field>
-            <Field label="Списък с чекчета — EN" hint="По един ред на точка.">
+            <Field label="Списък с чекчета - EN" hint="По един ред на точка.">
               <Textarea
                 rows={4}
                 value={form.features_en}
@@ -528,13 +528,13 @@ export function ProgramCardsPanel({
               />
             </Field>
 
-            <Field label="Текст на бутона — BG">
+            <Field label="Текст на бутона - BG">
               <Input
                 value={form.cta_label_bg}
                 onChange={(e) => set("cta_label_bg", e.target.value)}
               />
             </Field>
-            <Field label="Текст на бутона — EN">
+            <Field label="Текст на бутона - EN">
               <Input
                 value={form.cta_label_en}
                 onChange={(e) => set("cta_label_en", e.target.value)}
@@ -552,7 +552,7 @@ export function ProgramCardsPanel({
             <LinkEditor
               key={`${editingId}-href-en`}
               label="Накъде води бутонът (английски сайт)"
-              emptyLabel="— като на българския сайт —"
+              emptyLabel="- като на българския сайт -"
               value={form.href_en}
               onChange={(href) => set("href_en", href)}
             />
@@ -603,7 +603,7 @@ export function ProgramCardsPanel({
 
       {items.length === 0 ? (
         <p className="rounded-xl border border-ink/10 p-4 text-sm text-ink-soft">
-          Няма записани картички — сайтът показва трите по подразбиране. Натисни{" "}
+          Няма записани картички - сайтът показва трите по подразбиране. Натисни{" "}
           <strong>Нова картичка</strong>, за да поемеш секцията оттук (или пусни
           миграция <code className="text-xs">068_site_program_cards.sql</code>, която
           вписва сегашните три).
@@ -680,7 +680,7 @@ export function ProgramCardsPanel({
                   )}
                   <p className="mt-3 inline-flex items-center gap-1 break-all text-xs text-ink-soft">
                     {external && <ExternalLink className="h-3 w-3 shrink-0" />}
-                    {card.cta_label_bg || "(бутон без текст)"} → {card.href || "—"}
+                    {card.cta_label_bg || "(бутон без текст)"} → {card.href || "-"}
                   </p>
                   <div className="mt-4 flex gap-1">
                     <button

@@ -89,7 +89,7 @@ export default function AdminLoginPage() {
           </AdminButton>
           <p className="mt-4 text-xs leading-relaxed text-ink-soft">
             Главният админ влиза с <span className="font-medium text-ink">admin</span> и
-            основната админ парола. Остатъкът от екипа — с профила, който той създаде.
+            основната админ парола. Остатъкът от екипа - с профила, който той създаде.
           </p>
         </form>
       </div>

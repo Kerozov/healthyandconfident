@@ -105,7 +105,7 @@ export function AutomationSendNowDialog({
       count > 1 &&
       !confirm(
         `Да изпратя „${automation.name}“ на ${count} души?\n\n` +
-          (spread ? `Разпределени във времето — последният тръгва след ${spread}.` : "Всички тръгват наведнъж."),
+          (spread ? `Разпределени във времето - последният тръгва след ${spread}.` : "Всички тръгват наведнъж."),
       )
     ) {
       return;
@@ -190,7 +190,7 @@ export function AutomationSendNowDialog({
           {mode === "emails" && (
             <Field
               label="Имейли"
-              hint="Един или повече — на нов ред, със запетая или интервал. Езикът и името се вземат от абоната."
+              hint="Един или повече - на нов ред, със запетая или интервал. Езикът и името се вземат от абоната."
               htmlFor="send-now-emails"
             >
               <textarea
@@ -246,7 +246,7 @@ export function AutomationSendNowDialog({
 
           <Field
             label="Темпо"
-            hint="За повече от един човек — изпращане едно по едно, за да не тръгне всичко наведнъж."
+            hint="За повече от един човек - изпращане едно по едно, за да не тръгне всичко наведнъж."
             htmlFor="send-now-pacing"
           >
             <Select
@@ -300,7 +300,7 @@ export function AutomationSendNowDialog({
                 <span>
                   Продължи с следващите стъпки от поредицата
                   <span className="block text-xs text-ink-soft">
-                    Насрочва ги от сега, със закъсненията им. Които вече ги имат — не ги получават пак.
+                    Насрочва ги от сега, със закъсненията им. Които вече ги имат - не ги получават пак.
                   </span>
                 </span>
               </label>
@@ -315,7 +315,7 @@ export function AutomationSendNowDialog({
               </p>
               {preview.already > 0 && (
                 <p className="mt-1 text-ink-soft">
-                  {preview.already} вече я имат —{" "}
+                  {preview.already} вече я имат -{" "}
                   {resend ? "ще я получат пак." : "ще бъдат пропуснати."}
                 </p>
               )}

@@ -213,7 +213,7 @@ export function EmailBuilder({
         <div className="rounded-2xl border border-ink/10 bg-white p-3 sm:p-4">
           <ImageUploadField
             label="Банер най-отгоре (по избор)"
-            hint="Стои над логото, преди съдържанието. За снимка между текста добави блок „Снимка“ — него можеш да местиш свободно."
+            hint="Стои над логото, преди съдържанието. За снимка между текста добави блок „Снимка“ - него можеш да местиш свободно."
             value={heroImageUrl ?? ""}
             onChange={onHeroImageChange}
             folder="email"
@@ -255,7 +255,7 @@ export function EmailBuilder({
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">
               Взима кадъра (thumbnail) на видеото и го слага като банер отгоре.
-              Горният банер не се кликва — за банер, който отваря YouTube,
+              Горният банер не се кликва - за банер, който отваря YouTube,
               добави блок „YouTube видео“.
             </p>
             {youtubeError && (
@@ -299,7 +299,7 @@ export function EmailBuilder({
                 Добави първия блок
               </span>
               <span className="text-xs text-ink-soft">
-                Текст, снимка, видео, бутон, продукт, наръчник или форма — в
+                Текст, снимка, видео, бутон, продукт, наръчник или форма - в
                 какъвто ред искаш.
               </span>
             </button>
@@ -472,7 +472,7 @@ function BlockCard({
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          aria-label={`${EMAIL_BLOCK_LABELS[block.type]} — ${open ? "затвори" : "редактирай"}`}
+          aria-label={`${EMAIL_BLOCK_LABELS[block.type]} - ${open ? "затвори" : "редактирай"}`}
           className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1 py-1.5 text-left hover:bg-cream/60"
         >
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-forest-500/10 text-forest-700">

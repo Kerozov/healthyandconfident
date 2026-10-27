@@ -286,7 +286,7 @@ function StatusLine({ loaded, report }: { loaded: boolean; report: Report | null
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-        Изключен за този език — тук е с пунктир, на сайта не се вижда.
+        Изключен за този език - тук е с пунктир, на сайта не се вижда.
       </span>
     );
   }

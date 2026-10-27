@@ -180,7 +180,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
   // A retry of the paid event that lands after the refund: no tags, no
   // "thank you for your purchase" automations for money already returned.
   if (await sessionWasRefunded(input.stripeSessionId)) {
-    console.info(`[purchase] skip fulfil — session ${input.stripeSessionId} was refunded`);
+    console.info(`[purchase] skip fulfil - session ${input.stripeSessionId} was refunded`);
     return { ok: true, productIds, guideIds, tags: [] };
   }
 

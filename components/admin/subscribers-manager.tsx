@@ -492,7 +492,7 @@ export function SubscribersManager({
               ? "Няма достъп / сесията е изтекла. Презареди и влез отново."
               : `Импортът спря (HTTP ${res.status}).`);
           setImportNote(
-            `${message} Записани ${created + updated} от ${rows.length} реда — пусни файла отново, за да продължиш.`,
+            `${message} Записани ${created + updated} от ${rows.length} реда - пусни файла отново, за да продължиш.`,
           );
           router.refresh();
           return;
@@ -622,7 +622,7 @@ export function SubscribersManager({
 
           <Field
             label="Additional tags"
-            hint="Comma-separated — custom tags not in the list above."
+            hint="Comma-separated - custom tags not in the list above."
           >
             <Input
               value={add.extraTags}
@@ -650,12 +650,12 @@ export function SubscribersManager({
           last_name, phone, facebook_url, locale, status, tags/segments, source, notes, consent,
           created_at. Mailchimp <strong>LOCATION</strong> (e.g. United States) sets locale to{" "}
           <code className="text-xs">en</code> and adds the <code className="text-xs">en</code> tag.
-          Големи файлове минават на части — няма ограничение за размера.
+          Големи файлове минават на части - няма ограничение за размера.
         </p>
         <p className="mb-4 text-sm text-ink-soft">
           <strong>MailerLite експорт</strong> (CSV с табулации) се приема директно: всяка
           група от колоната <strong>Groups</strong> (разделени с „;“ или със запетая) се
-          слага на човека — съществуващата, ако името съвпада, иначе се създава нова в
+          слага на човека - съществуващата, ако името съвпада, иначе се създава нова в
           групата „{MAILERLITE_SEGMENT_GROUP}“ (само веднъж, без дубликати). Статусите bounced,
           junk и unconfirmed се внасят като отписани. Допълнителните полета (Проблем,
           Килограми, Company…) отиват в бележките. При повторен файл празните клетки не
@@ -694,8 +694,8 @@ export function SubscribersManager({
             <span className="font-semibold">Пусни автоматизациите след импорта</span>
             <span className="mt-0.5 block text-xs text-ink-soft">
               {importTriggerAutomations
-                ? "Хората влизат в автоматизациите за новите си сегменти и за нови абонати (според настройката „Импорт“/„Нови“ на всяка автоматизация) — ще получат писмата им."
-                : "Хората само получават сегментите си — никакви писма от автоматизации. За стари абонати от MailerLite обикновено това е правилното."}
+                ? "Хората влизат в автоматизациите за новите си сегменти и за нови абонати (според настройката „Импорт“/„Нови“ на всяка автоматизация) - ще получат писмата им."
+                : "Хората само получават сегментите си - никакви писма от автоматизации. За стари абонати от MailerLite обикновено това е правилното."}
             </span>
           </span>
         </label>
@@ -826,7 +826,7 @@ export function SubscribersManager({
       </Card>
 
       {editing && (
-        <Card title={`Редакция — ${editing.email}`}>
+        <Card title={`Редакция - ${editing.email}`}>
           <div className="mb-4 grid gap-4 md:grid-cols-2">
             <Field label="Име">
               <Input
@@ -846,7 +846,7 @@ export function SubscribersManager({
           <div className="rounded-xl border border-forest-100 bg-cream/40 p-4">
             <p className="text-sm font-semibold text-slate-800">Здравна група</p>
             <p className="mt-1 text-xs text-ink-soft">
-              Отговорът от формата (диабет / ИР / общо отслабване) — отива в колоната
+              Отговорът от формата (диабет / ИР / общо отслабване) - отива в колоната
               Групи. Колоната Интерес показва „Безплатно меню“, ако има таг free-menu.
             </p>
             <div className="mt-3 flex flex-col gap-2">
@@ -1099,7 +1099,7 @@ export function SubscribersManager({
                       </td>
                       <td className="py-3 pr-4 font-medium">{s.email}</td>
                       <td className="py-3 pr-4 text-ink-soft">
-                        {[s.first_name, s.last_name].filter(Boolean).join(" ") || s.name || "—"}
+                        {[s.first_name, s.last_name].filter(Boolean).join(" ") || s.name || "-"}
                         {s.facebook_url ? (
                           <a
                             href={s.facebook_url.startsWith("http") ? s.facebook_url : `https://${s.facebook_url}`}
@@ -1111,12 +1111,12 @@ export function SubscribersManager({
                           </a>
                         ) : null}
                       </td>
-                      <td className="py-3 pr-4 text-ink-soft">{s.phone || "—"}</td>
+                      <td className="py-3 pr-4 text-ink-soft">{s.phone || "-"}</td>
                       <td className="py-3 pr-4 uppercase text-ink-soft">{s.locale}</td>
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-1">
                           {activityInterestLabelsFromTags(s.tags).length === 0 ? (
-                            <span className="text-ink-soft/50">—</span>
+                            <span className="text-ink-soft/50">-</span>
                           ) : (
                             activityInterestLabelsFromTags(s.tags).map((label) => (
                               <span
@@ -1134,7 +1134,7 @@ export function SubscribersManager({
                           {(() => {
                             const segmentTags = s.tags.filter((t) => !isActivityTag(t));
                             if (segmentTags.length === 0) {
-                              return <span className="text-ink-soft/50">—</span>;
+                              return <span className="text-ink-soft/50">-</span>;
                             }
                             return segmentTags.map((t) => {
                               const isHealth = ALL_HEALTH_TAG_KEYS.includes(
@@ -1167,7 +1167,7 @@ export function SubscribersManager({
                             Неплатил
                           </span>
                         ) : (
-                          <span className="text-ink-soft/50">—</span>
+                          <span className="text-ink-soft/50">-</span>
                         )}
                       </td>
                       <td className="py-3 pr-4 text-ink-soft">
@@ -1176,7 +1176,7 @@ export function SubscribersManager({
                             {contact.zoomTotalMinutes} мин.
                           </span>
                         ) : (
-                          "—"
+                          "-"
                         )}
                       </td>
                       <td className="py-3 pr-4 text-ink-soft">{s.source}</td>
@@ -1211,7 +1211,7 @@ export function SubscribersManager({
                             )}
                           </div>
                         ) : (
-                          "—"
+                          "-"
                         )}
                       </td>
                       <td className="py-3 pr-4 text-center text-ink-soft">

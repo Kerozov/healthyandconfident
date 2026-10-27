@@ -402,7 +402,7 @@ export async function getPaymentStats(
       items: order.lines.map((line) => {
         const id =
           line.product_id || line.stripe_product_id?.replace(/^guide:/, "") || "";
-        return productNames.get(id)?.name ?? id ?? "—";
+        return productNames.get(id)?.name ?? id ?? "-";
       }),
     };
   }
@@ -462,7 +462,7 @@ export async function getPaymentStats(
   >();
   for (const order of currentOrders) {
     if (order.status !== "paid") continue;
-    const source = subscriberByEmail.get(order.email)?.source || "—";
+    const source = subscriberByEmail.get(order.email)?.source || "-";
     const entry = sourceMap.get(source) ?? {
       customers: new Set<string>(),
       orders: 0,

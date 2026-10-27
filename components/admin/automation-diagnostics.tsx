@@ -39,10 +39,10 @@ export function AutomationDiagnostics() {
     <section className="mt-8 rounded-2xl border border-ink/10 bg-white p-4 sm:p-5">
       <div className="flex items-center gap-2">
         <Stethoscope className="h-5 w-5 text-forest-600" />
-        <p className="font-medium text-ink">Диагностика — защо не се праща имейл?</p>
+        <p className="font-medium text-ink">Диагностика - защо не се праща имейл?</p>
       </div>
       <p className="mt-1 text-xs text-ink-soft sm:text-sm">
-        Въведи имейл на абонат и виж какво би се случило. Не изпраща нищо — само
+        Въведи имейл на абонат и виж какво би се случило. Не изпраща нищо - само
         проверява.
       </p>
 
@@ -96,8 +96,8 @@ export function AutomationDiagnostics() {
             className="mt-1 h-10 w-full rounded-lg border border-ink/15 px-3 text-sm"
           >
             <option value="auto">Авто (нов ако няма в базата)</option>
-            <option value="yes">Да — нов</option>
-            <option value="no">Не — вече записан</option>
+            <option value="yes">Да - нов</option>
+            <option value="no">Не - вече записан</option>
           </select>
         </label>
         <p className="text-xs text-ink-soft sm:col-span-2">
@@ -169,7 +169,7 @@ export function AutomationDiagnostics() {
           {result?.subscriberFound &&
             d.rules.some((r) => r.reason === "already_queued_or_sent") && (
               <p className="rounded-lg border border-forest-200 bg-forest-50/50 px-3 py-2 text-xs text-forest-800">
-                Абонатът е намерен. „И вече записани“ работи — но стъпките, които вече са
+                Абонатът е намерен. „И вече записани“ работи - но стъпките, които вече са
                 изпратени, не се пращат отново. За тест използвай друг имейл или изтрий
                 доставката от историята на автоматизацията.
               </p>
@@ -257,10 +257,10 @@ const REASONS: Record<string, string> = {
   purchase_segment_gate: "не влиза в групата за покупка",
   product_filter: "не съвпада с избрания продукт",
   already_queued_or_sent:
-    "вече е изпратена/планирана за този имейл — не се дублира (дори при „и вече записани“)",
+    "вече е изпратена/планирана за този имейл - не се дублира (дори при „и вече записани“)",
   waiting_for_parent_automation:
     "чака предходния имейл от веригата да се изпрати",
-  chained_delay_not_from_parent: "част от верига — стартира се от родителя",
+  chained_delay_not_from_parent: "част от верига - стартира се от родителя",
   form_filter: "не е попълнена избраната форма",
   form_answers: "отговорите на формата не минават условията",
   segment_entry_gate: "човекът не влиза сега за първи път в избраната група",
@@ -272,13 +272,13 @@ const REASONS: Record<string, string> = {
 function translateReason(reason: string): string {
   if (REASONS[reason]) return REASONS[reason];
   if (reason.startsWith("trigger:")) {
-    return `тригерът не съвпада — ${reason.replace("trigger: ", "")}`;
+    return `тригерът не съвпада - ${reason.replace("trigger: ", "")}`;
   }
   if (reason.startsWith("audience")) {
-    return `аудиторията не съвпада — ${reason.replace("audience ", "")}`;
+    return `аудиторията не съвпада - ${reason.replace("audience ", "")}`;
   }
   if (reason.startsWith("signup_source")) {
-    return `източникът не съвпада — ${reason.replace("signup_source ", "")}`;
+    return `източникът не съвпада - ${reason.replace("signup_source ", "")}`;
   }
   if (reason === "subscriber_origin") {
     return REASONS.subscriber_origin;

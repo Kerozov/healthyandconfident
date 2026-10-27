@@ -14,6 +14,8 @@ export type PostCatalogItem = {
   href: string;
   price: string;
   date?: string;
+  /** Programme buttons retain their configured checkout and extra offers. */
+  placementKey?: string;
 };
 export type PostRecommendations = {
   title: string;

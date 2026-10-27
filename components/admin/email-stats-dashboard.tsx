@@ -208,7 +208,7 @@ export function EmailStatsDashboard({
           </Card>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <Card title="Пътят на хората — от имейл до покупка">
+            <Card title="Пътят на хората - от имейл до покупка">
               <Funnel
                 steps={[
                   { label: "Получили имейл", value: funnel.recipients, hint: "поне един изпратен имейл" },
@@ -235,7 +235,7 @@ export function EmailStatsDashboard({
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <Card title="Кога отварят — час от деня">
+            <Card title="Кога отварят - час от деня">
               <ColumnChart
                 data={stats.opensByHour.map((h) => ({
                   label: `${h.hour}`,
@@ -249,7 +249,7 @@ export function EmailStatsDashboard({
               </p>
             </Card>
 
-            <Card title="Кога отварят — ден от седмицата">
+            <Card title="Кога отварят - ден от седмицата">
               <ColumnChart
                 data={stats.opensByWeekday.map((d) => ({
                   label: WEEKDAYS[d.weekday],

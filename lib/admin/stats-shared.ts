@@ -171,5 +171,5 @@ export async function fetchAllRows<T>(
 
 export function emailDomain(email: string): string {
   const at = email.lastIndexOf("@");
-  return at === -1 ? "—" : email.slice(at + 1).toLowerCase();
+  return at === -1 ? "-" : email.slice(at + 1).toLowerCase();
 }

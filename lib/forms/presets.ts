@@ -8,7 +8,7 @@ export const FORM_PRESETS: FormPreset[] = [
   {
     key: "health-intake",
     name: "Здравен въпросник",
-    description: "Anamnesis — цели, здраве, навици",
+    description: "Anamnesis - цели, здраве, навици",
     slug: "health-intake",
     title_bg: "Здравен въпросник",
     title_en: "Health questionnaire",
@@ -19,7 +19,7 @@ export const FORM_PRESETS: FormPreset[] = [
     email_subject_bg: "Моля, попълни здравния въпросник",
     email_subject_en: "Please complete your health questionnaire",
     email_intro_bg:
-      "<p>Здравей, {{name}}!</p><p>Благодарим ти, че си част от нашата общност. Моля, отдели няколко минути да попълниш въпросника — така ще можем да ти помогнем по-точно.</p>",
+      "<p>Здравей, {{name}}!</p><p>Благодарим ти, че си част от нашата общност. Моля, отдели няколко минути да попълниш въпросника - така ще можем да ти помогнем по-точно.</p>",
     email_intro_en:
       "<p>Hi {{name}}!</p><p>Thank you for being part of our community. Please take a few minutes to complete the questionnaire so we can support you better.</p>",
     settings: {
@@ -68,8 +68,8 @@ export const FORM_PRESETS: FormPreset[] = [
         type: "radio",
         label_bg: "С какво можем да ти помогнем?",
         label_en: "How can we help you?",
-        help_bg: "Избери едно — ще ти пратим най-подходящото съдържание.",
-        help_en: "Choose one — we'll send the most relevant content.",
+        help_bg: "Избери едно - ще ти пратим най-подходящото съдържание.",
+        help_en: "Choose one - we'll send the most relevant content.",
         required: true,
         options: [
           {
@@ -86,8 +86,8 @@ export const FORM_PRESETS: FormPreset[] = [
           },
           {
             value: "weight-loss",
-            label_bg: "Нямам тези проблеми — искам общо отслабване / повече енергия",
-            label_en: "None of these — general weight loss / more energy",
+            label_bg: "Нямам тези проблеми - искам общо отслабване / повече енергия",
+            label_en: "None of these - general weight loss / more energy",
             segment_key: "weight-loss",
           },
         ],
@@ -134,9 +134,9 @@ export const FORM_PRESETS: FormPreset[] = [
     email_subject_bg: "Сподели обратна връзка",
     email_subject_en: "Share your feedback",
     email_intro_bg:
-      "<p>Здравей!</p><p>Ще се радваме да чуем как мина за теб — попълни кратката форма по-долу.</p>",
+      "<p>Здравей!</p><p>Ще се радваме да чуем как мина за теб - попълни кратката форма по-долу.</p>",
     email_intro_en:
-      "<p>Hi!</p><p>We would love to hear how it went for you — please fill in the short form below.</p>",
+      "<p>Hi!</p><p>We would love to hear how it went for you - please fill in the short form below.</p>",
     settings: {
       theme: "warm",
       thank_you_bg: "Благодарим за обратната връзка!",
@@ -186,8 +186,8 @@ export const FORM_PRESETS: FormPreset[] = [
     title_en: "Register for the event",
     description_bg: "Попълни формата и ще получиш детайли по имейл.",
     description_en: "Fill in the form and you will receive details by email.",
-    email_subject_bg: "Запиши се — линк към формата",
-    email_subject_en: "Register — form link",
+    email_subject_bg: "Запиши се - линк към формата",
+    email_subject_en: "Register - form link",
     email_intro_bg:
       "<p>Здравей, {{name}}!</p><p>Радваме се, че искаш да участваш. Попълни формата за записване:</p>",
     email_intro_en:

@@ -330,7 +330,7 @@ export function resolvePlacementButton(
 
 export function productPlacementLabel(title_bg: string, title_en: string) {
   return {
-    label_bg: `Магазин: „${title_bg}“ — доп. оферта преди Stripe`,
-    label_en: `Shop: “${title_en}” — extra offer before Stripe checkout`,
+    label_bg: `Магазин: „${title_bg}“ - доп. оферта преди Stripe`,
+    label_en: `Shop: “${title_en}” - extra offer before Stripe checkout`,
   };
 }

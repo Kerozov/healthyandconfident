@@ -23,6 +23,7 @@ import { getLivePrices } from "@/lib/stripe/live-prices";
 import { resolveProgramSlug } from "@/lib/programs/types";
 import { getProgramLanding } from "@/lib/programs/landings";
 import { programPricingPriceIds } from "@/lib/programs/prices";
+import { normalizeDisplayText } from "@/lib/site/typography";
 
 export type { SiteContent };
 
@@ -143,7 +144,7 @@ async function withPublicClient<T>(
   fallback: T,
 ): Promise<T> {
   try {
-    return await run(getPublicClient());
+    return normalizeDisplayText(await run(getPublicClient()));
   } catch {
     return fallback;
   }

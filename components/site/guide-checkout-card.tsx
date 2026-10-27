@@ -101,8 +101,8 @@ export function GuideCheckoutCard({
         <p className="mt-5 flex items-center gap-2 text-xs text-ink-soft">
           <ShieldCheck className="h-4 w-4 text-forest-500" />
           {locale === "bg"
-            ? "Плащането минава през Stripe — сигурно и криптирано."
-            : "Payment is handled by Stripe — secure and encrypted."}
+            ? "Плащането минава през Stripe - сигурно и криптирано."
+            : "Payment is handled by Stripe - secure and encrypted."}
         </p>
       </div>
     </div>

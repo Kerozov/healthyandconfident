@@ -43,8 +43,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "vesi",
     aspect: "portrait",
     alt: {
-      bg: "Веси Ней — холистичен диетолог, специалист по инсулинова резистентност и Диабет тип 2",
-      en: "Vessie Nay — holistic nutritionist, insulin resistance and Type 2 Diabetes specialist",
+      bg: "Веси Ней - холистичен диетолог, специалист по инсулинова резистентност и Диабет тип 2",
+      en: "Vessie Nay - holistic nutritionist, insulin resistance and Type 2 Diabetes specialist",
     },
   },
   {
@@ -52,8 +52,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "vesi",
     aspect: "portrait",
     alt: {
-      bg: "Веси Ней — мотивиращ диетолог с над 10 години опит",
-      en: "Vessie Nay — motivating nutritionist with 10+ years of experience",
+      bg: "Веси Ней - мотивиращ диетолог с над 10 години опит",
+      en: "Vessie Nay - motivating nutritionist with 10+ years of experience",
     },
   },
   {
@@ -61,8 +61,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "vesi",
     aspect: "portrait",
     alt: {
-      bg: "Веси Ней — холистичен диетолог B.Med.Sc., NHS Diabetes Practitioner",
-      en: "Vessie Nay — holistic dietitian B.Med.Sc., NHS Diabetes Practitioner",
+      bg: "Веси Ней - холистичен диетолог B.Med.Sc., NHS Diabetes Practitioner",
+      en: "Vessie Nay - holistic dietitian B.Med.Sc., NHS Diabetes Practitioner",
     },
   },
   {
@@ -70,8 +70,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "food",
     aspect: "landscape",
     alt: {
-      bg: "Печена риба с зеленчуци — реално ястие от програмата за балансирано хранене",
-      en: "Grilled fish with vegetables — a real meal from the balanced eating program",
+      bg: "Печена риба с зеленчуци - реално ястие от програмата за балансирано хранене",
+      en: "Grilled fish with vegetables - a real meal from the balanced eating program",
     },
   },
   {
@@ -79,8 +79,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "food",
     aspect: "landscape",
     alt: {
-      bg: "Здравословни закуски с авокадо, яйца, сьомга и домати — вкусно меню без глад",
-      en: "Healthy breakfasts with avocado, eggs, salmon and tomatoes — tasty menu without hunger",
+      bg: "Здравословни закуски с авокадо, яйца, сьомга и домати - вкусно меню без глад",
+      en: "Healthy breakfasts with avocado, eggs, salmon and tomatoes - tasty menu without hunger",
     },
   },
   {
@@ -88,8 +88,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "food",
     aspect: "landscape",
     alt: {
-      bg: "Тостове с авокадо, яйца и чери домати — лесни рецепти за цялото семейство",
-      en: "Avocado toast with eggs and cherry tomatoes — easy family-friendly recipes",
+      bg: "Тостове с авокадо, яйца и чери домати - лесни рецепти за цялото семейство",
+      en: "Avocado toast with eggs and cherry tomatoes - easy family-friendly recipes",
     },
   },
   {
@@ -97,8 +97,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "food",
     aspect: "wide",
     alt: {
-      bg: "Колаж от вкусни ястия — салати, зеленчуци, протеин и здравословни гарнитури от менюто",
-      en: "Collage of delicious meals — salads, vegetables, protein and healthy sides from the menu",
+      bg: "Колаж от вкусни ястия - салати, зеленчуци, протеин и здравословни гарнитури от менюто",
+      en: "Collage of delicious meals - salads, vegetables, protein and healthy sides from the menu",
     },
   },
   {
@@ -106,8 +106,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "food",
     aspect: "landscape",
     alt: {
-      bg: "Салата с грилован халуми, авокадо и домати — засищащо и вкусно хранене",
-      en: "Salad with grilled halloumi, avocado and tomatoes — filling and delicious food",
+      bg: "Салата с грилован халуми, авокадо и домати - засищащо и вкусно хранене",
+      en: "Salad with grilled halloumi, avocado and tomatoes - filling and delicious food",
     },
   },
   {
@@ -115,8 +115,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "food",
     aspect: "wide",
     alt: {
-      bg: "Малка част от реалното меню на Веси Ней — салати, супи, гарнитури и здравословни ястия",
-      en: "A sample of Vessie Nay's real menu — salads, soups, sides and wholesome meals",
+      bg: "Малка част от реалното меню на Веси Ней - салати, супи, гарнитури и здравословни ястия",
+      en: "A sample of Vessie Nay's real menu - salads, soups, sides and wholesome meals",
     },
   },
   {
@@ -124,8 +124,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "food",
     aspect: "square",
     alt: {
-      bg: "Здравословна закуска с малини, боровинки и овес — сладко без вина от захар",
-      en: "Healthy breakfast with raspberries, blueberries and oats — sweet without sugar guilt",
+      bg: "Здравословна закуска с малини, боровинки и овес - сладко без вина от захар",
+      en: "Healthy breakfast with raspberries, blueberries and oats - sweet without sugar guilt",
     },
   },
   {
@@ -133,8 +133,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Колаж преди и след — трайно отслабване с програмата на Веси Ней",
-      en: "Before and after collage — lasting weight loss with Vessie Nay's program",
+      bg: "Колаж преди и след - трайно отслабване с програмата на Веси Ней",
+      en: "Before and after collage - lasting weight loss with Vessie Nay's program",
     },
   },
   {
@@ -151,8 +151,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Клиентка след трансформацията — повече увереност и енергия",
-      en: "Client after transformation — more confidence and energy",
+      bg: "Клиентка след трансформацията - повече увереност и енергия",
+      en: "Client after transformation - more confidence and energy",
     },
   },
   {
@@ -169,8 +169,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Клиентка след програмата — радост и енергия всеки ден",
-      en: "Client after the program — joy and energy every day",
+      bg: "Клиентка след програмата - радост и енергия всеки ден",
+      en: "Client after the program - joy and energy every day",
     },
   },
   {
@@ -187,8 +187,8 @@ export const siteMedia: SiteMediaItem[] = [
     category: "result",
     aspect: "portrait",
     alt: {
-      bg: "Същото семейство след 21-дневното предизвикателство — по-стройни и усмихнати",
-      en: "The same couple after the 21-day challenge — slimmer and smiling",
+      bg: "Същото семейство след 21-дневното предизвикателство - по-стройни и усмихнати",
+      en: "The same couple after the 21-day challenge - slimmer and smiling",
     },
   },
 ];

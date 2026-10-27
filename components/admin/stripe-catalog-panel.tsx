@@ -117,7 +117,7 @@ export function StripeCatalogPanel({
                         {item.stripeProductId}
                       </p>
                     </td>
-                    <td className="py-2.5 pr-3">{item.priceLabel || "—"}</td>
+                    <td className="py-2.5 pr-3">{item.priceLabel || "-"}</td>
                     <td className="py-2.5 pr-3">
                       <span
                         className={cn(

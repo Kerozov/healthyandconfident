@@ -22,7 +22,7 @@ export default async function AdminPaymentsPage({
     <div>
       <PageHeader
         title="Плащания"
-        description="Оборот, поръчки, продукти и клиенти — от реалните Stripe плащания."
+        description="Оборот, поръчки, продукти и клиенти - от реалните Stripe плащания."
       >
         <Suspense fallback={null}>
           <StatsToolbar active={period} />

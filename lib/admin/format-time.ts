@@ -23,9 +23,9 @@ export function formatAdminWhen(iso: string | null | undefined): string {
 }
 
 export function formatAdminDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("bg-BG", {
     day: "numeric",
     month: "short",

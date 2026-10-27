@@ -113,7 +113,7 @@ export function SegmentsManager({
             value={form.group_id}
             onChange={(e) => setForm({ ...form, group_id: e.target.value })}
           >
-            <option value="">— Без сегмент —</option>
+            <option value="">- Без сегмент -</option>
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name}
@@ -158,7 +158,7 @@ export function SegmentsManager({
                 <p className="text-xs text-ink-soft">
                   <code>{segment.key}</code>
                   {segment.group_id
-                    ? ` · сегмент: ${groupNameById.get(segment.group_id) ?? "—"}`
+                    ? ` · сегмент: ${groupNameById.get(segment.group_id) ?? "-"}`
                     : " · без сегмент"}
                   {segment.description ? ` · ${segment.description}` : ""}
                 </p>

@@ -25,7 +25,7 @@ export default async function AdminFormsPage() {
     <div>
       <PageHeader
         title="Форми"
-        description="Въпросници и форми с шаблони — изпращай по имейл и виж отговорите."
+        description="Въпросници и форми с шаблони - изпращай по имейл и виж отговорите."
       />
       <FormsManager
           forms={forms}

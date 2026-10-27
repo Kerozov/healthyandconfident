@@ -165,7 +165,7 @@ export function StripeLocalePicker({
           disabled={disabled || pending}
           onChange={(e) => pickProduct(e.target.value)}
         >
-          <option value="">— избери продукт —</option>
+          <option value="">- избери продукт -</option>
           {archivedSelected && (
             <option value={archivedSelected.stripeProductId}>
               {archivedSelected.name} (архивиран)
@@ -187,7 +187,7 @@ export function StripeLocalePicker({
             disabled={disabled || pending}
             onChange={(e) => pickPaymentLink(e.target.value)}
           >
-            <option value="">— избери линк —</option>
+            <option value="">- избери линк -</option>
             {paymentLinks.map((link) => (
               <option key={link.id} value={link.url}>
                 {link.name}
@@ -200,7 +200,7 @@ export function StripeLocalePicker({
 
       <Field
         label="Payment Link (URL)"
-        hint="buy.stripe.com — ползва се само ако няма избрана Stripe цена."
+        hint="buy.stripe.com - ползва се само ако няма избрана Stripe цена."
       >
         <Input
           value={value.stripe_url}
@@ -292,7 +292,7 @@ export function StripeHrefPicker({
           disabled={disabled || pending}
           onChange={(e) => pickProduct(e.target.value)}
         >
-          <option value="">— избери продукт —</option>
+          <option value="">- избери продукт -</option>
           {activeItems.map((item) => (
             <option key={item.stripeProductId} value={item.stripeProductId}>
               {item.name}
@@ -308,7 +308,7 @@ export function StripeHrefPicker({
             disabled={disabled || pending}
             onChange={(e) => pickPaymentLink(e.target.value)}
           >
-            <option value="">— избери линк —</option>
+            <option value="">- избери линк -</option>
             {paymentLinks.map((link) => (
               <option key={link.id} value={link.url}>
                 {link.name}

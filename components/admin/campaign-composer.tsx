@@ -332,7 +332,7 @@ export function CampaignComposer({
       title={isEmail ? "Нова имейл кампания" : "Нова SMS кампания"}
       subtitle={
         scheduledAt
-          ? "Ще се изпрати по график — часът е български."
+          ? "Ще се изпрати по график - часът е български."
           : "Изпраща се веднага след натискане на бутона."
       }
       onClose={onClose}
@@ -424,7 +424,7 @@ export function CampaignComposer({
           )}
           {!workerConfigured && (
             <p className="text-sm text-ink-soft">
-              Липсват worker променливите — изпращането е спряно.
+              Липсват worker променливите - изпращането е спряно.
             </p>
           )}
         </>
@@ -515,7 +515,7 @@ export function CampaignComposer({
                 <div className="mt-4 space-y-4">
                   <p className="text-xs text-ink-soft/80">
                     Показва се под съдържанието. Линкът може да се смени след
-                    изпращане от списъка с кампании — без повторно изпращане.
+                    изпращане от списъка с кампании - без повторно изпращане.
                     Допълнителни бутони добавяй с „Бутон“ над текста.
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -556,7 +556,7 @@ export function CampaignComposer({
               </label>
               <p className="mt-2 text-xs text-ink-soft/80">
                 Изключи, ако тази кампания не трябва да показва подписа от
-                „Email подпис“ настройките — останалата част от футъра се
+                „Email подпис“ настройките - останалата част от футъра се
                 показва както обикновено.
               </p>
             </WorkspacePanel>

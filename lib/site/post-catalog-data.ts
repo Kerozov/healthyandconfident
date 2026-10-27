@@ -19,7 +19,7 @@ async function publicForms(): Promise<PublicPostForm[]> {
 
 export async function getPostCatalog(locale: Locale) {
   const [products, guides, events, programs, videos, posts, forms] = await Promise.all([
-    getSiteProducts(), getSiteGuides(), getSiteEvents(), getSiteProgramCards(),
+    getSiteProducts(), getSiteGuides(), getSiteEvents(), getSiteProgramCards(true),
     getSiteVideos(), getPublishedPosts(locale), publicForms(),
   ]);
   return buildPostCatalog({

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, Leaf } from "lucide-react";
-import type { Locale } from "@/i18n/config";
+import { localeSwitchHref, type Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { OpenMenuButton } from "@/components/site/open-menu-button";
@@ -53,7 +53,7 @@ export function Navbar({
   }, [open]);
 
   const other: Locale = locale === "bg" ? "en" : "bg";
-  const switchHref = pathname.replace(/^\/(bg|en)/, `/${other}`) || `/${other}`;
+  const switchHref = localeSwitchHref(pathname, other);
   const freeMenuLabel = locale === "bg" ? "Безплатно меню" : "Free menu";
   const shortCta = locale === "bg" ? "Програми" : "Programs";
 

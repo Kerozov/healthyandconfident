@@ -21,7 +21,7 @@ const COPY = {
     pageNote:
       "Посетителят вижда корицата, описанието и цената, и купува оттам. Най-добро за студен трафик.",
     directNote:
-      "Stripe се отваря веднага. Страницата се прескача — за хора, които вече са решили.",
+      "Stripe се отваря веднага. Страницата се прескача - за хора, които вече са решили.",
   },
   product: {
     prefix: "/bg/products/",
@@ -115,7 +115,7 @@ export function CatalogLinkEditor({
         <p className="text-sm font-semibold text-ink">Линк</p>
         <p className="mt-1 text-xs leading-relaxed text-ink-soft">
           Всяко нещо тук има собствен адрес, който можеш да копираш и пратиш където
-          решиш — в съобщение, в реклама, в имейл.
+          решиш - в съобщение, в реклама, в имейл.
         </p>
       </div>
 
@@ -163,7 +163,7 @@ export function CatalogLinkEditor({
           checked={mode === "custom"}
           onSelect={() => onLinkModeChange("custom")}
           label="Собствен линк"
-          note="Води където напишеш — друга страница на сайта, форма, външен адрес."
+          note="Води където напишеш - друга страница на сайта, форма, външен адрес."
           disabled={disabled}
         />
         {mode === "custom" && (

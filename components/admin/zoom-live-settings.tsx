@@ -37,7 +37,7 @@ export function ZoomLiveSettings({ config }: { config: ZoomLiveConfig }) {
       <h2 className="font-display text-lg font-semibold">Бутон „На живо“ на сайта</h2>
       <p className="mt-1 text-sm text-ink-soft">
         Когато пуснеш Zoom среща, на сайта се появява червен бутон за
-        присъединяване. Сложи линка към срещата веднъж — после става
+        присъединяване. Сложи линка към срещата веднъж - после става
         автоматично.
       </p>
 
@@ -52,7 +52,7 @@ export function ZoomLiveSettings({ config }: { config: ZoomLiveConfig }) {
           />
         </label>
         <label className="block text-sm">
-          <span className="font-medium">Текст на бутона — български</span>
+          <span className="font-medium">Текст на бутона - български</span>
           <input
             className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm"
             value={form.label_bg}
@@ -60,7 +60,7 @@ export function ZoomLiveSettings({ config }: { config: ZoomLiveConfig }) {
           />
         </label>
         <label className="block text-sm">
-          <span className="font-medium">Текст на бутона — английски</span>
+          <span className="font-medium">Текст на бутона - английски</span>
           <input
             className="mt-1 w-full rounded-lg border border-ink/15 px-3 py-2 text-sm"
             value={form.label_en}

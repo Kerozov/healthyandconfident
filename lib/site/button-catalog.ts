@@ -73,7 +73,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
     buttons: [
       {
         key: "about_cta",
-        name: "Секция „За мен“ — главен бутон",
+        name: "Секция „За мен“ - главен бутон",
         spots: [
           {
             where: "Началната страница, секция „За мен“, първият бутон под наградата.",
@@ -85,7 +85,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "bio_banner_cta",
-        name: "Секция „За мен“ — бутон „Влез в общността“",
+        name: "Секция „За мен“ - бутон „Влез в общността“",
         spots: [
           {
             where: "Началната страница, секция „За мен“, вторият бутон под наградата.",
@@ -97,7 +97,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "outcomes_cta",
-        name: "Секция „Преди и след“ — бутон най-долу",
+        name: "Секция „Преди и след“ - бутон най-долу",
         spots: [
           {
             where: "Началната страница, секция „Преди и след“, под отзивите в Google.",
@@ -185,7 +185,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
             path: PROGRAM_RESISTANCE,
           },
         ],
-        defaultLabel: "Още подробности — видео тук",
+        defaultLabel: "Още подробности - видео тук",
         fallback: "Води към секция „Контакти“.",
       },
       {
@@ -259,7 +259,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_2_pricing_1",
-        name: "Цена 2: „Вариант 1“ — абонамент за 12 месеца",
+        name: "Цена 2: „Вариант 1“ - абонамент за 12 месеца",
         spots: [
           {
             where: "Страницата на клуба → секцията с цените, втората карта.",
@@ -271,7 +271,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_2_pricing_2",
-        name: "Цена 3: „Вариант 2“ — абонамент за 3 месеца",
+        name: "Цена 3: „Вариант 2“ - абонамент за 3 месеца",
         spots: [
           {
             where: "Страницата на клуба → секцията с цените, третата карта.",
@@ -298,7 +298,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
   },
   {
     id: "programs_0",
-    title: "Програма „Лято – стройна и спокойна“",
+    title: "Програма „Лято - стройна и спокойна“",
     path: PROGRAM_SUMMER,
     buttons: [
       {
@@ -341,7 +341,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
       },
       {
         key: "programs_0_pricing_0",
-        name: "Цена: „Летен пакет“ — еднократно плащане",
+        name: "Цена: „Летен пакет“ - еднократно плащане",
         spots: [
           {
             where: "Страницата на програмата → секцията с цените.",
@@ -370,7 +370,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
     id: "challenge_21",
     title: "Предизвикателство „21 дни по-стройни и щастливи“",
     path: CHALLENGE_21,
-    note: "Програмата още не е пусната в „Програми“ — страницата работи, но бутоните чакат продукт в Stripe.",
+    note: "Програмата още не е пусната в „Програми“ - страницата работи, но бутоните чакат продукт в Stripe.",
     buttons: [
       {
         key: "product_po-stroyni-i-shtastlivi",

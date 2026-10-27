@@ -127,7 +127,7 @@ export async function getCampaignStatsDetail(
   for (const click of clicks) {
     const email = click.email.toLowerCase();
     clicksByEmail.set(email, (clicksByEmail.get(email) ?? 0) + 1);
-    const url = click.target_url?.trim() || "—";
+    const url = click.target_url?.trim() || "-";
     const label = click.link_label?.trim() || url;
     const key = `${label}::${url}`;
     const entry = linkMap.get(key) ?? { label, url, clicks: 0, people: new Set<string>() };

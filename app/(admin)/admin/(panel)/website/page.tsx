@@ -18,7 +18,7 @@ export default async function AdminWebsitePage() {
     <div>
       <PageHeader
         title="Уебсайт"
-        description="Продукти, програми, ръководства, събития, видеа. Тук се задават и офертите (upsell / downsell), които важат навсякъде — в магазина и в имейлите."
+        description="Продукти, програми, ръководства, събития, видеа. Тук се задават и офертите (upsell / downsell), които важат навсякъде - в магазина и в имейлите."
       />
 
       <WebsiteManager

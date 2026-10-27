@@ -16,3 +16,9 @@ export const localeHtmlLang: Record<Locale, string> = {
 export function isLocale(value: string): value is Locale {
   return (locales as readonly string[]).includes(value);
 }
+
+/** Posts are language-specific; a matching slug in another language is not a translation. */
+export function localeSwitchHref(pathname: string, target: Locale): string {
+  if (/^\/(bg|en)\/blog\/[^/]+\/?$/.test(pathname)) return `/${target}/blog`;
+  return pathname.replace(/^\/(bg|en)(?=\/|$)/, `/${target}`) || `/${target}`;
+}

@@ -246,12 +246,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * sequences end after the second email with nothing to show for it.
  */
 export const AUTOMATION_SKIP_REASONS = {
-  unsubscribed: "Отписан имейл — не се изпраща.",
+  unsubscribed: "Отписан имейл - не се изпраща.",
   noPhone: "Няма телефонен номер за SMS.",
   noEmailContent: "Няма текст на имейла (нито на BG, нито на EN).",
   noSmsContent: "Няма текст на SMS (нито на BG, нито на EN).",
-  stepDisabled: "Стъпката е изключена — веригата спира тук.",
-  fixedDatePassed: "Датата на стъпката вече е минала — пропусната при ръчното изпращане, за да не пристигне извън контекст.",
+  stepDisabled: "Стъпката е изключена - веригата спира тук.",
+  fixedDatePassed: "Датата на стъпката вече е минала - пропусната при ръчното изпращане, за да не пристигне извън контекст.",
 } as const;
 
 function audienceSkipReason(tags: string[]): string {
@@ -260,7 +260,7 @@ function audienceSkipReason(tags: string[]): string {
 
 function overdueSkipReason(maxOverdueMs: number): string {
   const days = Math.round(maxOverdueMs / DAY_MS);
-  return `Закъсняла с над ${days} дни — пропусната, за да не пристигне извън контекст.`;
+  return `Закъсняла с над ${days} дни - пропусната, за да не пристигне извън контекст.`;
 }
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -704,7 +704,7 @@ async function scheduleChainedFromParent(
     // No per-step row can be written without the steps; the daily catch-up
     // queues them from the parent's delivery row.
     console.error(
-      `[automation] chain: could not load steps after ${parentAutomationId} for ${email} — the daily catch-up will queue them:`,
+      `[automation] chain: could not load steps after ${parentAutomationId} for ${email} - the daily catch-up will queue them:`,
       error.message,
     );
     return;
@@ -722,7 +722,7 @@ async function scheduleChainedFromParent(
     try {
       const outcome = await runChainStep(step, ctx, parentAt, run);
       if (outcome === "failed") {
-        console.warn(`[automation] chain step ${step.name} failed for ${email} — catch-up will retry`);
+        console.warn(`[automation] chain step ${step.name} failed for ${email} - catch-up will retry`);
       }
     } catch (err) {
       // runChainStep records its own outcome; this only guards the loop.
@@ -1314,18 +1314,18 @@ export async function diagnoseAutomations(
 
   if (!diagnosis.workerConfigured) {
     notes.push(
-      "NOTIFICATION_WORKER_URL / API_KEY липсват — нищо няма да се изпрати.",
+      "NOTIFICATION_WORKER_URL / API_KEY липсват - нищо няма да се изпрати.",
     );
   }
 
   if (await isEmailUnsubscribed(email)) {
     diagnosis.unsubscribed = true;
-    notes.push("Този имейл е отписан (unsubscribed) — автоматизации не се пращат.");
+    notes.push("Този имейл е отписан (unsubscribed) - автоматизации не се пращат.");
   }
 
   if (events.length === 0) {
     notes.push(
-      `При source="${source}" и isNew=${ctx.isNew} няма активен тригер — автоматизациите за запис/покупка няма да стартират, освен ако не симулираш друго събитие.`,
+      `При source="${source}" и isNew=${ctx.isNew} няма активен тригер - автоматизациите за запис/покупка няма да стартират, освен ако не симулираш друго събитие.`,
     );
   } else {
     notes.push(
@@ -1425,7 +1425,7 @@ export async function diagnoseAutomations(
       continue;
     }
     if (!rule.enabled) {
-      push(false, parent ? "изключена — веригата спира тук" : "изключена", "no");
+      push(false, parent ? "изключена - веригата спира тук" : "изключена", "no");
       continue;
     }
 
@@ -1453,7 +1453,7 @@ export async function diagnoseAutomations(
         true,
         parentState === "will"
           ? `ще се насрочи след „${parent.name}“`
-          : `„${parent.name}“ вече е изпратена — тази стъпка ще я навакса ежедневната проверка`,
+          : `„${parent.name}“ вече е изпратена - тази стъпка ще я навакса ежедневната проверка`,
         "will",
       );
       continue;
@@ -1500,7 +1500,7 @@ export async function diagnoseAutomations(
 
   if (diagnosis.wouldSendCount === 0) {
     notes.push(
-      "Нито една автоматизация не би се изпратила при тази симулация — виж причините по-долу.",
+      "Нито една автоматизация не би се изпратила при тази симулация - виж причините по-долу.",
     );
   }
 

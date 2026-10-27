@@ -58,9 +58,9 @@ function bgProfessionalServiceSchema(origin: string) {
   return {
   "@context": "https://schema.org",
   "@type": "ProfessionalService",
-  name: "Веси Ней — Healthy & Confident",
+  name: "Веси Ней - Healthy & Confident",
   description:
-    "Холистичен диетолог — инсулинова резистентност, Диабет тип 2 и трайно отслабване",
+    "Холистичен диетолог - инсулинова резистентност, Диабет тип 2 и трайно отслабване",
   url: `${origin}/bg`,
   telephone: "+447876565263",
   email: "vessie@healthyandconfident.co.uk",
@@ -85,8 +85,8 @@ export function HomeJsonLd({ dict, locale }: { dict: Dictionary; locale: Locale 
     "@type": "ImageGallery",
     name:
       locale === "bg"
-        ? "Реално меню и резултати — Веси Ней"
-        : "Real meals and results — Vessie Nay",
+        ? "Реално меню и резултати - Веси Ней"
+        : "Real meals and results - Vessie Nay",
     description: dict.method.foodNote,
     url: `${pageUrl}#food`,
     image: siteMedia.map((item) => ({

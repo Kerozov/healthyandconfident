@@ -69,12 +69,12 @@ export function ProductOfferEditor({
   if (form.upsell_offer_enabled && upsell) {
     if (baseHasBgPrice && !hasStripePrice(upsell, "bg")) {
       problems.push(
-        `„${upsell.title_bg}“ няма български Stripe Price ID — добави ѝ price_… , за да може да се купи заедно с този продукт на /bg.`,
+        `„${upsell.title_bg}“ няма български Stripe Price ID - добави ѝ price_… , за да може да се купи заедно с този продукт на /bg.`,
       );
     }
     if (baseHasEnPrice && !hasStripePrice(upsell, "en")) {
       problems.push(
-        `„${upsell.title_bg}“ няма английски Stripe Price ID — без него EN посетителите не могат да вземат двата продукта в една сметка.`,
+        `„${upsell.title_bg}“ няма английски Stripe Price ID - без него EN посетителите не могат да вземат двата продукта в една сметка.`,
       );
     }
   }
@@ -90,7 +90,7 @@ export function ProductOfferEditor({
     form.upsell_offer_id &&
     form.upsell_offer_id === form.downsell_offer_id
   ) {
-    problems.push("Офертата и втората оферта са един и същ продукт — избери различни.");
+    problems.push("Офертата и втората оферта са един и същ продукт - избери различни.");
   }
 
   return (
@@ -100,7 +100,7 @@ export function ProductOfferEditor({
           Допълнителни оферти (upsell и downsell)
         </p>
         <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-          Показват се при клик върху бутона за покупка на този продукт —{" "}
+          Показват се при клик върху бутона за покупка на този продукт -{" "}
           <strong>в магазина, на страниците на програмите и от продуктовите
           блокове в имейлите</strong>. Клиентът вижда офертата преди Stripe и
           може да вземе двата продукта с едно плащане.
@@ -125,7 +125,7 @@ export function ProductOfferEditor({
 
       <OfferSlot
         title="Оферта при покупка (upsell)"
-        description="По-скъпо или допълващо — показва се първо."
+        description="По-скъпо или допълващо - показва се първо."
         enabled={form.upsell_offer_enabled}
         onEnabledChange={(upsell_offer_enabled) => onChange({ upsell_offer_enabled })}
         offerId={form.upsell_offer_id}
@@ -144,7 +144,7 @@ export function ProductOfferEditor({
 
       <OfferSlot
         title="Втора оферта (downsell)"
-        description="По-евтина алтернатива — последен шанс, преди да продължи към плащане."
+        description="По-евтина алтернатива - последен шанс, преди да продължи към плащане."
         enabled={form.downsell_enabled}
         onEnabledChange={(downsell_enabled) => onChange({ downsell_enabled })}
         offerId={form.downsell_offer_id}
@@ -223,15 +223,15 @@ function OfferSlot({
           <Field label="Кой продукт да се предложи">
             {products.length === 0 ? (
               <p className="text-xs text-ink-soft">
-                Нужен е поне още един продукт — създай го първо.
+                Нужен е поне още един продукт - създай го първо.
               </p>
             ) : (
               <Select value={offerId} onChange={(e) => onOfferChange(e.target.value)}>
-                <option value="">— избери продукт —</option>
+                <option value="">- избери продукт -</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title_bg}
-                    {p.price_label_bg ? ` — ${p.price_label_bg}` : ""}
+                    {p.price_label_bg ? ` - ${p.price_label_bg}` : ""}
                     {!p.enabled ? " (скрит)" : ""}
                   </option>
                 ))}
@@ -240,7 +240,7 @@ function OfferSlot({
           </Field>
           <div className="grid gap-3 md:grid-cols-2">
             <Field
-              label="Текст над офертата — BG"
+              label="Текст над офертата - BG"
               hint={`Празно = „${DEFAULT_OFFER_HEADLINE.bg}“`}
             >
               <Input
@@ -249,7 +249,7 @@ function OfferSlot({
                 placeholder={DEFAULT_OFFER_HEADLINE.bg}
               />
             </Field>
-            <Field label="Текст над офертата — EN">
+            <Field label="Текст над офертата - EN">
               <Input
                 value={headlineEn}
                 onChange={(e) => onHeadlineEn(e.target.value)}

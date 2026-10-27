@@ -106,12 +106,12 @@ export function FilterChips<T extends string>({
 
 /** "Купили" pill — always worded as a timing match, never as caused by. */
 export function BuyersPill({ count }: { count: number | null }) {
-  if (count === null) return <span className="text-xs text-ink-soft">—</span>;
+  if (count === null) return <span className="text-xs text-ink-soft">-</span>;
   if (count === 0) return <span className="text-xs text-ink-soft">0</span>;
   return (
     <span
       className="inline-flex items-center rounded-full bg-coral-500/15 px-2 py-0.5 text-xs font-semibold text-coral-700"
-      title="Платили до 7 дни след имейла — съвпадение по време, не доказателство"
+      title="Платили до 7 дни след имейла - съвпадение по време, не доказателство"
     >
       {count.toLocaleString("bg-BG")} купили
     </span>

@@ -179,7 +179,7 @@ export function EmailFooterEditor({
         <p className="text-sm font-semibold text-ink">Горен header</p>
         <p className="text-xs text-ink-soft">
           Зелената лента най-отгоре на всеки имейл. Може да е текст, снимка или и двете
-          — и може да се изключи.
+          - и може да се изключи.
         </p>
         <label className="flex items-center gap-2 text-sm font-medium">
           <input
@@ -279,7 +279,7 @@ export function EmailFooterEditor({
 
         <ImageUploadField
           label="Снимка за подпис"
-          hint="Портрет в долната част на имейла — показва се цялата снимка, без изрязване."
+          hint="Портрет в долната част на имейла - показва се цялата снимка, без изрязване."
           value={form.signature_image_url}
           onChange={(url) => set("signature_image_url", url)}
           folder="email"

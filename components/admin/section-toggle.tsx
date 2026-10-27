@@ -11,8 +11,8 @@ export function SectionToggle({
   section,
   onSaved,
   label = "Покажи секцията на сайта",
-  titleLabelBg = "Заглавие секция — BG",
-  titleLabelEn = "Заглавие секция — EN",
+  titleLabelBg = "Заглавие секция - BG",
+  titleLabelEn = "Заглавие секция - EN",
   titleHint,
 }: {
   section: SiteSection;

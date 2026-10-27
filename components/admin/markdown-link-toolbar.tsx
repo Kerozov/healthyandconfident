@@ -156,7 +156,7 @@ export function MarkdownLinkToolbar({
             </Field>
             <Field
               label="Накъде води"
-              hint="Езикът се добавя сам — „/programs/21-dni“ отваря /bg/programs/21-dni на българския сайт."
+              hint="Езикът се добавя сам - „/programs/21-dni“ отваря /bg/programs/21-dni на българския сайт."
             >
               <Select
                 value={page}

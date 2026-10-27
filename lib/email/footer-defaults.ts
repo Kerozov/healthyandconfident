@@ -49,7 +49,7 @@ export const DEFAULT_EMAIL_FOOTER: Record<Locale, Omit<EmailFooterConfig, "id" |
     signature_closing: "With love and support,",
     signature_name: "Vesi",
     signature_title:
-      "Holistic Dietitian B.Med.Sc. (Hons) — insulin resistance & type 2 diabetes",
+      "Holistic Dietitian B.Med.Sc. (Hons) - insulin resistance & type 2 diabetes",
     signature_email: "vessie@healthyandconfident.co.uk",
     signature_phone: "00 44 7876 565 263",
     signature_links: [],

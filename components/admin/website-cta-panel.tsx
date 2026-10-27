@@ -174,14 +174,14 @@ function StripeTargetPicker({
     <div className="space-y-2">
       <Field
         label="Кой продукт се плаща"
-        hint="Избери един продукт. Натискането на бутона отваря нов таб със самото плащане в Stripe — еднократно или абонамент, според цената на продукта."
+        hint="Избери един продукт. Натискането на бутона отваря нов таб със самото плащане в Stripe - еднократно или абонамент, според цената на продукта."
       >
         <Select
           value={selected}
           disabled={disabled || (pending && items.length === 0)}
           onChange={(e) => pick(e.target.value)}
         >
-          <option value="">— избери продукт —</option>
+          <option value="">- избери продукт -</option>
           {oneOff.length > 0 && (
             <optgroup label="Еднократно плащане">
               {oneOff.map((item) => (
@@ -666,7 +666,7 @@ function OfferEditor({
           disabled={pending}
           onChange={(e) => patch({ offer_id: e.target.value })}
         >
-          <option value="">— без оферта —</option>
+          <option value="">- без оферта -</option>
           {offers.map((o) => (
             <option key={o.id} value={o.id}>
               {o.title_bg}
@@ -890,7 +890,7 @@ export function CtaPlacementsPanel({
   if (groups.length === 0) {
     return (
       <p className="text-sm text-ink-soft">
-        Няма бутони — пусни миграцията{" "}
+        Няма бутони - пусни миграцията{" "}
         <code className="text-xs">044_cta_placement_buttons.sql</code> в Supabase SQL
         Editor.
       </p>
@@ -907,13 +907,13 @@ export function CtaPlacementsPanel({
         <p>
           Всеки ред е един бутон на сайта, подреден по страницата, на която стои.
           Отвори го и отгоре виждаш{" "}
-          <strong className="text-ink">самата страница с осветен бутон</strong> —
+          <strong className="text-ink">самата страница с осветен бутон</strong> -
           този, който редактираш. Под нея сменяш текста, продукта за плащане и
           езиците.
         </p>
         <p className="mt-2">
           Бутон с избран продукт отваря{" "}
-          <strong className="text-ink">нов таб със самото плащане</strong> в Stripe —
+          <strong className="text-ink">нов таб със самото плащане</strong> в Stripe -
           работи еднакво за еднократно плащане и за месечен абонамент.
         </p>
       </div>

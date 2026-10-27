@@ -10,6 +10,7 @@ import { verifyFormInviteToken } from "@/lib/forms/form-invite-token";
 import { DynamicForm } from "@/components/site/dynamic-form";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { FormTemplateRecord } from "@/lib/forms/types";
+import { normalizeDisplayText } from "@/lib/site/typography";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +28,14 @@ const resolveForm = cache(async function resolveForm(
   const bySlug = await getFormTemplateBySlug(slug, { includeDisabled: true });
   if (bySlug) {
     return {
-      form: bySlug,
+      form: normalizeDisplayText(bySlug),
       inviteToken: payload?.f === bySlug.id ? token : undefined,
     };
   }
 
   if (!payload) return null;
   const byId = await getFormTemplateById(payload.f);
-  return byId ? { form: byId, inviteToken: token } : null;
+  return byId ? { form: normalizeDisplayText(byId), inviteToken: token } : null;
 });
 
 /** Merge tags the email provider failed to fill in are not data. */

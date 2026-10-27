@@ -45,7 +45,7 @@ export async function expandEmailForms(
       sid: recipient.subscriberId ?? undefined,
     });
     if (!token) {
-      console.error("[email-forms] invite token missing — check UNSUBSCRIBE_SECRET");
+      console.error("[email-forms] invite token missing - check UNSUBSCRIBE_SECRET");
       continue;
     }
     const { error } = await supabase.from("form_invitations").insert({

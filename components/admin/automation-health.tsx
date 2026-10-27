@@ -50,7 +50,7 @@ export function AutomationHealthPanel({
           <p className="mt-1 text-xs text-ink-soft">
             Всяка стъпка, която не тръгне за някого, се записва с причината в отчета си
             („пропуснат“ / „грешка“). Пропуснатите стъпки се наваксват всеки ден
-            {cronConfigured ? "" : " — само ако е зададен CRON_SECRET"}.
+            {cronConfigured ? "" : " - само ако е зададен CRON_SECRET"}.
           </p>
         </div>
         <button
@@ -70,7 +70,7 @@ export function AutomationHealthPanel({
 
       {!cronConfigured && (
         <p className="rounded-lg bg-gold-400/15 px-3 py-2 text-xs text-ink">
-          <code>CRON_SECRET</code> не е зададен — ежедневното наваксване на пропуснати стъпки
+          <code>CRON_SECRET</code> не е зададен - ежедневното наваксване на пропуснати стъпки
           не работи. Задай го във Vercel → Settings → Environment Variables (произволен дълъг
           низ) и направи нов deploy.
         </p>
@@ -88,7 +88,7 @@ export function AutomationHealthPanel({
                   : "bg-gold-400/15 text-ink",
               )}
             >
-              <strong className="font-semibold">{issue.name}</strong> — {issue.message}
+              <strong className="font-semibold">{issue.name}</strong> - {issue.message}
             </li>
           ))}
         </ul>

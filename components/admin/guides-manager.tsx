@@ -65,13 +65,13 @@ function SectionToggle({
         Покажи секцията на сайта
       </label>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field label="Заглавие секция — BG">
+        <Field label="Заглавие секция - BG">
           <Input
             value={form.title_bg}
             onChange={(e) => setForm({ ...form, title_bg: e.target.value })}
           />
         </Field>
-        <Field label="Заглавие секция — EN">
+        <Field label="Заглавие секция - EN">
           <Input
             value={form.title_en}
             onChange={(e) => setForm({ ...form, title_en: e.target.value })}
@@ -200,7 +200,7 @@ export function GuidesManagerPanel({
       }
     >
       <p className="mb-4 text-sm text-ink-soft">
-        PDF ръководства — закачи <strong>отделен Stripe продукт или Payment Link</strong>{" "}
+        PDF ръководства - закачи <strong>отделен Stripe продукт или Payment Link</strong>{" "}
         за български и за английски, както при продуктите. Ако оставиш английското
         плащане празно, ползва се българското.
       </p>
@@ -218,26 +218,26 @@ export function GuidesManagerPanel({
                 }
               />
             </Field>
-            <Field label="Име — BG">
+            <Field label="Име - BG">
               <Input
                 value={form.title_bg}
                 onChange={(e) => setForm({ ...form, title_bg: e.target.value })}
               />
             </Field>
-            <Field label="Име — EN">
+            <Field label="Име - EN">
               <Input
                 value={form.title_en}
                 onChange={(e) => setForm({ ...form, title_en: e.target.value })}
               />
             </Field>
-            <Field label="Описание — BG">
+            <Field label="Описание - BG">
               <Textarea
                 rows={3}
                 value={form.description_bg}
                 onChange={(e) => setForm({ ...form, description_bg: e.target.value })}
               />
             </Field>
-            <Field label="Описание — EN">
+            <Field label="Описание - EN">
               <Textarea
                 rows={3}
                 value={form.description_en}
@@ -246,19 +246,19 @@ export function GuidesManagerPanel({
             </Field>
             <ImageUploadField
               label="Корица"
-              hint="Снимката не се реже — показва се цялата. Най-добре изглежда хоризонтална 4:3 (1200×900 px); при друг формат празното място се запълва с размазан фон."
+              hint="Снимката не се реже - показва се цялата. Най-добре изглежда хоризонтална 4:3 (1200×900 px); при друг формат празното място се запълва с размазан фон."
               previewFrame="aspect-[4/3]"
               value={form.image_url}
               onChange={(url) => setForm({ ...form, image_url: url })}
               folder="guides"
             />
-            <Field label="Цена — BG">
+            <Field label="Цена - BG">
               <Input
                 value={form.price_label_bg}
                 onChange={(e) => setForm({ ...form, price_label_bg: e.target.value })}
               />
             </Field>
-            <Field label="Цена — EN">
+            <Field label="Цена - EN">
               <Input
                 value={form.price_label_en}
                 onChange={(e) => setForm({ ...form, price_label_en: e.target.value })}
@@ -279,7 +279,7 @@ export function GuidesManagerPanel({
             disabled={pending}
           />
           <StripeLocalePicker
-            label="Плащане — български"
+            label="Плащане - български"
             hint="Ползва се на /bg и като резерва за английски, ако там няма отделен Stripe."
             value={{
               stripe_id: form.stripe_id,
@@ -298,7 +298,7 @@ export function GuidesManagerPanel({
           />
           {form.enabled_en && (
             <StripeLocalePicker
-              label="Плащане — английски"
+              label="Плащане - английски"
               hint="Отделен Stripe продукт или Payment Link. Ако оставиш празно, ползва се българското плащане."
               value={{
                 stripe_id: form.stripe_id_en,

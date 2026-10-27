@@ -72,7 +72,7 @@ export function SignatureLinksEditor({
         <p className="text-sm font-semibold text-ink">Линкове в подписа</p>
         <p className="mt-1 text-xs text-ink-soft">
           Показват се под телефона в личния подпис. Избери страница, продукт или
-          форма — или сложи собствен адрес. Всеки може да е обикновен линк или бутон.
+          форма - или сложи собствен адрес. Всеки може да е обикновен линк или бутон.
         </p>
       </div>
 
@@ -164,7 +164,7 @@ export function SignatureLinksEditor({
                 <Field label="Продукт">
                   {sortedProducts.length === 0 ? (
                     <p className="text-sm text-ink-soft">
-                      Няма продукти — добави ги в Website → Продукти.
+                      Няма продукти - добави ги в Website → Продукти.
                     </p>
                   ) : (
                     <Select
@@ -191,7 +191,7 @@ export function SignatureLinksEditor({
                           {productTitle(product, locale)}
                           {productSellableInLocale(product, locale)
                             ? ""
-                            : " — няма Stripe цена"}
+                            : " - няма Stripe цена"}
                         </option>
                       ))}
                     </Select>
@@ -216,7 +216,7 @@ export function SignatureLinksEditor({
               <Field label="Форма">
                 {sortedForms.length === 0 ? (
                   <p className="text-sm text-ink-soft">
-                    Няма форми — създай ги в Admin → Форми.
+                    Няма форми - създай ги в Admin → Форми.
                   </p>
                 ) : (
                   <Select
@@ -237,7 +237,7 @@ export function SignatureLinksEditor({
                     {sortedForms.map((form) => (
                       <option key={form.id} value={form.id}>
                         {formTitle(form, locale)}
-                        {form.enabled ? "" : " — скрита (с покана)"}
+                        {form.enabled ? "" : " - скрита (с покана)"}
                       </option>
                     ))}
                   </Select>

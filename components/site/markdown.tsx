@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PostRecommendationsBlock } from "@/components/site/post-recommendations";
 import { parsePostRecommendations, type PostCatalogItem } from "@/lib/site/post-recommendations";
+import { remarkShortDashes } from "@/lib/site/typography";
 
 /**
  * A link in a post. Most are plain; one whose title says so is drawn as a
@@ -229,7 +230,8 @@ export function Markdown({
         const json = code.children.map((child) => child.type === "text" ? child.value : "").join("");
         const config = parsePostRecommendations(json);
         return config ? <PostRecommendationsBlock config={config} locale={locale}
-          catalog={catalog} excludePostId={excludePostId} preview={preview} /> : null;
+          catalog={catalog} excludePostId={excludePostId} preview={preview} />
+          : preview ? <p role="alert" className="not-prose rounded-xl bg-coral-50 p-4 text-sm text-coral-600">Настройките на този блок са невалидни. Провери блока в раздел „Markdown“.</p> : null;
       }
       return <pre>{children}</pre>;
     },
@@ -251,7 +253,7 @@ export function Markdown({
   return (
     // `flow-root` keeps a picture floated at the very end inside the article.
     <div className="prose prose-hc prose-lg flow-root max-w-none prose-headings:font-display prose-headings:font-semibold prose-a:font-medium prose-img:rounded-2xl">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkShortDashes]} components={components}>
         {content}
       </ReactMarkdown>
     </div>

@@ -170,7 +170,7 @@ export function FunnelBrandSync({
 
   return (
     <Card
-      title="FunnelBrand — синхронизация на контакти"
+      title="FunnelBrand - синхронизация на контакти"
       action={
         <div className="flex flex-wrap gap-2">
           <AdminButton variant="secondary" size="sm" onClick={test} disabled={pending}>
@@ -192,7 +192,7 @@ export function FunnelBrandSync({
         <p>
           Дърпа контактите, събрани през FunnelBrand, и ги слага в списъка с абонати. Всеки
           контакт идва с два етикета: група по името на фунията (откъде идва) и{" "}
-          <Badge>funnel-brand</Badge> (с кой софтуер е събран). Автоматизации не се пускат —
+          <Badge>funnel-brand</Badge> (с кой софтуер е събран). Автоматизации не се пускат -
           за да не тръгнат имейли към всички наведнъж.
         </p>
 
@@ -227,12 +227,12 @@ export function FunnelBrandSync({
           <div className="space-y-3 rounded-2xl border border-forest-400/30 bg-forest-50/40 p-4">
             <div>
               <p className="font-medium text-ink">
-                {picker.full ? "Пълна синхронизация" : "Синхронизация"} — в кой сегмент отиват
+                {picker.full ? "Пълна синхронизация" : "Синхронизация"} - в кой сегмент отиват
                 контактите?
               </p>
               <p className="text-xs">
                 Изборът важи за контактите, които се дърпат сега, и се запомня за следващия път.
-                Вече внесените контакти не се местят — за тях пусни пълна синхронизация.
+                Вече внесените контакти не се местят - за тях пусни пълна синхронизация.
               </p>
             </div>
 
@@ -288,7 +288,7 @@ export function FunnelBrandSync({
           >
             Пълна синхронизация
           </button>{" "}
-          чете целия списък отначало — полезно, ако нещо е пропуснато.
+          чете целия списък отначало - полезно, ако нещо е пропуснато.
         </p>
       </div>
     </Card>

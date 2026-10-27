@@ -405,7 +405,7 @@ export function WebsiteManager({
           <div className="mb-4 space-y-2 text-sm text-ink-soft">
             <p>
               Закачи <strong>отделен Stripe продукт или Payment Link</strong> за
-              български и за английски. Подреди с влачене в списъка долу — без
+              български и за английски. Подреди с влачене в списъка долу - без
               ръчни номера.
             </p>
             <p>
@@ -432,7 +432,7 @@ export function WebsiteManager({
           {editingProductId ? (
             <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Име — BG">
+                <Field label="Име - BG">
                   <Input
                     value={productForm.title_bg}
                     onChange={(e) =>
@@ -440,7 +440,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Име — EN" hint="По избор — ако е празно, копира се от BG">
+                <Field label="Име - EN" hint="По избор - ако е празно, копира се от BG">
                   <Input
                     value={productForm.title_en}
                     onChange={(e) =>
@@ -448,7 +448,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Описание — BG">
+                <Field label="Описание - BG">
                   <Textarea
                     rows={3}
                     value={productForm.description_bg}
@@ -457,7 +457,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Описание — EN">
+                <Field label="Описание - EN">
                   <Textarea
                     rows={3}
                     value={productForm.description_en}
@@ -468,13 +468,13 @@ export function WebsiteManager({
                 </Field>
                 <ImageUploadField
                   label="Снимка"
-                  hint="Снимката не се реже — показва се цялата. Най-добре изглежда хоризонтална 4:3 (1200×900 px); при друг формат празното място се запълва с размазан фон."
+                  hint="Снимката не се реже - показва се цялата. Най-добре изглежда хоризонтална 4:3 (1200×900 px); при друг формат празното място се запълва с размазан фон."
                   previewFrame="aspect-[4/3]"
                   value={productForm.image_url}
                   onChange={(url) => setProductForm({ ...productForm, image_url: url })}
                   folder="products"
                 />
-                <Field label="Цена — BG">
+                <Field label="Цена - BG">
                   <Input
                     value={productForm.price_label_bg}
                     onChange={(e) =>
@@ -482,7 +482,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Цена — EN">
+                <Field label="Цена - EN">
                   <Input
                     value={productForm.price_label_en}
                     onChange={(e) =>
@@ -491,7 +491,7 @@ export function WebsiteManager({
                   />
                 </Field>
                 <Field
-                  label="Заглавие по подразбиране — BG"
+                  label="Заглавие по подразбиране - BG"
                   hint={`Празно = ${DEFAULT_OFFER_HEADLINE.bg}`}
                 >
                   <Input
@@ -501,7 +501,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Заглавие по подразбиране — EN">
+                <Field label="Заглавие по подразбиране - EN">
                   <Input
                     value={productForm.headline_en}
                     onChange={(e) =>
@@ -509,7 +509,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Бутон — BG">
+                <Field label="Бутон - BG">
                   <Input
                     value={productForm.cta_label_bg}
                     onChange={(e) =>
@@ -518,7 +518,7 @@ export function WebsiteManager({
                     placeholder="Виж офертата"
                   />
                 </Field>
-                <Field label="Бутон — EN">
+                <Field label="Бутон - EN">
                   <Input
                     value={productForm.cta_label_en}
                     onChange={(e) =>
@@ -550,7 +550,7 @@ export function WebsiteManager({
               />
 
               <StripeLocalePicker
-                label="Плащане — български"
+                label="Плащане - български"
                 hint="Това се ползва на /bg и като резерва за английски, ако там няма отделен Stripe."
                 value={{
                   stripe_id: productForm.stripe_id,
@@ -581,7 +581,7 @@ export function WebsiteManager({
 
               {productForm.enabled_en && (
                 <StripeLocalePicker
-                  label="Плащане — английски"
+                  label="Плащане - английски"
                   hint="Отделен Stripe продукт или Payment Link. Ако оставиш празно, ползва се българското плащане."
                   value={{
                     stripe_id: productForm.stripe_id_en,
@@ -705,14 +705,14 @@ export function WebsiteManager({
         >
           <p className="mb-4 text-sm text-ink-soft">
             Събития с линк към записване. Ако включиш допълнителна оферта, тя се показва
-            като карта под събитието (не като popup — записването води към външен линк).
+            като карта под събитието (не като popup - записването води към външен линк).
           </p>
           <SectionToggle section={eventsSection} onSaved={refresh} />
 
           {editingEventId ? (
             <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Заглавие — BG">
+                <Field label="Заглавие - BG">
                   <Input
                     value={eventForm.title_bg}
                     onChange={(e) =>
@@ -720,7 +720,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Заглавие — EN">
+                <Field label="Заглавие - EN">
                   <Input
                     value={eventForm.title_en}
                     onChange={(e) =>
@@ -728,7 +728,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Описание — BG">
+                <Field label="Описание - BG">
                   <Textarea
                     rows={3}
                     value={eventForm.description_bg}
@@ -737,7 +737,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Описание — EN">
+                <Field label="Описание - EN">
                   <Textarea
                     rows={3}
                     value={eventForm.description_en}
@@ -746,7 +746,7 @@ export function WebsiteManager({
                     }
                   />
                 </Field>
-                <Field label="Линк към събитието — BG">
+                <Field label="Линк към събитието - BG">
                   <Input
                     value={eventForm.url}
                     onChange={(e) => setEventForm({ ...eventForm, url: e.target.value })}
@@ -754,7 +754,7 @@ export function WebsiteManager({
                   />
                 </Field>
                 <Field
-                  label="Линк към събитието — EN"
+                  label="Линк към събитието - EN"
                   hint="Празно = ползва българския линк."
                 >
                   <Input
@@ -776,7 +776,7 @@ export function WebsiteManager({
                 </Field>
                 <ImageUploadField
                   label="Снимка"
-                  hint="Снимката не се реже — показва се цялата. Най-добре изглежда хоризонтална 16:10 (1600×1000 px); при друг формат празното място се запълва с размазан фон."
+                  hint="Снимката не се реже - показва се цялата. Най-добре изглежда хоризонтална 16:10 (1600×1000 px); при друг формат празното място се запълва с размазан фон."
                   previewFrame="aspect-[16/10]"
                   value={eventForm.image_url}
                   onChange={(url) => setEventForm({ ...eventForm, image_url: url })}
@@ -928,7 +928,7 @@ export function WebsiteManager({
           }
         >
           <p className="mb-4 text-sm text-ink-soft">
-            Вдъхновяващи истории и ревюта — YouTube линк и избор дали да се показва на
+            Вдъхновяващи истории и ревюта - YouTube линк и избор дали да се показва на
             българския сайт, на английския, или и на двете.
           </p>
           <SectionToggle section={videosSection} onSaved={refresh} />
@@ -936,16 +936,16 @@ export function WebsiteManager({
           {editingVideoId ? (
             <div className="mb-6 space-y-4 rounded-xl border border-ink/10 p-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Заглавие — BG (по избор)">
+                <Field label="Заглавие - BG (по избор)">
                   <Input
                     value={videoForm.title_bg}
                     onChange={(e) =>
                       setVideoForm({ ...videoForm, title_bg: e.target.value })
                     }
-                    placeholder="Ревю — Юлия, програмата Живей без резистентност"
+                    placeholder="Ревю - Юлия, програмата Живей без резистентност"
                   />
                 </Field>
-                <Field label="Заглавие — EN (optional)">
+                <Field label="Заглавие - EN (optional)">
                   <Input
                     value={videoForm.title_en}
                     onChange={(e) =>

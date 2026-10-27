@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
     // Otherwise every run is a silent 401 and missed steps never catch up.
-    console.error("[cron/automations] CRON_SECRET is not set — the daily catch-up cannot run");
+    console.error("[cron/automations] CRON_SECRET is not set - the daily catch-up cannot run");
     return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 500 });
   }
   if (req.headers.get("authorization") !== `Bearer ${secret}`) {

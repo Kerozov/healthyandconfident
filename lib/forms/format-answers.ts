@@ -5,7 +5,7 @@ function formatAnswerValue(
   value: unknown,
   field?: FormField,
 ): string {
-  if (value === undefined || value === null || value === "") return "—";
+  if (value === undefined || value === null || value === "") return "-";
   if (typeof value === "boolean") return value ? "Да" : "Не";
 
   if (field?.type === "health_interest" && typeof value === "string") {

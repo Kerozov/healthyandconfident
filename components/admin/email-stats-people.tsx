@@ -181,7 +181,7 @@ export function PeopleTab({ people }: { people: PersonStatRow[] }) {
                           {p.bought && (
                             <span
                               className="ml-2 rounded-full bg-coral-500/15 px-2 py-0.5 text-[11px] font-semibold text-coral-700"
-                              title="Платил до 7 дни след имейл — съвпадение по време"
+                              title="Платил до 7 дни след имейл - съвпадение по време"
                             >
                               купил
                             </span>
@@ -198,9 +198,9 @@ export function PeopleTab({ people }: { people: PersonStatRow[] }) {
                       <td className="p-3">
                         <RateBar value={p.openRate} />
                       </td>
-                      <td className="p-3">{p.clicks > 0 ? formatNumber(p.clicks) : "—"}</td>
+                      <td className="p-3">{p.clicks > 0 ? formatNumber(p.clicks) : "-"}</td>
                       <td className="p-3 text-xs text-ink-soft">
-                        {p.lastSentAt ? formatDate(p.lastSentAt, "bg") : "—"}
+                        {p.lastSentAt ? formatDate(p.lastSentAt, "bg") : "-"}
                       </td>
                       <td className="p-3 text-right">
                         <button

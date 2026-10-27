@@ -270,7 +270,7 @@ export function DeliveryIssuesPanel({
         <p className="text-sm text-coral-600">{loadError}</p>
       ) : groups.length === 0 ? (
         <p className="text-sm text-ink-soft">
-          {total === 0 ? "Всички са получили — няма пропуски в този период." : "Няма съвпадения."}
+          {total === 0 ? "Всички са получили - няма пропуски в този период." : "Няма съвпадения."}
         </p>
       ) : (
         <div className="space-y-4">
@@ -291,7 +291,7 @@ export function DeliveryIssuesPanel({
                         type="button"
                         onClick={() => send(group, sendable, groupKey)}
                         disabled={busy}
-                        title="Само „Без запис“ и „Неуспешен“ — пропуснатите са по причина, прати ги поотделно"
+                        title="Само „Без запис“ и „Неуспешен“ - пропуснатите са по причина, прати ги поотделно"
                         className="inline-flex h-8 items-center gap-1.5 rounded-full bg-coral-500 px-3 text-xs font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
                       >
                         {busyKey === groupKey ? (
@@ -382,7 +382,7 @@ export function DeliveryIssuesPanel({
       {report && (report.ignored > 0 || report.truncated) && (
         <p className="mt-4 text-xs text-ink-soft">
           {report.ignored > 0 && `${report.ignored} игнорирани не се показват.`}
-          {report.truncated && " Показани са първите 3000 — стесни периода."}
+          {report.truncated && " Показани са първите 3000 - стесни периода."}
         </p>
       )}
     </Card>

@@ -30,14 +30,14 @@ export function PostRecommendationsEditor({ config, onChange, catalog, loading, 
     <div className="grid gap-3 sm:grid-cols-2">
       <Field label="Как се избират">
         <Select value={config.mode} onChange={(e) => patch({ mode: e.target.value as PostRecommendations["mode"] })}>
-          <option value="manual">Конкретни — в моя ред</option>
+          <option value="manual">Конкретни - в моя ред</option>
           <option value="random">Случайни при всяко зареждане</option>
           <option value="mixed">Фиксирани + случайно допълване</option>
         </Select>
       </Field>
       <Field label="Общо предложения" hint="От 1 до 50. Ако наличните са по-малко, показваме толкова, колкото има.">
         <Input type="number" min={1} max={50} value={config.count}
-          onChange={(e) => patch({ count: Math.min(50, Math.max(1, Number(e.target.value) || 1)) })} />
+          onChange={(e) => patch({ count: Math.min(50, Math.max(1, Math.floor(Number(e.target.value)) || 1)) })} />
       </Field>
     </div>
     <p className="text-xs leading-relaxed text-ink-soft">
@@ -109,7 +109,7 @@ export function PostRecommendationsEditor({ config, onChange, catalog, loading, 
         <Select value={config.layout} onChange={(e) => patch({ layout: e.target.value as PostRecommendations["layout"] })}>
           <option value="grid">Карти в колони</option>
           <option value="carousel">Карусел</option>
-          <option value="list">Списък — снимка до текста</option>
+          <option value="list">Списък - снимка до текста</option>
         </Select>
       </Field>
       {config.layout !== "list" && <Field label={config.layout === "carousel" ? "Видими карти наведнъж (на голям екран)" : "Колони (на голям екран)"} hint="На телефон картите се подреждат за малък екран.">
@@ -125,7 +125,7 @@ export function PostRecommendationsEditor({ config, onChange, catalog, loading, 
     {config.layout === "carousel" && <div className="space-y-3">
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={config.autoplay} onChange={(e) => patch({ autoplay: e.target.checked })} />Автоматично въртене</label>
       {config.autoplay && <Field label="Смяна през (секунди)" hint="От 3 до 30 секунди. Спира при четене с мишката или клавиатурата.">
-        <Input type="number" min={3} max={30} value={config.interval} onChange={(e) => patch({ interval: Math.min(30, Math.max(3, Number(e.target.value) || 3)) })} />
+        <Input type="number" min={3} max={30} value={config.interval} onChange={(e) => patch({ interval: Math.min(30, Math.max(3, Math.floor(Number(e.target.value)) || 3)) })} />
       </Field>}
     </div>}
     <details className="rounded-xl border border-ink/10 p-3">

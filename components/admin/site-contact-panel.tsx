@@ -159,7 +159,7 @@ export function SiteContactPanel({ config }: { config: SiteContactConfig }) {
             <div>
               <h3 className="text-sm font-semibold text-ink">Допълнителни линкове</h3>
               <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-                Показват се под Messenger / телефон / WhatsApp — в секция „Контакти“
+                Показват се под Messenger / телефон / WhatsApp - в секция „Контакти“
                 и във футъра. До {CONTACT_LINK_LIMIT} линка.
               </p>
             </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPublicClient } from "@/lib/supabase/public";
 import { isLocale } from "@/i18n/config";
+import { normalizeDisplayText } from "@/lib/site/typography";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
       .maybeSingle();
 
     if (!data) return NextResponse.json({ enabled: false });
-    return NextResponse.json(data);
+    return NextResponse.json(normalizeDisplayText(data));
   } catch {
     return NextResponse.json({ enabled: false });
   }

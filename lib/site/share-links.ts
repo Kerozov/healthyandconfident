@@ -241,7 +241,7 @@ export function catalogShareLinks(
 
     const pagePath = catalogPagePath(kind, item, locale);
     links.push({
-      label: `${LABELS[kind].page} — ${LOCALE_NAME[locale]}`,
+      label: `${LABELS[kind].page} - ${LOCALE_NAME[locale]}`,
       locale,
       path: pagePath,
       url: absoluteSiteUrl(pagePath),
@@ -251,7 +251,7 @@ export function catalogShareLinks(
     if (sellable) {
       const buyPath = catalogDirectBuyPath(kind, item, locale);
       links.push({
-        label: `${LABELS[kind].direct} — ${LOCALE_NAME[locale]}`,
+        label: `${LABELS[kind].direct} - ${LOCALE_NAME[locale]}`,
         locale,
         path: buyPath,
         url: absoluteSiteUrl(buyPath),

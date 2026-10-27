@@ -27,12 +27,12 @@ export function checkAutomationHealth(
 
     if (a.channel === "email") {
       if (!automationEmailContent(a, "bg") && !automationEmailContent(a, "en")) {
-        add(a, "error", "Няма текст на имейла — не се изпраща и следващите стъпки спират.");
+        add(a, "error", "Няма текст на имейла - не се изпраща и следващите стъпки спират.");
       } else if (!a.subject_bg?.trim() && !a.subject_en?.trim()) {
-        add(a, "warning", `Няма тема — изпраща се с името „${a.name}“ като тема.`);
+        add(a, "warning", `Няма тема - изпраща се с името „${a.name}“ като тема.`);
       }
     } else if (!automationSmsBody(a, "bg")) {
-      add(a, "error", "Няма текст на SMS — не се изпраща и следващите стъпки спират.");
+      add(a, "error", "Няма текст на SMS - не се изпраща и следващите стъпки спират.");
     }
 
     if (a.after_automation_id) {
@@ -41,14 +41,14 @@ export function checkAutomationHealth(
       let parent = byId.get(a.after_automation_id);
       while (parent) {
         if (seen.has(parent.id)) {
-          add(a, "error", "Веригата се затваря в кръг — тази стъпка никога няма да тръгне.");
+          add(a, "error", "Веригата се затваря в кръг - тази стъпка никога няма да тръгне.");
           break;
         }
         if (!parent.enabled) {
           add(
             a,
             "error",
-            `Предходната стъпка „${parent.name}“ е изключена — тази няма да тръгне, докато не я включиш.`,
+            `Предходната стъпка „${parent.name}“ е изключена - тази няма да тръгне, докато не я включиш.`,
           );
           break;
         }
@@ -63,20 +63,20 @@ export function checkAutomationHealth(
       a.trigger_event === "purchase" &&
       (a.purchase_product_ids?.filter(Boolean).length ?? 0) === 0
     ) {
-      add(a, "error", "„След покупка“ без избран продукт — никога не се задейства.");
+      add(a, "error", "„След покупка“ без избран продукт - никога не се задейства.");
     }
     if (
       a.trigger_event === "segment_entry" &&
       (a.segment_keys?.filter(Boolean).length ?? 0) === 0 &&
       (a.group_ids?.filter(Boolean).length ?? 0) === 0
     ) {
-      add(a, "error", "„Влизане в група“ без избрана група — никога не се задейства.");
+      add(a, "error", "„Влизане в група“ без избрана група - никога не се задейства.");
     }
     if (a.trigger_event === "form_submit") {
       if (!a.trigger_form_id) {
-        add(a, "error", "„След форма“ без избрана форма — никога не се задейства.");
+        add(a, "error", "„След форма“ без избрана форма - никога не се задейства.");
       } else if (!opts.formIds.has(a.trigger_form_id)) {
-        add(a, "error", "Формата на тригера вече я няма — никога не се задейства.");
+        add(a, "error", "Формата на тригера вече я няма - никога не се задейства.");
       }
     }
   }

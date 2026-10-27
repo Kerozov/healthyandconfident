@@ -19,8 +19,8 @@ const EVENT_LABELS: Record<string, string> = {
   checkout_started: "Започнал checkout",
   payment_completed: "Платил",
   payment_refunded: "Възстановено плащане",
-  zoom_joined: "Zoom — влязъл",
-  zoom_left: "Zoom — излязъл",
+  zoom_joined: "Zoom - влязъл",
+  zoom_left: "Zoom - излязъл",
   reminders_canceled: "Reminders отменени",
 };
 
@@ -116,7 +116,7 @@ export function ContactDetailView({
           </div>
           <div>
             <dt className="text-ink-soft">Име</dt>
-            <dd>{contact.name ?? "—"}</dd>
+            <dd>{contact.name ?? "-"}</dd>
           </div>
           <div>
             <dt className="text-ink-soft">Плащане</dt>
@@ -171,7 +171,7 @@ export function ContactDetailView({
                 <tr>
                   <td colSpan={3} className="py-6 text-center text-ink-soft">
                     {contact.zoom_attended
-                      ? "Няма запис по срещи с имейл — провери дали в Zoom е влязъл със същия имейл."
+                      ? "Няма запис по срещи с имейл - провери дали в Zoom е влязъл със същия имейл."
                       : "Няма Zoom участие още."}
                   </td>
                 </tr>
@@ -201,7 +201,7 @@ export function ContactDetailView({
                   <td className="py-2.5 pr-4 font-medium">
                     {EVENT_LABELS[e.event_type] ?? e.event_type}
                   </td>
-                  <td className="py-2.5 text-ink-soft">{eventDetails(e) || "—"}</td>
+                  <td className="py-2.5 text-ink-soft">{eventDetails(e) || "-"}</td>
                 </tr>
               ))}
               {events.length === 0 && (
@@ -219,7 +219,7 @@ export function ContactDetailView({
       <section className="rounded-xl border border-ink/10 bg-white p-6">
         <h2 className="font-display text-xl font-semibold">Имейли на човека</h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Автоматизации, кампании и напомняния — изпратени, планирани и неуспешни.
+          Автоматизации, кампании и напомняния - изпратени, планирани и неуспешни.
         </p>
         <div className="mt-4">
           <PersonEmailsTable emails={emails} />
@@ -248,11 +248,11 @@ export function ContactDetailView({
                     <td className="py-2.5 pr-3">{j.sequence_key}</td>
                     <td className="py-2.5 pr-3">{j.status}</td>
                     <td className="py-2.5 pr-3 text-ink-soft">
-                      {j.scheduled_at ? formatDate(j.scheduled_at, "bg") : "—"}
+                      {j.scheduled_at ? formatDate(j.scheduled_at, "bg") : "-"}
                     </td>
                     <td className="py-2.5 pr-3 font-mono text-xs">{j.worker_job_id}</td>
                     <td className="py-2.5 pr-3 text-ink-soft">
-                      {eng ? `${eng.opened}/${eng.sent} opened` : "—"}
+                      {eng ? `${eng.opened}/${eng.sent} opened` : "-"}
                     </td>
                     <td className="py-2.5">
                       {j.status === "pending" && (

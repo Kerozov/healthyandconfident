@@ -21,7 +21,7 @@ export function CatalogUnavailable({
       </h1>
       <p className="mt-3 text-sm text-ink-soft">
         {locale === "bg"
-          ? "Виж останалите програми и продукти или ни пиши — ще ти предложим подходящото."
+          ? "Виж останалите програми и продукти или ни пиши - ще ти предложим подходящото."
           : "Take a look at the other programmes and products, or get in touch and we will point you to the right one."}
       </p>
       <Link

@@ -139,7 +139,7 @@ export function InactiveSubscribersPanel() {
       <p className="mt-3 text-xs leading-relaxed text-ink-soft">
         Показва абонати, които са получили поне един имейл през периода, но не са
         отворили нито един и не са кликнали линк. Хора, записали се по-скоро от
-        началото на периода, не влизат. Отварянията се обновяват от worker-а — за
+        началото на периода, не влизат. Отварянията се обновяват от worker-а - за
         най-пресни данни първо обнови статистиката в Автоматизации.
       </p>
 
@@ -198,12 +198,12 @@ export function InactiveSubscribersPanel() {
                     />
                   </td>
                   <td className="py-3 pr-4 font-medium text-ink">{r.email}</td>
-                  <td className="py-3 pr-4 text-ink-soft">{r.name || "—"}</td>
+                  <td className="py-3 pr-4 text-ink-soft">{r.name || "-"}</td>
                   <td className="py-3 pr-4 text-center [font-variant-numeric:tabular-nums]">
                     {r.sent_count}
                   </td>
                   <td className="py-3 pr-4 text-ink-soft">
-                    {r.last_sent_at ? formatDate(r.last_sent_at, "bg") : "—"}
+                    {r.last_sent_at ? formatDate(r.last_sent_at, "bg") : "-"}
                   </td>
                   <td className="py-3 pr-4 text-ink-soft">
                     {r.last_opened_at ? formatDate(r.last_opened_at, "bg") : "Никога"}

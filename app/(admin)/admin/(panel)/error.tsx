@@ -21,7 +21,7 @@ export default function AdminPanelError({
       </h1>
       <p className="mt-3 text-sm text-ink-soft">
         Сървърната заявка е прекъсната (често при голям списък абонати или бавна
-        база). <strong>Не си излязъл от профила</strong> — опитай отново.
+        база). <strong>Не си излязъл от профила</strong> - опитай отново.
       </p>
       {error.digest ? (
         <p className="mt-2 font-mono text-xs text-ink-soft/70">

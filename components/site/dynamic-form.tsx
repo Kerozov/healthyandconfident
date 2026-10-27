@@ -184,7 +184,7 @@ export function DynamicForm({
     <div className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
       {preview && (
         <p className="mb-4 rounded-xl bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-900">
-          Преглед — изпращането не се записва.
+          Преглед - изпращането не се записва.
         </p>
       )}
       <div className={cn("rounded-3xl border p-6 sm:p-10", themeShell[theme])}>

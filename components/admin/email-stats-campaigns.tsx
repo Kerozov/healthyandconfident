@@ -160,14 +160,14 @@ function CampaignDetailPanel({ campaign }: { campaign: CampaignStatRow }) {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-xs text-ink-soft">
-                      {r.openedAt ? formatDate(r.openedAt, "bg") : "—"}
+                      {r.openedAt ? formatDate(r.openedAt, "bg") : "-"}
                     </td>
-                    <td className="px-3 py-2">{r.clicks > 0 ? formatNumber(r.clicks) : "—"}</td>
+                    <td className="px-3 py-2">{r.clicks > 0 ? formatNumber(r.clicks) : "-"}</td>
                     <td className="px-3 py-2 text-xs">
                       {r.boughtAt ? (
                         <span className="font-semibold text-coral-700">{formatDate(r.boughtAt, "bg")}</span>
                       ) : (
-                        <span className="text-ink-soft">—</span>
+                        <span className="text-ink-soft">-</span>
                       )}
                     </td>
                   </tr>
@@ -284,7 +284,7 @@ export function CampaignsTab({ campaigns }: { campaigns: CampaignStatRow[] }) {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-ink">{c.subject}</p>
                   <p className="mt-0.5 text-xs text-ink-soft">
-                    {c.sentAt ? formatDate(c.sentAt, "bg") : "—"} · {formatNumber(c.sent)} изпратени
+                    {c.sentAt ? formatDate(c.sentAt, "bg") : "-"} · {formatNumber(c.sent)} изпратени
                     {c.segment ? ` · ${c.segment}` : ""}
                     {c.failed + c.bounced > 0 && (
                       <span className="text-coral-700">

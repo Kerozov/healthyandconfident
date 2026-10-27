@@ -166,7 +166,7 @@ async function guardAction(
       return {
         ok: false,
         message:
-          "Връзката с базата се разпадна. Опитай пак — не си излязъл от профила.",
+          "Връзката с базата се разпадна. Опитай пак - не си излязъл от профила.",
       };
     }
     if (err instanceof AdminAccessError) {
@@ -559,14 +559,14 @@ function validateAutomationContent(
   if (!input.enabled) return null;
   if (input.channel === "sms") {
     if (!input.sms_bg?.trim() && !input.sms_en?.trim()) {
-      return "Включена SMS автоматизация трябва да има текст — иначе не се изпраща и следващите стъпки спират.";
+      return "Включена SMS автоматизация трябва да има текст - иначе не се изпраща и следващите стъпки спират.";
     }
     return null;
   }
   const hasSubject = Boolean(input.subject_bg?.trim() || input.subject_en?.trim());
   const hasBody = Boolean(input.html_bg?.trim() || input.html_en?.trim());
   if (!hasSubject || !hasBody) {
-    return "Включена автоматизация трябва да има заглавие (тема) и текст на имейла — иначе не се изпраща и следващите стъпки спират.";
+    return "Включена автоматизация трябва да има заглавие (тема) и текст на имейла - иначе не се изпраща и следващите стъпки спират.";
   }
   return null;
 }
@@ -600,7 +600,7 @@ async function validateAutomationChain(
   let cur: string | null = parentId;
   while (cur && !seen.has(cur)) {
     if (cur === id) {
-      return "Тази стъпка не може да е след своя следваща стъпка — веригата ще се затвори в кръг и няма да тръгне.";
+      return "Тази стъпка не може да е след своя следваща стъпка - веригата ще се затвори в кръг и няма да тръгне.";
     }
     seen.add(cur);
     cur = parentOf.get(cur) ?? null;
@@ -979,7 +979,7 @@ export async function runAutomationCatchUpNow(): Promise<ActionResult> {
       ok: r.errors === 0 && r.failed === 0,
       message:
         `Наваксване: ${parts.join(" · ")}.` +
-        (r.timedOut ? " Не стигна времето — пусни го отново за останалите." : "") +
+        (r.timedOut ? " Не стигна времето - пусни го отново за останалите." : "") +
         (r.skipped > 0 || r.failed > 0 ? " Причините са в отчета на всяка стъпка." : ""),
     };
   } catch (err) {
@@ -1091,9 +1091,9 @@ export async function getAutomationStatsMap(): Promise<
 }
 
 function deliverySyncMessage(result: DeliverySyncResult): string {
-  if (result.total === 0) return "Всичко е актуално — няма нови отваряния за проверка.";
+  if (result.total === 0) return "Всичко е актуално - няма нови отваряния за проверка.";
   const left =
-    result.remaining > 0 ? ` Остават ${result.remaining} — натисни „Обнови“ пак.` : "";
+    result.remaining > 0 ? ` Остават ${result.remaining} - натисни „Обнови“ пак.` : "";
   return `Проверени ${result.total - result.remaining} получатели, обновени ${result.synced}.${left}`;
 }
 
@@ -1183,7 +1183,7 @@ export async function resendAutomationToNonOpeners(
   if (nonOpeners.length === 0) {
     return {
       ok: false,
-      message: "Everyone has opened (or bounced) — nobody to resend to.",
+      message: "Everyone has opened (or bounced) - nobody to resend to.",
     };
   }
 
@@ -1191,7 +1191,7 @@ export async function resendAutomationToNonOpeners(
   if (emails.length === 0) {
     return {
       ok: false,
-      message: "Everyone has opened (or bounced) — nobody to resend to.",
+      message: "Everyone has opened (or bounced) - nobody to resend to.",
     };
   }
 
@@ -1348,7 +1348,7 @@ async function resolveManualRecipients(
     if (parsed.valid.length === 0) return { error: "Въведи поне един валиден имейл." };
     if (parsed.valid.length > MANUAL_SEND_MAX_TYPED) {
       return {
-        error: `Най-много ${MANUAL_SEND_MAX_TYPED} адреса наведнъж — за повече избери група.`,
+        error: `Най-много ${MANUAL_SEND_MAX_TYPED} адреса наведнъж - за повече избери група.`,
       };
     }
     emails = parsed.valid;
@@ -1423,7 +1423,7 @@ async function loadAutomationForManualSend(
   const automation = data as Automation | null;
   if (!automation) return { error: "Автоматизацията не е намерена." };
   if (!automationHasContent(automation)) {
-    return { error: `„${automation.name}“ няма текст — добави го и запази, преди да изпращаш.` };
+    return { error: `„${automation.name}“ няма текст - добави го и запази, преди да изпращаш.` };
   }
   return { automation };
 }
@@ -1477,7 +1477,7 @@ export async function sendAutomationNow(
 
   const { isNotificationWorkerConfigured } = await import("@/lib/worker/config");
   if (!isNotificationWorkerConfigured()) {
-    return { ok: false, message: "NOTIFICATION_WORKER_URL / API_KEY не са зададени — нищо не е изпратено." };
+    return { ok: false, message: "NOTIFICATION_WORKER_URL / API_KEY не са зададени - нищо не е изпратено." };
   }
 
   const loaded = await loadAutomationForManualSend(automationId);
@@ -1590,7 +1590,7 @@ export async function sendAutomationNow(
   if (counts.failed > 0) parts.push(`неуспешни ${counts.failed}`);
   let message = `„${automation.name}“ → ${resolved.label}: ${parts.join(" · ")}.`;
   if (remaining > 0) {
-    message += ` Остават ${remaining} — натисни „Изпрати“ пак за останалите${spacingMs > 0 ? " (темпото започва отначало от този момент)" : ""}.`;
+    message += ` Остават ${remaining} - натисни „Изпрати“ пак за останалите${spacingMs > 0 ? " (темпото започва отначало от този момент)" : ""}.`;
   }
   if (counts.skipped > 0 || counts.failed > 0) message += " Причините са в отчета на стъпката.";
   if (resolved.invalid.length > 0) {
@@ -1987,7 +1987,7 @@ export async function unsubscribeInactiveSubscribers(input: {
     wanted.has(r.id),
   );
   if (targets.length === 0) {
-    return { ok: false, message: "Няма кого да отпишем — списъкът се е променил." };
+    return { ok: false, message: "Няма кого да отпишем - списъкът се е променил." };
   }
 
   const supabase = getAdminClient();
@@ -2747,7 +2747,7 @@ export async function updateEmailCampaignCta(
   return {
     ok: true,
     message: ctaUrl
-      ? "Линкът е обновен — вече изпратените имейли ще пренасочват към новия адрес."
+      ? "Линкът е обновен - вече изпратените имейли ще пренасочват към новия адрес."
       : "Бутонът е премахнат от тази кампания.",
   };
 }
@@ -3192,7 +3192,7 @@ export async function resendToNonOpeners(input: {
   if (emails.length === 0) {
     return {
       ok: false,
-      message: "Everyone has opened it (or bounced) — nobody to resend to.",
+      message: "Everyone has opened it (or bounced) - nobody to resend to.",
     };
   }
 
@@ -4259,7 +4259,7 @@ export async function saveSiteProduct(input: {
   ) {
     return {
       ok: false,
-      message: "Изберѝ различен продукт за downsell — иначе предлагаш едно и също два пъти.",
+      message: "Изберѝ различен продукт за downsell - иначе предлагаш едно и също два пъти.",
     };
   }
 
@@ -4911,7 +4911,7 @@ export async function saveFormTemplate(input: {
   if (!wanted) {
     return {
       ok: false,
-      message: "Невалиден URL адрес (slug) — използвай букви и цифри.",
+      message: "Невалиден URL адрес (slug) - използвай букви и цифри.",
     };
   }
   if (emailFieldCount(input.fields) === 0) {
@@ -5262,7 +5262,7 @@ export async function saveMetaPixelConfig(input: {
   if (badExtra) {
     return {
       ok: false,
-      message: `Допълнителен Pixel ID „${badExtra}“ не е валиден — само цифри, разделени със запетая.`,
+      message: `Допълнителен Pixel ID „${badExtra}“ не е валиден - само цифри, разделени със запетая.`,
     };
   }
 
@@ -5323,7 +5323,7 @@ export async function sendMetaTestEvent(): Promise<ActionResult> {
       ok: false,
       message:
         result.error === "capi_disabled"
-          ? "Conversions API не е активен — попълни Pixel ID и Access token и включи пиксела."
+          ? "Conversions API не е активен - попълни Pixel ID и Access token и включи пиксела."
           : `Събитието беше пропуснато: ${result.error ?? "неизвестна причина"}.`,
     };
   }
@@ -5335,6 +5335,6 @@ export async function sendMetaTestEvent(): Promise<ActionResult> {
   return {
     ok: true,
     message:
-      "Тестовото събитие е изпратено. Провери го в Events Manager → Test events (до 1–2 минути).",
+      "Тестовото събитие е изпратено. Провери го в Events Manager → Test events (до 1-2 минути).",
   };
 }

@@ -39,7 +39,7 @@ export function SegmentAssignChecklist({
 
   if (assignableSegments(segments).length === 0) {
     return (
-      <p className="text-sm text-ink-soft">Няма групи — създайте първи по-горе.</p>
+      <p className="text-sm text-ink-soft">Няма групи - създайте първи по-горе.</p>
     );
   }
 
@@ -120,7 +120,7 @@ export function AudienceTargetChecklist({
 
   if (assignableSegments(segments).length === 0 && groups.length === 0) {
     return (
-      <p className="text-sm text-ink-soft">Няма групи или сегменти — създайте първи по-горе.</p>
+      <p className="text-sm text-ink-soft">Няма групи или сегменти - създайте първи по-горе.</p>
     );
   }
 
@@ -220,7 +220,7 @@ export function AudienceTargetChecklist({
       })}
       <p className="text-xs text-ink-soft">
         {isExclude
-          ? "Ако абонатът влезе в някой от тези сегменти или групи, този имейл/SMS няма да тръгне — и вече насроченият във воркера се отменя веднага, заедно със следващите стъпки в същата поредица."
+          ? "Ако абонатът влезе в някой от тези сегменти или групи, този имейл/SMS няма да тръгне - и вече насроченият във воркера се отменя веднага, заедно със следващите стъпки в същата поредица."
           : "Сегментът включва всички групи в него и вложените подсегменти. Ако абонатът излезе от аудиторията, насроченият имейл във воркера също се отказва."}
       </p>
     </div>

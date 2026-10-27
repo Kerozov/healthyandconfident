@@ -74,8 +74,8 @@ export function programCardForLocale(
 /** What a card's button is called in the admin's button list. */
 export function programCardPlacementLabel(title_bg: string, title_en: string) {
   return {
-    label_bg: `Програми: „${title_bg}“ — бутон на картичката`,
-    label_en: `Programs: “${title_en || title_bg}” — card button`,
+    label_bg: `Програми: „${title_bg}“ - бутон на картичката`,
+    label_en: `Programs: “${title_en || title_bg}” - card button`,
   };
 }
 

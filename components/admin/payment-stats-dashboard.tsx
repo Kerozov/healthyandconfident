@@ -23,7 +23,7 @@ const STATUS_LABELS = {
 const KIND_LABELS = {
   product: "оферта",
   guide: "наръчник",
-  unknown: "—",
+  unknown: "-",
 } as const;
 
 function shortDay(key: string): string {
@@ -71,7 +71,7 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
           label="Средна поръчка"
           value={<CountUp value={totals.aovCents} format={(v) => money(Math.round(v))} />}
           delta={trends.aov}
-          sub="AOV — оборот / поръчки"
+          sub="AOV - оборот / поръчки"
         />
         <StatTile
           label="Клиенти"
@@ -161,7 +161,7 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
                 emptyText="Още няма история по месеци."
               />
               <p className="mt-3 text-xs text-ink-soft">
-                Последните 12 месеца — независимо от избрания период.
+                Последните 12 месеца - независимо от избрания период.
               </p>
             </Card>
 
@@ -228,13 +228,13 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
                 <div>
                   <dt className="text-ink-soft">Средно дни</dt>
                   <dd className="mt-0.5 font-display text-2xl font-semibold text-ink">
-                    {stats.daysToPurchase.average ?? "—"}
+                    {stats.daysToPurchase.average ?? "-"}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-ink-soft">Медиана</dt>
                   <dd className="mt-0.5 font-display text-2xl font-semibold text-ink">
-                    {stats.daysToPurchase.median ?? "—"}
+                    {stats.daysToPurchase.median ?? "-"}
                   </dd>
                 </div>
                 <div>
@@ -312,7 +312,7 @@ export function PaymentStatsDashboard({ stats }: { stats: PaymentStatsOverview }
                       <td className="p-4">{formatNumber(p.customers)}</td>
                       <td className="p-4">
                         {p.refunds === 0 ? (
-                          <span className="text-ink-soft">—</span>
+                          <span className="text-ink-soft">-</span>
                         ) : (
                           <Badge tone="warning">
                             {formatNumber(p.refunds)} · {money(p.refundedCents)}
@@ -413,7 +413,7 @@ function OrdersTable({
                 {order.name && <p className="text-xs text-ink-soft">{order.email}</p>}
               </td>
               <td className="py-2.5 pr-3 text-ink-soft">
-                {order.items.filter(Boolean).join(", ") || "—"}
+                {order.items.filter(Boolean).join(", ") || "-"}
               </td>
               <td className="py-2.5 pr-3 font-semibold text-ink">
                 {formatMoney(order.totalCents, order.currency || currency)}

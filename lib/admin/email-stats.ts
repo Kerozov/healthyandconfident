@@ -682,7 +682,7 @@ export async function getEmailStats(
     { linkLabel: string; targetUrl: string; clicks: number; emails: Set<string> }
   >();
   for (const click of clickRows) {
-    const targetUrl = click.target_url?.trim() || "—";
+    const targetUrl = click.target_url?.trim() || "-";
     const linkLabel = click.link_label?.trim() || targetUrl;
     const key = `${linkLabel}::${targetUrl}`;
     const entry = linkMap.get(key) ?? {
@@ -746,7 +746,7 @@ export async function getEmailStats(
     sourceTitle:
       (click.source_type === "campaign"
         ? campaignTitles.get(click.source_id)
-        : automationTitles.get(click.source_id)) ?? "—",
+        : automationTitles.get(click.source_id)) ?? "-",
     linkLabel: click.link_label,
     targetUrl: click.target_url,
     clickedAt: click.clicked_at,

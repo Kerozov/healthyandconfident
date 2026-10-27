@@ -103,14 +103,14 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
         <StatusCard
           ok={data.pixelActive}
           title="Пиксел в сайта"
-          okText="Активен — зарежда се на всички страници"
-          badText="Изключен — липсва Pixel ID или е спрян"
+          okText="Активен - зарежда се на всички страници"
+          badText="Изключен - липсва Pixel ID или е спрян"
         />
         <StatusCard
           ok={data.capiActive}
           title="Conversions API"
-          okText="Активен — събитията се пращат и от сървъра"
-          badText="Изключен — липсва Access token"
+          okText="Активен - събитията се пращат и от сървъра"
+          badText="Изключен - липсва Access token"
         />
         <div className="rounded-2xl border border-ink/10 bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-soft/70">
@@ -146,7 +146,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
           <div className="space-y-4">
             <Toggle
               label="Включи Meta пиксела"
-              hint="Без това нищо не се изпраща — нито от браузъра, нито от сървъра."
+              hint="Без това нищо не се изпраща - нито от браузъра, нито от сървъра."
               checked={form.enabled}
               onChange={(v) => set("enabled", v)}
             />
@@ -220,29 +220,29 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
         <Card title="Кои събития да се следят">
           <div className="space-y-3">
             <Toggle
-              label="PageView — преглед на страница"
+              label="PageView - преглед на страница"
               hint="Основата за ретаргетинг аудитории."
               checked={form.track_page_view}
               onChange={(v) => set("track_page_view", v)}
             />
             <Toggle
-              label="ViewContent — преглед на програма"
+              label="ViewContent - преглед на програма"
               checked={form.track_view_content}
               onChange={(v) => set("track_view_content", v)}
             />
             <Toggle
-              label="Lead — записан имейл"
+              label="Lead - записан имейл"
               hint="Popup, лийд форма и въпросници."
               checked={form.track_lead}
               onChange={(v) => set("track_lead", v)}
             />
             <Toggle
-              label="InitiateCheckout — започнато плащане"
+              label="InitiateCheckout - започнато плащане"
               checked={form.track_checkout}
               onChange={(v) => set("track_checkout", v)}
             />
             <Toggle
-              label="Purchase — потвърдено плащане"
+              label="Purchase - потвърдено плащане"
               hint="Изпраща се от Stripe webhook-а с точната сума."
               checked={form.track_purchase}
               onChange={(v) => set("track_purchase", v)}
@@ -269,13 +269,13 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
 
           <p className="mt-4 text-xs leading-relaxed text-ink-soft">
             Личните данни (имейл, име, телефон) се хешират с SHA-256, преди да
-            напуснат сайта — Meta никога не получава чист имейл.
+            напуснат сайта - Meta никога не получава чист имейл.
           </p>
         </Card>
       </div>
 
       <Card
-        title="Мета реклами — тракинг данни"
+        title="Мета реклами - тракинг данни"
         action={
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft">
             <Megaphone className="h-4 w-4" aria-hidden />
@@ -287,7 +287,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
           <div className="space-y-5">
             <Field
               label="Код за верификация на домейна"
-              hint="Business Manager → Brand safety → Domains → Meta-tag verification. Копирай само стойността на content=„…“ — сайтът сам слага мета тага във всяка страница."
+              hint="Business Manager → Brand safety → Domains → Meta-tag verification. Копирай само стойността на content=„…“ - сайтът сам слага мета тага във всяка страница."
               htmlFor="meta-domain-verification"
             >
               <Input
@@ -301,7 +301,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
 
             <Field
               label="Допълнителни Pixel ID-та"
-              hint="За втори акаунт или агенция. Разделяй със запетая. Събитията отиват и до тях — и от браузъра, и от сървъра. Access token-ът трябва да има права върху всеки от тях."
+              hint="За втори акаунт или агенция. Разделяй със запетая. Събитията отиват и до тях - и от браузъра, и от сървъра. Access token-ът трябва да има права върху всеки от тях."
               htmlFor="meta-extra-pixels"
             >
               <Input
@@ -347,7 +347,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
           <div className="lg:col-span-2">
             <Field
               label="Бележки"
-              hint="Място за всичко останало — кампании, UTM-и, кой какво е сменил и кога."
+              hint="Място за всичко останало - кампании, UTM-и, кой какво е сменил и кога."
               htmlFor="meta-notes"
             >
               <Textarea
@@ -393,7 +393,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
       <Card title="Събития за последните 30 дни">
         {data.summary.length === 0 ? (
           <p className="text-sm text-ink-soft">
-            Още няма записани събития. Включи пиксела, запази и отвори сайта — или
+            Още няма записани събития. Включи пиксела, запази и отвори сайта - или
             натисни „Изпрати тестово събитие“.
           </p>
         ) : (
@@ -422,7 +422,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
                     <td className="py-2.5 pr-3 font-semibold">{formatNumber(row.sent)}</td>
                     <td className="py-2.5 pr-3">
                       {row.failed === 0 ? (
-                        <span className="text-ink-soft">—</span>
+                        <span className="text-ink-soft">-</span>
                       ) : (
                         <Badge tone="warning">{formatNumber(row.failed)}</Badge>
                       )}
@@ -467,7 +467,7 @@ export function MetaPixelManager({ data }: { data: MetaPixelAdminData }) {
                   <td className="p-4 text-ink-soft">
                     {row.source === "browser" ? "Браузър" : "Сървър"}
                   </td>
-                  <td className="p-4 text-ink-soft">{row.email ?? "—"}</td>
+                  <td className="p-4 text-ink-soft">{row.email ?? "-"}</td>
                   <td className="p-4">
                     {row.status === "sent" ? (
                       <Badge tone="success">Изпратено</Badge>

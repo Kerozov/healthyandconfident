@@ -30,7 +30,7 @@ export default async function AdminZoomPage({
     <div>
       <PageHeader
         title="Zoom срещи"
-        description="Всяка проведена сесия поотделно, кой колко е стоял и кой се връща. Хората без имейл също се броят — по името им в Zoom."
+        description="Всяка проведена сесия поотделно, кой колко е стоял и кой се връща. Хората без имейл също се броят - по името им в Zoom."
         actions={<PageHeaderActions />}
       >
         <Suspense fallback={null}>

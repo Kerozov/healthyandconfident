@@ -31,8 +31,8 @@ export default async function AdminEngagementPage({
   return (
     <div>
       <PageHeader
-        title="Статистика — имейли"
-        description="Доставки, отваряния, кликове и ангажираност. За профил на конкретен човек — Абонати → иконата за статистика."
+        title="Статистика - имейли"
+        description="Доставки, отваряния, кликове и ангажираност. За профил на конкретен човек - Абонати → иконата за статистика."
       >
         <Suspense fallback={null}>
           <StatsToolbar active={period} />

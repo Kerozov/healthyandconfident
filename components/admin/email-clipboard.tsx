@@ -72,7 +72,7 @@ export function CopyEmailButton({
       type="button"
       onClick={copy}
       disabled={disabled}
-      title="Копира темата, текста с бутоните, главния бутон, снимката и прикачения файл — за да ги поставиш в кампания или друга автоматизация"
+      title="Копира темата, текста с бутоните, главния бутон, снимката и прикачения файл - за да ги поставиш в кампания или друга автоматизация"
       className={cn(
         BUTTON,
         SIZES[size],
@@ -112,7 +112,7 @@ export function PasteEmailButton({
       type="button"
       onClick={() => onPaste(copied)}
       disabled={disabled}
-      title={`Поставя копирания имейл${copied.source ? ` (${copied.source})` : ""} — тема, текст, бутони, прикачен файл`}
+      title={`Поставя копирания имейл${copied.source ? ` (${copied.source})` : ""} - тема, текст, бутони, прикачен файл`}
       className={cn(
         BUTTON,
         SIZES[size],

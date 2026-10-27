@@ -19,8 +19,8 @@ export const BUILTIN_FIELD_DEFAULTS: FormFieldDefault[] = [
       type: "radio",
       label_bg: "С какво можем да ти помогнем?",
       label_en: "How can we help you?",
-      help_bg: "Избери едно — ще ти пратим най-подходящото съдържание.",
-      help_en: "Choose one — we'll send the most relevant content.",
+      help_bg: "Избери едно - ще ти пратим най-подходящото съдържание.",
+      help_en: "Choose one - we'll send the most relevant content.",
       required: true,
       options: HEALTH_INTEREST_OPTIONS.map((opt) => ({
         value: opt.tag,

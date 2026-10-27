@@ -14,7 +14,7 @@ export function EmailAttachmentPicker({
   filename,
   onChange,
   label = "PDF прикачка",
-  hint = "По избор — PDF файл, който се изпраща като прикачен към имейла.",
+  hint = "По избор - PDF файл, който се изпраща като прикачен към имейла.",
 }: {
   path: string;
   filename: string;

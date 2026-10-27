@@ -35,7 +35,7 @@ export default async function AdminAutomationsPage() {
         {!workerOk && (
           <Alert variant="warning">
             Задай <code>NOTIFICATION_WORKER_URL</code> и{" "}
-            <code>NOTIFICATION_WORKER_API_KEY</code> — иначе нищо няма да се изпраща.
+            <code>NOTIFICATION_WORKER_API_KEY</code> - иначе нищо няма да се изпраща.
           </Alert>
         )}
       </PageHeader>
@@ -56,9 +56,9 @@ export default async function AdminAutomationsPage() {
       <section className="mt-8 rounded-2xl border border-ink/10 bg-white p-4 text-sm text-ink-soft sm:p-5">
         <p className="font-medium text-ink">Пример: welcome серия</p>
         <ol className="mt-2 list-inside list-decimal space-y-1 text-xs sm:text-sm">
-          <li>Имейл 1 — събитие „Нов абонат“, „Веднага“, без верига.</li>
-          <li>Имейл 2 — „След“ Имейл 1 + 15 мин. (или след дни).</li>
-          <li>Имейл 3 — след Имейл 2.</li>
+          <li>Имейл 1 - събитие „Нов абонат“, „Веднага“, без верига.</li>
+          <li>Имейл 2 - „След“ Имейл 1 + 15 мин. (или след дни).</li>
+          <li>Имейл 3 - след Имейл 2.</li>
           <li>Или: събитие „След форма“ → избери формата → „Прати ако“ е отговорил дадено нещо.</li>
         </ol>
       </section>

@@ -199,7 +199,7 @@ function TokenTextarea({
               )
             }
             label={t.label}
-            title={`Вмъква ${t.tag} — напр. „${t.sample}“`}
+            title={`Вмъква ${t.tag} - напр. „${t.sample}“`}
           />
         ))}
       </div>
@@ -415,7 +415,7 @@ export function EmailBlockEditor({
             </Row>
           </div>
           <div className="flex flex-wrap items-end gap-4">
-            <Row label={`Ширина — ${block.width}%`}>
+            <Row label={`Ширина - ${block.width}%`}>
               <input
                 type="range"
                 min={20}
@@ -482,13 +482,13 @@ export function EmailBlockEditor({
     case "divider":
       return (
         <p className="text-xs text-ink-soft">
-          Тънка линия през цялата ширина — за разделяне на секции.
+          Тънка линия през цялата ширина - за разделяне на секции.
         </p>
       );
 
     case "spacer":
       return (
-        <Row label={`Височина — ${block.size} px`}>
+        <Row label={`Височина - ${block.size} px`}>
           <input
             type="range"
             min={8}
@@ -515,10 +515,10 @@ export function EmailBlockEditor({
 
     case "form":
       return (
-        <Row label="Форма — всеки получател получава личен линк">
+        <Row label="Форма - всеки получател получава личен линк">
           {ctx.forms.length === 0 ? (
             <p className="text-sm text-ink-soft">
-              Няма форми — създай ги в Admin → Форми.
+              Няма форми - създай ги в Admin → Форми.
             </p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
@@ -537,7 +537,7 @@ export function EmailBlockEditor({
                       (ctx.locale === "en" ? form.title_en : form.title_bg) ||
                       form.name
                     }
-                    note={form.enabled ? `/${form.slug}` : "скрита — само с покана"}
+                    note={form.enabled ? `/${form.slug}` : "скрита - само с покана"}
                   />
                 ))}
             </div>
@@ -557,7 +557,7 @@ export function EmailBlockEditor({
             placeholder="<p>Собствен HTML…</p>"
           />
           <p className="text-xs text-ink-soft">
-            За напреднали — вмъква се както е написан. Ползвай таблици, не
+            За напреднали - вмъква се както е написан. Ползвай таблици, не
             flex/grid, за да изглежда еднакво във всички пощи.
           </p>
         </div>
@@ -681,10 +681,10 @@ function CatalogOfferPicker({
       </Row>
 
       {source === "site" ? (
-        <Row label="Продукт или наръчник — картата се попълва с актуалната цена при изпращане">
+        <Row label="Продукт или наръчник - картата се попълва с актуалната цена при изпращане">
           {products.length === 0 && guides.length === 0 ? (
             <p className="text-sm text-ink-soft">
-              Няма продукти или ръководства — създай ги в Admin → Website.
+              Няма продукти или ръководства - създай ги в Admin → Website.
             </p>
           ) : (
             <div className="space-y-3">
@@ -716,7 +716,7 @@ function CatalogOfferPicker({
                               ? ctx.locale === "en"
                                 ? product.price_label_en
                                 : product.price_label_bg
-                              : "няма Stripe цена — добави я в Website → Продукти"
+                              : "няма Stripe цена - добави я в Website → Продукти"
                           }
                         />
                       );
@@ -753,7 +753,7 @@ function CatalogOfferPicker({
                               ? ctx.locale === "en"
                                 ? guide.price_label_en
                                 : guide.price_label_bg
-                              : "няма Stripe цена — добави я в Website → Ръководства"
+                              : "няма Stripe цена - добави я в Website → Ръководства"
                           }
                         />
                       );
@@ -765,7 +765,7 @@ function CatalogOfferPicker({
           )}
         </Row>
       ) : (
-        <Row label="Продукт от Stripe — име, цена и снимка идват от Stripe">
+        <Row label="Продукт от Stripe - име, цена и снимка идват от Stripe">
           {stripeCatalog.pending && stripeCatalog.items.length === 0 ? (
             <p className="flex items-center gap-2 text-sm text-ink-soft">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -775,7 +775,7 @@ function CatalogOfferPicker({
             <p className="text-sm text-coral-600">{stripeCatalog.error}</p>
           ) : stripeCatalog.items.length === 0 ? (
             <p className="text-sm text-ink-soft">
-              Няма продукти в Stripe — създай ги в Stripe Dashboard.
+              Няма продукти в Stripe - създай ги в Stripe Dashboard.
             </p>
           ) : (
             <div className="space-y-2">
@@ -1015,7 +1015,7 @@ function YoutubeEditor({
       </Row>
 
       <div className="flex flex-wrap items-end gap-4">
-        <Row label={`Ширина — ${block.width}%`}>
+        <Row label={`Ширина - ${block.width}%`}>
           <input
             type="range"
             min={20}

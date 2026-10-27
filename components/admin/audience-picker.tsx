@@ -165,7 +165,7 @@ export function AudiencePicker({
           hint="Subscribers with any of the selected tags (OR). Create segments on the Subscribers page."
         >
           {allTagOptions.length === 0 ? (
-            <p className="text-sm text-ink-soft">No tags yet — add tags to subscribers first.</p>
+            <p className="text-sm text-ink-soft">No tags yet - add tags to subscribers first.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {allTagOptions.map((tag) => {

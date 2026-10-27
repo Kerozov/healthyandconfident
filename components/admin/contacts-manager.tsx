@@ -74,7 +74,7 @@ export function ContactsManager({
           onChange={(e) => setPaymentFilter(e.target.value as typeof paymentFilter)}
           className="rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm"
         >
-          <option value="all">Всички — плащане</option>
+          <option value="all">Всички - плащане</option>
           <option value="unpaid">Неплатили</option>
           <option value="paid">Платили</option>
         </select>
@@ -83,7 +83,7 @@ export function ContactsManager({
           onChange={(e) => setReminderFilter(e.target.value as typeof reminderFilter)}
           className="rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm"
         >
-          <option value="all">Всички — reminders</option>
+          <option value="all">Всички - reminders</option>
           <option value="yes">С pending reminders</option>
           <option value="no">Без pending reminders</option>
         </select>
@@ -110,7 +110,7 @@ export function ContactsManager({
           onChange={(e) => setZoomFilter(e.target.value as typeof zoomFilter)}
           className="rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm"
         >
-          <option value="all">Всички — Zoom</option>
+          <option value="all">Всички - Zoom</option>
           <option value="yes">Участвали в Zoom</option>
           <option value="no">Без Zoom</option>
         </select>
@@ -163,7 +163,7 @@ export function ContactsManager({
                 <td className="px-4 py-3 text-ink-soft">
                   {c.pending_reminder_count > 0
                     ? `${c.pending_reminder_count} pending`
-                    : "—"}
+                    : "-"}
                 </td>
                 <td className="px-4 py-3 text-ink-soft">
                   {c.zoom_attended ? `Да (${c.zoom_total_minutes} мин.)` : "Не"}

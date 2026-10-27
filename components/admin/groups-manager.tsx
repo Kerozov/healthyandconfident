@@ -89,7 +89,7 @@ export function GroupsManager({
   return (
     <Card title="Сегменти">
       <p className="mb-4 text-sm text-ink-soft">
-        Сегментът обединява групи — не се присвоява директно на абонати.
+        Сегментът обединява групи - не се присвоява директно на абонати.
         При кампания или автоматизация избор на сегмент включва всички групи в
         него (и вложените подсегменти).
       </p>
@@ -108,7 +108,7 @@ export function GroupsManager({
             value={form.parent_id}
             onChange={(e) => setForm({ ...form, parent_id: e.target.value })}
           >
-            <option value="">— Главен сегмент —</option>
+            <option value="">- Главен сегмент -</option>
             {parentOptions.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name}
@@ -137,7 +137,7 @@ export function GroupsManager({
       {error && <p className="mb-4 text-sm text-coral-600">{error}</p>}
 
       {tree.length === 0 ? (
-        <p className="text-sm text-ink-soft">Няма сегменти — създайте първи по-горе.</p>
+        <p className="text-sm text-ink-soft">Няма сегменти - създайте първи по-горе.</p>
       ) : (
         <div className="divide-y divide-ink/5 rounded-xl border border-ink/10">
           {tree.map(({ group, depth }) => {

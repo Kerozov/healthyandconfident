@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 function stripeSetupProblem(product: SiteProduct): string | null {
   const bg = productStripeBg(product);
   if (!bg.stripe_price_id && !bg.stripe_url) {
-    return "Няма Stripe цена или Payment Link за български — не може да се купи";
+    return "Няма Stripe цена или Payment Link за български - не може да се купи";
   }
   if (product.enabled_en !== false) {
     const en = productStripeEnOnly(product);

@@ -383,7 +383,7 @@ export function PersonStatsPanel({
                 Всички имейли на човека ({detail.emails.length})
               </summary>
               <p className="mb-3 mt-2 text-xs text-ink-soft">
-                Автоматизации, кампании и напомняния — изпратени, планирани и неуспешни.
+                Автоматизации, кампании и напомняния - изпратени, планирани и неуспешни.
               </p>
               <PersonEmailsTable emails={detail.emails} />
             </details>

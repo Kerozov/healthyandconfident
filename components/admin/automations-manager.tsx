@@ -356,7 +356,7 @@ function Metric({
     <button
       type="button"
       onClick={onClick}
-      title={`Виж кои са — ${label.toLowerCase()}`}
+      title={`Виж кои са - ${label.toLowerCase()}`}
       className={cn(
         "-mx-2 -my-1 min-w-[64px] rounded-lg px-2 py-1 text-left transition-colors hover:bg-forest-50",
         active && "bg-forest-50 ring-1 ring-forest-400/50",
@@ -684,7 +684,7 @@ export function AutomationsManager({
       delay_minutes: 15,
       send_time: parent.send_time || "09:00",
       send_date: "",
-      name: `${parent.name} — следваща`,
+      name: `${parent.name} - следваща`,
       sort_order: (parent.sort_order ?? 0) + 10,
     });
     setSmsLinks({ bg: "", en: "" });
@@ -822,7 +822,7 @@ export function AutomationsManager({
       : undefined;
     const childNote =
       childCount > 0
-        ? `\n\nИма ${childCount} следващ${childCount === 1 ? "а стъпка" : "и стъпки"} — ${
+        ? `\n\nИма ${childCount} следващ${childCount === 1 ? "а стъпка" : "и стъпки"} - ${
             parentName
               ? `ще продължат след „${parentName}“.`
               : "ще станат начало на верига и ще тръгват направо от тригера."
@@ -873,9 +873,9 @@ export function AutomationsManager({
       setNote(
         after
           ? forksExisting
-            ? `Създадено копие „${res.name}“ като нов клон след „${after.name}“ — изключено, за да не спре текущата верига. Отвори го за редакция.`
-            : `Създадено копие „${res.name}“ след „${after.name}“ — изключено, отвори го за редакция.`
-          : `Създадено копие „${res.name}“ като нова верига — изключено, отвори го за редакция.`,
+            ? `Създадено копие „${res.name}“ като нов клон след „${after.name}“ - изключено, за да не спре текущата верига. Отвори го за редакция.`
+            : `Създадено копие „${res.name}“ след „${after.name}“ - изключено, отвори го за редакция.`
+          : `Създадено копие „${res.name}“ като нова верига - изключено, отвори го за редакция.`,
       );
       router.refresh();
     });
@@ -891,7 +891,7 @@ export function AutomationsManager({
         setError(res.message || "Неуспешно копиране");
         return;
       }
-      setNote(`Създадено копие „${res.name}“ — изключено, отвори го за редакция.`);
+      setNote(`Създадено копие „${res.name}“ - изключено, отвори го за редакция.`);
       router.refresh();
     });
   }
@@ -1035,7 +1035,7 @@ export function AutomationsManager({
       if (version) next = applyCopiedVersion(next, contentLocale, version);
     }
     setForm(next);
-    setNote(`Поставено съдържание от ${copied.source || "копие"} „${copied.name}“ — запази, за да остане.`);
+    setNote(`Поставено съдържание от ${copied.source || "копие"} „${copied.name}“ - запази, за да остане.`);
   }
 
   function emailCopiedFromList(copied: CopiedEmail) {
@@ -1050,7 +1050,7 @@ export function AutomationsManager({
       return;
     }
     if (!writeCopiedEmail(copied)) {
-      setError("Браузърът не позволи копиране — провери дали не е в частен режим.");
+      setError("Браузърът не позволи копиране - провери дали не е в частен режим.");
       return;
     }
     router.push("/admin/campaigns?paste=1");
@@ -1130,7 +1130,7 @@ export function AutomationsManager({
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-forest-400/60 bg-forest-50/60 px-4 py-3">
           <Copy className="h-4 w-4 shrink-0 text-forest-700" aria-hidden />
           <p className="min-w-0 flex-1 text-sm text-forest-900">
-            Копирано: <strong>{clipboard.name}</strong> — избери „Постави тук“ под
+            Копирано: <strong>{clipboard.name}</strong> - избери „Постави тук“ под
             стъпката, след която да застане, или го постави като нова верига.
           </p>
           <button
@@ -1156,7 +1156,7 @@ export function AutomationsManager({
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-forest-400/60 bg-forest-50/60 px-4 py-3">
           <ClipboardCopy className="h-4 w-4 shrink-0 text-forest-700" aria-hidden />
           <p className="min-w-0 flex-1 text-sm text-forest-900">
-            Имейлът <strong>{copiedNotice}</strong> е копиран — темата, текстът с
+            Имейлът <strong>{copiedNotice}</strong> е копиран - темата, текстът с
             бутоните, главният бутон, снимката и прикаченият файл. Постави го в нова
             кампания или в друга автоматизация („Постави“ в съдържанието).
           </p>
@@ -1256,7 +1256,7 @@ export function AutomationsManager({
                   type="button"
                   onClick={() => setSendNowFor(automations.find((a) => a.id === editingId)!)}
                   disabled={pending}
-                  title="Изпраща запазената версия — запази промените първо"
+                  title="Изпраща запазената версия - запази промените първо"
                   className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
@@ -1281,7 +1281,7 @@ export function AutomationsManager({
                   build={() => copiedEmailFromAutomation(form)}
                   onCopied={(copied) =>
                     setNote(
-                      `Копирано „${copied.name}“ — отвори Кампании → „Нова кампания с него“, или го постави в друга автоматизация.`,
+                      `Копирано „${copied.name}“ - отвори Кампании → „Нова кампания с него“, или го постави в друга автоматизация.`,
                     )
                   }
                 />
@@ -1352,7 +1352,7 @@ export function AutomationsManager({
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Добре дошла — отслабване"
+                  placeholder="Добре дошла - отслабване"
                 />
               </Field>
               <Field label="Канал">
@@ -1462,7 +1462,7 @@ export function AutomationsManager({
               <WorkspacePanel
                 tone="violet"
                 title="След коя форма"
-                description="Имейлът във формата е задължителен. Можеш да добавиш условия по изборни отговори — не по свободен текст."
+                description="Имейлът във формата е задължителен. Можеш да добавиш условия по изборни отговори - не по свободен текст."
               >
                 <FormTriggerPicker
                   forms={forms}
@@ -1509,10 +1509,10 @@ export function AutomationsManager({
             <WorkspacePanel title="Аудитория">
               <p className="mb-3 text-xs leading-relaxed text-ink-soft">
                 {form.trigger_event === "segment_entry"
-                  ? "Включване е самият тригер — автоматизацията тръгва, когато човекът влезе в тези групи/сегменти за първи път. Изключване спира изпращането."
+                  ? "Включване е самият тригер - автоматизацията тръгва, когато човекът влезе в тези групи/сегменти за първи път. Изключване спира изпращането."
                   : form.trigger_event === "form_submit"
                     ? "По желание ограничи кой да получи стъпката след формата. Празно включване = всеки, който е попълнил и минава условията по отговори."
-                    : "Включване = кой да получи тази стъпка. Изключване = кой никога не трябва да я получи (напр. вече платил). Смяната на група отменя насрочения имейл във воркера — не чака датата на изпращане."}
+                    : "Включване = кой да получи тази стъпка. Изключване = кой никога не трябва да я получи (напр. вече платил). Смяната на група отменя насрочения имейл във воркера - не чака датата на изпращане."}
               </p>
               <div className="grid gap-3">
                 <div className="rounded-xl border border-forest-500/25 bg-forest-50/30 p-3 space-y-2">
@@ -1618,7 +1618,7 @@ export function AutomationsManager({
                     });
                   }}
                 >
-                  <option value="">— Директно от събитието —</option>
+                  <option value="">- Директно от събитието -</option>
                   {otherAutomations.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
@@ -1658,7 +1658,7 @@ export function AutomationsManager({
               {scheduleMode === "immediate" && form.after_automation_id ? (
                 <Field
                   label="Минути след предишната"
-                  hint="Напр. 15 — за да не тръгнат два имейла едновременно."
+                  hint="Напр. 15 - за да не тръгнат два имейла едновременно."
                 >
                   <Input
                     type="number"
@@ -1794,7 +1794,7 @@ export function AutomationsManager({
                 {contentLocale === "bg" ? (
                   <div className="grid min-w-0 gap-4 xl:grid-cols-2">
                   <div className="min-w-0 space-y-3">
-                    <Field label="Тема" hint="Може и с {{first_name}}, {{last_name}}, {{name}} — напр. „{{first_name}}, имаме нещо за теб“.">
+                    <Field label="Тема" hint="Може и с {{first_name}}, {{last_name}}, {{name}} - напр. „{{first_name}}, имаме нещо за теб“.">
                       <Input
                         value={form.subject_bg}
                         onChange={(e) =>
@@ -1822,7 +1822,7 @@ export function AutomationsManager({
                     />
                     <Field
                       label="Главен бутон в края (текст)"
-                      hint="По избор — под съдържанието. Допълнителни бутони: „Бутон“ над текста."
+                      hint="По избор - под съдържанието. Допълнителни бутони: „Бутон“ над текста."
                     >
                       <Input
                         value={form.cta_label_bg}
@@ -1892,7 +1892,7 @@ export function AutomationsManager({
                     />
                     <Field
                       label="Main end button (text)"
-                      hint="Optional — below the body. Extra buttons: use “Бутон” above the text."
+                      hint="Optional - below the body. Extra buttons: use “Бутон” above the text."
                     >
                       <Input
                         value={form.cta_label_en}
@@ -1941,14 +1941,14 @@ export function AutomationsManager({
                   link={smsLinks.bg}
                   onMessageChange={(sms_bg) => setForm({ ...form, sms_bg })}
                   onLinkChange={(bg) => setSmsLinks({ ...smsLinks, bg })}
-                  messageLabel="SMS — BG"
+                  messageLabel="SMS - BG"
                 />
                 <SmsComposeFields
                   message={form.sms_en}
                   link={smsLinks.en}
                   onMessageChange={(sms_en) => setForm({ ...form, sms_en })}
                   onLinkChange={(en) => setSmsLinks({ ...smsLinks, en })}
-                  messageLabel="SMS — EN"
+                  messageLabel="SMS - EN"
                   messageHint="EN версията е по избор."
                 />
               </div>
@@ -2023,7 +2023,7 @@ export function AutomationsManager({
               {syncingAll ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Обновявам отварянията от worker-а — числата се попълват сами…
+                  Обновявам отварянията от worker-а - числата се попълват сами…
                 </>
               ) : syncedAt ? (
                 <>
@@ -2090,7 +2090,7 @@ export function AutomationsManager({
                 : null;
             const formNameLine =
               a.trigger_event === "form_submit"
-                ? `форма: ${selectedForm?.title_bg || selectedForm?.name || "—"}`
+                ? `форма: ${selectedForm?.title_bg || selectedForm?.name || "-"}`
                 : null;
             const rowBusy = busyId === a.id && pending;
             const isExpanded = expandedId === a.id;
@@ -2378,7 +2378,7 @@ export function AutomationsManager({
                       )}
                     >
                       <Users className="h-3.5 w-3.5" />
-                      {isExpanded ? "Скрий получателите" : "Получатели — кой получи, отвори, кликна"}
+                      {isExpanded ? "Скрий получателите" : "Получатели - кой получи, отвори, кликна"}
                       {isExpanded ? (
                         <ChevronUp className="h-3.5 w-3.5" />
                       ) : (
@@ -2406,7 +2406,7 @@ export function AutomationsManager({
                         type="button"
                         onClick={() => campaignFromAutomation(a)}
                         disabled={pending}
-                        title="Отваря нова кампания, попълнена с този имейл — избираш само аудитория и кога"
+                        title="Отваря нова кампания, попълнена с този имейл - избираш само аудитория и кога"
                         className="inline-flex h-8 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3 text-xs font-semibold text-ink-soft hover:bg-ink/5 disabled:opacity-50"
                       >
                         <Megaphone className="h-3.5 w-3.5" />

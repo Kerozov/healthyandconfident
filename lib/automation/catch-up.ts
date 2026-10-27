@@ -127,7 +127,7 @@ export async function catchUpAutomationChains(opts?: {
     timedOut: false,
   };
   if (!isNotificationWorkerConfigured()) {
-    report.notice = "NOTIFICATION_WORKER_URL / API_KEY не са зададени — нищо не е изпратено.";
+    report.notice = "NOTIFICATION_WORKER_URL / API_KEY не са зададени - нищо не е изпратено.";
     console.error(`[automation] catch-up: ${report.notice}`);
     return report;
   }

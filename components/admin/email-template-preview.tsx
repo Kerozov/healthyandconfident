@@ -129,7 +129,7 @@ export function EmailTemplatePreview({
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-white px-3 py-2">
         <p className="text-xs font-medium text-ink-soft">
-          Преглед — header и footer се добавят автоматично
+          Преглед - header и footer се добавят автоматично
         </p>
         <div className="inline-flex rounded-lg border border-ink/15 p-0.5">
           <DeviceButton
@@ -158,7 +158,7 @@ export function EmailTemplatePreview({
             <span className="font-semibold">
               {renderEmailTemplate(subject.trim(), SAMPLE_TEMPLATE_VARS) || "(без тема)"}
             </span>
-            {snippet && <span className="text-ink-soft"> — {snippet}</span>}
+            {snippet && <span className="text-ink-soft"> - {snippet}</span>}
           </p>
         </div>
       )}

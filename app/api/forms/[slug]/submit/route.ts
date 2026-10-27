@@ -293,7 +293,7 @@ export async function POST(
     }
   } else if (email) {
     console.info(
-      `[form-submit] ${formSource} ${email}: no marketing consent ticked — ` +
+      `[form-submit] ${formSource} ${email}: no marketing consent ticked - ` +
         "submission stored, no subscriber and no automations.",
     );
   }

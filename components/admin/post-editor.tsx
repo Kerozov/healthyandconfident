@@ -214,7 +214,7 @@ export function PostEditor({ post }: { post?: BlogPost }) {
                   rows={18}
                   value={form.content}
                   onChange={(e) => set("content", e.target.value)}
-                  placeholder="Write in Markdown — ## headings, **bold**, lists, [links](url), images..."
+                  placeholder="Write in Markdown - ## headings, **bold**, lists, [links](url), images..."
                   className="font-mono text-[13px]"
                 />
                 <p className="mt-2 text-xs leading-relaxed text-ink-soft">
@@ -258,7 +258,7 @@ export function PostEditor({ post }: { post?: BlogPost }) {
           <Card title="Media & taxonomy">
             <ImageUploadField
               label="Корица"
-              hint="JPEG, PNG, WebP — до 5 MB. Снимката не се реже; най-добре изглежда хоризонтална 16:10 (1600×1000 px)."
+              hint="JPEG, PNG, WebP - до 5 MB. Снимката не се реже; най-добре изглежда хоризонтална 16:10 (1600×1000 px)."
               previewFrame="aspect-[16/10]"
               value={form.cover_image}
               onChange={(url) => set("cover_image", url)}

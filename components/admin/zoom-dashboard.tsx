@@ -284,7 +284,7 @@ export function ZoomDashboard({ report }: { report: ZoomReport }) {
             totals.avgStayPct != null ? (
               <CountUp value={totals.avgStayPct} suffix="%" />
             ) : (
-              "—"
+              "-"
             )
           }
           sub="от продължителността на сесията"
@@ -544,7 +544,7 @@ function SessionCard({
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-ink">{s.topic}</p>
           <p className="text-xs text-ink-soft">
-            {start.time}–{end.time} · {formatMinutes(s.durationMinutes)}
+            {start.time}-{end.time} · {formatMinutes(s.durationMinutes)}
           </p>
         </div>
         <div className="text-right">

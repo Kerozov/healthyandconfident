@@ -55,8 +55,8 @@ function rankedFrom(raw: unknown): DashboardRankedItem[] {
   return raw.map((entry) => {
     const r = (entry ?? {}) as Record<string, unknown>;
     return {
-      id: String(r.id ?? "—"),
-      label: String(r.label ?? r.id ?? "—"),
+      id: String(r.id ?? "-"),
+      label: String(r.label ?? r.id ?? "-"),
       value: num(r.value),
     };
   });

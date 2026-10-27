@@ -18,8 +18,8 @@ const STATIC_GROUPS: SignupSourceGroup[] = [
     options: [
       { value: "free-menu-banner", label: "Банер „Безплатно меню“" },
       { value: "lead-magnet", label: "Lead magnet секция" },
-      { value: "menu-popup", label: "Popup — меню (ръчно)" },
-      { value: "auto-popup", label: "Popup — автоматичен" },
+      { value: "menu-popup", label: "Popup - меню (ръчно)" },
+      { value: "auto-popup", label: "Popup - автоматичен" },
     ],
   },
   {
@@ -31,8 +31,8 @@ const STATIC_GROUPS: SignupSourceGroup[] = [
     id: "nav",
     label: "Навигация и hero",
     options: [
-      { value: "nav-header", label: "Навигация — desktop" },
-      { value: "nav-mobile", label: "Навигация — mobile" },
+      { value: "nav-header", label: "Навигация - desktop" },
+      { value: "nav-mobile", label: "Навигация - mobile" },
       { value: "hero", label: "Hero секция" },
     ],
   },

@@ -246,7 +246,7 @@ export function FormsManager({
   function save() {
     setError(null);
     if (!hasRequiredEmailField(form.fields)) {
-      setError("Формата трябва да има задължително поле за имейл — автоматизациите тръгват по него.");
+      setError("Формата трябва да има задължително поле за имейл - автоматизациите тръгват по него.");
       setTab("fields");
       return;
     }
@@ -262,7 +262,7 @@ export function FormsManager({
       if (res.slug && res.slug !== form.slug) {
         setForm((prev) => ({ ...prev, id: res.id ?? prev.id, slug: res.slug! }));
         setSavedNote(
-          `Запазено. Публичният адрес е /bg/forms/${res.slug} — това е линкът за споделяне.`,
+          `Запазено. Публичният адрес е /bg/forms/${res.slug} - това е линкът за споделяне.`,
         );
         setEditingId(res.id ?? editingId);
         return;
@@ -329,7 +329,7 @@ export function FormsManager({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-ink-soft max-w-2xl">
           Създавай форми от готови шаблони, редактирай въпросите и изпращай линк по
-          имейл до избрана аудитория. Отговорите са под всеки формуляр — бутон{" "}
+          имейл до избрана аудитория. Отговорите са под всеки формуляр - бутон{" "}
           <strong className="text-slate-800">„Отговори“</strong>.
         </p>
         <div className="flex flex-wrap gap-2">
@@ -383,7 +383,7 @@ export function FormsManager({
               </Field>
               <Field
                 label="URL slug"
-                hint="Само латиница и цифри — кирилицата се превръща автоматично."
+                hint="Само латиница и цифри - кирилицата се превръща автоматично."
               >
                 <Input
                   value={form.slug}
@@ -401,7 +401,7 @@ export function FormsManager({
                 <p className="text-xs font-medium text-ink-soft">Публичен линк</p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <code className="break-all text-sm text-ink">
-                    {editorUrl || "—"}
+                    {editorUrl || "-"}
                   </code>
                   {editorUrl && slugPublished && (
                     <>
@@ -420,20 +420,20 @@ export function FormsManager({
                 {!slugPublished && (
                   <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-800">
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    Още не е записан — натисни „Запази“, за да заработи този адрес.
+                    Още не е записан - натисни „Запази“, за да заработи този адрес.
                     {liveSlug && ` Активен в момента е /bg/forms/${liveSlug}.`}
                   </p>
                 )}
                 {slugPublished && !form.enabled && (
                   <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-800">
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    Формата е скрита — този адрес връща 404. Отваря се само с личния
+                    Формата е скрита - този адрес връща 404. Отваря се само с личния
                     линк от имейл поканата.
                   </p>
                 )}
                 {liveSlug && slugPublished && (
                   <p className="mt-2 text-xs text-ink-soft">
-                    Старите адреси на тази форма продължават да работят — вече
+                    Старите адреси на тази форма продължават да работят - вече
                     изпратените линкове не се чупят при преименуване.
                   </p>
                 )}
@@ -447,26 +447,26 @@ export function FormsManager({
                 />
                 Активна форма (видима на сайта)
               </label>
-              <Field label="Заглавие — BG">
+              <Field label="Заглавие - BG">
                 <Input
                   value={form.title_bg}
                   onChange={(e) => setForm({ ...form, title_bg: e.target.value })}
                 />
               </Field>
-              <Field label="Заглавие — EN">
+              <Field label="Заглавие - EN">
                 <Input
                   value={form.title_en}
                   onChange={(e) => setForm({ ...form, title_en: e.target.value })}
                 />
               </Field>
-              <Field label="Описание — BG">
+              <Field label="Описание - BG">
                 <Textarea
                   rows={3}
                   value={form.description_bg}
                   onChange={(e) => setForm({ ...form, description_bg: e.target.value })}
                 />
               </Field>
-              <Field label="Описание — EN">
+              <Field label="Описание - EN">
                 <Textarea
                   rows={3}
                   value={form.description_en}
@@ -513,7 +513,7 @@ export function FormsManager({
                   disabled={pending}
                 />
               </div>
-              <Field label="Благодарност — BG">
+              <Field label="Благодарност - BG">
                 <Input
                   value={form.settings.thank_you_bg}
                   onChange={(e) =>
@@ -524,7 +524,7 @@ export function FormsManager({
                   }
                 />
               </Field>
-              <Field label="Благодарност — EN">
+              <Field label="Благодарност - EN">
                 <Input
                   value={form.settings.thank_you_en}
                   onChange={(e) =>
@@ -543,7 +543,7 @@ export function FormsManager({
               {!hasRequiredEmailField(form.fields) && (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-coral-200 bg-coral-50 px-4 py-3">
                   <p className="text-sm text-coral-900">
-                    Имейлът е задължителен във всяка форма — така автоматизация може да тръгне след попълване.
+                    Имейлът е задължителен във всяка форма - така автоматизация може да тръгне след попълване.
                   </p>
                   <button
                     type="button"
@@ -813,13 +813,13 @@ export function FormsManager({
 
           {tab === "email" && (
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Тема имейл — BG">
+              <Field label="Тема имейл - BG">
                 <Input
                   value={form.email_subject_bg}
                   onChange={(e) => setForm({ ...form, email_subject_bg: e.target.value })}
                 />
               </Field>
-              <Field label="Тема имейл — EN">
+              <Field label="Тема имейл - EN">
                 <Input
                   value={form.email_subject_en}
                   onChange={(e) => setForm({ ...form, email_subject_en: e.target.value })}
@@ -827,7 +827,7 @@ export function FormsManager({
               </Field>
               <div className="md:col-span-2">
                 <EmailBuilder
-                  title="Текст имейл — BG"
+                  title="Текст имейл - BG"
                   locale="bg"
                   value={form.email_intro_bg}
                   onChange={(email_intro_bg) => setForm({ ...form, email_intro_bg })}
@@ -836,7 +836,7 @@ export function FormsManager({
               </div>
               <div className="md:col-span-2">
                 <EmailBuilder
-                  title="Текст имейл — EN"
+                  title="Текст имейл - EN"
                   locale="en"
                   value={form.email_intro_en}
                   onChange={(email_intro_en) => setForm({ ...form, email_intro_en })}
@@ -894,7 +894,7 @@ export function FormsManager({
                   }}
                 />
                 <p className="text-xs text-ink-soft">
-                  В теста бутонът води към публичната форма — истинските покани носят
+                  В теста бутонът води към публичната форма - истинските покани носят
                   личен линк за всеки човек.
                 </p>
               </div>
@@ -1046,7 +1046,7 @@ export function FormsManager({
                   {!f.enabled && (
                     <p className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-800">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      Скрита — публичният линк връща 404. Само личните линкове от
+                      Скрита - публичният линк връща 404. Само личните линкове от
                       имейл поканите я отварят.
                     </p>
                   )}
@@ -1059,7 +1059,7 @@ export function FormsManager({
                     title={
                       f.enabled
                         ? "Скрий формата от публичния адрес"
-                        : "Активирай — публичният линк заработва веднага"
+                        : "Активирай - публичният линк заработва веднага"
                     }
                     className={cn(
                       "inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-ink/5 disabled:opacity-60",
@@ -1077,7 +1077,7 @@ export function FormsManager({
                     title={
                       f.enabled
                         ? "Копирай линка към формата"
-                        : "Формата е скрита — този линк връща 404, докато не я активираш"
+                        : "Формата е скрита - този линк връща 404, докато не я активираш"
                     }
                   />
                   <a
@@ -1087,7 +1087,7 @@ export function FormsManager({
                     title={
                       f.enabled
                         ? "Отвори формата"
-                        : "Формата е скрита — този адрес връща 404"
+                        : "Формата е скрита - този адрес връща 404"
                     }
                     className={cn(
                       "inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-ink/5",
@@ -1142,7 +1142,7 @@ export function FormsManager({
                       <tbody>
                         {submissions.map((s) => (
                           <tr key={s.id} className="border-b border-ink/5 align-top">
-                            <td className="px-4 py-2 font-mono text-xs">{s.email ?? "—"}</td>
+                            <td className="px-4 py-2 font-mono text-xs">{s.email ?? "-"}</td>
                             <td className="px-4 py-2 text-xs text-ink-soft">
                               {formatDate(s.submitted_at, "bg")}
                             </td>

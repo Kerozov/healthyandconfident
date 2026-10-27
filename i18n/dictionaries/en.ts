@@ -4,7 +4,7 @@ export const en: Dictionary = {
   meta: {
     title: "Vessie Nay | Holistic Nutritionist & Type 2 Diabetes Practitioner",
     description:
-      "Vessie Nay — Holistic Nutritionist (B.Med.Sc. Hons) & NHS Type 2 Diabetes Practitioner. Lasting weight loss, blood-sugar balance and diabetes remission through food, mindset and real support. Group programs online.",
+      "Vessie Nay - Holistic Nutritionist (B.Med.Sc. Hons) & NHS Type 2 Diabetes Practitioner. Lasting weight loss, blood-sugar balance and diabetes remission through food, mindset and real support. Group programs online.",
     keywords: [
       "holistic nutritionist",
       "type 2 diabetes remission",
@@ -19,7 +19,7 @@ export const en: Dictionary = {
       "delicious diet food",
       "before after weight loss",
     ],
-    ogAlt: "Vessie Nay — Holistic Nutritionist & Diabetes Practitioner",
+    ogAlt: "Vessie Nay - Holistic Nutritionist & Diabetes Practitioner",
   },
   nav: {
     items: [
@@ -36,12 +36,12 @@ export const en: Dictionary = {
   hero: {
     eyebrow: "Holistic Nutritionist · NHS Diabetes Practitioner",
     title: "Lose ",
-    titleAccent: "5–15 kg",
-    titleAfter: " for good — without hunger or another diet",
+    titleAccent: "5-15 kg",
+    titleAfter: " for good - without hunger or another diet",
     subtitle:
-      "For busy women with insulin resistance, pre-diabetes or Type 2 Diabetes. Delicious family food, a clear structure and real support — a method from England with a 94% success rate.",
+      "For busy women with insulin resistance, pre-diabetes or Type 2 Diabetes. Delicious family food, a clear structure and real support - a method from England with a 94% success rate.",
     bullets: [
-      "Your first 3–5 kg in just 21 days",
+      "Your first 3-5 kg in just 21 days",
       "Stable blood sugar and more energy",
       "No calorie counting, hours in the kitchen or special shops",
     ],
@@ -109,7 +109,7 @@ export const en: Dictionary = {
     eyebrow: "Choose your start",
     title: "Programs",
     subtitle:
-      "Three clear paths — depending on how much you want to lose and how much support you need.",
+      "Three clear paths - depending on how much you want to lose and how much support you need.",
     items: [
       {
         badge: "Great start",
@@ -117,7 +117,7 @@ export const en: Dictionary = {
         duration: "21 days",
         price: "",
         description:
-          "Lose 3–5 kg in 21 days and learn to eat balanced, delicious food for life.",
+          "Lose 3-5 kg in 21 days and learn to eat balanced, delicious food for life.",
         features: [
           "Quick recipes and menus",
           "Videos on building your plate",
@@ -133,7 +133,7 @@ export const en: Dictionary = {
         duration: "3 months",
         price: "group program",
         description:
-          "Lose 5–15 kg for good and get on top of insulin resistance — with full support.",
+          "Lose 5-15 kg for good and get on top of insulin resistance - with full support.",
         features: [
           "Weekly group sessions on Zoom",
           "Delicious family-friendly menu",
@@ -145,7 +145,7 @@ export const en: Dictionary = {
         image: "/images/6.jpg",
       },
       {
-        badge: "Just 7–10 min a day",
+        badge: "Just 7-10 min a day",
         title: "Reprogram Your Appetite",
         duration: "monthly club",
         price: "",
@@ -163,7 +163,7 @@ export const en: Dictionary = {
     ],
     trustLine: "Secure payment via Stripe · confirmation and access by email",
     helpText: "Not sure which program is right for you?",
-    helpCta: "Message me — I'll help you choose",
+    helpCta: "Message me - I'll help you choose",
     moreTitle: "More programs",
     wasLabel: "instead of",
   },
@@ -171,26 +171,26 @@ export const en: Dictionary = {
     eyebrow: "Guides",
     title: "Guides & handbooks",
     subtitle:
-      "Short PDF guides with recipes and clear steps — a small first step to feel the method this week.",
+      "Short PDF guides with recipes and clear steps - a small first step to feel the method this week.",
     cta: "Get the guide",
     badge: "PDF guide",
   },
   results: {
     eyebrow: "Transformations",
-    title: "Before & after — real clients",
+    title: "Before & after - real clients",
     subtitle:
-      "No hunger and no yo-yo — just delicious food, a clear structure and support.",
+      "No hunger and no yo-yo - just delicious food, a clear structure and support.",
     beforeLabel: "Before",
     afterLabel: "After",
-    collageCaption: "Valya — now FREE of insulin resistance, lighter and more confident for good",
+    collageCaption: "Valya - now FREE of insulin resistance, lighter and more confident for good",
     pairCaptions: [
-      "Ani — after a lot of stress. Today 30 kg lighter, with more energy and self-belief",
+      "Ani - after a lot of stress. Today 30 kg lighter, with more energy and self-belief",
       "A new shape and new confidence",
       "A couple after the “LIVE without resistance” programme",
     ],
     videosTitle: "Hear it from them",
     playLabel: "Play video",
-    cta: "I want results like these — message me",
+    cta: "I want results like these - message me",
   },
   googleReviews: {
     title: "Google reviews",
@@ -212,21 +212,21 @@ export const en: Dictionary = {
         rating: 5,
         date: "5 months ago",
         quote:
-          "I always thought I ate healthily until I met Vessie. She completely transformed how I think about food — my energy returned and my endurance increased noticeably. Professional, sincere and very knowledgeable.",
+          "I always thought I ate healthily until I met Vessie. She completely transformed how I think about food - my energy returned and my endurance increased noticeably. Professional, sincere and very knowledgeable.",
       },
       {
         name: "Helen R.",
         rating: 5,
         date: "8 months ago",
         quote:
-          "I struggled with menopause symptoms for four years — hot flashes, brain fog, terrible mood swings. A friend recommended Vessie. After the second week I started feeling better. Diet really was a game-changer.",
+          "I struggled with menopause symptoms for four years - hot flashes, brain fog, terrible mood swings. A friend recommended Vessie. After the second week I started feeling better. Diet really was a game-changer.",
       },
       {
         name: "Maria P.",
         rating: 5,
         date: "1 year ago",
         quote:
-          "The approach is holistic — not just a menu but a mindset shift. I feel genuine support at every step. Results come quickly and last. Highly recommend for anyone with insulin resistance.",
+          "The approach is holistic - not just a menu but a mindset shift. I feel genuine support at every step. Results come quickly and last. Highly recommend for anyone with insulin resistance.",
       },
     ],
   },
@@ -246,7 +246,7 @@ export const en: Dictionary = {
     no: [
       "You're looking for a pill or a 7-day miracle",
       "You want to starve yourself and count calories",
-      "You can't give yourself 15–30 minutes a day",
+      "You can't give yourself 15-30 minutes a day",
     ],
     cta: "See the programs",
   },
@@ -259,11 +259,11 @@ export const en: Dictionary = {
     pillars: [
       {
         title: "A flatter tummy",
-        text: "Lose the fat and speed up your metabolism — with support for your liver and thyroid.",
+        text: "Lose the fat and speed up your metabolism - with support for your liver and thyroid.",
       },
       {
         title: "Balanced blood sugar",
-        text: "Stable blood sugar for more energy and a better mood — no crashes, no cravings.",
+        text: "Stable blood sugar for more energy and a better mood - no crashes, no cravings.",
       },
       {
         title: "A new mindset",
@@ -285,12 +285,12 @@ export const en: Dictionary = {
     title: "Hi, I'm Vessie Nay",
     paragraphs: [
       "I'm a Holistic Nutritionist with a medical degree (B.Med.Sc. Hons) and an NHS Diabetes Practitioner in England. I specialise in insulin resistance, Type 2 Diabetes and lasting weight loss.",
-      "I've helped hundreds of patients and clients in 15 countries lose weight without hunger and get their blood sugar under control — instead of relying on medication alone.",
+      "I've helped hundreds of patients and clients in 15 countries lose weight without hunger and get their blood sugar under control - instead of relying on medication alone.",
     ],
     credentials: [
       "B.Med.Sc. (Hons), Medical University graduate",
       "NHS Type 2 Diabetes Practitioner",
-      "Cambridge DEP — weight management",
+      "Cambridge DEP - weight management",
       "Speaker & motivational team coach",
     ],
     award: "National award for contribution to fighting insulin resistance",
@@ -301,12 +301,12 @@ export const en: Dictionary = {
   leadMagnet: {
     title: "Free: your colourful 2-day slimming menu",
     subtitle:
-      "Tasty, balanced and easy — get a taste of the method that helps hundreds get healthier and more confident.",
+      "Tasty, balanced and easy - get a taste of the method that helps hundreds get healthier and more confident.",
     placeholder: "Your best email",
     button: "Send me the menu",
     consent:
       "I agree to receive emails with tips, recipes and helpful content. You can unsubscribe at any time.",
-    success: "Check your inbox — your menu is on the way! 🎉",
+    success: "Check your inbox - your menu is on the way! 🎉",
     error: "Something went wrong. Please try again.",
   },
   faq: {
@@ -316,41 +316,41 @@ export const en: Dictionary = {
     items: [
       {
         q: "Is this just another diet?",
-        a: "No. No hunger, no bans and no calorie counting. You add the right food, a clear structure, motivation and support — that's why the results last for life.",
+        a: "No. No hunger, no bans and no calorie counting. You add the right food, a clear structure, motivation and support - that's why the results last for life.",
       },
       {
         q: "Will it work if I have insulin resistance, Hashimoto's or I'm in menopause?",
-        a: "Yes — the programs are built for exactly this: insulin resistance, pre-diabetes and Type 2 Diabetes, an underactive thyroid, Hashimoto's, fatty liver and menopause. The whole method is built around stable blood sugar.",
+        a: "Yes - the programs are built for exactly this: insulin resistance, pre-diabetes and Type 2 Diabetes, an underactive thyroid, Hashimoto's, fatty liver and menopause. The whole method is built around stable blood sugar.",
       },
       {
         q: "Which program should I choose?",
-        a: "For a quick, easy start — “21 Days Slimmer & Happier”. If you have more than 5 kg to lose or insulin resistance — the 3-month “Live Without Resistance” with group support. If cravings and emotional eating are your main struggle — the “Reprogram Your Appetite” club.",
+        a: "For a quick, easy start - “21 Days Slimmer & Happier”. If you have more than 5 kg to lose or insulin resistance - the 3-month “Live Without Resistance” with group support. If cravings and emotional eating are your main struggle - the “Reprogram Your Appetite” club.",
       },
       {
         q: "How much time do I need each day?",
-        a: "15–30 minutes a day for food and movement. The 3-month program also has one weekly Zoom session (about an hour) — from the comfort of your home.",
+        a: "15-30 minutes a day for food and movement. The 3-month program also has one weekly Zoom session (about an hour) - from the comfort of your home.",
       },
       {
         q: "Do I need to spend hours cooking or buy expensive products?",
-        a: "No. Recipes are quick, filling and use everyday supermarket ingredients — the whole family enjoys them.",
+        a: "No. Recipes are quick, filling and use everyday supermarket ingredients - the whole family enjoys them.",
       },
       {
         q: "Can it really help with Type 2 Diabetes?",
-        a: "Yes — my approach is built around lasting blood-sugar balance and diabetes remission, drawing on my work as an NHS Diabetes Practitioner with hundreds of patients.",
+        a: "Yes - my approach is built around lasting blood-sugar balance and diabetes remission, drawing on my work as an NHS Diabetes Practitioner with hundreds of patients.",
       },
       {
         q: "How do the programs work and how do I get access?",
-        a: "Everything is online. After payment you get a confirmation and access by email — menus, recipes, videos and a clear structure, plus group Zoom sessions with me.",
+        a: "Everything is online. After payment you get a confirmation and access by email - menus, recipes, videos and a clear structure, plus group Zoom sessions with me.",
       },
     ],
   },
   finalCta: {
     title: "The first step is the hardest. Let's take it together.",
-    subtitle: "Choose a program today — or start for free with the 2-day menu.",
+    subtitle: "Choose a program today - or start for free with the 2-day menu.",
     primaryCta: "Choose your starting point",
     freeMenuTitle: "Not ready yet?",
     freeMenuText:
-      "Get the free 2-day menu and try the method at home — tasty, balanced and easy.",
+      "Get the free 2-day menu and try the method at home - tasty, balanced and easy.",
     freeMenuCta: "Send me the menu",
     contactTitle: "Got a question? Message me directly",
   },
@@ -386,7 +386,7 @@ export const en: Dictionary = {
   },
   footer: {
     tagline:
-      "Holistic Nutritionist & NHS Diabetes Practitioner. Lasting weight loss, balanced blood sugar and confidence — from the inside out.",
+      "Holistic Nutritionist & NHS Diabetes Practitioner. Lasting weight loss, balanced blood sugar and confidence - from the inside out.",
     rights: "All rights reserved.",
     columns: [
       {
@@ -407,7 +407,7 @@ export const en: Dictionary = {
         title: "Programs",
         links: [
           { label: "All programmes", href: "/en/programs" },
-          { label: "Summer — slim and calm", href: "/en/programs/lyato" },
+          { label: "Summer - slim and calm", href: "/en/programs/lyato" },
           { label: "21 Days Slimmer & Happier", href: "/en/programs/21-dni" },
           { label: "Live Without Resistance", href: "/en/programs/3-mes" },
           { label: "Reprogram Your Appetite", href: "/en/programs/klub" },

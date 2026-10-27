@@ -31,7 +31,7 @@ export default async function AdminSubscribersPage() {
     <div>
       <PageHeader
         title="Абонати"
-        description="Управление на списъка — групи, имейли на човека, Zoom и покупки. Кликни иконата 📊 до имейла за пълен профил и история на имейлите."
+        description="Управление на списъка - групи, имейли на човека, Zoom и покупки. Кликни иконата 📊 до имейла за пълен профил и история на имейлите."
       />
       <SubscribersTabs>
         <div className="space-y-8">

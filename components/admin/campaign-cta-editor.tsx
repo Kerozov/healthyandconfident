@@ -47,7 +47,7 @@ export function CampaignCtaEditor({
           <div>
             <p className="text-sm font-medium text-ink">Бутон в имейла</p>
             <p className="mt-0.5 text-xs text-ink-soft/80">
-              Промени линка по всяко време — вече изпратените имейли ще
+              Промени линка по всяко време - вече изпратените имейли ще
               пренасочват към новия адрес без повторно изпращане.
             </p>
           </div>

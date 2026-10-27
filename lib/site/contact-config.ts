@@ -6,6 +6,7 @@ import { getPublicClient } from "@/lib/supabase/public";
 import type { SiteContactConfig } from "@/lib/supabase/types";
 import { siteConfig } from "@/lib/site";
 import { parseContactLinks } from "@/lib/site/contact-links";
+import { normalizeDisplayText } from "@/lib/site/typography";
 
 export const DEFAULT_SITE_CONTACT: SiteContactConfig = {
   id: "00000000-0000-0000-0000-000000000000",
@@ -47,7 +48,7 @@ async function fetchContactConfig(
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    return fromRow((data as SiteContactConfig | null) ?? null);
+    return normalizeDisplayText(fromRow((data as SiteContactConfig | null) ?? null));
   } catch {
     return DEFAULT_SITE_CONTACT;
   }

@@ -35,7 +35,7 @@ export function FormTriggerPicker({
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">— Избери форма —</option>
+          <option value="">- Избери форма -</option>
           {forms.map((form) => (
             <option key={form.id} value={form.id}>
               {form.title_bg?.trim() || form.name} ({form.slug})
@@ -77,7 +77,7 @@ export function FormAnswerConditionsEditor({
   if (choiceFields.length === 0) {
     return (
       <p className="text-sm text-ink-soft">
-        Тази форма няма въпроси с избор (dropdown, бутони или чекбоксове) —
+        Тази форма няма въпроси с избор (dropdown, бутони или чекбоксове) -
         автоматизацията тръгва след всяко попълване. Свободен текст не се ползва
         като условие.
       </p>
@@ -152,7 +152,7 @@ export function FormAnswerConditionsEditor({
                   updateAt(index, { field_id: e.target.value, values: [] })
                 }
               >
-                <option value="">— Избери въпрос —</option>
+                <option value="">- Избери въпрос -</option>
                 {choiceFields.map((choice) => (
                   <option key={choice.id} value={choice.id}>
                     {choice.label_bg?.trim() || choice.label_en || choice.id}

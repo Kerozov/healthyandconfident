@@ -522,7 +522,7 @@ export function ProgramLanding({
                     {t.quote}
                   </p>
                   <footer className="mt-4 text-sm font-semibold text-forest-600">
-                    — {t.name}
+                    - {t.name}
                   </footer>
                 </blockquote>
               ))}
@@ -745,7 +745,7 @@ export function ProgramLanding({
                     </p>
                     <ul className="mt-2 space-y-1 text-forest-700">
                       {content.transformation.before.map((b) => (
-                        <li key={b}>— {b}</li>
+                        <li key={b}>- {b}</li>
                       ))}
                     </ul>
                   </div>
@@ -755,7 +755,7 @@ export function ProgramLanding({
                     </p>
                     <ul className="mt-2 space-y-1 text-forest-700">
                       {content.transformation.after.map((a) => (
-                        <li key={a}>— {a}</li>
+                        <li key={a}>- {a}</li>
                       ))}
                     </ul>
                   </div>
@@ -781,7 +781,7 @@ export function ProgramLanding({
                 </p>
                 <ul className="mt-3 space-y-1 text-sm text-forest-700">
                   {content.transformation.audienceBullets.map((b) => (
-                    <li key={b}>— {b}</li>
+                    <li key={b}>- {b}</li>
                   ))}
                 </ul>
               </div>
@@ -1017,7 +1017,7 @@ export function ProgramLanding({
                     </p>
                     <ul className="mt-4 space-y-2 text-sm text-forest-700">
                       {content.pricing.audienceBullets.map((b) => (
-                        <li key={b}>— {b}</li>
+                        <li key={b}>- {b}</li>
                       ))}
                     </ul>
                   </div>

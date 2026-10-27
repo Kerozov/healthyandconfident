@@ -17,7 +17,7 @@ function shortDay(key: string): string {
 }
 
 function formatDuration(seconds: number): string {
-  if (!seconds) return "—";
+  if (!seconds) return "-";
   if (seconds < 60) return `${seconds} сек`;
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
@@ -79,7 +79,7 @@ export function VisitStatsDashboard({ stats }: { stats: VisitStatsOverview }) {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Фуния — от влизане до плащане">
+        <Card title="Фуния - от влизане до плащане">
           <Funnel
             steps={[
               { label: "Посетители", value: funnel.visitors, hint: "различни устройства" },
@@ -90,7 +90,7 @@ export function VisitStatsDashboard({ stats }: { stats: VisitStatsOverview }) {
           <p className="mt-4 rounded-xl bg-forest-50 px-3 py-2 text-xs text-forest-800">
             Платени поръчки за периода: <strong>{formatNumber(funnel.purchases)}</strong>. Не
             са част от фунията, защото плащането не може да се върже с конкретен посетител
-            (част от хората плащат от линк в имейл). Подробно — в „Плащания“.
+            (част от хората плащат от линк в имейл). Подробно - в „Плащания“.
           </p>
         </Card>
 

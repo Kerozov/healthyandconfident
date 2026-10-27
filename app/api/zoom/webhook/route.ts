@@ -91,12 +91,12 @@ export async function POST(req: Request) {
     }
   } else if (process.env.NODE_ENV === "production") {
     console.error(
-      "[zoom/webhook] rejected: ZOOM_WEBHOOK_SECRET is not set — set it in the environment to accept Zoom events.",
+      "[zoom/webhook] rejected: ZOOM_WEBHOOK_SECRET is not set - set it in the environment to accept Zoom events.",
     );
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   } else {
     console.warn(
-      "[zoom/webhook] ZOOM_WEBHOOK_SECRET is not set — events are accepted unverified (development only).",
+      "[zoom/webhook] ZOOM_WEBHOOK_SECRET is not set - events are accepted unverified (development only).",
     );
   }
 

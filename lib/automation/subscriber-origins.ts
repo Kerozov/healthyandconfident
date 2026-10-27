@@ -20,7 +20,7 @@ export const SUBSCRIBER_ORIGIN_OPTIONS: {
   {
     value: "new",
     label: "Нови",
-    hint: "Първи път в списъка — форма, меню, popup, ръчно или импорт",
+    hint: "Първи път в списъка - форма, меню, popup, ръчно или импорт",
   },
   {
     value: "existing_registered",

@@ -58,9 +58,9 @@ const TIME_PARTS = new Intl.DateTimeFormat("en-GB", {
 });
 
 function when(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "-";
   const parts = Object.fromEntries(
     TIME_PARTS.formatToParts(date).map((part) => [part.type, part.value]),
   );
@@ -433,7 +433,7 @@ export function AutomationReportPanel({
             type="button"
             onClick={copyEmails}
             disabled={filtered.length === 0}
-            title="Копира имейлите от текущия филтър — по един на ред"
+            title="Копира имейлите от текущия филтър - по един на ред"
             className="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 text-xs font-semibold text-ink-soft hover:bg-ink/5 disabled:opacity-40"
           >
             {copied ? (
@@ -539,7 +539,7 @@ export function AutomationReportPanel({
                         ) : row.opened ? (
                           "да"
                         ) : (
-                          <span className="text-ink-soft/50">—</span>
+                          <span className="text-ink-soft/50">-</span>
                         )}
                       </td>
                     )}
@@ -561,7 +561,7 @@ export function AutomationReportPanel({
                                   <li
                                     key={`${row.id}-${link.url}-${link.label}`}
                                     className="max-w-[240px] truncate text-[11px] text-ink-soft"
-                                    title={`${link.label} — ${link.url}`}
+                                    title={`${link.label} - ${link.url}`}
                                   >
                                     {link.label} · {link.clicks}
                                   </li>
@@ -570,7 +570,7 @@ export function AutomationReportPanel({
                             )}
                           </div>
                         ) : (
-                          <span className="text-ink-soft/50">—</span>
+                          <span className="text-ink-soft/50">-</span>
                         )}
                       </td>
                     )}

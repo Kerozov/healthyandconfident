@@ -99,7 +99,7 @@ export function CampaignsWorkspace({
         <Alert variant="warning" className="mt-4">
           Задай <code>NOTIFICATION_WORKER_URL</code>,{" "}
           <code>NOTIFICATION_WORKER_API_KEY</code> и{" "}
-          <code>NOTIFICATION_WORKER_FROM</code> — иначе нищо няма да се изпраща.
+          <code>NOTIFICATION_WORKER_FROM</code> - иначе нищо няма да се изпраща.
         </Alert>
       )}
 
@@ -108,7 +108,7 @@ export function CampaignsWorkspace({
           <ClipboardPaste className="h-4 w-4 shrink-0 text-forest-700" aria-hidden />
           <p className="min-w-0 flex-1 text-sm text-forest-900">
             Копиран имейл{copiedEmail.source ? ` от ${copiedEmail.source}` : ""}:{" "}
-            <strong>{copiedEmail.name}</strong> — с текста, бутоните и прикачения файл.
+            <strong>{copiedEmail.name}</strong> - с текста, бутоните и прикачения файл.
           </p>
           <button
             type="button"

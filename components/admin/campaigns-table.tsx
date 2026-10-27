@@ -424,10 +424,10 @@ export function CampaignsTable({
                                 <RecipientStatusBadge status={r.status} />
                               </td>
                               <td className="px-4 py-2 text-xs text-ink-soft">
-                                {r.sentAt ? formatDate(r.sentAt, "en") : "—"}
+                                {r.sentAt ? formatDate(r.sentAt, "en") : "-"}
                               </td>
                               <td className="px-4 py-2 text-xs text-ink-soft">
-                                {r.openedAt ? formatDate(r.openedAt, "en") : "—"}
+                                {r.openedAt ? formatDate(r.openedAt, "en") : "-"}
                               </td>
                               <td className="px-4 py-2 text-xs font-medium text-forest-700">
                                 {"clickCount" in r ? (r as { clickCount?: number }).clickCount ?? 0 : 0}

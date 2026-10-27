@@ -459,7 +459,7 @@ function ForkConnector({ count }: { count: number }) {
     <div className="flex flex-col items-center py-2">
       <div className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-semibold text-amber-900">
         <Split className="h-3 w-3" />
-        {count} клона — различна аудитория
+        {count} клона - различна аудитория
       </div>
       <div className="mt-2 h-4 w-px bg-forest-400/50" />
       <ArrowDown className="h-4 w-4 text-forest-500" />
@@ -473,7 +473,7 @@ function ExcludeExit({ item }: { item: ResolvedAudience["excludes"][number] }) {
       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-coral-500" />
       <UserMinus className="h-3.5 w-3.5 shrink-0" />
       <span>
-        <strong>{item.name}</strong> — спира на тази стъпка
+        <strong>{item.name}</strong> - спира на тази стъпка
       </span>
     </div>
   );
@@ -824,7 +824,7 @@ export function AutomationFlowView({
   if (!hasAny) {
     return (
       <p className="text-sm text-ink-soft">
-        Няма автоматизации — създай първа от таб „Списък“.
+        Няма автоматизации - създай първа от таб „Списък“.
       </p>
     );
   }
@@ -834,12 +834,12 @@ export function AutomationFlowView({
       <div className="rounded-xl border border-forest-100 bg-cream/50 px-4 py-3 text-sm text-ink-soft">
         <p>
           Кликни стъпка за редакция.{" "}
-          <strong className="text-forest-700">Следваща стъпка</strong> — добавя
+          <strong className="text-forest-700">Следваща стъпка</strong> - добавя
           нова под нея със същия тригър и аудитория.{" "}
-          <strong className="text-slate-700">Копирай</strong> — запомня стъпката,
+          <strong className="text-slate-700">Копирай</strong> - запомня стъпката,
           после натисни <strong className="text-forest-700">Постави тук</strong> под
           друга стъпка, за да я дублираш там (копието е изключено).{" "}
-          <strong className="text-coral-700">Изтрий</strong> — премахва стъпката.{" "}
+          <strong className="text-coral-700">Изтрий</strong> - премахва стъпката.{" "}
           <span className="text-amber-800">Разклонения</span> = различни пътища.{" "}
           <span className="text-coral-700">Изключения</span> = спират веригата.
         </p>

@@ -11,6 +11,9 @@ import {
 import { buildPostCatalog, type PostCatalogSource } from "@/lib/site/post-catalog";
 import { toggleMarkdownFormat } from "@/lib/site/markdown-formatting";
 import type { BlogPost, SiteEvent, SiteGuide, SiteProduct, SiteProgramCard, SiteVideo } from "@/lib/supabase/types";
+import { normalizeDisplayText, shortDashes } from "@/lib/site/typography";
+import { getDictionary } from "@/i18n";
+import { localeSwitchHref } from "@/i18n/config";
 
 let passed = 0;
 function check(label: string, test: () => void) {
@@ -112,6 +115,20 @@ check("Catalog excludes inactive items, drafts, other languages and past Sofia d
   const en = buildPostCatalog(source, "en", new Date("2026-10-26T22:30:00Z"));
   assert.deepEqual(en.map((i) => i.key), ["guide:g", "post:english", "form:form"]);
 });
+check("Hidden programmes cannot reappear as dictionary fallback cards", () => {
+  const hidden = { ...source, programs: source.programs.map((p) => ({ ...p, enabled: false, enabled_en: false })),
+    fallbackPrograms: getDictionary("bg").programs.items };
+  assert.ok(!buildPostCatalog(hidden, "bg").some((item) => item.kind === "program"));
+  const fallback = buildPostCatalog({ ...hidden, programs: [] }, "bg").filter((item) => item.kind === "program");
+  assert.equal(fallback.length, hidden.fallbackPrograms.length);
+  assert.equal(fallback[0].placementKey, "programs_0");
+});
+check("Programme recommendations retain their own configured checkout button", () => {
+  const withPlacement = { ...source, programs: source.programs.map((p) => ({ ...p, placement_key: "programs_42" })) };
+  const item = buildPostCatalog(withPlacement, "bg").find((item) => item.kind === "program");
+  assert.equal(item?.placementKey, "programs_42");
+  assert.equal(item?.href, "/bg/programs/21-dni");
+});
 check("Public cards honor the count and render inside the article, outside a pre tag", () => {
   const settings = { ...config, title: "Нашите предложения", mode: "manual" as const,
     selected: ["guide:7", "product:2"], count: 1 };
@@ -140,5 +157,59 @@ check("Bold handles sentences, spaces, toggling and the selected word range", ()
   assert.equal(toggleMarkdownFormat(" дума ", 0, 6, "**").value, " **дума** ");
   assert.equal(toggleMarkdownFormat("**дума**", 0, 8, "**").value, "дума");
   assert.equal(toggleMarkdownFormat("", 0, 0, "**").value, "**удебелен текст**");
+});
+check("CMS copy uses short hyphens while URLs, IDs, tags and raw Markdown remain intact", () => {
+  const raw = {
+    id: "id\u2014keep", title_bg: "Заглавие\u2014уточнение", price_label_en: "5\u201315 EUR",
+    features_bg: ["Храна \u2014 без глад"], href: "https://example.com/a\u2014b", slug: "slug\u2014keep",
+    purchase_tags: ["tag\u2014keep"], content: "[Текст](https://example.com/a\u2014b)",
+    fields: [{ id: "field\u2014keep", label_bg: "Един \u2014 два", options: [{ value: "value\u2014keep", label_en: "A &mdash; B" }] }],
+  };
+  const normalized = normalizeDisplayText(raw);
+  assert.equal(normalized.title_bg, "Заглавие-уточнение");
+  assert.equal(normalized.price_label_en, "5-15 EUR");
+  assert.deepEqual(normalized.features_bg, ["Храна - без глад"]);
+  for (const key of ["id", "href", "slug", "purchase_tags", "content"] as const) assert.deepEqual(normalized[key], raw[key]);
+  assert.equal(normalized.fields[0].label_bg, "Един - два");
+  assert.equal(normalized.fields[0].options[0].label_en, "A - B");
+  assert.equal(normalized.fields[0].options[0].value, raw.fields[0].options[0].value);
+  assert.ok(raw.title_bg.includes("\u2014"));
+  assert.equal(shortDashes("A&#8212;B &ndash; C&#x2013;D"), "A-B - C-D");
+});
+check("Bold works across paragraph breaks and toggles back without changing the text", () => {
+  const text = "Първо изречение.\n\nВторо изречение.";
+  const result = toggleMarkdownFormat(text, 0, text.length, "**");
+  assert.equal(result.value, "**Първо изречение.**\n\n**Второ изречение.**");
+  const html = renderToStaticMarkup(<Markdown content={result.value} />);
+  assert.ok(html.includes("<strong>Първо изречение.</strong>"));
+  assert.ok(html.includes("<strong>Второ изречение.</strong>"));
+  assert.equal(toggleMarkdownFormat(result.value, result.start, result.end, "**").value, text);
+});
+check("Published Markdown normalizes copy and captions without breaking links or code", () => {
+  const markdown = "## Заглавие \u2014 уточнение\n\n**Думи \u2013 още** и [линк &mdash; текст](https://example.com/a\u2014b)\n\n![Описание \u2014 снимка](/images/3.jpg \"Надпис \u2014 снимка\")\n\n```text\na\u2014b\n```";
+  const html = renderToStaticMarkup(<Markdown content={markdown} />);
+  assert.ok(html.includes("Заглавие - уточнение"));
+  assert.ok(html.includes("Думи - още"));
+  assert.ok(html.includes("линк - текст"));
+  assert.ok(html.includes("Надпис - снимка"));
+  assert.ok(html.includes('alt="Описание - снимка"'));
+  assert.ok(html.includes('href="https://example.com/a%E2%80%94b"'));
+  assert.ok(html.includes("<code class=\"language-text\">a\u2014b"));
+});
+check("Recommendation titles are normalized and malformed settings warn in admin preview", () => {
+  const settings = { ...config, mode: "manual" as const, title: "Избрано \u2014 за теб", selected: ["guide:7"] };
+  const html = renderToStaticMarkup(<Markdown content={recommendationsMarkdown(settings)} catalog={catalog} preview />);
+  assert.ok(html.includes("Избрано - за теб"));
+  const invalid = "```site-content\n{invalid}\n```";
+  assert.ok(renderToStaticMarkup(<Markdown content={invalid} preview />).includes('role="alert"'));
+  assert.ok(!renderToStaticMarkup(<Markdown content={invalid} />).includes("invalid"));
+});
+check("Language switches from articles cannot point to missing translations", () => {
+  assert.equal(localeSwitchHref("/bg/blog/simptomi-na-insulinova-rezistentnost", "en"), "/en/blog");
+  assert.equal(localeSwitchHref("/en/blog/a-post/", "bg"), "/bg/blog");
+  assert.equal(localeSwitchHref("/bg/blog", "en"), "/en/blog");
+  assert.equal(localeSwitchHref("/bg/programs/21-dni", "en"), "/en/programs/21-dni");
+  assert.equal(localeSwitchHref("/en/guides/skin", "bg"), "/bg/guides/skin");
+  assert.equal(localeSwitchHref("/bg", "en"), "/en");
 });
 console.log(`\n${passed} blog checks passed.`);

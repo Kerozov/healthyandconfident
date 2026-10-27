@@ -146,7 +146,7 @@ export function hasSmsMergeTags(text: string): boolean {
 }
 
 export const SMS_CAMPAIGN_MERGE_TAG_ERROR =
-  "SMS кампаниите пращат един и същи текст на всички — {{name}} и {{email}} биха стигнали до хората буквално. Махни ги или ползвай автоматизация.";
+  "SMS кампаниите пращат един и същи текст на всички - {{name}} и {{email}} биха стигнали до хората буквално. Махни ги или ползвай автоматизация.";
 
 export function checkSmsCompose(
   message: string,
@@ -175,7 +175,7 @@ export function checkSmsCompose(
 
   if (preparedForSend.includes(LINK_PLACEHOLDER)) {
     errors.push(
-      `Не използвай „${LINK_PLACEHOLDER}“ — добави линка в полето „Tracked link“.`,
+      `Не използвай „${LINK_PLACEHOLDER}“ - добави линка в полето „Tracked link“.`,
     );
   }
 
@@ -184,23 +184,23 @@ export function checkSmsCompose(
   }
 
   if (urlsInMessage.some((url) => !/^https:\/\//i.test(url))) {
-    warnings.push("Ползвай https:// линкове — http адресите също се съкращават, но https е по-надежден.");
+    warnings.push("Ползвай https:// линкове - http адресите също се съкращават, но https е по-надежден.");
   }
 
   if (/^\//.test(link?.trim() ?? "") || /^\//.test(expanded)) {
     warnings.push(
-      "Относителни пътища (/page) няма да се съкратят — сложи пълен https:// URL в полето за линк.",
+      "Относителни пътища (/page) няма да се съкратят - сложи пълен https:// URL в полето за линк.",
     );
   }
 
   if (urlsInMessage.length > 1) {
     warnings.push(
-      "Повече от един URL в текста — всеки линк заема ~24 символа след shorten.",
+      "Повече от един URL в текста - всеки линк заема ~24 символа след shorten.",
     );
   }
 
   if (!hasLink && expanded.match(/\b(линк|link|тук|here)\b/i)) {
-    warnings.push("Изглежда очакваш линк — попълни полето „Tracked link“.");
+    warnings.push("Изглежда очакваш линк - попълни полето „Tracked link“.");
   }
 
   const length = estimatePreparedLength(expanded, normalizedLink ?? undefined);

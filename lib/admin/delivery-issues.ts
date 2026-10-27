@@ -72,7 +72,7 @@ type SubscriberRow = {
 
 function bounceReason(status: string | null): string {
   if (status === "complained") return "Маркиран като спам от получателя.";
-  if (status === "bounced") return "Върнат — адресът не приема поща (bounce).";
+  if (status === "bounced") return "Върнат - адресът не приема поща (bounce).";
   return "Изпращачът отчете неуспешна доставка.";
 }
 
@@ -205,7 +205,7 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
       await pushMissing(
         step,
         candidates.map((s) => ({ email: s.email, at: s.created_at })),
-        "Записа се, но автоматизацията не е тръгнала — няма никакъв запис (грешка или прекъсване при записването).",
+        "Записа се, но автоматизацията не е тръгнала - няма никакъв запис (грешка или прекъсване при записването).",
       );
     }
   }
@@ -229,7 +229,7 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
     await pushMissing(
       step,
       matching.map((s) => ({ email: s.email!, at: s.submitted_at })),
-      "Попълни формата, но автоматизацията не е тръгнала — няма никакъв запис.",
+      "Попълни формата, но автоматизацията не е тръгнала - няма никакъв запис.",
     );
   }
 
@@ -331,7 +331,7 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
       issue.canSend = false;
     } else if (deadAddresses.has(issue.email)) {
       issue.canSend = false;
-      issue.blocked = "адресът е върнат (bounce) на друг имейл — провери го";
+      issue.blocked = "адресът е върнат (bounce) на друг имейл - провери го";
     } else if (sub?.status !== "subscribed") {
       issue.canSend = false;
       issue.blocked = sub ? "отписан" : "не е в абонатите";

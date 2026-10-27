@@ -23,9 +23,9 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "zhivey-bez-rezistentnost": {
     ...zhiveyBezRezistentnostBg,
     meta: {
-      title: "Live Without Resistance | 3-Month Program — Vessie Nay",
+      title: "Live Without Resistance | 3-Month Program - Vessie Nay",
       description:
-        "Sustainable weight loss and insulin resistance support. 94% success rate — without hunger or deprivation.",
+        "Sustainable weight loss and insulin resistance support. 94% success rate - without hunger or deprivation.",
     },
     hero: {
       ...zhiveyBezRezistentnostBg.hero,
@@ -35,7 +35,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       subtitle:
         "Live without restrictions! Rediscover your body and confidence with the proven Live Without Resistance system.",
       bullets: [
-        "Lose 5–15 kg in 3 months",
+        "Lose 5-15 kg in 3 months",
         "Tackle insulin resistance & Type 2 Diabetes",
         "No hunger, no another diet",
       ],
@@ -50,15 +50,15 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     pain: {
       title: "Does this sound like you?",
       paragraphs: zhiveyBezRezistentnostBg.pain!.paragraphs,
-      hook: "You're not alone — there is already a solution!",
+      hook: "You're not alone - there is already a solution!",
     },
     vision: {
       title: "Imagine…",
       paragraphs: [
         "Waking with energy, wearing what you love with confidence, enjoying food without guilt.",
-        "Imagine controlling your health — not the other way around.",
+        "Imagine controlling your health - not the other way around.",
         "Hundreds of women achieved this with Live Without Resistance.",
-        "Not another diet — a full transformation based on a method proven in England with 94% success.",
+        "Not another diet - a full transformation based on a method proven in England with 94% success.",
       ],
     },
     audience: {
@@ -136,11 +136,11 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     faq: [
       {
         q: "If I'm busy, how much time weekly?",
-        a: "1 hour for the weekly meeting + 15–30 min daily for food and movement.",
+        a: "1 hour for the weekly meeting + 15-30 min daily for food and movement.",
       },
       {
         q: "Special dishes or expensive products?",
-        a: "No — everyday supermarket ingredients. Family-friendly recipes. You get everything by email after payment.",
+        a: "No - everyday supermarket ingredients. Family-friendly recipes. You get everything by email after payment.",
       },
       {
         q: "Who is this program for?",
@@ -175,7 +175,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     video: {
       title: "Meet me and the",
       titleAccent: "method",
-      cta: "More details — watch video",
+      cta: "More details - watch video",
       href: contactSection,
     },
     newsletter: {
@@ -195,9 +195,9 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "preprogramirai-apetita": {
     ...preprogramiraiApetitaBg,
     meta: {
-      title: "Reprogram Your Appetite | Slim & Light Club — Vessie Nay",
+      title: "Reprogram Your Appetite | Slim & Light Club - Vessie Nay",
       description:
-        "7–10 minutes a day. Release stress, emotional eating and cravings. 94% success method. From {price}.",
+        "7-10 minutes a day. Release stress, emotional eating and cravings. 94% success method. From {price}.",
     },
     hero: {
       ...preprogramiraiApetitaBg.hero,
@@ -205,7 +205,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       title: "Reprogram your",
       titleAccent: "appetite",
       subtitle:
-        "Easy solutions for smart busy women — low energy, bloated belly, strong appetite.",
+        "Easy solutions for smart busy women - low energy, bloated belly, strong appetite.",
       bullets: ["10 minutes a day that bring back lightness and calm"],
       priceLine: "Everything for only {price}",
       primaryCta: "Yes, I want to handle it",
@@ -215,7 +215,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       title: "Reprogram Your Appetite is for you if…",
       items: preprogramiraiApetitaBg.audience!.items.map((item, i) => ({
         ...item,
-        title: ["Problem 1 – Stress", "Problem 2 – Temptations", "Problem 3 – No time"][i],
+        title: ["Problem 1 - Stress", "Problem 2 - Temptations", "Problem 3 - No time"][i],
       })),
       closing: preprogramiraiApetitaBg.audience!.closing,
     },
@@ -231,7 +231,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       subtitle: "Club for a SLIM figure and lightness",
       stat: "A method with 94% success, changing thousands of lives in England and Bulgaria.",
       checklist: preprogramiraiApetitaBg.promoStrip!.checklist,
-      footer: "EVERYTHING YOU NEED — FINALLY EASY — IN 1 PLACE — 24/7",
+      footer: "EVERYTHING YOU NEED - FINALLY EASY - IN 1 PLACE - 24/7",
     },
     valueStack: {
       ...preprogramiraiApetitaBg.valueStack!,
@@ -253,7 +253,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     },
     transformation: preprogramiraiApetitaBg.transformation,
     includes: {
-      title: "SLIM & LIGHT Club — Reprogram your appetite",
+      title: "SLIM & LIGHT Club - Reprogram your appetite",
       items: preprogramiraiApetitaBg.includes!.items,
     },
     trust: {
@@ -265,7 +265,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       ...preprogramiraiApetitaBg.pricing!,
       title: "SLIM & LIGHT Club",
       titleAccent: "Reprogram your appetite",
-      subtitle: "Join the club now — everything in one place, 24/7 from your phone",
+      subtitle: "Join the club now - everything in one place, 24/7 from your phone",
       audienceTitle: "Who is it for:",
       options: preprogramiraiApetitaBg.pricing!.options.map((o, i) => ({
         ...o,
@@ -273,7 +273,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
         badge: i === 1 ? "Best value" : i === 2 ? "Most popular" : undefined,
         cta: "I want access now",
       })),
-      ps: "Tap the button — we'll guide you to payment and Skool access.",
+      ps: "Tap the button - we'll guide you to payment and Skool access.",
     },
     faq: preprogramiraiApetitaBg.faq,
     finalCta: {
@@ -285,17 +285,17 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
   "summer-programme": {
     ...summerProgrammeBg,
     meta: {
-      title: "Summer — Slim and Calm | Summer package — Vessie Nay",
+      title: "Summer - Slim and Calm | Summer package - Vessie Nay",
       description:
-        "Enjoy the sea, the ice cream and the evenings with friends — without guilt, and without starting over in September. A practical summer package with guides, 12 recipes and SOS audio practices. {amount} one-off.",
+        "Enjoy the sea, the ice cream and the evenings with friends - without guilt, and without starting over in September. A practical summer package with guides, 12 recipes and SOS audio practices. {amount} one-off.",
     },
     hero: {
       ...summerProgrammeBg.hero,
       eyebrow: "Summer Programme With Vessie Ney",
-      title: "Summer —",
+      title: "Summer -",
       titleAccent: "slim and calm",
       subtitle:
-        "Enjoy the sea, the ice cream and the evenings with friends — without guilt, and without starting over in September.",
+        "Enjoy the sea, the ice cream and the evenings with friends - without guilt, and without starting over in September.",
       bullets: [
         "A practical summer package of beautiful guides",
         "12 easy recipes for breakfast, lunch and dinner",
@@ -317,7 +317,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
         "You're off to the seaside. The kids want ice cream. Tonight it's a restaurant. Tomorrow there's a barbecue.",
         "The hotel breakfast looks incredible. It's hot outside and cooking is the last thing you feel like doing.",
         "And somewhere between all the lovely moments… you lose your rhythm. Then you get home, step on the scales and say: \u201cI'll start on Monday.\u201d",
-        "The real problem isn't the food. It's that summer costs you your rhythm — and nobody ever showed you what to do when you're on holiday, tired, and everyone around you is enjoying themselves.",
+        "The real problem isn't the food. It's that summer costs you your rhythm - and nobody ever showed you what to do when you're on holiday, tired, and everyone around you is enjoying themselves.",
       ],
       hook: "You're not short on willpower. You're not short on knowledge. You're short of a plan that works in real life.",
     },
@@ -334,14 +334,14 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     comparison: {
       title: "This isn't a diet. It's your summer helper.",
       positive: {
-        title: "\u201cSummer — slim and calm\u201d",
+        title: "\u201cSummer - slim and calm\u201d",
         bullets: [
           "No bans and no extreme restrictions",
           "No starving and no calorie counting",
           "No hours in the kitchen or the gym",
-          "Easy, tasty answers for real situations — hotel, restaurant, barbecue, the road",
+          "Easy, tasty answers for real situations - hotel, restaurant, barbecue, the road",
           "Balanced eating that protects your blood sugar and your energy",
-          "Clear steps: open the guide and you know what to choose — calmly and without guilt",
+          "Clear steps: open the guide and you know what to choose - calmly and without guilt",
         ],
       },
       negative: {
@@ -352,30 +352,30 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
           "Fall apart on the first day of the holiday",
         ],
         closing:
-          "The approach comes from my practice with women dealing with insulin resistance, menopause and the kilos summer keeps adding — exactly where ordinary diets fail.",
+          "The approach comes from my practice with women dealing with insulin resistance, menopause and the kilos summer keeps adding - exactly where ordinary diets fail.",
       },
     },
     includes: {
       title: "What's inside?",
       items: summerProgrammeBg.includes!.items.map((item, i) => ({
         title: [
-          "Eating out — restaurant, hotel and all inclusive",
+          "Eating out - restaurant, hotel and all inclusive",
           "Eating without cooking",
           "Healthy Snack Guide",
           "Summer Mineral Mocktails",
           "Barbecue and summer grill",
           "12 delicious summer recipes",
-          "Summer fruit — which ones and how much",
+          "Summer fruit - which ones and how much",
           "SOS audio practices",
         ][i],
         text: [
           "What to choose calmly, without missing out on the pleasure.",
           "Easy ideas for busy people on hot days, when the kitchen is the last place you want to be.",
-          "What to take to the beach, in the car and on the road — filling and convenient.",
+          "What to take to the beach, in the car and on the road - filling and convenient.",
           "Refreshing drinks with electrolytes that double as homemade ice cream.",
-          "How to enjoy the grill — healthier and guilt-free.",
-          "Fast. Easy. Breakfast, lunch and dinner — for the whole family.",
-          "A list for the fridge door — for steady blood sugar.",
+          "How to enjoy the grill - healthier and guilt-free.",
+          "Fast. Easy. Breakfast, lunch and dinner - for the whole family.",
+          "A list for the fridge door - for steady blood sugar.",
           "For the moments you slip and need a reminder to be kind to yourself.",
         ][i],
       })),
@@ -392,11 +392,11 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
           "If you want to come home calm and confident",
         ][i],
         text: [
-          "And good food — without choosing between the two.",
+          "And good food - without choosing between the two.",
           "No time to cook and no wish to spend summer in the kitchen.",
           "Without extreme restrictions and without hiding under a loose shirt.",
           "Everything is built around steady blood sugar.",
-          "Rather than with 3–5 kg more than you left with.",
+          "Rather than with 3-5 kg more than you left with.",
         ][i],
       })),
       closing: "Recognise yourself? Get the package for {amount}.",
@@ -405,12 +405,12 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       {
         headline: "10 kg down in total",
         quote:
-          "Natasha kept going after the Challenge ended — 10 kg lighter in total.",
+          "Natasha kept going after the Challenge ended - 10 kg lighter in total.",
         name: "Natasha",
       },
       {
         headline: "28 cm off in 21 days",
-        quote: "Mostly around the tummy — in three weeks, without hunger or hours of cooking.",
+        quote: "Mostly around the tummy - in three weeks, without hunger or hours of cooking.",
         name: "Hrisi Valkova",
       },
       {
@@ -442,7 +442,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       credentials: [
         "Specialist: insulin resistance and Type 2 Diabetes",
         "Healthy weight loss and real motivation (you do need it 🙂)",
-        "Years of specialist practice in the UK — an innovative method with a 94% success rate",
+        "Years of specialist practice in the UK - an innovative method with a 94% success rate",
         "Author of the first Bulgarian system for insulin resistance, Type 2 Diabetes and lasting weight loss",
         "Hundreds of patients and clients across 15 countries",
       ],
@@ -454,11 +454,11 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     faq: [
       {
         q: "When do I get access?",
-        a: "Straight after payment — the link arrives at the email address you paid with. If you can't see it, check the Promotions and Spam folders.",
+        a: "Straight after payment - the link arrives at the email address you paid with. If you can't see it, check the Promotions and Spam folders.",
       },
       {
         q: "How long do I have access?",
-        a: "60 days from purchase — enough for the whole summer, holiday included.",
+        a: "60 days from purchase - enough for the whole summer, holiday included.",
       },
       {
         q: "Do I need an app?",
@@ -466,15 +466,15 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       },
       {
         q: "Do I have to cook?",
-        a: "Only if you want to. There's a whole \u201ceating without cooking\u201d guide, and the recipes are quick and easy — made for hot days.",
+        a: "Only if you want to. There's a whole \u201ceating without cooking\u201d guide, and the recipes are quick and easy - made for hot days.",
       },
       {
         q: "Is it suitable with insulin resistance?",
-        a: "Yes. The whole package is built around steady blood sugar — that's exactly why it exists. If you take medication, tell your doctor.",
+        a: "Yes. The whole package is built around steady blood sugar - that's exactly why it exists. If you take medication, tell your doctor.",
       },
       {
         q: "What if I'm already on holiday?",
-        a: "Even better — that's the point. Open the hotel and restaurant guide and you'll know what to choose at your very next meal.",
+        a: "Even better - that's the point. Open the hotel and restaurant guide and you'll know what to choose at your very next meal.",
       },
       {
         q: "How do I pay?",
@@ -494,7 +494,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       options: [
         {
           ...summerProgrammeBg.pricing!.options[0],
-          label: "Summer — slim and calm",
+          label: "Summer - slim and calm",
           badge: "Summer package",
           price: "{price}",
           note: "One-off payment · 60 days of access · guides, 12 recipes and SOS audio practices",

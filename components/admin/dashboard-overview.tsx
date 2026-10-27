@@ -377,7 +377,7 @@ export function DashboardOverviewPanel({
                 </Card>
               )}
               {access.engagement && (
-                <Card title="Имейли — изпратени и отворени">
+                <Card title="Имейли - изпратени и отворени">
                   <TimeSeriesChart
                     labels={labels}
                     height={220}
@@ -424,7 +424,7 @@ export function DashboardOverviewPanel({
                       <div key={item.label}>
                         <dt className="text-ink-soft">{item.label}</dt>
                         <dd className="mt-0.5 font-display text-2xl font-semibold text-ink [font-variant-numeric:tabular-nums]">
-                          {item.value === null ? "—" : <CountUp value={item.value} />}
+                          {item.value === null ? "-" : <CountUp value={item.value} />}
                         </dd>
                       </div>
                     ))}
@@ -489,7 +489,7 @@ export function DashboardOverviewPanel({
                       {data.recentCampaigns.map((c) => (
                         <tr key={c.id} className="border-b border-ink/5 last:border-0">
                           <td className="p-4 font-medium text-ink">{c.subject}</td>
-                          <td className="p-4 text-ink-soft">{c.segment_tag ?? "—"}</td>
+                          <td className="p-4 text-ink-soft">{c.segment_tag ?? "-"}</td>
                           <td className="p-4 text-ink-soft">
                             {formatNumber(c.recipients_count ?? 0)}
                           </td>

@@ -38,7 +38,7 @@ export function ProofStrip({ dict }: { dict: Dictionary }) {
                 {item.label}
               </p>
               <p className="mt-2 flex-1 text-xs leading-relaxed text-ink-soft sm:text-sm">{item.note}</p>
-              <p className="mt-3 text-xs font-semibold text-slate-700">— {item.name}</p>
+              <p className="mt-3 text-xs font-semibold text-slate-700">- {item.name}</p>
             </li>
           ))}
         </ul>

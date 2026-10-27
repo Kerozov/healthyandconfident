@@ -95,7 +95,7 @@ export function FormOptionSegmentEditor({
                 });
               }}
             >
-              <option value="">— Без група —</option>
+              <option value="">- Без група -</option>
               {ungrouped.map((s) => (
                 <option key={s.id} value={s.key}>
                   {s.name}
@@ -104,7 +104,7 @@ export function FormOptionSegmentEditor({
               {tree.map(({ group, depth }) => {
                 const list = byGroup.get(group.id) ?? [];
                 if (list.length === 0) return null;
-                const prefix = depth > 0 ? `${"–".repeat(depth)} ` : "";
+                const prefix = depth > 0 ? `${"-".repeat(depth)} ` : "";
                 return (
                   <optgroup key={group.id} label={`${prefix}${group.name}`}>
                     {list.map((s) => (
@@ -127,7 +127,7 @@ export function FormOptionSegmentEditor({
       ))}
       {assignableSegments(segments).length === 0 && (
         <p className="text-xs text-coral-600">
-          Няма групи — създай ги първо в Групи, после ги вържи към отговорите.
+          Няма групи - създай ги първо в Групи, после ги вържи към отговорите.
         </p>
       )}
       <button

@@ -414,7 +414,7 @@ function TextBlockEditor({
         rows={Math.min(Math.max(lines + 1, 4), 24)}
         value={block.text}
         onChange={(e) => onChange({ ...block, text: e.target.value })}
-        placeholder="Пиши тук — ## заглавие, **удебелен**, - списък…"
+        placeholder="Пиши тук - ## заглавие, **удебелен**, - списък…"
         className="field-sizing-content max-h-[70vh] font-mono text-[13px]"
       />
       <button type="button" onMouseDown={(event) => event.preventDefault()}
@@ -450,7 +450,7 @@ function ImageBlockEditor({
     <div className="space-y-4">
       <ImageUploadField
         label="Снимка"
-        hint="JPEG, PNG, WebP — до 5 MB. Показва се цялата, без изрязване."
+        hint="JPEG, PNG, WebP - до 5 MB. Показва се цялата, без изрязване."
         value={image.src}
         onChange={(src) => setImage({ src })}
         folder="blog"
@@ -487,7 +487,7 @@ function ImageBlockEditor({
           >
             {nextIsText
               ? `Текстът от следващия блок тече ${layout === "left" ? "отдясно" : "отляво"} на снимката. На телефон снимката е на цяла ширина.`
-              : "Сложи текстов блок след снимката — той ще я обтича."}
+              : "Сложи текстов блок след снимката - той ще я обтича."}
           </p>
         )}
       </div>
@@ -510,7 +510,7 @@ function ImageBlockEditor({
       </div>
       <Field
         label="Линк при клик"
-        hint="По избор — напр. YouTube видео или /programs/21-dni."
+        hint="По избор - напр. YouTube видео или /programs/21-dni."
       >
         <Input
           value={image.href}
@@ -712,7 +712,7 @@ function GalleryBlockEditor({
             <>
               <ImagePlus className="h-6 w-6 text-ink-soft/60" />
               <span className="font-semibold text-ink">Добави снимки</span>
-              <span>Пусни тук или кликни — може няколко наведнъж</span>
+              <span>Пусни тук или кликни - може няколко наведнъж</span>
             </>
           )}
         </button>
@@ -733,7 +733,7 @@ function GalleryBlockEditor({
 
       {error && <p className="text-sm text-coral-600">{error}</p>}
       <p className="text-xs leading-relaxed text-ink-soft">
-        На сайта: 2 или 4 снимки — по две на ред, иначе по три (на телефон по
+        На сайта: 2 или 4 снимки - по две на ред, иначе по три (на телефон по
         две). Всяка се показва цяла, без изрязване.
       </p>
     </div>

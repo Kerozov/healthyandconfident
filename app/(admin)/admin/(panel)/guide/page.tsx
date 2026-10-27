@@ -10,7 +10,7 @@ export default function AdminGuidePage() {
     <div>
       <PageHeader
         title="Ръководство"
-        description="Как работи всеки екран в админа — стъпка по стъпка, на едно място. Отвори го винаги когато не си сигурна какво прави даден бутон."
+        description="Как работи всеки екран в админа - стъпка по стъпка, на едно място. Отвори го винаги когато не си сигурна какво прави даден бутон."
       />
 
       <section className="rounded-2xl border border-forest-500/25 bg-forest-50/50 p-5 sm:p-6">

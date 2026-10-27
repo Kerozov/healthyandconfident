@@ -1,5 +1,10 @@
 import { getPublicClient } from "@/lib/supabase/public";
 import type { BlogPost, Locale } from "@/lib/supabase/types";
+import { normalizeDisplayText, shortDashes } from "@/lib/site/typography";
+
+function publicPost(post: BlogPost): BlogPost {
+  return { ...normalizeDisplayText(post), tags: post.tags.map(shortDashes) };
+}
 
 /**
  * Missing env must not crash `next build` / SSG, so no client means "no posts".
@@ -25,7 +30,7 @@ export async function getPublishedPosts(locale: Locale): Promise<BlogPost[]> {
     .eq("status", "published")
     .order("published_at", { ascending: false });
   if (error) throw new Error(`Blog posts query failed: ${error.message}`);
-  return (data as BlogPost[]) ?? [];
+  return ((data as BlogPost[]) ?? []).map(publicPost);
 }
 
 export async function getPostBySlug(
@@ -42,7 +47,7 @@ export async function getPostBySlug(
     .eq("status", "published")
     .maybeSingle();
   if (error) throw new Error(`Blog post query failed: ${error.message}`);
-  return (data as BlogPost | null) ?? null;
+  return data ? publicPost(data as BlogPost) : null;
 }
 
 export async function getAllPublishedSlugs(): Promise<
