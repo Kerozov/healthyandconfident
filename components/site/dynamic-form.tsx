@@ -8,6 +8,8 @@ import { trackSiteLead } from "@/lib/analytics/client";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { ThankYouButton } from "@/components/site/thank-you-button";
+import { SiteImage } from "@/components/site/site-image";
 
 const inputClass =
   "w-full rounded-xl border border-forest-100 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-forest-500 focus:ring-2 focus:ring-forest-500/20";
@@ -30,6 +32,7 @@ export function DynamicForm({
   token,
   slug,
   preview = false,
+  previewThankYou = false,
 }: {
   locale: Locale;
   title: string;
@@ -42,6 +45,8 @@ export function DynamicForm({
   slug: string;
   /** Admin preview — shows thank-you without writing a submission. */
   preview?: boolean;
+  /** Show the thank-you screen directly in the admin preview. */
+  previewThankYou?: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string | string[] | boolean>>(() => {
     const init: Record<string, string | string[] | boolean> = {};
@@ -121,7 +126,7 @@ export function DynamicForm({
     setErrorMsg(null);
 
     const missing = renderFields.some(
-      (field) => field.required && field.type !== "heading" && isBlank(field),
+      (field) => field.required && field.type !== "heading" && field.type !== "image" && isBlank(field),
     );
     if (missing) {
       setState("error");
@@ -155,21 +160,24 @@ export function DynamicForm({
     }
   }
 
-  if (state === "done") {
+  if (state === "done" || (preview && previewThankYou)) {
     return (
       <div className="mx-auto max-w-xl px-4 py-16">
         <div className="flex items-start gap-4 rounded-2xl border border-forest-500/20 bg-cream px-6 py-8">
           <CheckCircle2 className="mt-0.5 h-8 w-8 shrink-0 text-forest-600" />
-          <div>
+          <div className="min-w-0">
             <h1 className="font-display text-2xl font-semibold text-forest-800">
               {locale === "en" ? "Thank you!" : "Благодарим!"}
             </h1>
             <p className="mt-2 text-ink-soft">{thankYou}</p>
-            {preview && (
+            <ThankYouButton
+              button={locale === "en" ? settings.thank_you_button_en : settings.thank_you_button_bg}
+            />
+            {preview && !previewThankYou && (
               <button
                 type="button"
                 onClick={() => setState("idle")}
-                className="mt-4 text-sm font-semibold text-forest-600 hover:text-forest-700"
+                className="mt-4 block text-sm font-semibold text-forest-600 hover:text-forest-700"
               >
                 {locale === "en" ? "Show form again" : "Покажи формата отново"}
               </button>
@@ -189,6 +197,20 @@ export function DynamicForm({
       )}
       <div className={cn("rounded-3xl border p-6 sm:p-10", themeShell[theme])}>
         <header className="mb-8 text-center">
+          {settings.cover_image_url && (
+            <SiteImage
+              src={settings.cover_image_url}
+              alt={
+                (locale === "en" ? settings.cover_image_alt_en : settings.cover_image_alt_bg)?.trim() ||
+                settings.cover_image_alt_bg?.trim() || settings.cover_image_alt_en?.trim() || ""
+              }
+              width={1200}
+              height={800}
+              sizes="(max-width: 640px) 100vw, 592px"
+              className="mb-6 max-h-[32rem] rounded-2xl object-contain"
+              priority
+            />
+          )}
           <h1 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
             {title}
           </h1>
@@ -201,6 +223,27 @@ export function DynamicForm({
 
         <form onSubmit={submit} className="space-y-6">
           {renderFields.map((field) => {
+            if (field.type === "image") {
+              if (!field.image_url) return null;
+              return (
+                <figure key={field.id}>
+                  <SiteImage
+                    src={field.image_url}
+                    alt={label(field)}
+                    width={1200}
+                    height={800}
+                    sizes="(max-width: 640px) 100vw, 592px"
+                    className="max-h-[32rem] rounded-2xl object-contain"
+                  />
+                  {help(field) && (
+                    <figcaption className="mt-2 text-center text-sm text-ink-soft">
+                      {help(field)}
+                    </figcaption>
+                  )}
+                </figure>
+              );
+            }
+
             if (field.type === "heading") {
               return (
                 <div key={field.id} className="border-b border-ink/10 pb-2 pt-2">

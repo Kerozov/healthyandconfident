@@ -1,3 +1,5 @@
+import type { ThankYouButton } from "@/lib/site/thank-you-button";
+
 export type FormFieldType =
   | "text"
   | "email"
@@ -11,6 +13,7 @@ export type FormFieldType =
   /** @deprecated Use radio with option.segment_key — still accepted & normalized */
   | "health_interest"
   | "heading"
+  | "image"
   | "consent";
 
 export type FormFieldOption = {
@@ -32,6 +35,8 @@ export type FormField = {
   options?: FormFieldOption[];
   help_bg?: string;
   help_en?: string;
+  /** Content image displayed between questions; does not collect an answer. */
+  image_url?: string;
 };
 
 export type FormTheme = "default" | "warm" | "minimal";
@@ -40,6 +45,12 @@ export type FormSettings = {
   theme: FormTheme;
   thank_you_bg: string;
   thank_you_en: string;
+  thank_you_button_bg?: ThankYouButton | null;
+  thank_you_button_en?: ThankYouButton | null;
+  /** Image shown at the top of the public form, independently of the email banner. */
+  cover_image_url?: string;
+  cover_image_alt_bg?: string;
+  cover_image_alt_en?: string;
   /** @deprecated Prefer tags_on_submit */
   tag_on_submit?: string;
   /** Fixed segment keys applied to the subscriber after submit */

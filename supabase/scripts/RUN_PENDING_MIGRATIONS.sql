@@ -1385,4 +1385,11 @@ on conflict (key) do nothing;
 
 notify pgrst, 'reload schema';
 
+-- 084: optional thank-you button shared by menu/newsletter signup screens.
+alter table public.popup_config
+  add column if not exists success_button jsonb,
+  add column if not exists checkout_button jsonb;
+
+notify pgrst, 'reload schema';
+
 select 'Upgrade complete (012–057 and 064–065 applied). Also run 007_automations.sql if not yet applied.' as result;

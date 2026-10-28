@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle, X } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
+import { ThankYouButton } from "@/components/site/thank-you-button";
+import { normalizeThankYouButton, type ThankYouButton as ThankYouButtonSettings } from "@/lib/site/thank-you-button";
 
 const COPY = {
   bg: {
@@ -25,7 +27,10 @@ const COPY = {
   },
 } as const;
 
-export function CheckoutNotice({ locale }: { locale: Locale }) {
+export function CheckoutNotice({ locale, successButton }: {
+  locale: Locale;
+  successButton?: ThankYouButtonSettings | null;
+}) {
   const searchParams = useSearchParams();
   const copy = COPY[locale] ?? COPY.bg;
 
@@ -67,6 +72,7 @@ export function CheckoutNotice({ locale }: { locale: Locale }) {
   if (!open || !status) return null;
 
   const isSuccess = status === "success";
+  const thankYouButton = isSuccess ? normalizeThankYouButton(successButton) : null;
 
   return (
     <div
@@ -107,12 +113,17 @@ export function CheckoutNotice({ locale }: { locale: Locale }) {
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">
             {isSuccess ? copy.successBody : copy.cancelBody}
           </p>
+          <ThankYouButton button={thankYouButton} className="mt-6 w-full" />
           <button
             type="button"
             onClick={dismiss}
             className={cn(
-              "mt-6 inline-flex h-11 w-full items-center justify-center rounded-full px-6 text-sm font-semibold text-white",
-              isSuccess ? "bg-forest-600 hover:bg-forest-700" : "bg-slate-700 hover:bg-slate-800",
+              "inline-flex h-11 w-full items-center justify-center rounded-full px-6 text-sm font-semibold",
+              thankYouButton
+                ? "mt-3 border border-forest-200 text-forest-700 hover:bg-forest-50"
+                : isSuccess
+                  ? "mt-6 bg-forest-600 text-white hover:bg-forest-700"
+                  : "mt-6 bg-slate-700 text-white hover:bg-slate-800",
             )}
           >
             {copy.close}

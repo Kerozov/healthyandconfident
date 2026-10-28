@@ -3,22 +3,25 @@ import "server-only";
 import { cache } from "react";
 import { getPublicClient } from "@/lib/supabase/public";
 import type { Locale } from "@/i18n/config";
+import type { PopupConfig } from "@/lib/supabase/types";
 
 /**
- * Segment tag admins pick in /admin/popup ("Save to segment"). Reads directly
- * so the tag applies on every entry point into the gift-menu popup (auto-delay,
- * nav link, header CTA) — not just the client fetch that gates the auto-popup.
+ * Thank-you settings from /admin/popup, shared by signup and checkout screens.
+ * Selecting the row also tolerates deployments before the optional button
+ * column exists, so existing signup forms continue to work during the upgrade.
  */
-export const getPopupSegmentTag = cache(async (locale: Locale): Promise<string> => {
+export const getPopupThankYouConfig = cache(async (locale: Locale): Promise<
+  Pick<PopupConfig, "segment_tag" | "success_message" | "success_button" | "checkout_button"> | null
+> => {
   try {
     const supabase = getPublicClient();
     const { data } = await supabase
       .from("popup_config")
-      .select("segment_tag")
+      .select("*")
       .eq("locale", locale)
       .maybeSingle();
-    return (data as { segment_tag: string } | null)?.segment_tag?.trim() || "all";
+    return data as Pick<PopupConfig, "segment_tag" | "success_message" | "success_button" | "checkout_button"> | null;
   } catch {
-    return "all";
+    return null;
   }
 });

@@ -69,6 +69,25 @@ automations do not fire on synced contacts.
 
 Requires migration `049_funnel_brand_sync.sql`.
 
+## Thank-you buttons
+
+In **Admin → Форми → Съдържание**, each form can have an optional thank-you
+button with its own label and URL for BG and EN. **Преглед → Thank you страница**
+shows the result without submitting a form. Clear both fields to remove a button.
+
+In **Admin → Popup**, the thank-you button for each language is shared by menu
+and newsletter signup screens, including programme pages. A configured button
+keeps the signup popup open and replaces the automatic offer popup after signup.
+The same screen has an independent **Бутон след покупка** for the checkout
+confirmation; cancelled payments do not show it.
+
+Requires migration `084_thank_you_buttons.sql` for signup and checkout buttons.
+Per-form buttons use the existing form settings and need no schema change.
+
+```bash
+bun run verify:thank-you
+```
+
 ## Team email notifications
 
 In **Admin → Профили и промени**, add a notification email to each profile and

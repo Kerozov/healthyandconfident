@@ -28,7 +28,7 @@ import { MenuPopupProvider } from "@/components/site/menu-popup";
 import { HashScroll } from "@/components/site/hash-scroll";
 import { CtaPreviewHighlighter } from "@/components/site/cta-preview";
 import { OfferPopupProvider } from "@/components/site/offer-popup";
-import { getPopupSegmentTag } from "@/lib/site/popup-config";
+import { getPopupThankYouConfig } from "@/lib/site/popup-config";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -93,12 +93,12 @@ export default async function SiteLayout({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
-  const [dict, site, contactConfig, metaPixel, popupSegmentTag] = await Promise.all([
+  const [dict, site, contactConfig, metaPixel, popupConfig] = await Promise.all([
     getDictionary(l),
     getPublicSiteContent(),
     getSiteContactConfig(),
     getMetaPixelPublicConfig(),
-    getPopupSegmentTag(l),
+    getPopupThankYouConfig(l),
   ]);
 
   return (
@@ -123,9 +123,10 @@ export default async function SiteLayout({
               subtitle: dict.leadMagnet.subtitle,
               button: dict.leadMagnet.button,
               consent: dict.leadMagnet.consent,
-              success: dict.leadMagnet.success,
+              success: popupConfig?.success_message?.trim() || dict.leadMagnet.success,
             }}
-            segmentTag={popupSegmentTag}
+            segmentTag={popupConfig?.segment_tag}
+            successButton={popupConfig?.success_button}
           >
             <HashScroll />
             <SiteHeader locale={l} items={dict.nav.items} cta={dict.nav.cta} />
@@ -139,7 +140,7 @@ export default async function SiteLayout({
             )}
             <Popup locale={l} />
             <Suspense fallback={null}>
-              <CheckoutNotice locale={l} />
+              <CheckoutNotice locale={l} successButton={popupConfig?.checkout_button} />
             </Suspense>
             <Suspense fallback={null}>
               <SiteAnalytics />

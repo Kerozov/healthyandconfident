@@ -61,6 +61,7 @@ import { formatDate } from "@/lib/utils";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
 import { cn } from "@/lib/utils";
 import { TabList } from "@/components/admin/tab-list";
+import { ThankYouButtonFields } from "@/components/admin/thank-you-button-fields";
 
 const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
   { value: "text", label: "Текст" },
@@ -73,6 +74,7 @@ const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
   { value: "radio", label: "Избор (бутони)" },
   { value: "checkbox", label: "Множествен избор" },
   { value: "heading", label: "Заглавие секция" },
+  { value: "image", label: "Снимка" },
   { value: "consent", label: "Съгласие (checkbox)" },
 ];
 
@@ -84,9 +86,9 @@ function emptyField(type: FormFieldType): FormField {
   return {
     id: newFieldId(),
     type,
-    label_bg: type === "heading" ? "Нова секция" : "Ново поле",
-    label_en: type === "heading" ? "New section" : "New field",
-    required: type !== "heading",
+    label_bg: type === "image" ? "" : type === "heading" ? "Нова секция" : "Ново поле",
+    label_en: type === "image" ? "" : type === "heading" ? "New section" : "New field",
+    required: type !== "heading" && type !== "image",
     ...(type === "select" || type === "radio" || type === "checkbox"
       ? {
           options: [
@@ -125,8 +127,10 @@ export function FormsManager({
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [tab, setTab] = useState<EditorTab>("content");
   const [previewLocale, setPreviewLocale] = useState<"bg" | "en">("bg");
+  const [previewThankYou, setPreviewThankYou] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
+  const [uploadingImages, setUploadingImages] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<
     import("@/lib/forms/types").FormSubmissionRecord[] | null
@@ -220,6 +224,7 @@ export function FormsManager({
       description_en: row.description_en,
       fields: normalizeFormFields(row.fields ?? []),
       settings: {
+        ...row.settings,
         theme: (row.settings?.theme as FormTheme) ?? "default",
         thank_you_bg: row.settings?.thank_you_bg ?? "",
         thank_you_en: row.settings?.thank_you_en ?? "",
@@ -243,8 +248,18 @@ export function FormsManager({
     setSavedNote(null);
   }
 
+  function setImageUploading(uploading: boolean) {
+    setUploadingImages((current) => Math.max(0, current + (uploading ? 1 : -1)));
+  }
+
   function save() {
     setError(null);
+    if (uploadingImages > 0) return;
+    if (form.fields.some((field) => field.type === "image" && !field.image_url?.trim())) {
+      setError("Качи снимка във всеки блок „Снимка“ или премахни празния блок.");
+      setTab("fields");
+      return;
+    }
     if (!hasRequiredEmailField(form.fields)) {
       setError("Формата трябва да има задължително поле за имейл - автоматизациите тръгват по него.");
       setTab("fields");
@@ -365,7 +380,7 @@ export function FormsManager({
             contentId="form-editor-panel"
             tabs={[
               { id: "content", label: "Съдържание" },
-              { id: "fields", label: "Въпроси" },
+              { id: "fields", label: "Въпроси и снимки" },
               { id: "email", label: "Имейл" },
               { id: "preview", label: "Преглед" },
               ...(editingId !== "new" ? [{ id: "send", label: "Изпрати" }] : []),
@@ -488,6 +503,35 @@ export function FormsManager({
                   <option value="minimal">Минимална</option>
                 </Select>
               </Field>
+              <div className="space-y-4 rounded-xl border border-ink/10 p-4 md:col-span-2">
+                <ImageUploadField
+                  label="Снимка в началото на формата"
+                  hint="Показва се над заглавието. За снимки между въпросите използвай „+ Снимка“ във „Въпроси и снимки“."
+                  value={form.settings.cover_image_url ?? ""}
+                  folder="forms"
+                  previewFit="contain"
+                  onUploadingChange={setImageUploading}
+                  onChange={(cover_image_url) => setForm((current) => ({
+                    ...current,
+                    settings: { ...current.settings, cover_image_url },
+                  }))}
+                />
+                {form.settings.cover_image_url && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {(["bg", "en"] as const).map((loc) => (
+                      <Field key={loc} label={`Описание на снимката - ${loc.toUpperCase()}`} hint="За хора, които използват екранен четец. По желание.">
+                        <Input
+                          value={form.settings[`cover_image_alt_${loc}`] ?? ""}
+                          onChange={(e) => setForm({
+                            ...form,
+                            settings: { ...form.settings, [`cover_image_alt_${loc}`]: e.target.value },
+                          })}
+                        />
+                      </Field>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3 md:col-span-2">
                 <p className="text-sm font-semibold text-forest-800">
                   Фиксирани групи след попълване
@@ -535,6 +579,20 @@ export function FormsManager({
                   }
                 />
               </Field>
+              {(["bg", "en"] as const).map((loc) => (
+                <div key={loc} className="rounded-xl border border-ink/10 p-4">
+                  <p className="mb-3 text-sm font-semibold text-forest-800">
+                    Бутон на thank you страницата - {loc.toUpperCase()}
+                  </p>
+                  <ThankYouButtonFields
+                    value={form.settings[`thank_you_button_${loc}`]}
+                    onChange={(button) => setForm({
+                      ...form,
+                      settings: { ...form.settings, [`thank_you_button_${loc}`]: button },
+                    })}
+                  />
+                </div>
+              ))}
             </div>
           )}
 
@@ -650,6 +708,8 @@ export function FormsManager({
                         <button
                           type="button"
                           onClick={() => moveField(index, -1)}
+                          aria-label="Премести нагоре"
+                          disabled={index === 0}
                           className="inline-flex h-7 w-7 items-center justify-center rounded-lg hover:bg-ink/5"
                         >
                           <ArrowUp className="h-3.5 w-3.5" />
@@ -657,12 +717,15 @@ export function FormsManager({
                         <button
                           type="button"
                           onClick={() => moveField(index, 1)}
+                          aria-label="Премести надолу"
+                          disabled={index === form.fields.length - 1}
                           className="inline-flex h-7 w-7 items-center justify-center rounded-lg hover:bg-ink/5"
                         >
                           <ArrowDown className="h-3.5 w-3.5" />
                         </button>
                         <button
                           type="button"
+                          aria-label="Премахни блока"
                           onClick={() => {
                             if (
                               field.type === "email" &&
@@ -673,6 +736,7 @@ export function FormsManager({
                               );
                               return;
                             }
+                            setError(null);
                             setForm({
                               ...form,
                               fields: form.fields.filter((f) => f.id !== field.id),
@@ -685,7 +749,28 @@ export function FormsManager({
                       </div>
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Етикет BG">
+                      {field.type === "image" && (
+                        <div className="md:col-span-2">
+                          <ImageUploadField
+                            label="Снимка във формата"
+                            hint="Премести блока със стрелките, за да поставиш снимката между избрани въпроси."
+                            value={field.image_url ?? ""}
+                            folder="forms"
+                            previewFit="contain"
+                            onUploadingChange={setImageUploading}
+                            onChange={(image_url) => {
+                              setError(null);
+                              setForm((current) => ({
+                                ...current,
+                                fields: current.fields.map((item) =>
+                                  item.id === field.id ? { ...item, image_url, required: false } : item,
+                                ),
+                              }));
+                            }}
+                          />
+                        </div>
+                      )}
+                      <Field label={field.type === "image" ? "Описание на снимката - BG (по желание)" : "Етикет BG"}>
                         <Input
                           value={field.label_bg}
                           onChange={(e) => {
@@ -695,7 +780,7 @@ export function FormsManager({
                           }}
                         />
                       </Field>
-                      <Field label="Етикет EN">
+                      <Field label={field.type === "image" ? "Описание на снимката - EN (по желание)" : "Етикет EN"}>
                         <Input
                           value={field.label_en}
                           onChange={(e) => {
@@ -705,7 +790,7 @@ export function FormsManager({
                           }}
                         />
                       </Field>
-                      {field.type !== "heading" && field.type !== "consent" && (
+                      {field.type !== "heading" && field.type !== "image" && field.type !== "consent" && (
                         <>
                           {field.type !== "radio" &&
                             field.type !== "select" &&
@@ -743,27 +828,29 @@ export function FormsManager({
                       )}
                       {field.type !== "heading" && (
                         <>
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={field.type === "email" ? true : (field.required ?? false)}
-                              disabled={field.type === "email"}
-                              onChange={(e) => {
-                                if (field.type === "email") return;
-                                const fields = [...form.fields];
-                                fields[index] = {
-                                  ...field,
-                                  required: e.target.checked,
-                                };
-                                setForm({ ...form, fields });
-                              }}
-                            />
-                            Задължително
-                            {field.type === "email" && (
-                              <span className="text-xs text-ink-soft">(имейлът винаги е задължителен)</span>
-                            )}
-                          </label>
-                          <Field label="Подсказка BG">
+                          {field.type !== "image" && (
+                            <label className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={field.type === "email" ? true : (field.required ?? false)}
+                                disabled={field.type === "email"}
+                                onChange={(e) => {
+                                  if (field.type === "email") return;
+                                  const fields = [...form.fields];
+                                  fields[index] = {
+                                    ...field,
+                                    required: e.target.checked,
+                                  };
+                                  setForm({ ...form, fields });
+                                }}
+                              />
+                              Задължително
+                              {field.type === "email" && (
+                                <span className="text-xs text-ink-soft">(имейлът винаги е задължителен)</span>
+                              )}
+                            </label>
+                          )}
+                          <Field label={field.type === "image" ? "Надпис под снимката - BG (по желание)" : "Подсказка BG"}>
                             <Input
                               value={field.help_bg ?? ""}
                               onChange={(e) => {
@@ -773,7 +860,7 @@ export function FormsManager({
                               }}
                             />
                           </Field>
-                          <Field label="Подсказка EN">
+                          <Field label={field.type === "image" ? "Надпис под снимката - EN (по желание)" : "Подсказка EN"}>
                             <Input
                               value={field.help_en ?? ""}
                               onChange={(e) => {
@@ -920,25 +1007,43 @@ export function FormsManager({
 
           {tab === "preview" && (
             <div className="space-y-3 rounded-2xl border border-ink/10 bg-cream-2/30 p-4">
-              <div className="inline-flex rounded-xl border border-ink/15 bg-white p-1">
-                {(["bg", "en"] as const).map((loc) => (
-                  <button
-                    key={loc}
-                    type="button"
-                    onClick={() => setPreviewLocale(loc)}
-                    className={cn(
-                      "rounded-lg px-3 py-1.5 text-xs font-semibold",
-                      previewLocale === loc
-                        ? "bg-forest-600 text-cream"
-                        : "text-ink-soft hover:bg-cream",
-                    )}
-                  >
-                    {loc === "bg" ? "Български" : "English"}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="inline-flex rounded-xl border border-ink/15 bg-white p-1">
+                  {(["bg", "en"] as const).map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setPreviewLocale(loc)}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-xs font-semibold",
+                        previewLocale === loc
+                          ? "bg-forest-600 text-cream"
+                          : "text-ink-soft hover:bg-cream",
+                      )}
+                    >
+                      {loc === "bg" ? "Български" : "English"}
+                    </button>
+                  ))}
+                </div>
+                <div className="inline-flex rounded-xl border border-ink/15 bg-white p-1">
+                  {[false, true].map((thankYou) => (
+                    <button
+                      key={String(thankYou)}
+                      type="button"
+                      onClick={() => setPreviewThankYou(thankYou)}
+                      aria-pressed={previewThankYou === thankYou}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-xs font-semibold",
+                        previewThankYou === thankYou ? "bg-forest-600 text-cream" : "text-ink-soft hover:bg-cream",
+                      )}
+                    >
+                      {thankYou ? "Thank you страница" : "Форма"}
+                    </button>
+                  ))}
+                </div>
               </div>
               <DynamicForm
-                key={previewLocale}
+                key={`${previewLocale}-${previewThankYou}`}
                 locale={previewLocale}
                 title={
                   previewLocale === "en"
@@ -952,6 +1057,7 @@ export function FormsManager({
                 settings={form.settings}
                 slug={form.slug || "preview"}
                 preview
+                previewThankYou={previewThankYou}
               />
             </div>
           )}
@@ -987,12 +1093,15 @@ export function FormsManager({
 
           {error && <p className="mt-4 text-sm text-coral-600">{error}</p>}
           {savedNote && <p className="mt-4 text-sm text-forest-700">{savedNote}</p>}
+          {uploadingImages > 0 && (
+            <p className="mt-4 text-sm text-ink-soft" role="status">Снимките се качват. Изчакай, преди да запазиш.</p>
+          )}
 
           <div className="mt-6 flex gap-2">
             <button
               type="button"
               onClick={save}
-              disabled={pending || !form.name.trim()}
+              disabled={pending || uploadingImages > 0 || !form.name.trim()}
               className="inline-flex h-11 items-center gap-2 rounded-full bg-forest-600 px-6 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
             >
               <Save className="h-4 w-4" /> Запази
@@ -1000,7 +1109,8 @@ export function FormsManager({
             <button
               type="button"
               onClick={closeEditor}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-medium hover:bg-ink/5"
+              disabled={pending || uploadingImages > 0}
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/15 px-5 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
             >
               <X className="h-4 w-4" /> Отказ
             </button>
@@ -1040,7 +1150,7 @@ export function FormsManager({
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-ink-soft">
-                    /forms/{f.slug} · {f.fields?.length ?? 0} въпроса ·{" "}
+                    /forms/{f.slug} · {f.fields?.filter((field) => field.type !== "heading" && field.type !== "image").length ?? 0} въпроса ·{" "}
                     {f.submission_count} отговора · {f.invitation_count} изпратени
                   </p>
                   {!f.enabled && (
@@ -1100,6 +1210,7 @@ export function FormsManager({
                     type="button"
                     onClick={() => openEdit(f)}
                     disabled={pending || editingId !== null}
+                    aria-label={`Редактирай форма „${f.name}“`}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-ink/5"
                   >
                     <Pencil className="h-4 w-4" />

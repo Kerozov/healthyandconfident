@@ -48,6 +48,7 @@ export function ImageUploadField({
   className,
   previewFit = "cover",
   previewFrame,
+  onUploadingChange,
 }: {
   label: string;
   hint?: string;
@@ -59,6 +60,8 @@ export function ImageUploadField({
   previewFit?: "cover" | "contain";
   /** The site card's ratio (e.g. `aspect-[16/10]`) — previews the image exactly as the card shows it. */
   previewFrame?: string;
+  /** Lets a containing editor wait for the upload before saving or closing. */
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
@@ -70,12 +73,18 @@ export function ImageUploadField({
   }
 
   function uploadFile(file: File) {
+    if (pending) return;
     setError(null);
+    onUploadingChange?.(true);
 
     startTransition(async () => {
-      const res = await uploadSiteImage(file, folder);
-      if (res.ok) onChange(res.url);
-      else setError(res.message);
+      try {
+        const res = await uploadSiteImage(file, folder);
+        if (res.ok) onChange(res.url);
+        else setError(res.message);
+      } finally {
+        onUploadingChange?.(false);
+      }
     });
   }
 
@@ -164,6 +173,7 @@ export function ImageUploadField({
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
           className="hidden"
+          disabled={pending}
           onChange={onFileChange}
         />
 

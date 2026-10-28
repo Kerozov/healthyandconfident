@@ -1,5 +1,6 @@
 import type { EmailSignatureLink } from "@/lib/email/signature-links";
 import type { SiteContactLink } from "@/lib/site/contact-links";
+import type { ThankYouButton } from "@/lib/site/thank-you-button";
 
 export type Locale = "bg" | "en";
 
@@ -81,6 +82,8 @@ export type PopupConfig = {
   message: string;
   cta_label: string;
   success_message: string;
+  success_button?: ThankYouButton | null;
+  checkout_button?: ThankYouButton | null;
   image_url: string | null;
   segment_tag: string;
   delay_seconds: number;

@@ -10,8 +10,8 @@ export default async function AdminPopupPage() {
   return (
     <div>
       <PageHeader
-        title="Popup"
-        description="Редакция на съобщението и формата за имейл на всеки език."
+        title="Popup и thank you екрани"
+        description="Popup формата и бутоните след записване или покупка на всеки език."
       />
 
       <div className="grid gap-6 xl:grid-cols-2">

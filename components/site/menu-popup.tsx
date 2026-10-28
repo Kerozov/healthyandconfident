@@ -15,6 +15,9 @@ import type { Locale } from "@/i18n/config";
 import { SubscribeForm } from "@/components/site/subscribe-form";
 import { useOfferPopup } from "@/components/site/offer-popup";
 import { ModalCloseButton } from "@/components/site/modal-close-button";
+import { ThankYouButton } from "@/components/site/thank-you-button";
+import { normalizeThankYouButton, type ThankYouButton as ThankYouButtonSettings } from "@/lib/site/thank-you-button";
+import { SignupThankYouProvider } from "@/components/site/signup-thank-you-provider";
 
 export type MenuPopupCopy = {
   title: string;
@@ -42,12 +45,14 @@ export function MenuPopupProvider({
   locale,
   copy,
   segmentTag,
+  successButton,
   children,
 }: {
   locale: Locale;
   copy: MenuPopupCopy;
   /** Admin-configured "Save to segment" from /admin/popup — additional tag on top of `free-menu`. */
   segmentTag?: string;
+  successButton?: ThankYouButtonSettings | null;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -58,6 +63,7 @@ export function MenuPopupProvider({
   const autoCloseRef = useRef<number | null>(null);
 
   const storageKey = `hc_popup_${locale}`;
+  const thankYouButton = normalizeThankYouButton(successButton);
 
   const baseTags = useMemo(() => {
     const extra = (segmentTag ?? "").trim();
@@ -117,7 +123,9 @@ export function MenuPopupProvider({
 
   return (
     <MenuPopupContext.Provider value={{ openMenuPopup }}>
-      {children}
+      <SignupThankYouProvider button={thankYouButton}>
+        {children}
+      </SignupThankYouProvider>
 
       {open && (
         <div
@@ -154,6 +162,7 @@ export function MenuPopupProvider({
               {done ? (
                 <div className="relative py-6 text-center">
                   <p className="font-display text-xl text-forest-600">{copy.success}</p>
+                  <ThankYouButton button={thankYouButton} />
                 </div>
               ) : (
                 <SubscribeForm
@@ -168,6 +177,8 @@ export function MenuPopupProvider({
                     if (typeof window !== "undefined") {
                       localStorage.setItem(storageKey, "subscribed");
                     }
+                    // A configured next step needs to remain available until clicked.
+                    if (thankYouButton) return;
                     const openedOffer = tryOpenPlacement("leadmagnet_cta", "");
                     if (openedOffer) {
                       // Close now so this dialog's scroll-lock cleanup cannot

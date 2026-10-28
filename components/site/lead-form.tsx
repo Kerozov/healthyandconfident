@@ -3,6 +3,7 @@
 import { SubscribeForm } from "@/components/site/subscribe-form";
 import type { Locale } from "@/i18n/config";
 import { useOfferPopup } from "@/components/site/offer-popup";
+import { useSignupThankYouButton } from "@/components/site/signup-thank-you-provider";
 
 export function LeadForm({
   locale,
@@ -30,6 +31,7 @@ export function LeadForm({
   compact?: boolean;
 }) {
   const { tryOpenPlacement } = useOfferPopup();
+  const thankYouButton = useSignupThankYouButton();
 
   const baseTags =
     segmentTag && segmentTag !== "all" && segmentTag !== "weight-loss"
@@ -47,7 +49,7 @@ export function LeadForm({
       variant={variant}
       compact={compact}
       onSuccess={() => {
-        if (offerPlacementKey) {
+        if (offerPlacementKey && !thankYouButton) {
           tryOpenPlacement(offerPlacementKey, "");
         }
       }}

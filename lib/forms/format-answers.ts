@@ -37,7 +37,10 @@ export function formatSubmissionAnswers(
   const rows: { label: string; value: string }[] = [];
 
   for (const field of fields) {
-    if (field.type === "heading") continue;
+    if (field.type === "heading" || field.type === "image") {
+      used.add(field.id);
+      continue;
+    }
     if (!(field.id in answers)) continue;
     used.add(field.id);
     rows.push({

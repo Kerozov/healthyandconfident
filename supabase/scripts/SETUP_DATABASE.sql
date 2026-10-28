@@ -1632,6 +1632,13 @@ where key = 'outcomes_cta';
 
 notify pgrst, 'reload schema';
 
+-- 084: optional thank-you button shared by menu/newsletter signup screens.
+alter table public.popup_config
+  add column if not exists success_button jsonb,
+  add column if not exists checkout_button jsonb;
+
+notify pgrst, 'reload schema';
+
 select 'Setup complete — schema up to date through 057 (campaign delivery key, site button rows)' as result;
 
 

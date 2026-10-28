@@ -123,7 +123,7 @@ export async function POST(
   const fields = form.fields ?? [];
 
   for (const field of fields) {
-    if (!field.required || field.type === "heading") continue;
+    if (!field.required || field.type === "heading" || field.type === "image") continue;
     if (body.token && field.type === "email") continue;
     if (isBlankAnswer(answers[field.id])) {
       return NextResponse.json(

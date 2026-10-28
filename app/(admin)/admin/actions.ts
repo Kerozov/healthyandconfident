@@ -134,6 +134,7 @@ import {
   getSubscriberEngagementDetail,
 } from "@/lib/admin/engagement";
 import type { FormField, FormSettings } from "@/lib/forms/types";
+import { normalizeThankYouButton, thankYouButtonError, type ThankYouButton } from "@/lib/site/thank-you-button";
 import { getFormPreset } from "@/lib/forms/presets";
 import { forceEmailFieldsRequired, emailFieldCount } from "@/lib/forms/required-email";
 import { formSlug as normalizeFormSlug } from "@/lib/forms/slug";
@@ -306,12 +307,18 @@ export async function savePopup(input: {
   message: string;
   cta_label: string;
   success_message: string;
+  success_button?: ThankYouButton | null;
+  checkout_button?: ThankYouButton | null;
   image_url?: string;
   segment_tag: string;
   delay_seconds: number;
 }): Promise<ActionResult> {
   const guard = await guardAction("popup", { action: "save", summary: "Обнови popup" });
   if (!guard.ok) return guard;
+  for (const [label, button] of [["След записване", input.success_button], ["След покупка", input.checkout_button]] as const) {
+    const buttonError = thankYouButtonError(button);
+    if (buttonError) return { ok: false, message: `${label}: ${buttonError}` };
+  }
   const supabase = getAdminClient();
   const { error } = await supabase
     .from("popup_config")
@@ -321,6 +328,8 @@ export async function savePopup(input: {
       message: input.message,
       cta_label: input.cta_label,
       success_message: input.success_message,
+      success_button: normalizeThankYouButton(input.success_button),
+      checkout_button: normalizeThankYouButton(input.checkout_button),
       image_url: input.image_url || null,
       segment_tag: input.segment_tag,
       delay_seconds: input.delay_seconds,
@@ -328,6 +337,7 @@ export async function savePopup(input: {
     })
     .eq("locale", input.locale);
   if (error) return { ok: false, message: error.message };
+  revalidatePath(`/${input.locale}`, "layout");
   return { ok: true };
 }
 
@@ -4920,6 +4930,14 @@ export async function saveFormTemplate(input: {
       message: "Формата трябва да има задължително поле за имейл.",
     };
   }
+  if (input.fields.some((field) => field.type === "image" && !field.image_url?.trim())) {
+    return { ok: false, message: "Качи снимка във всеки блок „Снимка“ или премахни празния блок." };
+  }
+
+  for (const locale of ["bg", "en"] as const) {
+    const error = thankYouButtonError(input.settings[`thank_you_button_${locale}`]);
+    if (error) return { ok: false, message: `Бутон на thank you страницата (${locale.toUpperCase()}): ${error}` };
+  }
 
   // A clash with another form silently became a Postgres unique-violation the
   // admin could do nothing about — take the next free slug instead.
@@ -4932,8 +4950,14 @@ export async function saveFormTemplate(input: {
     title_en: input.title_en.trim() || input.title_bg.trim(),
     description_bg: input.description_bg.trim(),
     description_en: input.description_en.trim(),
-    fields: forceEmailFieldsRequired(input.fields),
-    settings: input.settings,
+    fields: forceEmailFieldsRequired(input.fields).map((field) =>
+      field.type === "image" ? { ...field, image_url: field.image_url?.trim(), required: false } : field,
+    ),
+    settings: {
+      ...input.settings,
+      thank_you_button_bg: normalizeThankYouButton(input.settings.thank_you_button_bg),
+      thank_you_button_en: normalizeThankYouButton(input.settings.thank_you_button_en),
+    },
     email_subject_bg: input.email_subject_bg.trim(),
     email_subject_en: input.email_subject_en.trim() || input.email_subject_bg.trim(),
     email_intro_bg: input.email_intro_bg.trim(),
