@@ -24,6 +24,7 @@ import type {
   SiteContactConfig,
 } from "@/lib/supabase/types";
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
+import { AcademyProductField } from "@/components/admin/academy-product-field";
 import { DEFAULT_SITE_SECTIONS } from "@/lib/site/defaults";
 import { DEFAULT_OFFER_HEADLINE } from "@/lib/site/cta-placements";
 import { productPlacementKey } from "@/lib/site/product-placement";
@@ -110,6 +111,7 @@ const EMPTY_PRODUCT = {
   downsell_headline_bg: "",
   downsell_headline_en: "",
   purchase_tags: [] as string[],
+  academy_product: "",
   enabled: true,
   enabled_en: true,
   slug: "",
@@ -323,6 +325,7 @@ export function WebsiteManager({
       downsell_headline_bg: placement?.downsell_headline_bg ?? "",
       downsell_headline_en: placement?.downsell_headline_en ?? "",
       purchase_tags: product.purchase_tags ?? [],
+      academy_product: product.academy_product ?? "",
       enabled: product.enabled,
       enabled_en: product.enabled_en !== false,
       slug: product.slug?.trim() ?? "",
@@ -624,6 +627,11 @@ export function WebsiteManager({
                   disabled={pending}
                 />
               </div>
+              <AcademyProductField
+                value={productForm.academy_product}
+                onChange={(academy_product) => setProductForm({ ...productForm, academy_product })}
+                disabled={pending}
+              />
               <label className="flex items-center gap-2 text-sm font-medium">
                 <input
                   type="checkbox"

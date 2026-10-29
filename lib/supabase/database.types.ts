@@ -74,6 +74,10 @@ type SubscriberPurchase = {
   order_total_cents: number | null;
   currency: string | null;
   purchased_at: string;
+  /** Academy product this line unlocks (`*` = every program) — migration 085. */
+  academy_product: string | null;
+  /** Course code the academy issued for this line. */
+  academy_code: string | null;
 };
 
 export type Json =

@@ -2883,7 +2883,11 @@ export async function sendTestEmail(input: {
   let lastError = "";
   for (const email of recipients) {
     const sub = subByEmail.get(email);
-    const vars = templateVarsFromSubscriber(sub, email);
+    // A test is not a purchase — show where the course code goes, not a real one.
+    const vars = {
+      ...templateVarsFromSubscriber(sub, email),
+      courseCode: SAMPLE_TEMPLATE_VARS.courseCode,
+    };
     try {
       const { bodyHtml, attachments } = await buildEmailBodyForRecipient({
         html: renderEmailTemplate(input.html, vars),
@@ -3017,7 +3021,13 @@ export async function sendTestSms(input: {
     const sub = subByPhone.get(phone);
     const body = renderEmailTemplate(
       template,
-      sub ? templateVarsFromSubscriber(sub, sub.email) : { ...SAMPLE_TEMPLATE_VARS, phone },
+      sub
+        ? {
+            ...templateVarsFromSubscriber(sub, sub.email),
+            // A test is not a purchase — show where the code goes, not a real one.
+            courseCode: SAMPLE_TEMPLATE_VARS.courseCode,
+          }
+        : { ...SAMPLE_TEMPLATE_VARS, phone },
     );
     try {
       const res = await sendSms({
@@ -3733,6 +3743,12 @@ function isMissingColumn(message: string | undefined): boolean {
 }
 
 /** A slug the unique index refused — name the field the admin has to change. */
+/** Course code from the academy: `*` for every program, a slug, or empty for none. */
+function academyProductColumn(value: string | undefined): { academy_product?: string | null } {
+  if (value === undefined) return {};
+  return { academy_product: value.trim().toLowerCase() || null };
+}
+
 function catalogSaveMessage(message: string): string {
   if (/slug/i.test(message) && /duplicate|unique/i.test(message)) {
     return "Този адрес вече се ползва от друго нещо. Смени „Адрес на страницата“.";
@@ -4019,6 +4035,7 @@ export async function saveSiteGuide(input: {
   price_label_en?: string;
   image_url?: string;
   purchase_tags?: string[];
+  academy_product?: string;
   enabled?: boolean;
   enabled_en?: boolean;
   sort_order?: number;
@@ -4079,6 +4096,7 @@ export async function saveSiteGuide(input: {
     price_label_en: input.price_label_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
     purchase_tags: (input.purchase_tags ?? []).filter(Boolean),
+    ...academyProductColumn(input.academy_product),
     enabled: input.enabled ?? true,
     enabled_en: input.enabled_en ?? true,
     sort_order: input.sort_order ?? 0,
@@ -4203,6 +4221,7 @@ export async function saveSiteProduct(input: {
   enabled_en?: boolean;
   sort_order?: number;
   purchase_tags?: string[];
+  academy_product?: string;
   upsell_offer_id?: string | null;
   upsell_offer_enabled?: boolean;
   upsell_offer_headline_bg?: string;
@@ -4314,6 +4333,7 @@ export async function saveSiteProduct(input: {
     cta_label_en: input.cta_label_en?.trim() ?? "",
     audience_tags: [] as string[],
     purchase_tags: (input.purchase_tags ?? []).filter(Boolean),
+    ...academyProductColumn(input.academy_product),
     enabled: input.enabled ?? true,
     enabled_en: enabledEn,
     updated_at: new Date().toISOString(),

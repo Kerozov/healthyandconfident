@@ -1639,6 +1639,15 @@ alter table public.popup_config
 
 notify pgrst, 'reload schema';
 
+-- 085: course codes from the academy after a paid checkout.
+alter table public.site_products add column if not exists academy_product text;
+alter table public.site_guides add column if not exists academy_product text;
+alter table public.subscriber_purchases
+  add column if not exists academy_product text,
+  add column if not exists academy_code text;
+
+notify pgrst, 'reload schema';
+
 select 'Setup complete — schema up to date through 057 (campaign delivery key, site button rows)' as result;
 
 
