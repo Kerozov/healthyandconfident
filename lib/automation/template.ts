@@ -1,3 +1,5 @@
+import { ACADEMY_CODES_ENABLED } from "@/lib/academy/product";
+
 /** What a `{{…}}` tag can pull from the person a message goes to. */
 export type TemplateVars = {
   /** Full name as stored on the subscriber (`name`). */
@@ -11,7 +13,7 @@ export type TemplateVars = {
 };
 
 /** The tags the editors offer, in the order they show them. */
-export const MERGE_TAGS = [
+const ALL_MERGE_TAGS = [
   { tag: "{{first_name}}", label: "Първо име", sample: "Мария" },
   { tag: "{{last_name}}", label: "Фамилия", sample: "Иванова" },
   { tag: "{{name}}", label: "Цяло име", sample: "Мария Иванова" },
@@ -19,6 +21,10 @@ export const MERGE_TAGS = [
   { tag: "{{phone}}", label: "Телефон", sample: "+359 888 123 456" },
   { tag: "{{course_code}}", label: "Код за курса", sample: "ABCD-EFGH-JKMN" },
 ] as const;
+
+export const MERGE_TAGS = ALL_MERGE_TAGS.filter(
+  (t) => ACADEMY_CODES_ENABLED || t.tag !== "{{course_code}}",
+);
 
 const COURSE_CODE_RE = /\{\{\s*(course_code|код_за_курс)\s*\}\}/i;
 

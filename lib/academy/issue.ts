@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import { academyProductParam } from "@/lib/academy/product";
+import { ACADEMY_CODES_ENABLED, academyProductParam } from "@/lib/academy/product";
 
 /**
  * Course access codes from the academy (academy-platform, „Продажби“).
@@ -134,6 +134,7 @@ export async function issueCourseCodesForSession(
   stripeSessionId: string,
   name?: string | null,
 ): Promise<void> {
+  if (!ACADEMY_CODES_ENABLED) return;
   const config = academyConfig();
   if (!config) return;
   try {
