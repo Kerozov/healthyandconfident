@@ -56,6 +56,12 @@ export const ADMIN_SCREEN_GROUPS = [
         description: "Абонати, групи и сегменти",
       },
       {
+        key: "free-menu",
+        label: "Безплатно меню",
+        href: "/admin/free-menu",
+        description: "Заявки за менюто и отговорите във формата",
+      },
+      {
         key: "contacts",
         label: "Контакти",
         href: "/admin/contacts",
@@ -143,6 +149,7 @@ const PATH_PREFIXES: { prefix: string; screen: AdminScreenKey | "team" }[] = [
   { prefix: "/admin/popup", screen: "popup" },
   { prefix: "/admin/email-footer", screen: "email-footer" },
   { prefix: "/admin/subscribers", screen: "subscribers" },
+  { prefix: "/admin/free-menu", screen: "free-menu" },
   { prefix: "/admin/contacts", screen: "contacts" },
   { prefix: "/admin/zoom", screen: "zoom" },
   { prefix: "/admin/forms", screen: "forms" },

@@ -27,6 +27,7 @@ import {
   Eye,
   Shield,
   Loader2,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -48,6 +49,7 @@ const ICONS: Record<AdminScreenKey, typeof LayoutDashboard> = {
   popup: MousePointerClick,
   "email-footer": Signature,
   subscribers: Users,
+  "free-menu": Gift,
   contacts: Route,
   zoom: Video,
   forms: ClipboardList,

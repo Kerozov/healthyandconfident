@@ -18,6 +18,7 @@ import { ModalCloseButton } from "@/components/site/modal-close-button";
 import { ThankYouButton } from "@/components/site/thank-you-button";
 import { normalizeThankYouButton, type ThankYouButton as ThankYouButtonSettings } from "@/lib/site/thank-you-button";
 import { SignupThankYouProvider } from "@/components/site/signup-thank-you-provider";
+import { freeMenuTags } from "@/lib/site/free-menu";
 
 export type MenuPopupCopy = {
   title: string;
@@ -65,10 +66,7 @@ export function MenuPopupProvider({
   const storageKey = `hc_popup_${locale}`;
   const thankYouButton = normalizeThankYouButton(successButton);
 
-  const baseTags = useMemo(() => {
-    const extra = (segmentTag ?? "").trim();
-    return extra && extra !== "all" ? ["free-menu", extra] : ["free-menu"];
-  }, [segmentTag]);
+  const baseTags = useMemo(() => freeMenuTags(segmentTag), [segmentTag]);
 
   const openMenuPopup = useCallback(
     (nextSource = "menu-popup") => {

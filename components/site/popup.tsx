@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { Locale } from "@/i18n/config";
 import { useMenuPopup } from "@/components/site/menu-popup";
 import { isCtaPreviewPage } from "@/lib/site/cta-preview";
+import { isFreeMenuPath } from "@/lib/site/free-menu";
 
 /** Auto-opens the menu signup popup after delay (admin config). */
 export function Popup({ locale }: { locale: Locale }) {
@@ -15,6 +16,8 @@ export function Popup({ locale }: { locale: Locale }) {
     if (typeof window === "undefined") return;
     // A popup over the button preview would hide the very thing being shown.
     if (isCtaPreviewPage()) return;
+    // The free menu page already shows this form - a popup of it would cover it.
+    if (isFreeMenuPath(window.location.pathname)) return;
     if (localStorage.getItem(storageKey)) return;
     if (scheduledRef.current) return;
 
@@ -28,6 +31,7 @@ export function Popup({ locale }: { locale: Locale }) {
         scheduledRef.current = true;
         timer = setTimeout(() => {
           if (localStorage.getItem(storageKey)) return;
+          if (isFreeMenuPath(window.location.pathname)) return;
           openMenuPopup("auto-popup");
         }, (d.delay_seconds || 6) * 1000);
       })

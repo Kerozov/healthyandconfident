@@ -16,6 +16,7 @@ const STATIC_GROUPS: SignupSourceGroup[] = [
     id: "free-menu",
     label: "Безплатно меню",
     options: [
+      { value: "free-menu-page", label: "Страница „Безплатно меню“" },
       { value: "free-menu-banner", label: "Банер „Безплатно меню“" },
       { value: "lead-magnet", label: "Lead magnet секция" },
       { value: "menu-popup", label: "Popup - меню (ръчно)" },

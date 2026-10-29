@@ -7,6 +7,7 @@ import { getProgramLanding } from "@/lib/programs/landings";
 import { getSiteGuides, getSiteProducts } from "@/lib/site/content";
 import { filterProductsForLocale } from "@/lib/site/product-locale";
 import { filterGuidesForLocale } from "@/lib/site/guide-catalog";
+import { freeMenuPath } from "@/lib/site/free-menu";
 import {
   guidePagePath,
   guidesListPath,
@@ -55,6 +56,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       {
         url: `${base}${guidesListPath(locale)}`,
         changeFrequency: "weekly",
+        priority: 0.8,
+      },
+      {
+        url: `${base}${freeMenuPath(locale)}`,
+        changeFrequency: "monthly",
         priority: 0.8,
       },
       {
