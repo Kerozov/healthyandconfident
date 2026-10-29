@@ -29,8 +29,8 @@ export type AccessCodeResult =
 const ERRORS: Record<string, string> = {
   invalid_key: "Ключът за академията (ACADEMY_SALE_KEY) е грешен или отменен.",
   space_archived: "Пространството в академията е архивирано.",
-  product_required: "В академията има няколко продукта или школи — посочи кой в полето „Продукт в академията“.",
-  unknown_product: "Няма такъв активен продукт или школа в академията — провери полето „Продукт в академията“.",
+  product_required: "В академията има няколко продукта или школи — избери курс в полето „Кой курс отключва“.",
+  unknown_product: "Няма такъв активен продукт или школа в академията — избери курса наново в полето „Кой курс отключва“.",
   product_without_courses: "Продуктът в академията няма избрани курсове.",
 };
 
@@ -66,6 +66,31 @@ export async function requestAccessCode(
     }
   }
   return { ok: false, message: last };
+}
+
+/** The academy's programs, by name (`GET /api/v1/catalog`), for the course picker. */
+export type AcademyCatalog = {
+  schools: { slug: string; name: string; courses: { ref: string; title: string }[] }[];
+};
+
+export async function fetchAcademyCatalog(
+  config: AcademyConfig,
+): Promise<{ ok: true; catalog: AcademyCatalog } | { ok: false; message: string }> {
+  try {
+    const res = await fetch(`${config.url}/api/v1/catalog`, {
+      headers: { Authorization: `Bearer ${config.key}` },
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => null)) as
+      | (Partial<AcademyCatalog> & { error?: string; message?: string })
+      | null;
+    if (res.ok && Array.isArray(data?.schools)) return { ok: true, catalog: { schools: data.schools } };
+    const reason = data?.error ? (ERRORS[data.error] ?? data.message ?? data.error) : `HTTP ${res.status}`;
+    return { ok: false, message: reason };
+  } catch {
+    return { ok: false, message: "Академията не отговори." };
+  }
 }
 
 type PurchaseLine = {
