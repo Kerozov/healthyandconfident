@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { listAcademyCourses } from "@/app/(admin)/admin/academy-actions";
 import { Field, Select } from "@/components/admin/fields";
-import { ACADEMY_ALL_PROGRAMS } from "@/lib/academy/product";
+import { ACADEMY_ALL_PROGRAMS, ACADEMY_CODES_ENABLED } from "@/lib/academy/product";
 
 type Schools = { slug: string; name: string; courses: { ref: string; title: string }[] }[];
 
@@ -14,7 +14,15 @@ type Schools = { slug: string; name: string; courses: { ref: string; title: stri
  * owner picks a course by name — nothing is typed. The code goes into emails
  * as `{{course_code}}`.
  */
-export function AcademyProductField({
+export function AcademyProductField(props: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return ACADEMY_CODES_ENABLED ? <AcademyProductFieldOn {...props} /> : null;
+}
+
+function AcademyProductFieldOn({
   value,
   onChange,
   disabled,
