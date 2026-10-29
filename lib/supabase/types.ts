@@ -462,6 +462,8 @@ export type SiteProduct = {
   audience_tags: string[];
   /** Tags applied to subscriber when this product is purchased */
   purchase_tags: string[];
+  /** Academy product (slug) whose course code a buyer gets — `{{course_code}}`. */
+  academy_product?: string | null;
   enabled: boolean;
   /** When false, the product is hidden on the English site and in EN emails. */
   enabled_en: boolean;
@@ -535,6 +537,8 @@ export type SiteGuide = {
   image_url: string | null;
   /** Segment keys applied to subscriber after successful payment */
   purchase_tags: string[];
+  /** Academy product (slug) whose course code a buyer gets — `{{course_code}}`. */
+  academy_product?: string | null;
   enabled: boolean;
   /** When false, the guide is hidden on the English site and in EN emails. */
   enabled_en: boolean;

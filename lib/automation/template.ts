@@ -6,6 +6,8 @@ export type TemplateVars = {
   lastName?: string | null;
   email: string;
   phone?: string | null;
+  /** Course access code from the academy — only filled for emails that use the tag. */
+  courseCode?: string | null;
 };
 
 /** The tags the editors offer, in the order they show them. */
@@ -15,7 +17,19 @@ export const MERGE_TAGS = [
   { tag: "{{name}}", label: "Цяло име", sample: "Мария Иванова" },
   { tag: "{{email}}", label: "Имейл", sample: "maria@example.com" },
   { tag: "{{phone}}", label: "Телефон", sample: "+359 888 123 456" },
+  { tag: "{{course_code}}", label: "Код за курса", sample: "ABCD-EFGH-JKMN" },
 ] as const;
+
+const COURSE_CODE_RE = /\{\{\s*(course_code|код_за_курс)\s*\}\}/i;
+
+/**
+ * Whether a text asks for the buyer's course code. Only those emails go to the
+ * academy for one — and fail visibly when there is none, instead of going out
+ * with a hole where the code should be.
+ */
+export function usesCourseCode(...texts: (string | null | undefined)[]): boolean {
+  return texts.some((t) => Boolean(t) && COURSE_CODE_RE.test(t!));
+}
 
 /** Sample person for previews and test sends without a real subscriber. */
 export const SAMPLE_TEMPLATE_VARS: TemplateVars = {
@@ -24,10 +38,11 @@ export const SAMPLE_TEMPLATE_VARS: TemplateVars = {
   lastName: "Иванова",
   email: "maria@example.com",
   phone: "+359 888 123 456",
+  courseCode: "ABCD-EFGH-JKMN",
 };
 
 const PLACEHOLDER_RE =
-  /\{\{\s*(name|full_name|first_name|firstname|last_name|lastname|email|phone)\s*\}\}/gi;
+  /\{\{\s*(name|full_name|first_name|firstname|last_name|lastname|email|phone|course_code|код_за_курс)\s*\}\}/gi;
 
 /** Same greeting fallback the emails always used when the name is unknown. */
 const NAME_FALLBACK = "there";
@@ -81,6 +96,9 @@ export function renderEmailTemplate(template: string, vars: TemplateVars): strin
         return email;
       case "phone":
         return phone;
+      case "course_code":
+      case "код_за_курс":
+        return vars.courseCode?.trim() ?? "";
       default:
         return "";
     }
@@ -126,5 +144,7 @@ export function campaignMergeFields(vars: TemplateVars): Record<string, string> 
     lastname: last,
     email: vars.email,
     phone: vars.phone?.trim() ?? "",
+    // Campaigns go to many people at once; a course code belongs to one purchase.
+    course_code: vars.courseCode?.trim() ?? "",
   };
 }

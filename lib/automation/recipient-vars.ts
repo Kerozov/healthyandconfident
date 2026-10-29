@@ -1,7 +1,8 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import type { TemplateVars } from "@/lib/automation/template";
+import { usesCourseCode, type TemplateVars } from "@/lib/automation/template";
+import { courseCodeForRecipient } from "@/lib/academy/issue";
 import type { AutomationRunContext } from "@/lib/automation/run";
 
 /**
@@ -39,4 +40,23 @@ export async function templateVarsForContext(ctx: AutomationRunContext): Promise
     // No row / no DB — the full name still splits into first and last.
   }
   return vars;
+}
+
+/**
+ * Adds the buyer's course code when one of the texts uses `{{course_code}}`.
+ * Throws when there is no code, so the step is recorded as failed (and the
+ * daily catch-up retries it) instead of sending an email with an empty code.
+ */
+export async function withCourseCode(
+  vars: TemplateVars,
+  ctx: AutomationRunContext,
+  ...texts: (string | null | undefined)[]
+): Promise<TemplateVars> {
+  if (!usesCourseCode(...texts)) return vars;
+  const courseCode = await courseCodeForRecipient({
+    email: vars.email,
+    name: vars.name,
+    purchasedProductIds: ctx.purchasedProductIds,
+  });
+  return { ...vars, courseCode };
 }

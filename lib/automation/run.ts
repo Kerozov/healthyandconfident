@@ -19,7 +19,7 @@ import { expandAudienceKeys } from "@/lib/segments/hierarchy";
 import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
 import { isEmailUnsubscribed } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
-import { templateVarsForContext } from "@/lib/automation/recipient-vars";
+import { templateVarsForContext, withCourseCode } from "@/lib/automation/recipient-vars";
 import { automationEmailContent, automationSmsBody } from "@/lib/automation/content";
 import {
   scheduledAtAfterDays,
@@ -544,9 +544,10 @@ async function submitStep(
       await recordSkip(automation, ctx, AUTOMATION_SKIP_REASONS.noPhone, existing);
       return "skipped";
     }
+    const smsTemplate = automationSmsBody(automation, locale);
     const body = renderEmailTemplate(
-      automationSmsBody(automation, locale),
-      await templateVarsForContext(ctx),
+      smsTemplate,
+      await withCourseCode(await templateVarsForContext(ctx), ctx, smsTemplate),
     );
     if (!body.trim()) {
       await recordSkip(automation, ctx, AUTOMATION_SKIP_REASONS.noSmsContent, existing);

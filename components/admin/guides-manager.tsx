@@ -9,6 +9,7 @@ import { saveSiteGuide, deleteSiteGuide } from "@/app/(admin)/admin/actions";
 import { formatStripeIdInput, isValidStripeIdInput } from "@/lib/stripe/parse-stripe-id";
 import { GuideAdminGrid } from "@/components/admin/guide-admin-grid";
 import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
+import { AcademyProductField } from "@/components/admin/academy-product-field";
 import { Field, Input, Textarea, Card, LocaleVisibilityCheckboxes } from "@/components/admin/fields";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { CatalogLinkEditor } from "@/components/admin/catalog-link-editor";
@@ -32,6 +33,7 @@ const EMPTY_GUIDE = {
   price_label_en: "",
   image_url: "",
   purchase_tags: [] as string[],
+  academy_product: "",
   enabled: true,
   enabled_en: true,
   sort_order: 0,
@@ -149,6 +151,7 @@ export function GuidesManagerPanel({
       price_label_en: guide.price_label_en,
       image_url: guide.image_url ?? "",
       purchase_tags: guide.purchase_tags ?? [],
+      academy_product: guide.academy_product ?? "",
       enabled: guide.enabled,
       enabled_en: guide.enabled_en !== false,
       sort_order: guide.sort_order,
@@ -330,6 +333,11 @@ export function GuidesManagerPanel({
               disabled={pending}
             />
           </div>
+          <AcademyProductField
+            value={form.academy_product}
+            onChange={(academy_product) => setForm({ ...form, academy_product })}
+            disabled={pending}
+          />
           <LocaleVisibilityCheckboxes
             enabled={form.enabled}
             enabledEn={form.enabled_en}

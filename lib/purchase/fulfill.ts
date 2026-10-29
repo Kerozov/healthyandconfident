@@ -1,6 +1,7 @@
 import "server-only";
 
 import { runAutomations } from "@/lib/automation/run";
+import { issueCourseCodesForSession } from "@/lib/academy/issue";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { syncContactAfterPurchase } from "@/lib/contacts/payment";
 import type { ResolvedLineItem } from "@/lib/stripe/resolve-products";
@@ -51,6 +52,8 @@ async function upsertPurchaseRow(input: {
   paymentStatus: PurchasePaymentStatus;
   /** Stripe session total — same on every line, so orders sum without double counting. */
   orderTotalCents: number | null;
+  /** Academy product this line unlocks — its course code is issued from it. */
+  academyProduct?: string | null;
 }): Promise<void> {
   const supabase = getAdminClient();
   const row = {
@@ -64,6 +67,7 @@ async function upsertPurchaseRow(input: {
     amount_cents: input.item.amountCents,
     order_total_cents: input.orderTotalCents,
     currency: input.item.currency,
+    ...(input.academyProduct ? { academy_product: input.academyProduct } : {}),
   };
 
   const loadExisting = async () => {
@@ -293,6 +297,13 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     }
   }
 
+  const academyProductOf = (item: ResolvedLineItem): string | null => {
+    const row =
+      products.find((p) => p.id === item.internalProductId) ??
+      guides.find((g) => g.id === item.internalGuideId);
+    return row?.academy_product?.trim() || null;
+  };
+
   try {
     for (const item of lineItems) {
       await upsertPurchaseRow({
@@ -302,12 +313,16 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
         stripeSessionId: input.stripeSessionId,
         paymentStatus: "paid",
         orderTotalCents,
+        academyProduct: academyProductOf(item),
       });
     }
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     return { ok: false, productIds, guideIds, tags: [] };
   }
+
+  // Before the automations: the "thank you" email reads the code from the line.
+  await issueCourseCodesForSession(input.stripeSessionId, input.name);
 
   const { cancelIneligibleAutomationDeliveriesForSubscriber } = await import(
     "@/lib/automation/cancel"

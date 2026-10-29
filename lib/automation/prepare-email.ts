@@ -7,7 +7,7 @@ import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
 import { unsubscribeLinkForEmail } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
-import { templateVarsForContext } from "@/lib/automation/recipient-vars";
+import { templateVarsForContext, withCourseCode } from "@/lib/automation/recipient-vars";
 import { automationEmailContent } from "@/lib/automation/content";
 import { computeAutomationSendAt } from "@/lib/automation/send-at";
 import { automationJobIdempotencyKey } from "@/lib/automation/idempotency";
@@ -51,7 +51,12 @@ export async function buildAutomationEmailMessage(
   const content = automationEmailContent(automation, locale);
   if (!content) return null;
 
-  const vars = await templateVarsForContext(ctx);
+  const vars = await withCourseCode(
+    await templateVarsForContext(ctx),
+    ctx,
+    content.subject,
+    content.html,
+  );
   const subject = renderEmailTemplate(content.subject, vars);
   const renderedHtml = renderEmailTemplate(content.html, vars);
   const attachmentPath =
