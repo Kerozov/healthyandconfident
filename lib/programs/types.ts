@@ -88,6 +88,20 @@ export type ProgramLandingContent = {
    * not indexed until the buttons carry a real price.
    */
   noindex?: boolean;
+  /**
+   * Olive/cream palette and the cooking-page layout. Other landings stay as they are.
+   */
+  variant?: "olive";
+  /** Email capture on the price card until that card's button is wired in the admin. */
+  waitlist?: {
+    pending: string;
+    prompt: string;
+    button: string;
+    consent: string;
+    success: string;
+    source: string;
+    tag: string;
+  };
   hero: {
     eyebrow: string;
     title: string;

@@ -29,11 +29,13 @@ import {
   programHeroPlacementKey,
   programPricingPlacementKey,
   programSecondaryPlacementKey,
+  placementHasAdminTarget,
   programVideoPlacementKey,
 } from "@/lib/site/cta-placements";
 import { Container } from "@/components/ui/container";
 import { CtaLink } from "@/components/site/cta-link";
 import { LeadForm } from "@/components/site/lead-form";
+import { SubscribeForm } from "@/components/site/subscribe-form";
 import { ProgramCountdown } from "@/components/site/program-countdown";
 import { SiteImage } from "@/components/site/site-image";
 import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
@@ -227,6 +229,8 @@ export function ProgramLanding({
   ctaPlacements?: Record<string, SiteCtaPlacement>;
 }) {
   const { hero } = content;
+  const olive = content.variant === "olive";
+  const bodyText = olive ? "text-base leading-relaxed" : "text-lg leading-relaxed";
   const placementKey = programPlacementKey(content);
   const heroPlacementKey = programHeroPlacementKey(placementKey, ctaPlacements);
   const primaryButton = resolvePlacementButton(ctaPlacements, heroPlacementKey, locale, {
@@ -300,12 +304,13 @@ export function ProgramLanding({
                 priority
                 sizes="(max-width: 1024px) 90vw, 480px"
                 figureClassName={cn(
-                  "order-1 mx-auto max-w-[min(100%,320px)] rounded-2xl border border-white/10 shadow-2xl sm:max-w-sm sm:rounded-3xl lg:order-2 lg:mx-0 lg:max-w-none",
+                  "mx-auto max-w-[min(100%,320px)] rounded-2xl border border-white/10 shadow-2xl sm:max-w-sm sm:rounded-3xl lg:order-2 lg:mx-0 lg:max-w-none",
+                  olive ? "order-2" : "order-1",
                 )}
               />
             )}
 
-            <div className={cn(hero.image && splitTextCol)}>
+            <div className={cn(hero.image && (olive ? "order-1" : splitTextCol))}>
               <span className="inline-flex items-center gap-2 rounded-full border border-gold-400/40 bg-gold-400/10 px-4 py-1.5 text-sm font-semibold text-gold-300">
                 <Sparkles className="h-4 w-4" /> {hero.eyebrow}
               </span>
@@ -328,8 +333,33 @@ export function ProgramLanding({
                 {hero.subtitle}
               </p>
 
+              {olive && (
+                <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-3">
+                  <CtaLink
+                    placementKey={heroPlacementKey}
+                    href={primaryButton.href}
+                    variant="onDark"
+                    size="lg"
+                    className="w-full sm:w-auto"
+                  >
+                    {primaryButton.label}
+                  </CtaLink>
+                  {secondaryButton && !secondaryButton.hidden && (
+                    <CtaLink
+                      placementKey={programSecondaryPlacementKey(placementKey)}
+                      href={secondaryButton.href}
+                      variant="onDarkOutline"
+                      size="lg"
+                      className="w-full sm:w-auto"
+                    >
+                      {secondaryButton.label}
+                    </CtaLink>
+                  )}
+                </div>
+              )}
+
               {hero.bullets && hero.bullets.length > 0 && (
-                <ul className="mt-5 space-y-2.5 sm:mt-8 sm:space-y-3">
+                <ul className={cn("mt-5 space-y-2.5 sm:space-y-3", olive ? "sm:mt-6" : "sm:mt-8")}>
                   {hero.bullets.map((b) => (
                     <li key={b} className="flex items-start gap-3 text-slate-100">
                       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold-400/20">
@@ -347,6 +377,7 @@ export function ProgramLanding({
                 </p>
               )}
 
+              {!olive && (
               <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-3">
                 <CtaLink
                   placementKey={heroPlacementKey}
@@ -369,6 +400,7 @@ export function ProgramLanding({
                   </CtaLink>
                 )}
               </div>
+              )}
             </div>
           </div>
         </Container>
@@ -385,7 +417,7 @@ export function ProgramLanding({
             <h2 className="font-display text-3xl font-semibold text-forest-900 sm:text-4xl">
               {content.pain.title}
             </h2>
-            <div className="mt-8 space-y-5 text-left text-lg leading-relaxed text-forest-800">
+            <div className={cn("mt-8 space-y-5 text-left text-forest-800", bodyText)}>
               {content.pain.paragraphs.map((p) => (
                 <p key={p.slice(0, 40)}>{p}</p>
               ))}
@@ -413,7 +445,8 @@ export function ProgramLanding({
               </h2>
               <div
                 className={cn(
-                  "mt-8 space-y-5 text-lg leading-relaxed text-forest-800",
+                  "mt-8 space-y-5 text-forest-800",
+                  bodyText,
                   !content.vision.image && "text-left",
                 )}
               >
@@ -447,20 +480,35 @@ export function ProgramLanding({
                 return (
                   <div
                     key={item.title}
-                    className="rounded-2xl border-2 border-rose-200/80 bg-white p-6 shadow-sm"
+                    className={cn(
+                      "rounded-2xl border-2 p-6 shadow-sm",
+                      olive ? "border-forest-200 bg-cream-200" : "border-rose-200/80 bg-white",
+                    )}
                   >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+                    <span
+                      className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-full",
+                        olive ? "bg-forest-100 text-forest-500" : "bg-rose-50 text-rose-600",
+                      )}
+                    >
                       <Icon className="h-5 w-5" />
                     </span>
                     <h3 className="mt-4 font-display text-base font-semibold leading-snug text-forest-900">
                       {item.title}
                     </h3>
-                    <p className="mt-2 text-sm text-forest-700">{item.text}</p>
+                    <p className={cn("mt-2 text-forest-700", olive ? "text-base leading-relaxed" : "text-sm")}>
+                      {item.text}
+                    </p>
                     {item.bullets && item.bullets.length > 0 && (
                       <ul className="mt-3 space-y-1 text-sm text-forest-700">
                         {item.bullets.map((b) => (
                           <li key={b} className="flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full",
+                                olive ? "bg-forest-500" : "bg-rose-400",
+                              )}
+                            />
                             {b}
                           </li>
                         ))}
@@ -519,17 +567,19 @@ export function ProgramLanding({
                   key={t.name}
                   className="rounded-3xl border border-forest-100/60 bg-white p-8 shadow-sm"
                 >
-                  <div className="flex gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-gold-400 text-gold-400" />
-                    ))}
-                  </div>
+                  {!olive && (
+                    <div className="flex gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className="h-4 w-4 fill-gold-400 text-gold-400" />
+                      ))}
+                    </div>
+                  )}
                   {t.headline && (
-                    <p className="mt-4 font-display text-lg font-semibold uppercase leading-snug text-forest-900">
-                      „{t.headline}“
+                    <p className="mt-4 font-display text-lg font-semibold leading-snug text-forest-900">
+                      {olive ? t.headline : `„${t.headline}“`}
                     </p>
                   )}
-                  <p className="mt-4 text-sm leading-relaxed text-forest-700">
+                  <p className={cn("mt-4 leading-relaxed text-forest-700", olive ? "text-base" : "text-sm")}>
                     {t.quote}
                   </p>
                   <footer className="mt-4 text-sm font-semibold text-forest-600">
@@ -706,7 +756,12 @@ export function ProgramLanding({
                   ))}
                 </ul>
               </div>
-              <div className="rounded-3xl border border-rose-200 bg-rose-50/30 p-8">
+              <div
+                className={cn(
+                  "rounded-3xl border p-8",
+                  olive ? "border-forest-200 bg-cream-200" : "border-rose-200 bg-rose-50/30",
+                )}
+              >
                 <h3 className="font-display text-lg font-semibold leading-snug text-forest-900">
                   {content.comparison.negative.title}
                 </h3>
@@ -718,7 +773,12 @@ export function ProgramLanding({
                   ))}
                 </ul>
                 {content.comparison.negative.closing && (
-                  <p className="mt-6 border-t border-rose-200 pt-6 text-sm font-medium leading-relaxed text-slate-800">
+                  <p
+                    className={cn(
+                      "mt-6 border-t pt-6 font-medium leading-relaxed text-slate-800",
+                      olive ? "border-forest-200 text-base" : "border-rose-200 text-sm",
+                    )}
+                  >
                     {content.comparison.negative.closing}
                   </p>
                 )}
@@ -838,7 +898,7 @@ export function ProgramLanding({
         <section className="bg-white py-24">
           <Container>
             {content.curriculum.intro && (
-              <p className="mx-auto max-w-3xl text-center text-lg leading-relaxed text-forest-800">
+              <p className={cn("mx-auto max-w-3xl text-center text-forest-800", olive ? bodyText : "text-lg leading-relaxed")}>
                 {content.curriculum.intro}
               </p>
             )}
@@ -854,7 +914,9 @@ export function ProgramLanding({
                   </span>
                   <div>
                     <h3 className="font-semibold text-forest-900">{item.title}</h3>
-                    <p className="mt-1 text-sm leading-relaxed text-forest-700">{item.text}</p>
+                    <p className={cn("mt-1 leading-relaxed text-forest-700", olive ? "text-base" : "text-sm")}>
+                      {item.text}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -900,7 +962,16 @@ export function ProgramLanding({
                   >
                     <Icon className="h-8 w-8 text-gold-400" />
                     <h3 className="mt-5 font-display text-xl font-semibold">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-200/80">{item.text}</p>
+                    {item.text ? (
+                      <p
+                        className={cn(
+                          "mt-3 leading-relaxed text-slate-200/80",
+                          olive ? "text-base" : "text-sm",
+                        )}
+                      >
+                        {item.text}
+                      </p>
+                    ) : null}
                   </div>
                 );
               })}
@@ -917,15 +988,22 @@ export function ProgramLanding({
               {content.includes.title}
             </h2>
             <div className="mx-auto mt-14 max-w-3xl divide-y divide-forest-100 rounded-3xl border border-forest-100 bg-cream-50/50">
-              {content.includes.items.map((item) => (
-                <details key={item.title} className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 font-semibold text-forest-900 transition-colors hover:text-forest-600 [&::-webkit-details-marker]:hidden">
-                    <span className="font-display text-lg">{item.title}</span>
-                    <ChevronDown className="h-5 w-5 shrink-0 text-forest-500 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <p className="px-6 pb-5 text-sm leading-relaxed text-forest-700">{item.text}</p>
-                </details>
-              ))}
+              {olive
+                ? content.includes.items.map((item) => (
+                    <article key={item.title} className="px-6 py-5">
+                      <h3 className="font-display text-lg font-semibold text-forest-900">{item.title}</h3>
+                      <p className="mt-2 text-base leading-relaxed text-forest-700">{item.text}</p>
+                    </article>
+                  ))
+                : content.includes.items.map((item) => (
+                    <details key={item.title} className="group">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 font-semibold text-forest-900 transition-colors hover:text-forest-600 [&::-webkit-details-marker]:hidden">
+                        <span className="font-display text-lg">{item.title}</span>
+                        <ChevronDown className="h-5 w-5 shrink-0 text-forest-500 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <p className="px-6 pb-5 text-sm leading-relaxed text-forest-700">{item.text}</p>
+                    </details>
+                  ))}
             </div>
           </Container>
         </section>
@@ -1077,6 +1155,11 @@ export function ProgramLanding({
                   const priceText = visiblePrice(opt.price);
                   const noteText = visiblePrice(opt.note);
                   const badgeText = visiblePrice(opt.badge);
+                  const configured = placementHasAdminTarget(
+                    ctaPlacements[programPricingPlacementKey(placementKey, i)],
+                    locale,
+                  );
+                  const showWaitlist = Boolean(olive && content.waitlist && !configured);
                   return (
                   <div
                     key={opt.label}
@@ -1100,11 +1183,37 @@ export function ProgramLanding({
                         {priceText}
                       </p>
                     )}
+                    {showWaitlist && (
+                      <p className="mt-3 font-display text-xl font-semibold text-forest-800">
+                        {content.waitlist!.pending}
+                      </p>
+                    )}
                     {noteText && (
-                      <p className="mt-2 flex-1 text-pretty text-sm leading-relaxed text-forest-600">
+                      <p
+                        className={cn(
+                          "mt-2 flex-1 text-pretty leading-relaxed text-forest-600",
+                          olive ? "text-base" : "text-sm",
+                        )}
+                      >
                         {noteText}
                       </p>
                     )}
+                    {showWaitlist ? (
+                      <div className="mt-4">
+                        <p className="text-base leading-relaxed text-forest-700">{content.waitlist!.prompt}</p>
+                        <div className="mt-3">
+                          <SubscribeForm
+                            locale={locale}
+                            source={content.waitlist!.source}
+                            baseTags={[content.waitlist!.tag]}
+                            consent={content.waitlist!.consent}
+                            success={content.waitlist!.success}
+                            buttonLabel={content.waitlist!.button}
+                            compact
+                          />
+                        </div>
+                      </div>
+                    ) : (
                     <CtaLink
                       placementKey={programPricingPlacementKey(placementKey, i)}
                       href={href}
@@ -1114,6 +1223,7 @@ export function ProgramLanding({
                     >
                       {pricingButton.label}
                     </CtaLink>
+                    )}
                   </div>
                   );
               })}
@@ -1145,7 +1255,9 @@ export function ProgramLanding({
                     {item.q}
                     <ChevronDown className="h-5 w-5 shrink-0 text-forest-500 transition-transform group-open:rotate-180" />
                   </summary>
-                  <p className="px-6 pb-4 text-sm leading-relaxed text-forest-700">{item.a}</p>
+                  <p className={cn("px-6 pb-4 leading-relaxed text-forest-700", olive ? "text-base" : "text-sm")}>
+                    {item.a}
+                  </p>
                 </details>
               ))}
             </div>
@@ -1214,7 +1326,7 @@ export function ProgramLanding({
 
       {/* Final CTA */}
       {content.finalCta && (
-        <section className="bg-forest-900 py-20 text-center text-white">
+        <section className={cn("bg-forest-900 py-20 text-center text-white", olive && "pb-28")}>
           <Container className="max-w-2xl">
             <h2 className="font-display text-3xl font-semibold sm:text-4xl">
               {content.finalCta.title}

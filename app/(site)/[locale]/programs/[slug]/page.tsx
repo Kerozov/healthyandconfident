@@ -7,6 +7,8 @@ import {
   programPath,
   resolveProgramSlug,
 } from "@/lib/programs/types";
+import { getDictionary } from "@/i18n";
+import { KUHNYA_ID } from "@/lib/programs/kuhnya";
 import { getPricedProgramLanding } from "@/lib/programs/priced";
 import { getCtaPlacements } from "@/lib/site/content";
 import type { SiteCtaPlacement } from "@/lib/supabase/types";
@@ -76,8 +78,28 @@ export default async function ProgramPage({
     redirect(`/${locale}${programPath(id)}`);
   }
   const ctaPlacements = await ctaPlacementsByKey();
-  const content = await getPricedProgramLanding(locale as Locale, id, ctaPlacements);
-  if (!content) notFound();
+  const priced = await getPricedProgramLanding(locale as Locale, id, ctaPlacements);
+  if (!priced) notFound();
+  // Homepage proof numbers, same dictionary the results strip reads. The two
+  // lines that say a condition is gone stay off this page.
+  const content =
+    id === KUHNYA_ID
+      ? {
+          ...priced,
+          testimonials: [0, 3, 4].map((index) => {
+            const item = getDictionary(locale as Locale).proof.items[index];
+            return {
+              headline: `${item.value} ${item.label}`,
+              quote: item.note,
+              name: item.name,
+            };
+          }),
+          testimonialsNote:
+            locale === "bg"
+              ? "Резултатът зависи от началната точка."
+              : "The result depends on where you start.",
+        }
+      : priced;
 
   return (
     <>

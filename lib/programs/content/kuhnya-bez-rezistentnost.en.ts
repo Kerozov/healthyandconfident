@@ -1,6 +1,12 @@
 import type { ProgramLandingContent } from "../types";
 import { kuhnyaBezRezistentnostBg } from "./kuhnya-bez-rezistentnost.bg";
-import { KUHNYA_NAME } from "../kuhnya";
+import {
+  KUHNYA_CHALLENGE_BONUS_TITLE,
+  KUHNYA_NAME,
+  KUHNYA_SHOW_CHALLENGE_BONUS,
+  KUHNYA_SIGNUP_SOURCE,
+  KUHNYA_SIGNUP_TAG,
+} from "../kuhnya";
 
 /**
  * English mirror of the cooking programme. The working title lives in
@@ -25,7 +31,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     subtitle:
       "The tummy is still there, the time is not, and “healthy” has always tasted like nothing. Here you learn to cook real food on a busy day - and to build the menu yourself.",
     bullets: [
-      "For people with insulin resistance who are tired of choosing between taste and blood sugar",
+      "For women with insulin resistance who are tired of choosing between taste and blood sugar",
       "Recipes for 15-20 minutes, not for a free Sunday",
       "Your own menus, from a normal shop - for you and for the table",
     ],
@@ -37,11 +43,6 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
       title: "Food you can",
       titleAccent: "cook quickly",
       images: bg.galleries![0].images,
-    },
-    {
-      title: "And it is not",
-      titleAccent: "bland",
-      images: bg.galleries![1].images,
     },
   ],
   pain: {
@@ -59,7 +60,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     title: "Picture dinner in 20 minutes",
     paragraphs: [
       "You open the fridge and you know what is happening. You are not hunting through ten tabs. You are not cooking one meal “for the diet” and another for everyone else.",
-      "The food has flavour. Your middle does not sit so heavy afterwards. The afternoon does not flatten you. And the menu is yours - built for your day, not a stranger's list that does not fit your life.",
+      "The food has flavour. Your middle may not sit so heavy afterwards, and the afternoon may not flatten you - how much depends on where you start. And the menu is yours - built for your day, not a stranger's list that does not fit your life.",
       "How much your weight, your measurements or your energy will change depends on where you start and on how steadily you cook. There is no miracle here and no promise that anything “goes away”. There is a clear kitchen that supports your body.",
     ],
   },
@@ -69,7 +70,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     items: [
       {
         title: "You have insulin resistance",
-        text: "And you are tired of every meal feeling like a gamble. You want plates that keep blood sugar steadier, without eating cardboard.",
+        text: "And you are tired of every meal feeling like a gamble. You want plates that help blood sugar stay steadier (how much depends on where you start), without eating cardboard.",
       },
       {
         title: "The tummy and the extra weight annoy you every time you get dressed",
@@ -92,7 +93,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
         text: "One meal for the table. No second shift in the kitchen after everyone has sat down.",
       },
     ],
-    closing: "If you recognised yourself in at least two of these, this kitchen is for you.",
+    closing: "If you recognise yourself in at least two of these, this kitchen is for you.",
   },
   comparison: {
     title: "This is not another diet",
@@ -147,15 +148,14 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     ],
   },
   pillars: {
-    title: "And one thing that may come with it",
+    title: "Before you start",
     items: [
-      {
-        title: "Possible bonus: a 3-day challenge",
-        text: "The launch may include a short challenge to get you into the kitchen fast. We will say so clearly before it starts - it is not counted until it is ready.",
-      },
+      ...(KUHNYA_SHOW_CHALLENGE_BONUS
+        ? [{ title: KUHNYA_CHALLENGE_BONUS_TITLE.en, text: "" }]
+        : []),
       {
         title: "Start: mid-November 2026",
-        text: "That is when the programme opens. Until signup is live, the button stays on the page or goes to contact, instead of to a payment that does not work yet.",
+        text: "That is when the programme opens.",
       },
       {
         title: "The change is not the same for everyone",
@@ -181,7 +181,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
       },
       {
         title: "Look after blood sugar with the plate, not with panic",
-        text: "Steadier energy through the day. This does not replace treatment and it does not promise that insulin resistance disappears.",
+        text: "Steadier energy through the day - how much depends on where you start. This does not replace treatment and it does not promise that insulin resistance disappears.",
       },
       {
         title: "Feed the rest of the table too",
@@ -208,7 +208,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
   faq: [
     {
       q: "When does it start?",
-      a: "Mid-November 2026. If signup is not open yet, the button does not send you to pay - write and we will tell you when places are open.",
+      a: "Mid-November 2026.",
     },
     {
       q: "Will I spend hours in the kitchen?",
@@ -234,24 +234,15 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
       q: "Do I build the menu myself, or do I get a ready-made list?",
       a: "Both: you have something to start from, and you learn to assemble your own week so you are not stuck on someone else's list every month.",
     },
-    {
-      q: "Is there a bonus 3-day challenge?",
-      a: "There may be, around the start. We will say so clearly before it begins. Until then it is not a promise.",
-    },
-    {
-      q: "How much does it cost?",
-      a: "The price is not written on the page. It appears here when signup is open and the button is connected to payment. Until then there is no made-up amount.",
-    },
   ],
   pricing: {
     ...bg.pricing!,
     title: "Come into a kitchen",
     titleAccent: "that actually works",
-    subtitle:
-      "Starts mid-November 2026. When signup is open, the amount shows on this card - the same amount you pay.",
+    subtitle: "Start: mid-November 2026.",
     audienceTitle: "Before you tap",
     audienceBullets: [
-      "This is cooking and choosing food, not a treatment.",
+      "This is cooking and choosing food, not a treatment, and it does not replace your doctor. If you take medication, talk to them before you change how you eat.",
       "Any change depends on where you start.",
       "If you want a miracle in ten days, this programme is not your path.",
     ],
@@ -261,10 +252,19 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
         label: name,
         badge: "Starts mid-November 2026",
         price: "{price}",
-        note: "One payment. The amount appears here once checkout is open.",
+        note: "",
         cta: "I want in the kitchen",
       },
     ],
+  },
+  waitlist: {
+    pending: "Signup opens soon.",
+    prompt: "Leave your email and you will get the price and first chance at a place.",
+    button: "Save me a place",
+    consent: "I agree to receive emails about this programme. You can unsubscribe at any time.",
+    success: "You are on the list. We will write with the price and first chance at a place.",
+    source: KUHNYA_SIGNUP_SOURCE,
+    tag: KUHNYA_SIGNUP_TAG,
   },
   finalCta: {
     title: "Enough of bland food. Enough of “I have no time”.",
