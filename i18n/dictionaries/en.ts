@@ -1,4 +1,5 @@
 import type { Dictionary } from "@/i18n/types";
+import { KUHNYA_NAME, KUHNYA_PUBLIC_SLUG } from "@/lib/programs/kuhnya";
 
 export const en: Dictionary = {
   meta: {
@@ -23,7 +24,18 @@ export const en: Dictionary = {
   },
   nav: {
     items: [
-      { label: "Programs", href: "#programs" },
+      {
+        label: "Programs",
+        href: "#programs",
+        children: [
+          { label: "21 Days Slimmer & Happier", href: "/en/programs/21-dni" },
+          { label: "Live Without Resistance", href: "/en/programs/3-mes" },
+          { label: KUHNYA_NAME.en, href: `/en/programs/${KUHNYA_PUBLIC_SLUG}` },
+          { label: "Summer - slim and calm", href: "/en/programs/lyato" },
+          { label: "Reprogram Your Appetite", href: "/en/programs/klub" },
+          { label: "All programmes", href: "/en/programs" },
+        ],
+      },
       { label: "Results", href: "#results" },
       { label: "Method", href: "#method" },
       { label: "About", href: "#about" },
@@ -324,7 +336,7 @@ export const en: Dictionary = {
       },
       {
         q: "Which program should I choose?",
-        a: "For a quick, easy start - “21 Days Slimmer & Happier”. If you have more than 5 kg to lose or insulin resistance - the 3-month “Live Without Resistance” with group support. If cravings and emotional eating are your main struggle - the “Reprogram Your Appetite” club.",
+        a: `For a quick, easy start - “21 Days Slimmer & Happier”. If you are busy and want to learn fast, easy, tasty cooking with insulin resistance - “${KUHNYA_NAME.en}”. If you have more than 5 kg to lose or insulin resistance - the 3-month “Live Without Resistance” with group support. If cravings and emotional eating are your main struggle - the “Reprogram Your Appetite” club.`,
       },
       {
         q: "How much time do I need each day?",
@@ -410,6 +422,7 @@ export const en: Dictionary = {
           { label: "Summer - slim and calm", href: "/en/programs/lyato" },
           { label: "21 Days Slimmer & Happier", href: "/en/programs/21-dni" },
           { label: "Live Without Resistance", href: "/en/programs/3-mes" },
+          { label: KUHNYA_NAME.en, href: `/en/programs/${KUHNYA_PUBLIC_SLUG}` },
           { label: "Reprogram Your Appetite", href: "/en/programs/klub" },
         ],
       },

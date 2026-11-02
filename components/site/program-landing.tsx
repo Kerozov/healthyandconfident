@@ -42,6 +42,17 @@ import { cn } from "@/lib/utils";
 const pillarIcons = [Flame, Heart, Zap];
 const audienceIcons = [Scale, Droplets, Leaf, Shield, Stethoscope, Sun, Moon];
 
+/** `{price}` and the other money tokens, still unfilled. */
+const UNRESOLVED_PRICE =
+  /\{(?:amount|price|monthly|total|perday|off)(?:@\d+)?(?::[^}]*)?\}/;
+
+/** Empty, or still a Stripe token, so the page must not print a made-up sum. */
+function visiblePrice(text: string | undefined): string | null {
+  const value = text?.trim() ?? "";
+  if (!value || UNRESOLVED_PRICE.test(value)) return null;
+  return value;
+}
+
 function SectionTitle({
   title,
   accent,
@@ -330,9 +341,9 @@ export function ProgramLanding({
                 </ul>
               )}
 
-              {hero.priceLine && (
+              {visiblePrice(hero.priceLine) && (
                 <p className="mt-6 text-balance font-display text-xl font-semibold leading-snug text-white sm:mt-8 sm:text-2xl">
-                  {hero.priceLine}
+                  {visiblePrice(hero.priceLine)}
                 </p>
               )}
 
@@ -1062,7 +1073,11 @@ export function ProgramLanding({
                   "md:grid-cols-2 lg:grid-cols-3",
               )}
             >
-              {visiblePricing.map(({ opt, i, pricingButton, href }) => (
+              {visiblePricing.map(({ opt, i, pricingButton, href }) => {
+                  const priceText = visiblePrice(opt.price);
+                  const noteText = visiblePrice(opt.note);
+                  const badgeText = visiblePrice(opt.badge);
+                  return (
                   <div
                     key={opt.label}
                     className={cn(
@@ -1074,18 +1089,22 @@ export function ProgramLanding({
                           : "border-forest-100",
                     )}
                   >
-                    {opt.badge && (
+                    {badgeText && (
                       <p className="text-xs font-semibold uppercase tracking-wider text-forest-500">
-                        {opt.badge}
+                        {badgeText}
                       </p>
                     )}
                     <p className="mt-1 text-sm font-semibold text-forest-600">{opt.label}</p>
-                    <p className="mt-2 font-display text-2xl font-bold text-forest-900 sm:text-3xl">
-                      {opt.price}
-                    </p>
-                    <p className="mt-2 flex-1 text-pretty text-sm leading-relaxed text-forest-600">
-                      {opt.note}
-                    </p>
+                    {priceText && (
+                      <p className="mt-2 font-display text-2xl font-bold text-forest-900 sm:text-3xl">
+                        {priceText}
+                      </p>
+                    )}
+                    {noteText && (
+                      <p className="mt-2 flex-1 text-pretty text-sm leading-relaxed text-forest-600">
+                        {noteText}
+                      </p>
+                    )}
                     <CtaLink
                       placementKey={programPricingPlacementKey(placementKey, i)}
                       href={href}
@@ -1096,7 +1115,8 @@ export function ProgramLanding({
                       {pricingButton.label}
                     </CtaLink>
                   </div>
-              ))}
+                  );
+              })}
             </div>
 
             {content.pricing.ps && (

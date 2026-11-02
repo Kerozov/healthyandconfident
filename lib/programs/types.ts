@@ -1,16 +1,19 @@
 import type { Locale } from "@/i18n/config";
+import { KUHNYA_ID, KUHNYA_PUBLIC_SLUG } from "@/lib/programs/kuhnya";
 
 export type ProgramLandingSlug =
   | "zhivey-bez-rezistentnost"
   | "preprogramirai-apetita"
   | "summer-programme"
-  | "po-stroyni-i-shtastlivi";
+  | "po-stroyni-i-shtastlivi"
+  | typeof KUHNYA_ID;
 
 export const PROGRAM_LANDING_SLUGS: ProgramLandingSlug[] = [
   "zhivey-bez-rezistentnost",
   "preprogramirai-apetita",
   "summer-programme",
   "po-stroyni-i-shtastlivi",
+  KUHNYA_ID,
 ];
 
 /**
@@ -24,6 +27,7 @@ export const PROGRAM_PUBLIC_SLUGS: Record<ProgramLandingSlug, string> = {
   "po-stroyni-i-shtastlivi": "21-dni",
   "preprogramirai-apetita": "klub",
   "summer-programme": "lyato",
+  [KUHNYA_ID]: KUHNYA_PUBLIC_SLUG,
 };
 
 /**
@@ -178,8 +182,11 @@ export type ProgramLandingContent = {
       badge?: string;
       /** Usually a placeholder — `{price}`, `3 × {amount}`. */
       price: string;
-      /** Quoted only until the card's button has a Stripe price. */
-      fallbackPrice: ProgramFallbackPrice;
+      /**
+       * Quoted only until the card's button has a Stripe price. Leave it out
+       * when there must be no amount on the page until the admin wires Stripe.
+       */
+      fallbackPrice?: ProgramFallbackPrice;
       note: string;
       cta: string;
       href?: string;

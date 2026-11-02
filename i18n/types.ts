@@ -1,4 +1,9 @@
-export type NavItem = { label: string; href: string };
+export type NavItem = {
+  label: string;
+  href: string;
+  /** Programmes under „Програми“ in the header. */
+  children?: { label: string; href: string }[];
+};
 
 export type Program = {
   badge?: string;

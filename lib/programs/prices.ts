@@ -33,7 +33,8 @@ export function programPricingPriceIds(
   );
 }
 
-function fromFallback(price: ProgramFallbackPrice): LivePrice {
+function fromFallback(price: ProgramFallbackPrice | undefined): LivePrice | undefined {
+  if (!price || !Number.isFinite(price.amount)) return undefined;
   return {
     unitAmount: Math.round(price.amount * 100),
     currency: price.currency ?? "eur",
@@ -60,7 +61,7 @@ const TOKEN = /\{(amount|price|monthly|total|perday|off)(?:@(\d+))?(?::([^}]*))?
 
 function fillTokens(
   text: string,
-  prices: LivePrice[],
+  prices: (LivePrice | undefined)[],
   ownCard: number,
   locale: Locale,
 ): string {
@@ -119,6 +120,7 @@ function fillDeep<T>(value: T, fill: (text: string) => string): T {
 /**
  * The page with every price placeholder replaced — by the Stripe price of the
  * card's button, or the card's `fallbackPrice` while that button has none.
+ * A card with neither keeps the `{price}` token, and the landing hides it.
  */
 export function fillProgramPrices(
   content: ProgramLandingContent,
