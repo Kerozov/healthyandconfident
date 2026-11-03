@@ -20,7 +20,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
   meta: {
     title: `${name} | Quick meals - Vessie Nay`,
     description:
-      "Ideas for quick healthy meals on busy evenings. Food combinations, not a weekly menu. For healthy people and for people with insulin resistance. Starts mid-November 2026.",
+      "No-cook ideas, 23 dinners and 5 lunches with familiar foods, and a smart-stock list. For busy evenings. Starts mid-November 2026.",
   },
   hero: {
     ...bg.hero,
@@ -28,11 +28,11 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     title: name,
     titleAccent: "Fast. Easy. Tasty.",
     subtitle:
-      "Evening arrives and cooking is the last thing there is time for. Here are ideas for quick healthy meals - thrown together from what is already at home.",
+      "The evening is short and cooking drops off. Inside: no-cook ideas, 23 dinners and 5 lunches with familiar foods, and what to keep in the cupboard, the fridge and the freezer.",
     bullets: [
-      "For busy evenings, not a free Sunday",
-      "Food combinations you can put on a plate in minutes",
-      "Tasty food for the whole table, from a normal shop",
+      "23 dinner ideas and 5 lunches",
+      "Meals with no cooking, for the evenings you will not cook",
+      "A smart stock list and one hour of prep on Sunday",
     ],
     primaryCta: "I want in the kitchen",
     secondaryCta: "See what's included",
@@ -65,7 +65,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     ...bg.vision!,
     title: "Picture a short dinner",
     paragraphs: [
-      "You open the fridge and put a plate together from what is there. You are not hunting through ten tabs. You are not cooking one meal “for the diet” and another for everyone else.",
+      "There is a ready option for the evening: a jar and a few vegetables, the fridge, the freezer, or no cooking at all. You are not hunting through ten tabs.",
       "The food has flavour. Your middle may not sit so heavy afterwards, and the afternoon may not flatten you - how much depends on where you start.",
       "How much your weight, your measurements or your energy will change depends on where you start and on how often dinner looks like this. There is no miracle here and no promise that anything “goes away”. There are ideas for quick meals that support the body.",
     ],
@@ -87,8 +87,8 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
         text: "You are not looking for another ban. You are looking for food you can live with after the first week.",
       },
       {
-        title: "Other people sit at the table",
-        text: "One meal for everyone. No second shift in the kitchen after everyone has sat down.",
+        title: "You want familiar food from a normal shop",
+        text: "Lentils, beans, eggs, cheese, roasted peppers, frozen vegetables. Not a speciality store.",
       },
       {
         title: "You are healthy and still want to eat well",
@@ -106,9 +106,9 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     positive: {
       title: `“${name}”`,
       bullets: [
-        "Quick meals for busy evenings, with food from a normal shop",
-        "Combinations of food, not a weekly sheet",
-        "Food with flavour the whole table can eat",
+        "23 dinner ideas and 5 lunches with familiar foods",
+        "No-cook ideas for breakfast, lunch and dinner",
+        "A list for the cupboard, fridge and freezer, plus one hour on Sunday",
         "For healthy people and for people watching blood sugar - including insulin resistance",
         "Starts mid-November 2026, from home, at your pace",
       ],
@@ -117,7 +117,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
       title: "It is not for you if…",
       bullets: [
         "You want a pill, a 10-day trick, or a promise that a condition will disappear.",
-        "You will not open the kitchen at all. This is cooking - quick, but it is cooking.",
+        "You want a ready weekly menu. These are separate meal ideas, not a plan for the week.",
         "You want someone else to cook for you every day.",
       ],
       closing:
@@ -128,28 +128,20 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     title: "What you get",
     items: [
       {
-        title: "Ideas for busy evenings",
-        text: "Quick meals for the end of the day, when time is short.",
+        title: "Healthy eating without cooking",
+        text: "Ideas for breakfast, lunch and dinner for the evenings you will not cook. For each, you pick three or four for the week. For example a bowl of yogurt and fruit, overnight oats, a smoked salmon salad, turkey wraps, a hummus plate.",
       },
       {
-        title: "Food combinations",
-        text: "What goes with what, so there is a plate without hours in the kitchen.",
+        title: "23 dinners and 5 lunches",
+        text: "What to cook quickly, with familiar foods from a Bulgarian kitchen: from the cupboard, the fridge, the freezer and the air fryer. For example lentil with tomatoes and savory, mish-mash, eggs Panagyurishte style, chicken with broccoli, meatballs, a shopska salad in a jar.",
       },
       {
-        title: "A shop that is not a speciality store",
-        text: "Ordinary food. You know what to buy and what to leave, without a three-hour loop of the aisles.",
+        title: "The smart stock",
+        text: "What to keep in the cupboard, the fridge and the freezer, so dinner is still possible when nothing was planned. Once a week you tick what you have. What is missing is the shopping list. The foods are easy to find in a normal shop and are also chosen to work with insulin resistance.",
       },
       {
-        title: "For a short evening after work",
-        text: "For the box at the office and for the day the plan fell apart.",
-      },
-      {
-        title: "One meal for the whole table",
-        text: "No separate pot “for the diet”. Everyone at home eats the same food.",
-      },
-      {
-        title: "How to choose when you eat out",
-        text: "A restaurant, the canteen, someone else's house. You know what to order and the evening is not ruined.",
+        title: "One hour on Sunday",
+        text: "A little prep for calmer evenings: boiled eggs, a double batch of meatballs, cooked lentils or beans in portions, roasted chicken, and cucumber and peppers cut up.",
       },
     ],
   },
@@ -170,28 +162,24 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     ],
   },
   curriculum: {
-    intro: "For busy people who want ideas for dinner, not another list of bans.",
+    intro: "For busy evenings: ready ideas for a meal, not a plan for the week.",
     title: "What stays after the programme",
     items: [
       {
-        title: "Cook dinner without disappearing into the kitchen",
-        text: "Short meals that work on a weekday.",
+        title: "Dinner even when you will not cook",
+        text: "There are separate no-cook ideas. For the week you pick three or four for breakfast, for lunch and for dinner.",
       },
       {
-        title: "Put a plate together from what you have",
-        text: "A combination for this evening, not a weekly plan.",
+        title: "Dinner from what you already have",
+        text: "23 dinner ideas and 5 lunches: from the cupboard, the fridge, the freezer or the air fryer. The amounts in those ideas are for one person.",
       },
       {
-        title: "Stop eating “healthy and awful”",
-        text: "Flavour is the condition for carrying on. Otherwise the idea dies in a drawer.",
+        title: "One hour on Sunday",
+        text: "Boiled eggs, meatballs, lentils or beans, roasted chicken and cut vegetables. The evenings after that are shorter.",
       },
       {
-        title: "Look after energy with the plate, not with panic",
-        text: "Steadier energy through the day - how much depends on where you start. This applies if you are healthy too. It does not replace treatment and it does not promise that insulin resistance disappears.",
-      },
-      {
-        title: "Feed the rest of the table too",
-        text: "One meal. Less washing up. Less “I am on a regime”.",
+        title: "Calmer energy, with no promise of a miracle",
+        text: "How much weight, your middle or your energy will change depends on where you start. This applies without a diagnosis too. It does not replace treatment and it does not promise that insulin resistance disappears.",
       },
     ],
     closing: "With care, and without miracle talk - Vessie Nay",
@@ -218,15 +206,15 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     },
     {
       q: "Will this take hours in the kitchen?",
-      a: "No. The programme is for busy evenings. The meals are short on purpose - for a weekday, not a free weekend.",
+      a: "Not for hours. There are ideas with no cooking at all. The other evenings are short: from a jar, the fridge, the freezer or the air fryer. On Sunday there is one hour of prep.",
     },
     {
-      q: "Do I need a separate pot?",
-      a: "No. The idea is one tasty meal for the table, from a normal shop.",
+      q: "How many people are the meals for?",
+      a: "In the quick-cooking ideas the amounts are for one person. If a portion is not enough, the guide says to add more vegetables.",
     },
     {
       q: "Is this a menu?",
-      a: "No. These are ideas for quick meals and food combinations. A ready weekly menu is not part of this programme.",
+      a: "No. These are separate meal ideas: no-cook options, 23 dinners and 5 lunches. A ready weekly menu is not part of this programme.",
     },
     {
       q: "Is it only for insulin resistance?",
