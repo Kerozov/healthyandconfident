@@ -336,7 +336,7 @@ export const en: Dictionary = {
       },
       {
         q: "Which program should I choose?",
-        a: `For a quick, easy start - “21 Days Slimmer & Happier”. If you are busy and want to learn fast, easy, tasty cooking with insulin resistance - “${KUHNYA_NAME.en}”. If you have more than 5 kg to lose or insulin resistance - the 3-month “Live Without Resistance” with group support. If cravings and emotional eating are your main struggle - the “Reprogram Your Appetite” club.`,
+        a: `For a quick, easy start - “21 Days Slimmer & Happier”. If your days are full and you want ideas for quick healthy meals - “${KUHNYA_NAME.en}”. If you have more than 5 kg to lose or insulin resistance - the 3-month “Live Without Resistance” with group support. If cravings and emotional eating are your main struggle - the “Reprogram Your Appetite” club.`,
       },
       {
         q: "How much time do I need each day?",

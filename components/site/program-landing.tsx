@@ -191,7 +191,13 @@ function FoodGallery({
   gallery,
   locale,
 }: {
-  gallery: { title: string; titleAccent?: string; images: string[] };
+  gallery: {
+    title: string;
+    titleAccent?: string;
+    images: string[];
+    captions?: Record<string, string>;
+    alts?: Record<string, string>;
+  };
   locale: Locale;
 }) {
   return (
@@ -199,20 +205,25 @@ function FoodGallery({
       <Container>
         <SectionTitle title={gallery.title} accent={gallery.titleAccent} />
         <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-          {gallery.images.map((src) => (
-            <figure
-              key={src}
-              className="relative aspect-square overflow-hidden rounded-2xl bg-cream-2 shadow-md ring-1 ring-forest-100/80"
-            >
-              <SiteImage
-                src={src}
-                alt={mediaAlt(src, locale) || gallery.title}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                imageClassName="object-cover transition duration-500 hover:scale-[1.03]"
-              />
-            </figure>
-          ))}
+          {gallery.images.map((src) => {
+            const caption = gallery.captions?.[src];
+            return (
+              <div key={src} className="flex flex-col gap-2">
+                <figure className="relative aspect-square overflow-hidden rounded-2xl bg-cream-2 shadow-md ring-1 ring-forest-100/80">
+                  <SiteImage
+                    src={src}
+                    alt={gallery.alts?.[src] || mediaAlt(src, locale) || gallery.title}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    imageClassName="object-cover transition duration-500 hover:scale-[1.03]"
+                  />
+                </figure>
+                {caption ? (
+                  <p className="text-center text-sm leading-snug text-forest-700">{caption}</p>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </Container>
     </section>

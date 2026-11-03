@@ -1,4 +1,4 @@
--- 086: buttons for „Кухня без резистентност“ (working title).
+-- 086: buttons for „Здравословно хранене за заети хора“.
 --
 -- The public name lives in lib/programs/kuhnya.ts. These rows are what
 -- Админ → Сайт → Бутони lists. No Stripe product is stored here: pick it on
@@ -8,23 +8,23 @@
 insert into public.site_cta_placements (key, label_bg, label_en) values
   (
     'product_kuhnya-bez-rezistentnost',
-    'Кухня без резистентност - главен бутон',
-    'Kitchen Without Resistance - primary button'
+    'Здравословно хранене за заети хора - главен бутон',
+    'Healthy Eating for Busy People - primary button'
   ),
   (
     'product_kuhnya-bez-rezistentnost_secondary',
-    'Кухня без резистентност - втори бутон горе',
-    'Kitchen Without Resistance - secondary button'
+    'Здравословно хранене за заети хора - втори бутон горе',
+    'Healthy Eating for Busy People - secondary button'
   ),
   (
     'product_kuhnya-bez-rezistentnost_pricing_0',
-    'Кухня без резистентност - цена',
-    'Kitchen Without Resistance - price'
+    'Здравословно хранене за заети хора - цена',
+    'Healthy Eating for Busy People - price'
   ),
   (
     'product_kuhnya-bez-rezistentnost_final',
-    'Кухня без резистентност - последен бутон на страницата',
-    'Kitchen Without Resistance - last button on the page'
+    'Здравословно хранене за заети хора - последен бутон на страницата',
+    'Healthy Eating for Busy People - last button on the page'
   )
 on conflict (key) do nothing;
 

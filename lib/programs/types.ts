@@ -116,7 +116,15 @@ export type ProgramLandingContent = {
     placementKey?: string;
     image?: string;
   };
-  galleries?: { title: string; titleAccent?: string; images: string[] }[];
+  galleries?: {
+    title: string;
+    titleAccent?: string;
+    images: string[];
+    /** Caption under one photo, keyed by its path. Other pages omit this. */
+    captions?: Record<string, string>;
+    /** Alt used instead of the shared one, keyed by path. */
+    alts?: Record<string, string>;
+  }[];
   pain?: { title: string; paragraphs: string[]; hook: string };
   vision?: { title: string; paragraphs: string[]; image?: string };
   audience?: {

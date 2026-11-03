@@ -6,8 +6,8 @@
  * the public path stay put so links and the Stripe buttons do not break.
  */
 export const KUHNYA_NAME = {
-  bg: "Кухня без резистентност",
-  en: "Kitchen Without Resistance",
+  bg: "Здравословно хранене за заети хора",
+  en: "Healthy Eating for Busy People",
 } as const;
 
 export const KUHNYA_ID = "kuhnya-bez-rezistentnost" as const;

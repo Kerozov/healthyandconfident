@@ -9,9 +9,8 @@ import {
 } from "../kuhnya";
 
 /**
- * English mirror of the cooking programme. The working title lives in
- * `lib/programs/kuhnya.ts`. Price tokens stay empty until the admin attaches
- * a Stripe product to the pricing button.
+ * English mirror. The display name lives in `lib/programs/kuhnya.ts`.
+ * Same photos as the Bulgarian page: no /images/7.jpg or /images/8.jpg.
  */
 const name = KUHNYA_NAME.en;
 const bg = kuhnyaBezRezistentnostBg;
@@ -19,9 +18,9 @@ const bg = kuhnyaBezRezistentnostBg;
 export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
   ...bg,
   meta: {
-    title: `${name} | Fast, tasty cooking - Vessie Nay`,
+    title: `${name} | Quick meals - Vessie Nay`,
     description:
-      "For busy people with insulin resistance. Learn to cook fast, easy, tasty food and build your own menus. Starts mid-November 2026.",
+      "Ideas for quick healthy meals on busy evenings. Food combinations, not a weekly menu. For healthy people and for people with insulin resistance. Starts mid-November 2026.",
   },
   hero: {
     ...bg.hero,
@@ -29,11 +28,11 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     title: name,
     titleAccent: "Fast. Easy. Tasty.",
     subtitle:
-      "The tummy is still there, the time is not, and “healthy” has always tasted like nothing. Here you learn to cook real food on a busy day - and to build the menu yourself.",
+      "Evening arrives and cooking is the last thing there is time for. Here are ideas for quick healthy meals - thrown together from what is already at home.",
     bullets: [
-      "For women with insulin resistance who are tired of choosing between taste and blood sugar",
-      "Recipes for 15-20 minutes, not for a free Sunday",
-      "Your own menus, from a normal shop - for you and for the table",
+      "For busy evenings, not a free Sunday",
+      "Food combinations you can put on a plate in minutes",
+      "Tasty food for the whole table, from a normal shop",
     ],
     primaryCta: "I want in the kitchen",
     secondaryCta: "See what's included",
@@ -43,25 +42,32 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
       title: "Food you can",
       titleAccent: "cook quickly",
       images: bg.galleries![0].images,
+      captions: {
+        "/images/11.jpg": "Quick meal ideas from the programme",
+      },
+      alts: {
+        "/images/9.jpg": "Collage of meals - salads, vegetables and protein",
+        "/images/11.jpg": "Quick meal ideas from the programme",
+      },
     },
   ],
   pain: {
-    title: "Know this day?",
+    title: "Know this evening?",
     paragraphs: [
-      "You wake up bloated before the coffee. Clothes pull. The scales stay quiet or creep up - and you already know it is not “just willpower”.",
-      "Insulin resistance keeps the loop going: hunger, the afternoon crash, hunger again. Extra weight comes back, however many Monday diets you start.",
-      "Then evening. Work has eaten the day. You have no time to cook. You order. Or you throw something in a pan and feel cross about it afterwards.",
-      "And healthy food? Dry, a separate pot just for you, and nobody else at home will eat it. So you quit before you have really started.",
+      "The day is over. There is no energy left to cook. You order. Or you throw something in a pan and feel cross about it afterwards.",
+      "Healthy food so far has been dry and bland. A separate pot nobody else wants. So you quit before you have really started.",
+      "Your middle feels heavy, clothes pull, the scales stay quiet or creep up. And it is already clear this is not “just willpower”.",
+      "The same is true if you are healthy, and if blood sugar worries you. Insulin resistance is one of the cases, not the only one.",
     ],
-    hook: "Stop choosing between time, taste and blood sugar. The kitchen can be on your side.",
+    hook: "Stop choosing between time and taste. Dinner can be quick and healthy.",
   },
   vision: {
     ...bg.vision!,
-    title: "Picture dinner in 20 minutes",
+    title: "Picture a short dinner",
     paragraphs: [
-      "You open the fridge and you know what is happening. You are not hunting through ten tabs. You are not cooking one meal “for the diet” and another for everyone else.",
-      "The food has flavour. Your middle may not sit so heavy afterwards, and the afternoon may not flatten you - how much depends on where you start. And the menu is yours - built for your day, not a stranger's list that does not fit your life.",
-      "How much your weight, your measurements or your energy will change depends on where you start and on how steadily you cook. There is no miracle here and no promise that anything “goes away”. There is a clear kitchen that supports your body.",
+      "You open the fridge and put a plate together from what is there. You are not hunting through ten tabs. You are not cooking one meal “for the diet” and another for everyone else.",
+      "The food has flavour. Your middle may not sit so heavy afterwards, and the afternoon may not flatten you - how much depends on where you start.",
+      "How much your weight, your measurements or your energy will change depends on where you start and on how often dinner looks like this. There is no miracle here and no promise that anything “goes away”. There are ideas for quick meals that support the body.",
     ],
   },
   audience: {
@@ -69,81 +75,81 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     title: `${name} is for you if…`,
     items: [
       {
-        title: "You have insulin resistance",
-        text: "And you are tired of every meal feeling like a gamble. You want plates that help blood sugar stay steadier (how much depends on where you start), without eating cardboard.",
-      },
-      {
-        title: "The tummy and the extra weight annoy you every time you get dressed",
-        text: "You are not looking for another ban. You are looking for food you can live with after the first week.",
-      },
-      {
-        title: "You have no time to cook",
-        text: "Between work, children and an evening when you are simply tired. The recipes here are short on purpose.",
+        title: "The evening is packed and cooking drops off",
+        text: "Between work and a late end to the day. The ideas here are short on purpose.",
       },
       {
         title: "Healthy food has tasted like nothing",
-        text: "If it has no flavour, you will not repeat it. Taste is part of the plan, not a reward for later.",
+        text: "If it has no flavour, it will not be repeated. Taste is part of the meal, not a reward for later.",
       },
       {
-        title: "You want to build the menu yourself",
-        text: "Not follow someone else's sheet for the rest of your life. You learn to assemble your week - and to change it when the day falls apart.",
+        title: "The tummy and the extra weight annoy you when you get dressed",
+        text: "You are not looking for another ban. You are looking for food you can live with after the first week.",
       },
       {
-        title: "You cook for more than yourself",
-        text: "One meal for the table. No second shift in the kitchen after everyone has sat down.",
+        title: "Other people sit at the table",
+        text: "One meal for everyone. No second shift in the kitchen after everyone has sat down.",
+      },
+      {
+        title: "You are healthy and still want to eat well",
+        text: "The advice is not only for a diagnosis. It applies when nothing hurts and the days are simply full.",
+      },
+      {
+        title: "You have insulin resistance",
+        text: "The plates help blood sugar stay steadier (how much depends on where you start), without eating cardboard. This is not a treatment and it does not replace a doctor.",
       },
     ],
-    closing: "If you recognise yourself in at least two of these, this kitchen is for you.",
+    closing: "If you recognise yourself in at least two of these, the programme is for you.",
   },
   comparison: {
     title: "This is not another diet",
     positive: {
       title: `“${name}”`,
       bullets: [
-        "Fast recipes for busy days, with food from a normal shop",
-        "You learn to build the menu, instead of searching for one again every evening",
-        "Food with flavour that the whole table can eat",
-        "A clear idea of the plate and of blood sugar - without counting calories into the ground",
+        "Quick meals for busy evenings, with food from a normal shop",
+        "Combinations of food, not a weekly sheet",
+        "Food with flavour the whole table can eat",
+        "For healthy people and for people watching blood sugar - including insulin resistance",
         "Starts mid-November 2026, from home, at your pace",
       ],
     },
     negative: {
       title: "It is not for you if…",
       bullets: [
-        "You want a pill, a 10-day trick, or a promise that your condition will disappear.",
-        "You are not willing to open the kitchen at all. This is cooking - quick, but it is cooking.",
-        "You want someone else to plan every bite and write you a menu every morning forever.",
+        "You want a pill, a 10-day trick, or a promise that a condition will disappear.",
+        "You will not open the kitchen at all. This is cooking - quick, but it is cooking.",
+        "You want someone else to cook for you every day.",
       ],
       closing:
-        "The programme teaches cooking and choosing food. It is not a treatment and it does not replace your doctor.",
+        "The programme offers ideas for quick meals and for choosing food. It is not a treatment and it does not replace a doctor.",
     },
   },
   includes: {
     title: "What you get",
     items: [
       {
-        title: "Fast recipes for breakfast, lunch and dinner",
-        text: "Short steps, few pans, flavour you want to repeat tomorrow.",
+        title: "Ideas for busy evenings",
+        text: "Quick meals for the end of the day, when time is short.",
       },
       {
-        title: "How to build the menu yourself",
-        text: "Not one frozen plan. A way to lay out your week and change it when the day goes sideways.",
+        title: "Food combinations",
+        text: "What goes with what, so there is a plate without hours in the kitchen.",
       },
       {
         title: "A shop that is not a speciality store",
         text: "Ordinary food. You know what to buy and what to leave, without a three-hour loop of the aisles.",
       },
       {
-        title: "Cooking when you have 15-20 minutes",
-        text: "For the evening after work, the box at the office, the day the plan collapsed.",
+        title: "For a short evening after work",
+        text: "For the box at the office and for the day the plan fell apart.",
       },
       {
         title: "One meal for the whole table",
-        text: "No separate pot “for the diet”. The household eats the same food.",
+        text: "No separate pot “for the diet”. Everyone at home eats the same food.",
       },
       {
         title: "How to choose when you eat out",
-        text: "A restaurant, the canteen, someone else's house. You know what to order and you do not come home feeling you have broken everything.",
+        text: "A restaurant, the canteen, someone else's house. You know what to order and the evening is not ruined.",
       },
     ],
   },
@@ -164,24 +170,24 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     ],
   },
   curriculum: {
-    intro: "For busy people who want a kitchen, not another list of bans.",
-    title: "What you will be able to do",
+    intro: "For busy people who want ideas for dinner, not another list of bans.",
+    title: "What stays after the programme",
     items: [
       {
         title: "Cook dinner without disappearing into the kitchen",
-        text: "Short recipes that work on a weekday.",
+        text: "Short meals that work on a weekday.",
       },
       {
-        title: "Write a menu for the week",
-        text: "And change it on Wednesday without feeling you have failed.",
+        title: "Put a plate together from what you have",
+        text: "A combination for this evening, not a weekly plan.",
       },
       {
         title: "Stop eating “healthy and awful”",
-        text: "Flavour is the condition for carrying on. Otherwise the plan dies in a drawer.",
+        text: "Flavour is the condition for carrying on. Otherwise the idea dies in a drawer.",
       },
       {
-        title: "Look after blood sugar with the plate, not with panic",
-        text: "Steadier energy through the day - how much depends on where you start. This does not replace treatment and it does not promise that insulin resistance disappears.",
+        title: "Look after energy with the plate, not with panic",
+        text: "Steadier energy through the day - how much depends on where you start. This applies if you are healthy too. It does not replace treatment and it does not promise that insulin resistance disappears.",
       },
       {
         title: "Feed the rest of the table too",
@@ -211,38 +217,38 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
       a: "Mid-November 2026.",
     },
     {
-      q: "Will I spend hours in the kitchen?",
-      a: "No. The programme is for busy people. The recipes are short on purpose - for a weekday, not a free weekend.",
+      q: "Will this take hours in the kitchen?",
+      a: "No. The programme is for busy evenings. The meals are short on purpose - for a weekday, not a free weekend.",
     },
     {
-      q: "Do I have to cook a separate meal for myself?",
+      q: "Do I need a separate pot?",
       a: "No. The idea is one tasty meal for the table, from a normal shop.",
     },
     {
-      q: "Is it suitable if I have insulin resistance?",
-      a: "Yes - the whole kitchen is built around steadier blood sugar. It is not a treatment, it does not promise the condition will disappear, and it does not replace your doctor. If you take medication, tell your doctor before you change how you eat.",
+      q: "Is this a menu?",
+      a: "No. These are ideas for quick meals and food combinations. A ready weekly menu is not part of this programme.",
     },
     {
-      q: "Will I lose weight and will the tummy go down?",
-      a: "You may notice a change in weight, measurements and energy. How much depends on where you start and on how steadily you cook and eat. There is no fixed promise.",
+      q: "Is it only for insulin resistance?",
+      a: "No. The advice is for busy people - for healthy people, and when blood sugar is a concern, including insulin resistance. It is not a treatment and it does not replace a doctor. If you take medication, tell a doctor before you change how you eat.",
+    },
+    {
+      q: "Will weight and the tummy change?",
+      a: "There may be a change in weight, measurements and energy. How much depends on where you start and on how often dinner looks like this. There is no fixed promise.",
     },
     {
       q: "Will healthy food still taste like nothing?",
-      a: "No. If it has no flavour, you will not repeat it. Taste is part of the programme, not a compromise.",
-    },
-    {
-      q: "Do I build the menu myself, or do I get a ready-made list?",
-      a: "Both: you have something to start from, and you learn to assemble your own week so you are not stuck on someone else's list every month.",
+      a: "No. If it has no flavour, it will not be repeated. Taste is part of the programme, not a compromise.",
     },
   ],
   pricing: {
     ...bg.pricing!,
     title: "Come into a kitchen",
-    titleAccent: "that actually works",
+    titleAccent: "that works on a busy day",
     subtitle: "Start: mid-November 2026.",
     audienceTitle: "Before you tap",
     audienceBullets: [
-      "This is cooking and choosing food, not a treatment, and it does not replace your doctor. If you take medication, talk to them before you change how you eat.",
+      "This is cooking and choosing food, not a treatment, and it does not replace a doctor. If you take medication, tell a doctor before you change how you eat.",
       "Any change depends on where you start.",
       "If you want a miracle in ten days, this programme is not your path.",
     ],
