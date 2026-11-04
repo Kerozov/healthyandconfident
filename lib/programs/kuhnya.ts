@@ -1,7 +1,7 @@
 /**
- * Working title for the cooking programme.
+ * Display name for the cooking programme.
  *
- * The public name is not final. Change `bg` and `en` here and the landing,
+ * Change `bg` and `en` here and the landing,
  * the header, the footer and the admin button group pick it up. The id and
  * the public path stay put so links and the Stripe buttons do not break.
  */

@@ -8,10 +8,6 @@ import {
   KUHNYA_SIGNUP_TAG,
 } from "../kuhnya";
 
-/**
- * English mirror. The display name lives in `lib/programs/kuhnya.ts`.
- * Same photos as the Bulgarian page: no /images/7.jpg or /images/8.jpg.
- */
 const name = KUHNYA_NAME.en;
 const bg = kuhnyaBezRezistentnostBg;
 
@@ -20,249 +16,162 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
   meta: {
     title: `${name} | Quick meals - Vessie Nay`,
     description:
-      "No-cook ideas, 23 dinners and 5 lunches with familiar foods, and a smart-stock list. For busy evenings. Starts mid-November 2026.",
+      "Videos and three guides for busy days: no-cook meals, 23 dinner ideas and 5 lunches, ingredient checklists and weekly prep. With Vessie Nay.",
   },
   hero: {
     ...bg.hero,
-    eyebrow: "New programme · starts mid-November 2026",
+    eyebrow: "New programme · planned start mid-November 2026",
     title: name,
-    titleAccent: "Fast. Easy. Tasty.",
+    titleAccent: "What's for dinner tonight?",
     subtitle:
-      "The evening is short and cooking drops off. Inside: no-cook ideas, 23 dinners and 5 lunches with familiar foods, and what to keep in the cupboard, the fridge and the freezer.",
+      "You get home late and still need to sort out dinner. I've put together quick meals and ways to combine ready-to-eat ingredients, so you have something to make on your busiest days.",
     bullets: [
-      "23 dinner ideas and 5 lunches",
-      "Meals with no cooking, for the evenings you will not cook",
-      "A smart stock list and one hour of prep on Sunday",
+      "23 dinner ideas and 5 lunches with familiar ingredients",
+      "No-cook ideas for breakfast, lunch and dinner",
+      "Ingredient checklists and prep for the week ahead",
     ],
-    primaryCta: "I want in the kitchen",
-    secondaryCta: "See what's included",
+    primaryCta: "See how to join",
+    secondaryCta: "See what you get",
+    imageAlt: "Baked fish with vegetables and lemon",
   },
   galleries: [
     {
-      title: "Food you can",
-      titleAccent: "cook quickly",
+      title: "Food from Vessie's kitchen",
       images: bg.galleries![0].images,
-      captions: {
-        "/images/11.jpg": "Quick meal ideas from the programme",
-      },
       alts: {
-        "/images/9.jpg": "Collage of meals - salads, vegetables and protein",
-        "/images/11.jpg": "Quick meal ideas from the programme",
+        "/images/6.jpg": "Baked fish with vegetables and lemon",
+        "/images/9.jpg": "Photos of home-cooked meals with salads and vegetables",
+        "/images/10.jpg": "Salad with grilled halloumi, avocado and tomatoes",
+        "/images/12.jpg": "Bowl of porridge with raspberries and blueberries",
       },
     },
   ],
   pain: {
-    title: "Know this evening?",
+    title: "What's for dinner?",
     paragraphs: [
-      "The day is over. There is no energy left to cook. You order. Or you throw something in a pan and feel cross about it afterwards.",
-      "Healthy food so far has been dry and bland. A separate pot nobody else wants. So you quit before you have really started.",
-      "Your middle feels heavy, clothes pull, the scales stay quiet or creep up. And it is already clear this is not “just willpower”.",
-      "The same is true if you are healthy, and if blood sugar worries you. Insulin resistance is one of the cases, not the only one.",
+      "After work, there are errands, chores and plenty of other things to do. By the time you reach the kitchen, you're hungry. You open the fridge and wonder what you can make with what's left.",
+      "This programme is for those evenings. It includes quick meals with familiar ingredients, lunches to pack and combinations you can put together without turning on the cooker.",
     ],
-    hook: "Stop choosing between time and taste. Dinner can be quick and healthy.",
+    hook: "Eggs with peppers, a bean salad or chicken with broccoli. There are plenty of quick options.",
   },
   vision: {
     ...bg.vision!,
-    title: "Picture a short dinner",
+    title: "Start with what you already have",
     paragraphs: [
-      "There is a ready option for the evening: a jar and a few vegetables, the fridge, the freezer, or no cooking at all. You are not hunting through ten tabs.",
-      "The food has flavour. Your middle may not sit so heavy afterwards, and the afternoon may not flatten you - how much depends on where you start.",
-      "How much your weight, your measurements or your energy will change depends on where you start and on how often dinner looks like this. There is no miracle here and no promise that anything “goes away”. There are ideas for quick meals that support the body.",
+      "A jar of beans, roasted peppers and a few vegetables make a quick salad. Eggs and cheese can become mish-mash, a Bulgarian dish with peppers and tomatoes. Yesterday's cooked chicken gets tomorrow's lunch well on its way.",
+      "I'll show you what to keep on hand and what you can prepare ahead, so dinner doesn't mean starting from scratch every night.",
     ],
+    imageAlt: "Salad with grilled halloumi, avocado and tomatoes",
   },
   audience: {
     eyebrow: "Who it's for",
-    title: `${name} is for you if…`,
+    title: "You'll find this useful if…",
     items: [
       {
-        title: "The evening is packed and cooking drops off",
-        text: "Between work and a late end to the day. The ideas here are short on purpose.",
+        title: "You have little time to cook in the evening",
+        text: "You want meals that take little preparation, with options for days when you won't cook at all.",
       },
       {
-        title: "Healthy food has tasted like nothing",
-        text: "If it has no flavour, it will not be repeated. Taste is part of the meal, not a reward for later.",
+        title: "You're always wondering what to eat",
+        text: "You want ideas using eggs, vegetables, beans, fish and other ingredients you already buy.",
       },
       {
-        title: "The tummy and the extra weight annoy you when you get dressed",
-        text: "You are not looking for another ban. You are looking for food you can live with after the first week.",
-      },
-      {
-        title: "You want familiar food from a normal shop",
-        text: "Lentils, beans, eggs, cheese, roasted peppers, frozen vegetables. Not a speciality store.",
-      },
-      {
-        title: "You are healthy and still want to eat well",
-        text: "The advice is not only for a diagnosis. It applies when nothing hurts and the days are simply full.",
+        title: "You want to eat better on busy days",
+        text: "The programme is for women and men, including people without health conditions. Use the ideas for yourself and at home.",
       },
       {
         title: "You have insulin resistance",
-        text: "The plates help blood sugar stay steadier (how much depends on where you start), without eating cardboard. This is not a treatment and it does not replace a doctor.",
+        text: "The Smart Stock guide includes an ingredient checklist Vessie has also selected with insulin resistance in mind.",
       },
     ],
-    closing: "If you recognise yourself in at least two of these, the programme is for you.",
-  },
-  comparison: {
-    title: "This is not another diet",
-    positive: {
-      title: `“${name}”`,
-      bullets: [
-        "23 dinner ideas and 5 lunches with familiar foods",
-        "No-cook ideas for breakfast, lunch and dinner",
-        "A list for the cupboard, fridge and freezer, plus one hour on Sunday",
-        "For healthy people and for people watching blood sugar - including insulin resistance",
-        "Starts mid-November 2026, from home, at your pace",
-      ],
-    },
-    negative: {
-      title: "It is not for you if…",
-      bullets: [
-        "You want a pill, a 10-day trick, or a promise that a condition will disappear.",
-        "You want a ready weekly menu. These are separate meal ideas, not a plan for the week.",
-        "You want someone else to cook for you every day.",
-      ],
-      closing:
-        "The programme offers ideas for quick meals and for choosing food. It is not a treatment and it does not replace a doctor.",
-    },
   },
   includes: {
     title: "What you get",
     items: [
       {
-        title: "Healthy eating without cooking",
-        text: "Ideas for breakfast, lunch and dinner for the evenings you will not cook. For each, you pick three or four for the week. For example a bowl of yogurt and fruit, overnight oats, a smoked salmon salad, turkey wraps, a hummus plate.",
+        title: "Videos with Vessie",
+        text: "Videos are part of the programme. Alongside them, you receive three guides with meal ideas and checklists to use in the kitchen.",
       },
       {
-        title: "23 dinners and 5 lunches",
-        text: "What to cook quickly, with familiar foods from a Bulgarian kitchen: from the cupboard, the fridge, the freezer and the air fryer. For example lentil with tomatoes and savory, mish-mash, eggs Panagyurishte style, chicken with broccoli, meatballs, a shopska salad in a jar.",
+        title: "Healthy Eating Without Cooking",
+        text: "Breakfast, lunch and dinner combinations using ready-to-eat or previously prepared ingredients. Examples include yoghurt with fruit, smoked salmon salad and a hummus platter. Some ideas use boiled eggs or cooked chicken.",
       },
       {
-        title: "The smart stock",
-        text: "What to keep in the cupboard, the fridge and the freezer, so dinner is still possible when nothing was planned. Once a week you tick what you have. What is missing is the shopping list. The foods are easy to find in a normal shop and are also chosen to work with insulin resistance.",
+        title: "What Can I Cook Quickly?",
+        text: "23 dinner ideas and 5 lunches with familiar ingredients from Bulgarian cooking. Organised by what you have in the cupboard, fridge and freezer, with a separate air fryer section. Each meal has quantities for one person and a preparation time.",
       },
       {
-        title: "One hour on Sunday",
-        text: "A little prep for calmer evenings: boiled eggs, a double batch of meatballs, cooked lentils or beans in portions, roasted chicken, and cucumber and peppers cut up.",
+        title: "The Smart Stock",
+        text: "Checklists for your cupboard, fridge and freezer, plus space for your shopping list. It also includes One Hour on Sunday, with ideas for food to cook or portion ahead.",
       },
-    ],
-  },
-  pillars: {
-    title: "Before you start",
-    items: [
       ...(KUHNYA_SHOW_CHALLENGE_BONUS
         ? [{ title: KUHNYA_CHALLENGE_BONUS_TITLE.en, text: "" }]
         : []),
-      {
-        title: "Start: mid-November 2026",
-        text: "That is when the programme opens.",
-      },
-      {
-        title: "The change is not the same for everyone",
-        text: "How much your weight, your middle or your energy shifts depends on where you start and on how steadily you keep going. There is no fixed number and no promise of a cure.",
-      },
     ],
-  },
-  curriculum: {
-    intro: "For busy evenings: ready ideas for a meal, not a plan for the week.",
-    title: "What stays after the programme",
-    items: [
-      {
-        title: "Dinner even when you will not cook",
-        text: "There are separate no-cook ideas. For the week you pick three or four for breakfast, for lunch and for dinner.",
-      },
-      {
-        title: "Dinner from what you already have",
-        text: "23 dinner ideas and 5 lunches: from the cupboard, the fridge, the freezer or the air fryer. The amounts in those ideas are for one person.",
-      },
-      {
-        title: "One hour on Sunday",
-        text: "Boiled eggs, meatballs, lentils or beans, roasted chicken and cut vegetables. The evenings after that are shorter.",
-      },
-      {
-        title: "Calmer energy, with no promise of a miracle",
-        text: "How much weight, your middle or your energy will change depends on where you start. This applies without a diagnosis too. It does not replace treatment and it does not promise that insulin resistance disappears.",
-      },
-    ],
-    closing: "With care, and without miracle talk - Vessie Nay",
   },
   trust: {
     ...bg.trust!,
-    title: "Why trust me in the kitchen",
+    title: "Meet the person behind the programme",
     greeting: "Hello, I'm Vessie Nay.",
     credentials: [
       "Holistic nutritionist, B.Med.Sc. (Hons), Cambridge CDEP",
-      "Specialist in insulin resistance and Type 2 Diabetes",
-      "Years of practice in the UK, working with people in many countries",
-      "Author of Live Without Resistance and of the 21 Days Slimmer and Happier challenge",
+      "UK practice and online work with people in different countries",
+      "Author of Live Without Resistance and the 21 Days Slimmer and Happier challenge",
+      "Specialist in insulin resistance and type 2 diabetes",
     ],
-    accolades: [
-      "National award for work on insulin resistance",
-      "Food that gets cooked at home - not a plan that only lives on paper",
-    ],
+    accolades: ["National award for work on insulin resistance"],
   },
   faq: [
     {
-      q: "When does it start?",
-      a: "Mid-November 2026.",
+      q: "When does the programme start?",
+      a: "The planned start is mid-November 2026.",
     },
     {
-      q: "Will this take hours in the kitchen?",
-      a: "Not for hours. There are ideas with no cooking at all. The other evenings are short: from a jar, the fridge, the freezer or the air fryer. On Sunday there is one hour of prep.",
+      q: "Does it include a weekly menu?",
+      a: "You receive individual meal ideas and food combinations. A ready-made weekly menu is not included in this programme.",
     },
     {
-      q: "How many people are the meals for?",
-      a: "In the quick-cooking ideas the amounts are for one person. If a portion is not enough, the guide says to add more vegetables.",
+      q: "How long does the cooking take?",
+      a: "The times in What Can I Cook Quickly? range from 5 to 30 minutes, depending on the dish. Some use pre-cooked beans, lentils or meat. There is also a separate guide with no-cook ideas.",
     },
     {
-      q: "Is this a menu?",
-      a: "No. These are separate meal ideas: no-cook options, 23 dinners and 5 lunches. A ready weekly menu is not part of this programme.",
+      q: "How many people are the quantities for?",
+      a: "The quantities in What Can I Cook Quickly? are for one person. Increase the ingredients for the number of portions you need.",
     },
     {
-      q: "Is it only for insulin resistance?",
-      a: "No. The advice is for busy people - for healthy people, and when blood sugar is a concern, including insulin resistance. It is not a treatment and it does not replace a doctor. If you take medication, tell a doctor before you change how you eat.",
+      q: "Do I need an air fryer?",
+      a: "Only some of the ideas use an air fryer. The guide also includes salads, dishes made in a frying pan and no-cook options.",
     },
     {
-      q: "Will weight and the tummy change?",
-      a: "There may be a change in weight, measurements and energy. How much depends on where you start and on how often dinner looks like this. There is no fixed promise.",
-    },
-    {
-      q: "Will healthy food still taste like nothing?",
-      a: "No. If it has no flavour, it will not be repeated. Taste is part of the programme, not a compromise.",
+      q: "Is it only for people with insulin resistance?",
+      a: "The programme is for busy women and men, including people without a diagnosis. The materials are educational and do not replace medical consultation, diagnosis or treatment.",
     },
   ],
   pricing: {
     ...bg.pricing!,
-    title: "Come into a kitchen",
-    titleAccent: "that works on a busy day",
-    subtitle: "Start: mid-November 2026.",
-    audienceTitle: "Before you tap",
-    audienceBullets: [
-      "This is cooking and choosing food, not a treatment, and it does not replace a doctor. If you take medication, tell a doctor before you change how you eat.",
-      "Any change depends on where you start.",
-      "If you want a miracle in ten days, this programme is not your path.",
-    ],
+    title: "Join the programme",
+    subtitle: "Planned start: mid-November 2026.",
     options: [
       {
         ...bg.pricing!.options[0],
         label: name,
-        badge: "Starts mid-November 2026",
-        price: "{price}",
-        note: "",
-        cta: "I want in the kitchen",
+        note: "Videos and three guides for eating well on busy days.",
+        cta: "Join the programme",
       },
     ],
   },
   waitlist: {
-    pending: "Signup opens soon.",
-    prompt: "Leave your email and you will get the price and first chance at a place.",
-    button: "Save me a place",
-    consent: "I agree to receive emails about this programme. You can unsubscribe at any time.",
-    success: "You are on the list. We will write with the price and first chance at a place.",
+    pending: "Signup opens soon",
+    prompt: "Leave your email and we'll send you the price and details when signup opens.",
+    button: "Notify me",
+    consent: "I agree to receive emails about this programme. I can unsubscribe at any time.",
+    success: "Your email is on the notification list. We'll write when signup opens.",
     source: KUHNYA_SIGNUP_SOURCE,
     tag: KUHNYA_SIGNUP_TAG,
   },
   finalCta: {
-    title: "Enough of bland food. Enough of “I have no time”.",
-    cta: "Yes, I want this kitchen",
+    title: "Ideas for your next busy evening",
+    cta: "See how to join",
     href: bg.finalCta!.href,
   },
 };

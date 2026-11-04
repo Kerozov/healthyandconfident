@@ -115,6 +115,7 @@ export type ProgramLandingContent = {
     secondaryHref?: string;
     placementKey?: string;
     image?: string;
+    imageAlt?: string;
   };
   galleries?: {
     title: string;
@@ -126,7 +127,7 @@ export type ProgramLandingContent = {
     alts?: Record<string, string>;
   }[];
   pain?: { title: string; paragraphs: string[]; hook: string };
-  vision?: { title: string; paragraphs: string[]; image?: string };
+  vision?: { title: string; paragraphs: string[]; image?: string; imageAlt?: string };
   audience?: {
     eyebrow?: string;
     title: string;

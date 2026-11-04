@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 
 const pillarIcons = [Flame, Heart, Zap];
 const audienceIcons = [Scale, Droplets, Leaf, Shield, Stethoscope, Sun, Moon];
+const cookingAudienceIcons = [Moon, Leaf, Sun, Stethoscope];
 
 /** `{price}` and the other money tokens, still unfilled. */
 const UNRESOLVED_PRICE =
@@ -311,12 +312,12 @@ export function ProgramLanding({
               <LandingFigure
                 layout="hero"
                 src={hero.image}
-                alt={mediaAlt(hero.image, locale) || hero.title}
+                alt={hero.imageAlt ?? (mediaAlt(hero.image, locale) || hero.title)}
                 priority
                 sizes="(max-width: 1024px) 90vw, 480px"
                 figureClassName={cn(
                   "mx-auto max-w-[min(100%,320px)] rounded-2xl border border-white/10 shadow-2xl sm:max-w-sm sm:rounded-3xl lg:order-2 lg:mx-0 lg:max-w-none",
-                  olive ? "order-2" : "order-1",
+                  olive ? "order-2 aspect-[4/3]" : "order-1",
                 )}
               />
             )}
@@ -334,9 +335,9 @@ export function ProgramLanding({
                     : "font-display text-3xl sm:text-5xl lg:text-6xl",
                 )}
               >
-                <span className="block">{hero.title}</span>
+                <span className={cn("block", olive && "text-balance")}>{hero.title}</span>
                 {hero.titleAccent && (
-                  <span className="mt-1 block text-gold-200 sm:mt-3">{hero.titleAccent}</span>
+                  <span className={cn("mt-1 block text-gold-200 sm:mt-3", olive && "text-2xl font-medium leading-snug sm:text-3xl")}>{hero.titleAccent}</span>
                 )}
               </h1>
 
@@ -469,7 +470,7 @@ export function ProgramLanding({
             {content.vision.image && (
               <LandingFigure
                 src={content.vision.image}
-                alt={mediaAlt(content.vision.image, locale) || content.vision.title}
+                alt={content.vision.imageAlt ?? (mediaAlt(content.vision.image, locale) || content.vision.title)}
                 figureClassName={cn("rounded-3xl shadow-xl ring-1 ring-forest-100/80", splitImageCol)}
               />
             )}
@@ -485,9 +486,9 @@ export function ProgramLanding({
               eyebrow={content.audience.eyebrow}
               title={content.audience.title}
             />
-            <div className="mt-14 grid gap-5 md:grid-cols-3">
+            <div className={cn("mt-14 grid gap-5", olive ? "md:grid-cols-2" : "md:grid-cols-3")}>
               {content.audience.items.map((item, i) => {
-                const Icon = audienceIcons[i] ?? Heart;
+                const Icon = (olive ? cookingAudienceIcons : audienceIcons)[i] ?? Heart;
                 return (
                   <div
                     key={item.title}
