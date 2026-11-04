@@ -317,7 +317,10 @@ export function ProgramLanding({
                 sizes="(max-width: 1024px) 90vw, 480px"
                 figureClassName={cn(
                   "mx-auto max-w-[min(100%,320px)] rounded-2xl border border-white/10 shadow-2xl sm:max-w-sm sm:rounded-3xl lg:order-2 lg:mx-0 lg:max-w-none",
-                  olive ? "order-2 aspect-[4/3]" : "order-1",
+                  // A portrait cover keeps its own 3:4 frame instead of being cropped.
+                  olive
+                    ? cn("order-2", isGraphicCoverImage(hero.image) ? "lg:max-w-md lg:justify-self-center" : "aspect-[4/3]")
+                    : "order-1",
                 )}
               />
             )}
@@ -1172,6 +1175,10 @@ export function ProgramLanding({
                     locale,
                   );
                   const showWaitlist = Boolean(olive && content.waitlist && !configured);
+                  // Unwired, the card's button falls back to `#pricing` — a click
+                  // that goes nowhere. Show the price alone until the admin wires it.
+                  const pointsAtItself = !configured && href === "#pricing";
+                  const oldPriceText = priceText ? visiblePrice(opt.oldPrice) : null;
                   return (
                   <div
                     key={opt.label}
@@ -1191,8 +1198,14 @@ export function ProgramLanding({
                     )}
                     <p className="mt-1 text-sm font-semibold text-forest-600">{opt.label}</p>
                     {priceText && (
-                      <p className="mt-2 font-display text-2xl font-bold text-forest-900 sm:text-3xl">
-                        {priceText}
+                      <p className="mt-2 flex flex-wrap items-baseline gap-x-3 font-display text-2xl font-bold text-forest-900 sm:text-3xl">
+                        <span>{priceText}</span>
+                        {oldPriceText && (
+                          <s className="text-lg font-semibold text-forest-400 sm:text-xl">
+                            <span className="sr-only">{locale === "bg" ? "вместо " : "instead of "}</span>
+                            {oldPriceText}
+                          </s>
+                        )}
                       </p>
                     )}
                     {showWaitlist && (
@@ -1225,7 +1238,7 @@ export function ProgramLanding({
                           />
                         </div>
                       </div>
-                    ) : (
+                    ) : pointsAtItself ? null : (
                     <CtaLink
                       placementKey={programPricingPlacementKey(placementKey, i)}
                       href={href}

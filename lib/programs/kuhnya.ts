@@ -16,10 +16,17 @@ export const KUHNYA_ID = "kuhnya-bez-rezistentnost" as const;
 export const KUHNYA_PUBLIC_SLUG = "kuhnya" as const;
 
 /**
- * Admin → Сайт → Бутони. The price on the page is the Stripe price attached
- * to `${KUHNYA_PLACEMENT_KEY}_pricing_0`. No amount is stored in code.
+ * Admin → Сайт → Бутони. Once a Stripe price is attached to
+ * `${KUHNYA_PLACEMENT_KEY}_pricing_0`, the page quotes that price and the
+ * button opens Checkout. Until then the page quotes `KUHNYA_PRICE`.
  */
 export const KUHNYA_PLACEMENT_KEY = `product_${KUHNYA_ID}` as const;
+
+/** Euros, shown while the price button has no Stripe price. */
+export const KUHNYA_PRICE = 39;
+
+/** Euros, struck through next to the price. */
+export const KUHNYA_OLD_PRICE = 69;
 
 /**
  * Not confirmed. Flip to true to show one card whose title is
@@ -31,10 +38,6 @@ export const KUHNYA_CHALLENGE_BONUS_TITLE = {
   bg: "Бонус: 3-дневно предизвикателство за бърз старт в кухнята.",
   en: "Bonus: a 3-day challenge for a fast start in the kitchen.",
 } as const;
-
-/** Stored on the subscriber so this waitlist is not mixed with the free menu. */
-export const KUHNYA_SIGNUP_SOURCE = `program-${KUHNYA_ID}` as const;
-export const KUHNYA_SIGNUP_TAG = "kuhnya-bez-rezistentnost" as const;
 
 export function isKuhnyaProgramPath(pathname: string): boolean {
   return new RegExp(`^/(bg|en)/programs/${KUHNYA_PUBLIC_SLUG}/?$`).test(pathname);

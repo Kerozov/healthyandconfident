@@ -19,7 +19,7 @@ export function Popup({ locale }: { locale: Locale }) {
     if (isCtaPreviewPage()) return;
     // The free menu page already shows this form - a popup of it would cover it.
     if (isFreeMenuPath(window.location.pathname)) return;
-    // The cooking programme has its own waitlist. This popup would cover the CTA.
+    // A menu signup popup would cover the price card on the cooking programme.
     if (isKuhnyaProgramPath(window.location.pathname)) return;
     if (localStorage.getItem(storageKey)) return;
     if (scheduledRef.current) return;

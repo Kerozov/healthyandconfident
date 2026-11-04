@@ -205,6 +205,8 @@ export type ProgramLandingContent = {
       badge?: string;
       /** Usually a placeholder — `{price}`, `3 × {amount}`. */
       price: string;
+      /** The earlier price, struck through next to `price` — „69 €“. */
+      oldPrice?: string;
       /**
        * Quoted only until the card's button has a Stripe price. Leave it out
        * when there must be no amount on the page until the admin wires Stripe.

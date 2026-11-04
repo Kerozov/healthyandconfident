@@ -3,20 +3,20 @@ import { kuhnyaBezRezistentnostBg } from "./kuhnya-bez-rezistentnost.bg";
 import {
   KUHNYA_CHALLENGE_BONUS_TITLE,
   KUHNYA_NAME,
+  KUHNYA_OLD_PRICE,
   KUHNYA_SHOW_CHALLENGE_BONUS,
-  KUHNYA_SIGNUP_SOURCE,
-  KUHNYA_SIGNUP_TAG,
 } from "../kuhnya";
 
 const name = KUHNYA_NAME.en;
 const bg = kuhnyaBezRezistentnostBg;
+const oldPrice = `€${KUHNYA_OLD_PRICE}`;
 
 export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
   ...bg,
   meta: {
     title: `${name} | Quick meals - Vessie Nay`,
     description:
-      "Videos and three guides for busy days: no-cook meals, 23 dinner ideas and 5 lunches, ingredient checklists and weekly prep. With Vessie Nay.",
+      "Short 10-12 minute videos and three guides for busy days: no-cook meals, 23 dinner ideas and 5 lunches, a shopping list and weekly prep. With Vessie Nay.",
   },
   hero: {
     ...bg.hero,
@@ -26,12 +26,16 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     subtitle:
       "You get home late and still need to sort out dinner. I've put together quick meals and ways to combine ready-to-eat ingredients, so you have something to make on your busiest days.",
     bullets: [
+      "Short 10-12 minute videos for busy people",
       "23 dinner ideas and 5 lunches with familiar ingredients",
       "No-cook ideas for breakfast, lunch and dinner",
-      "Ingredient checklists and prep for the week ahead",
+      "A shopping list and prep for the week ahead",
     ],
-    primaryCta: "See how to join",
+    priceLine: `Price: {amount} instead of ${oldPrice}`,
+    primaryCta: "See the price",
     secondaryCta: "See what you get",
+    // The cover is in Bulgarian, so the English page keeps the food photo.
+    image: "/images/6.jpg",
     imageAlt: "Baked fish with vegetables and lemon",
   },
   galleries: [
@@ -89,12 +93,12 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
     title: "What you get",
     items: [
       {
-        title: "Videos with Vessie",
-        text: "Videos are part of the programme. Alongside them, you receive three guides with meal ideas and checklists to use in the kitchen.",
+        title: "Short videos with Vessie",
+        text: "Each video is 10-12 minutes, so you can watch it even on your busiest day. Alongside them, you receive three guides with meal ideas and a shopping list.",
       },
       {
         title: "Healthy Eating Without Cooking",
-        text: "Breakfast, lunch and dinner combinations using ready-to-eat or previously prepared ingredients. Examples include yoghurt with fruit, smoked salmon salad and a hummus platter. Some ideas use boiled eggs or cooked chicken.",
+        text: "Breakfast, lunch and dinner combinations using ready-to-eat or previously prepared ingredients. Examples include yoghurt with fruit and a hummus platter. Some ideas use boiled eggs or cooked chicken.",
       },
       {
         title: "What Can I Cook Quickly?",
@@ -102,7 +106,7 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
       },
       {
         title: "The Smart Stock",
-        text: "Checklists for your cupboard, fridge and freezer, plus space for your shopping list. It also includes One Hour on Sunday, with ideas for food to cook or portion ahead.",
+        text: "A shopping list and checklists for your cupboard, fridge and freezer. It also includes One Hour on Sunday, with ideas for food to cook or portion ahead.",
       },
       ...(KUHNYA_SHOW_CHALLENGE_BONUS
         ? [{ title: KUHNYA_CHALLENGE_BONUS_TITLE.en, text: "" }]
@@ -155,23 +159,15 @@ export const kuhnyaBezRezistentnostEn: ProgramLandingContent = {
       {
         ...bg.pricing!.options[0],
         label: name,
-        note: "Videos and three guides for eating well on busy days.",
+        oldPrice,
+        note: "Short 10-12 minute videos, three guides and a shopping list.",
         cta: "Join the programme",
       },
     ],
   },
-  waitlist: {
-    pending: "Signup opens soon",
-    prompt: "Leave your email and we'll send you the price and details when signup opens.",
-    button: "Notify me",
-    consent: "I agree to receive emails about this programme. I can unsubscribe at any time.",
-    success: "Your email is on the notification list. We'll write when signup opens.",
-    source: KUHNYA_SIGNUP_SOURCE,
-    tag: KUHNYA_SIGNUP_TAG,
-  },
   finalCta: {
     title: "Ideas for your next busy evening",
-    cta: "See how to join",
+    cta: "See the price",
     href: bg.finalCta!.href,
   },
 };

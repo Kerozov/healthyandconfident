@@ -1,7 +1,6 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import { KUHNYA_SIGNUP_TAG } from "@/lib/programs/kuhnya";
 import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
 
 /**
@@ -13,7 +12,7 @@ import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
  * (e.g. `zakupili-rakovodstvo-…`) to their own address and be mailed a paid
  * guide for free.
  */
-const STATIC_SIGNUP_TAGS = ["free-menu", "newsletter", KUHNYA_SIGNUP_TAG] as const;
+const STATIC_SIGNUP_TAGS = ["free-menu", "newsletter"] as const;
 
 /** Sources only the server sets — never accepted from the browser. */
 const RESERVED_SOURCES = new Set(["purchase", "manual", "import", "system", "funnel-brand"]);

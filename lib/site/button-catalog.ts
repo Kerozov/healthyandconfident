@@ -431,18 +431,18 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
     id: KUHNYA_ID,
     title: `Програма „${KUHNYA_NAME.bg}“`,
     path: KUHNYA,
-    note: "Цената идва от Stripe продукта на бутона „Цена“, когато го избереш тук. Дотогава страницата не показва сума.",
+    note: "Цената идва от Stripe продукта на бутона „Цена“, когато го избереш тук. Дотогава страницата показва 39 € (задраскани 69 €) и няма бутон за плащане.",
     buttons: [
       {
         key: KUHNYA_PLACEMENT_KEY,
-        name: "Главен бутон „Виж записването“",
+        name: "Главен бутон „Виж цената“",
         spots: [
           {
             where: "Страницата на програмата → големият бутон най-горе.",
             path: KUHNYA,
           },
         ],
-        defaultLabel: "Виж записването",
+        defaultLabel: "Виж цената",
         sells: true,
         fallback: "Скролва до секцията с цената на същата страница.",
       },
@@ -469,7 +469,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
         ],
         defaultLabel: "Включи се в програмата",
         sells: true,
-        fallback: "Показва форма за известяване, докато няма зададен адрес за записване или плащане.",
+        fallback: "Показва само цената, без бутон, докато няма зададена Stripe цена или адрес за плащане.",
       },
       {
         key: `${KUHNYA_PLACEMENT_KEY}_final`,
@@ -480,7 +480,7 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
             path: KUHNYA,
           },
         ],
-        defaultLabel: "Виж записването",
+        defaultLabel: "Виж цената",
         sells: true,
         fallback: "Скролва до секцията с цената.",
       },

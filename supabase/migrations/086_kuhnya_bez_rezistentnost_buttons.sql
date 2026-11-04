@@ -3,7 +3,7 @@
 -- The public name lives in lib/programs/kuhnya.ts. These rows are what
 -- Админ → Сайт → Бутони lists. No Stripe product is stored here: pick it on
 -- the price button (`product_kuhnya-bez-rezistentnost_pricing_0`). Until then
--- the page shows no amount and the buy buttons stay on the page.
+-- the page quotes KUHNYA_PRICE from lib/programs/kuhnya.ts and shows no buy button.
 
 insert into public.site_cta_placements (key, label_bg, label_en) values
   (
