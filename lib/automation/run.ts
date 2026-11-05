@@ -1242,6 +1242,14 @@ export async function runAutomationsForSubscriber(
 }
 
 export type AutomationDiagnosisRule = {
+  id: string;
+  afterAutomationId: string | null;
+  /**
+   * How it would go out: its own trigger fires now, it is queued after a parent
+   * that goes out now, or the daily catch-up sends it after a parent that went
+   * out earlier. Null when it would not go out.
+   */
+  via: "trigger" | "after_parent" | "catch_up" | null;
   name: string;
   enabled: boolean;
   channel: string;
@@ -1373,6 +1381,9 @@ export async function diagnoseAutomations(
   if (diagnosis.unsubscribed) {
     for (const rule of allRules) {
       diagnosis.rules.push({
+        id: rule.id,
+        afterAutomationId: rule.after_automation_id,
+        via: null,
         name: rule.name,
         enabled: rule.enabled,
         channel: rule.channel,
@@ -1405,10 +1416,18 @@ export async function diagnoseAutomations(
 
   for (const rule of ordered) {
     const emptyContent = contentMissing(rule);
-    const push = (wouldSend: boolean, reason: string, next: "will" | "done" | "no") => {
+    const push = (
+      wouldSend: boolean,
+      reason: string,
+      next: "will" | "done" | "no",
+      via: AutomationDiagnosisRule["via"] = null,
+    ) => {
       state.set(rule.id, next);
       if (wouldSend) diagnosis.wouldSendCount += 1;
       rowsById.set(rule.id, {
+        id: rule.id,
+        afterAutomationId: rule.after_automation_id,
+        via: wouldSend ? via : null,
         name: rule.name,
         enabled: rule.enabled,
         channel: rule.channel,
@@ -1456,6 +1475,7 @@ export async function diagnoseAutomations(
           ? `ще се насрочи след „${parent.name}“`
           : `„${parent.name}“ вече е изпратена - тази стъпка ще я навакса ежедневната проверка`,
         "will",
+        parentState === "will" ? "after_parent" : "catch_up",
       );
       continue;
     }
@@ -1490,7 +1510,7 @@ export async function diagnoseAutomations(
       push(false, AUTOMATION_SKIP_REASONS.noPhone, "no");
       continue;
     }
-    push(true, "ще изпрати", "will");
+    push(true, "ще изпрати", "will", "trigger");
   }
 
   // Report in the admin's own order, not chain-depth order.

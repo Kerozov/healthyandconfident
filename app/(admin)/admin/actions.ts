@@ -1801,6 +1801,112 @@ export async function importSubscribers(input: {
   };
 }
 
+function normalizeSubscriberTags(tags: string[]): string[] {
+  return Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean)));
+}
+
+export type SubscriberAutomationPreviewItem = {
+  id: string;
+  name: string;
+  channel: "email" | "sms";
+  /** "Веднага", "След 2 дн. · 09:00"… */
+  when: string;
+  /** Set for a later step that is queued after another step in this list. */
+  afterName: string | null;
+};
+
+/**
+ * What saving these groups would start, without saving or sending anything.
+ * Same check as the real run after `updateSubscriber`: only "Влизане в група"
+ * automations for groups the person is entering now, plus the steps queued
+ * after them. Steps the daily catch-up would send anyway are left out — the
+ * admin's choice here does not change them.
+ */
+export async function previewSubscriberAutomations(input: {
+  id: string;
+  tags: string[];
+}): Promise<
+  | { ok: true; automations: SubscriberAutomationPreviewItem[] }
+  | { ok: false; message: string }
+> {
+  const guard = await guardAction("subscribers");
+  if (!guard.ok) return { ok: false, message: guard.message ?? "Няма достъп." };
+
+  const supabase = getAdminClient();
+  const { data: subRow, error: subError } = await supabase
+    .from("subscribers")
+    .select("email, tags, status, name, phone, locale")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (subError) return { ok: false, message: subError.message };
+  const sub = subRow as {
+    email: string;
+    tags: string[] | null;
+    status: string;
+    name: string | null;
+    phone: string | null;
+    locale: string | null;
+  } | null;
+  if (!sub) return { ok: false, message: "Абонатът не е намерен." };
+  // Saving never starts automations for someone who is unsubscribed.
+  if (sub.status === "unsubscribed") return { ok: true, automations: [] };
+
+  const { diagnoseAutomations } = await import("@/lib/automation/run");
+  const diagnosis = await diagnoseAutomations({
+    email: sub.email,
+    name: sub.name,
+    phone: sub.phone,
+    locale: sub.locale === "en" ? "en" : "bg",
+    subscriberId: input.id,
+    tags: normalizeSubscriberTags(input.tags),
+    priorTags: sub.tags ?? [],
+    isNew: false,
+    source: "system",
+  });
+  // Without the worker the real run sends nothing either.
+  if (!diagnosis.workerConfigured || diagnosis.unsubscribed) {
+    return { ok: true, automations: [] };
+  }
+
+  const starting = diagnosis.rules.filter(
+    (rule) => rule.wouldSend && (rule.via === "trigger" || rule.via === "after_parent"),
+  );
+  if (starting.length === 0) return { ok: true, automations: [] };
+
+  const { data: timingRows, error: timingError } = await supabase
+    .from("automations")
+    .select("id, send_date, send_time, delay_days, delay_minutes, after_automation_id")
+    .in(
+      "id",
+      starting.map((rule) => rule.id),
+    );
+  if (timingError) return { ok: false, message: timingError.message };
+
+  const { automationScheduleLabel } = await import("@/lib/automation/schedule-label");
+  type TimingRow = Parameters<typeof automationScheduleLabel>[0] & { id: string };
+  const timingById = new Map(
+    ((timingRows as TimingRow[] | null) ?? []).map((row) => [row.id, row]),
+  );
+  const nameById = new Map(diagnosis.rules.map((rule) => [rule.id, rule.name]));
+
+  return {
+    ok: true,
+    automations: starting.map((rule) => {
+      const timing = timingById.get(rule.id);
+      return {
+        id: rule.id,
+        name: rule.name,
+        channel: rule.channel === "sms" ? "sms" : "email",
+        when: timing ? automationScheduleLabel(timing) : "",
+        afterName:
+          rule.via === "after_parent" && rule.afterAutomationId
+            ? (nameById.get(rule.afterAutomationId) ?? null)
+            : null,
+      };
+    }),
+  };
+}
+
 export async function updateSubscriber(input: {
   id: string;
   tags?: string[];
@@ -1808,6 +1914,12 @@ export async function updateSubscriber(input: {
   notes?: string;
   first_name?: string;
   last_name?: string;
+  /**
+   * When tags change: start the "Влизане в група" automations for groups the
+   * person enters now. Default true. False only records the groups — no
+   * automation mail goes out because of this save.
+   */
+  startAutomations?: boolean;
 }): Promise<ActionResult> {
   const guard = await guardAction("subscribers", { action: "update", summary: "Обнови абонат" });
   if (!guard.ok) return guard;
@@ -1829,9 +1941,7 @@ export async function updateSubscriber(input: {
 
   const patch: Partial<import("@/lib/supabase/types").Subscriber> = {};
   if (input.tags !== undefined) {
-    patch.tags = Array.from(
-      new Set(input.tags.map((t) => t.trim()).filter(Boolean)),
-    );
+    patch.tags = normalizeSubscriberTags(input.tags);
   }
   if (input.status) patch.status = input.status;
   if (input.notes !== undefined) patch.notes = input.notes;
@@ -1869,20 +1979,22 @@ export async function updateSubscriber(input: {
         row.email as string,
         (row.tags as string[]) ?? [],
       );
-      try {
-        await runAutomations({
-          email: row.email as string,
-          name: patch.name !== undefined ? patch.name : (existing?.name ?? null),
-          phone: existing?.phone ?? null,
-          locale: existing?.locale === "en" ? "en" : "bg",
-          subscriberId: input.id,
-          tags: (row.tags as string[]) ?? [],
-          priorTags: existing?.tags ?? [],
-          isNew: false,
-          source: "system",
-        });
-      } catch (err) {
-        console.error("[updateSubscriber] automations:", err);
+      if (input.startAutomations !== false) {
+        try {
+          await runAutomations({
+            email: row.email as string,
+            name: patch.name !== undefined ? patch.name : (existing?.name ?? null),
+            phone: existing?.phone ?? null,
+            locale: existing?.locale === "en" ? "en" : "bg",
+            subscriberId: input.id,
+            tags: (row.tags as string[]) ?? [],
+            priorTags: existing?.tags ?? [],
+            isNew: false,
+            source: "system",
+          });
+        } catch (err) {
+          console.error("[updateSubscriber] automations:", err);
+        }
       }
     }
   }

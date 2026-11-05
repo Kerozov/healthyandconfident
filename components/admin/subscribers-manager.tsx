@@ -18,7 +18,10 @@ import {
   updateSubscriber,
   deleteSubscriber,
   getSubscriberEngagementReport,
+  previewSubscriberAutomations,
+  type SubscriberAutomationPreviewItem,
 } from "@/app/(admin)/admin/actions";
+import { SubscriberAutomationsConfirm } from "@/components/admin/subscriber-automations-confirm";
 import { Field, Input, Select, Card } from "@/components/admin/fields";
 import {
   exportSubscribersCsv,
@@ -107,6 +110,14 @@ export function SubscribersManager({
     diabetes: false,
     general: false,
   });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editNote, setEditNote] = useState<string | null>(null);
+  /** Save is waiting for "start the automations or not". */
+  const [automationConfirm, setAutomationConfirm] = useState<{
+    tags: string[];
+    automations: SubscriberAutomationPreviewItem[];
+    checkError: string | null;
+  } | null>(null);
 
   const [importSegments, setImportSegments] = useState<string[]>([]);
   const [importPreview, setImportPreview] = useState<ImportSubscriberRow[] | null>(
@@ -330,6 +341,9 @@ export function SubscribersManager({
 
   function openEditSegments(s: Subscriber) {
     setEditing(s);
+    setEditError(null);
+    setEditNote(null);
+    setAutomationConfirm(null);
     const names = subscriberNameParts(s);
     setEditFirstName(names.first);
     setEditLastName(names.last);
@@ -339,24 +353,85 @@ export function SubscribersManager({
     setEditExtraTags(s.tags.filter((t) => !known.has(t)).join(", "));
   }
 
+  async function persistEdit(
+    target: Subscriber,
+    tags: string[],
+    startAutomations: boolean,
+    note: string,
+  ) {
+    const res = await updateSubscriber({
+      id: target.id,
+      first_name: editFirstName,
+      last_name: editLastName,
+      tags,
+      startAutomations,
+    });
+    setAutomationConfirm(null);
+    if (!res.ok) {
+      setEditError(res.message || "Записът не успя.");
+      return;
+    }
+    setEditing(null);
+    setEditNote(`Запазено: ${target.email}. ${note}`.trim());
+    router.refresh();
+  }
+
+  /**
+   * Save asks first when the new groups would start automations, and names
+   * them. Nothing to start (or groups unchanged) saves straight away.
+   */
   function saveEditSegments() {
     if (!editing) return;
+    const target = editing;
+    const tags = applyHealthSelectionToTags(
+      mergeTags(editTagKeys, parseTagList(editExtraTags)),
+      editHealth,
+    );
+    setEditError(null);
+    setEditNote(null);
+
+    const before = new Set(target.tags.map((t) => t.trim()).filter(Boolean));
+    const after = new Set(tags.map((t) => t.trim()).filter(Boolean));
+    const tagsChanged =
+      before.size !== after.size || [...after].some((t) => !before.has(t));
+
     startTransition(async () => {
-      const res = await updateSubscriber({
-        id: editing.id,
-        first_name: editFirstName,
-        last_name: editLastName,
-        tags: applyHealthSelectionToTags(
-          mergeTags(editTagKeys, parseTagList(editExtraTags)),
-          editHealth,
-        ),
-      });
-      if (!res.ok) {
-        setError(res.message || "Failed to update segments");
+      if (!tagsChanged) {
+        await persistEdit(target, tags, false, "");
         return;
       }
-      setEditing(null);
-      router.refresh();
+      let preview: Awaited<ReturnType<typeof previewSubscriberAutomations>>;
+      try {
+        preview = await previewSubscriberAutomations({ id: target.id, tags });
+      } catch (err) {
+        preview = {
+          ok: false,
+          message: err instanceof Error ? err.message : "неизвестна грешка",
+        };
+      }
+      if (preview.ok && preview.automations.length === 0) {
+        await persistEdit(target, tags, false, "Не тръгват автоматизации.");
+        return;
+      }
+      setAutomationConfirm({
+        tags,
+        automations: preview.ok ? preview.automations : [],
+        checkError: preview.ok ? null : preview.message,
+      });
+    });
+  }
+
+  function confirmAutomations(startAutomations: boolean) {
+    if (!editing || !automationConfirm) return;
+    const target = editing;
+    const { tags, automations, checkError } = automationConfirm;
+    const note = !startAutomations
+      ? "Автоматизациите не са пуснати."
+      : checkError
+        ? "Автоматизациите са пуснати."
+        : `Пуснати: ${automations.map((a) => `„${a.name}“`).join(", ")}.`;
+    startTransition(async () => {
+      await persistEdit(target, tags, startAutomations, note);
     });
   }
 
@@ -925,12 +1000,17 @@ export function SubscribersManager({
             </Field>
           </div>
 
+          {editError && <p className="mt-4 text-sm text-coral-600">{editError}</p>}
+
           <div className="mt-4 flex gap-2">
             <button
               onClick={saveEditSegments}
               disabled={pending}
-              className="inline-flex h-10 items-center rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-forest-600 px-5 text-sm font-semibold text-cream hover:bg-forest-700 disabled:opacity-60"
             >
+              {pending && !automationConfirm && (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              )}
               Save
             </button>
             <button
@@ -944,7 +1024,35 @@ export function SubscribersManager({
         </Card>
       )}
 
+      {editing && automationConfirm && (
+        <SubscriberAutomationsConfirm
+          email={editing.email}
+          automations={automationConfirm.automations}
+          checkError={automationConfirm.checkError}
+          busy={pending}
+          onStart={() => confirmAutomations(true)}
+          onSkip={() => confirmAutomations(false)}
+          onCancel={() => setAutomationConfirm(null)}
+        />
+      )}
+
       <Card>
+        {editNote && (
+          <p
+            role="status"
+            className="mb-4 flex items-start justify-between gap-3 rounded-xl bg-forest-50 px-4 py-2.5 text-sm text-forest-700"
+          >
+            <span>{editNote}</span>
+            <button
+              type="button"
+              onClick={() => setEditNote(null)}
+              aria-label="Скрий"
+              className="shrink-0 text-forest-700/70 hover:text-forest-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </p>
+        )}
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Filter">
             <Select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
