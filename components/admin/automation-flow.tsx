@@ -32,6 +32,7 @@ import type {
 } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { formatSignupSourcesLine } from "@/lib/automation/signup-sources";
+import { automationScheduleLabel } from "@/lib/automation/schedule-label";
 import {
   formatFormAnswerConditionsLine,
 } from "@/lib/automation/form-conditions";
@@ -125,22 +126,6 @@ function resolveAudience(
   }
 
   return { groups: resolvedGroups, segments: resolvedSegments, excludes };
-}
-
-function scheduleLabel(automation: Automation): string {
-  if (automation.send_date) {
-    return `Дата: ${automation.send_date} · ${automation.send_time}`;
-  }
-  if ((automation.delay_days ?? 0) > 0) {
-    return `След ${automation.delay_days} дн. · ${automation.send_time}`;
-  }
-  if ((automation.delay_minutes ?? 0) > 0) {
-    return `След ${automation.delay_minutes} мин.`;
-  }
-  if (automation.after_automation_id) {
-    return "Веднага след предишната";
-  }
-  return "Веднага";
 }
 
 function audienceSummary(
@@ -433,7 +418,7 @@ function FlowCard({
 
       <p className="mt-3 flex items-center gap-1 text-[11px] text-ink-soft">
         <Zap className="h-3 w-3" />
-        {scheduleLabel(automation)}
+        {automationScheduleLabel(automation)}
       </p>
     </button>
   );
