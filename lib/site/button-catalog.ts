@@ -12,6 +12,7 @@
  * Each spot also carries the page it is on, so the admin can frame that page and
  * light the button up instead of reading a description of where it should be.
  */
+import { KUHNYA_ID, KUHNYA_NAME, KUHNYA_PLACEMENT_KEY } from "@/lib/programs/kuhnya";
 import { programPath } from "@/lib/programs/types";
 
 export type SiteButtonKind = "button" | "offer";
@@ -59,6 +60,7 @@ const PROGRAM_SUMMER = programPath("summer-programme");
 const PROGRAM_RESISTANCE = programPath("zhivey-bez-rezistentnost");
 const CLUB_APPETITE = programPath("preprogramirai-apetita");
 const CHALLENGE_21 = programPath("po-stroyni-i-shtastlivi");
+const KUHNYA = programPath(KUHNYA_ID);
 
 /** `/programs/x` on the Bulgarian site is `/bg/programs/x`. */
 export function siteButtonPath(locale: string, path: string): string {
@@ -420,6 +422,65 @@ export const SITE_BUTTON_GROUPS: SiteButtonGroup[] = [
           },
         ],
         defaultLabel: "Да! Включвам се",
+        sells: true,
+        fallback: "Скролва до секцията с цената.",
+      },
+    ],
+  },
+  {
+    id: KUHNYA_ID,
+    title: `Програма „${KUHNYA_NAME.bg}“`,
+    path: KUHNYA,
+    note: "Цената идва от Stripe продукта на бутона „Цена“, когато го избереш тук. Дотогава страницата показва 39 € (задраскани 69 €) и няма бутон за плащане.",
+    buttons: [
+      {
+        key: KUHNYA_PLACEMENT_KEY,
+        name: "Главен бутон „Виж цената“",
+        spots: [
+          {
+            where: "Страницата на програмата → големият бутон най-горе.",
+            path: KUHNYA,
+          },
+        ],
+        defaultLabel: "Виж цената",
+        sells: true,
+        fallback: "Скролва до секцията с цената на същата страница.",
+      },
+      {
+        key: `${KUHNYA_PLACEMENT_KEY}_secondary`,
+        name: "Втори бутон горе „Виж какво получаваш“",
+        spots: [
+          {
+            where: "Страницата на програмата → до главния бутон най-горе.",
+            path: KUHNYA,
+          },
+        ],
+        defaultLabel: "Виж какво получаваш",
+        fallback: "Скролва до секцията „Какво получаваш“.",
+      },
+      {
+        key: `${KUHNYA_PLACEMENT_KEY}_pricing_0`,
+        name: `Цена: „${KUHNYA_NAME.bg}“`,
+        spots: [
+          {
+            where: "Страницата на програмата → секцията с цената. От този бутон страницата чете сумата.",
+            path: KUHNYA,
+          },
+        ],
+        defaultLabel: "Включи се в програмата",
+        sells: true,
+        fallback: "Показва само цената, без бутон, докато няма зададена Stripe цена или адрес за плащане.",
+      },
+      {
+        key: `${KUHNYA_PLACEMENT_KEY}_final`,
+        name: "Последен бутон най-долу",
+        spots: [
+          {
+            where: "Страницата на програмата → тъмната лента най-накрая.",
+            path: KUHNYA,
+          },
+        ],
+        defaultLabel: "Виж цената",
         sells: true,
         fallback: "Скролва до секцията с цената.",
       },

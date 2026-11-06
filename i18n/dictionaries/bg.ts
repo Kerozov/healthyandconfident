@@ -1,4 +1,5 @@
 import type { Dictionary } from "@/i18n/types";
+import { KUHNYA_NAME, KUHNYA_PUBLIC_SLUG } from "@/lib/programs/kuhnya";
 
 export const bg: Dictionary = {
   meta: {
@@ -25,7 +26,18 @@ export const bg: Dictionary = {
   },
   nav: {
     items: [
-      { label: "Програми", href: "#programs" },
+      {
+        label: "Програми",
+        href: "#programs",
+        children: [
+          { label: "21 дни по-стройни и щастливи", href: "/bg/programs/21-dni" },
+          { label: "Живей без резистентност", href: "/bg/programs/3-mes" },
+          { label: KUHNYA_NAME.bg, href: `/bg/programs/${KUHNYA_PUBLIC_SLUG}` },
+          { label: "Лято - стройна и спокойна", href: "/bg/programs/lyato" },
+          { label: "Препрограмирай апетита", href: "/bg/programs/klub" },
+          { label: "Всички програми", href: "/bg/programs" },
+        ],
+      },
       { label: "Резултати", href: "#results" },
       { label: "Ръководства", href: "/bg/guides" },
       { label: "Методът", href: "#method" },
@@ -327,7 +339,7 @@ export const bg: Dictionary = {
       },
       {
         q: "Коя програма да избера?",
-        a: "За бърз и лесен старт - „21 дни по-стройни и щастливи“. Ако имаш повече от 5 кг за сваляне или инсулинова резистентност - 3-месечната „Живей без резистентност“ с групова подкрепа. Ако основният ти проблем са изкушенията и емоционалното хранене - клубът „Препрограмирай апетита“. А ако искаш да започнеш с малко - избери ръководство.",
+        a: `За бърз и лесен старт - „21 дни по-стройни и щастливи“. Ако дните са пълни и търсиш идеи за бързи здравословни ястия - „${KUHNYA_NAME.bg}“. Ако имаш повече от 5 кг за сваляне или инсулинова резистентност - 3-месечната „Живей без резистентност“ с групова подкрепа. Ако основният ти проблем са изкушенията и емоционалното хранене - клубът „Препрограмирай апетита“. А ако искаш да започнеш с малко - избери ръководство.`,
       },
       {
         q: "Колко време ми трябва на ден?",
@@ -413,6 +425,7 @@ export const bg: Dictionary = {
           { label: "Лято - стройна и спокойна", href: "/bg/programs/lyato" },
           { label: "21 дни по-стройни и щастливи", href: "/bg/programs/21-dni" },
           { label: "Живей без резистентност", href: "/bg/programs/3-mes" },
+          { label: KUHNYA_NAME.bg, href: `/bg/programs/${KUHNYA_PUBLIC_SLUG}` },
           { label: "Препрограмирай апетита", href: "/bg/programs/klub" },
         ],
       },

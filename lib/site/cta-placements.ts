@@ -211,6 +211,19 @@ export function programFinalPlacementKey(baseKey: string): string {
   return `${baseKey}_final`;
 }
 
+/** True when an admin has chosen a Stripe price, Payment Link, or custom URL. */
+export function placementHasAdminTarget(
+  placement: SiteCtaPlacement | undefined,
+  locale: Locale,
+): boolean {
+  const stripe = placementStripeForLocale(placement, locale);
+  if (stripe.stripe_price_id || stripe.stripe_url) return true;
+  const enUrl = placement?.button_url_en?.trim() ?? "";
+  const bgUrl = placement?.button_url?.trim() ?? "";
+  const custom = locale === "en" ? enUrl || bgUrl : bgUrl;
+  return Boolean(custom);
+}
+
 export function placementStripeForLocale(
   placement: SiteCtaPlacement | undefined,
   locale: Locale,

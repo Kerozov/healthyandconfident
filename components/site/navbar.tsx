@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Leaf } from "lucide-react";
+import { Menu, X, Leaf, ChevronDown } from "lucide-react";
 import { localeSwitchHref, type Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -17,6 +17,14 @@ const PRIMARY_NAV = new Set(["#programs", "#results", "#about", "#contact"]);
 
 function isExternal(href: string) {
   return href.startsWith("/") && !href.startsWith(`#`);
+}
+
+function navHref(locale: Locale, href: string) {
+  return href.startsWith("#") ? `/${locale}${href}` : href;
+}
+
+function closeParentDetails(event: { currentTarget: HTMLElement }) {
+  event.currentTarget.closest("details")?.removeAttribute("open");
 }
 
 export function Navbar({
@@ -81,7 +89,7 @@ export function Navbar({
             </span>
           </Link>
 
-          <nav className="hidden min-w-0 items-center justify-center gap-2 overflow-hidden lg:flex xl:gap-3">
+          <nav className="hidden min-w-0 items-center justify-center gap-2 overflow-visible lg:flex xl:gap-3">
             {items.map((item) => {
               const compactOnly = !PRIMARY_NAV.has(item.href) && !isExternal(item.href);
               const className = cn(
@@ -100,10 +108,40 @@ export function Navbar({
                 );
               }
 
+              if (item.children && item.children.length > 0) {
+                return (
+                  <details key={item.href} className="group relative">
+                    <summary
+                      className={cn(
+                        className,
+                        "flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden",
+                      )}
+                    >
+                      {item.label}
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="absolute left-1/2 top-full z-50 w-72 -translate-x-1/2 pt-2">
+                      <div className="rounded-2xl border border-forest-100 bg-cream p-1.5 shadow-lg">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.href}
+                            href={navHref(locale, child.href)}
+                            onClick={closeParentDetails}
+                            className="block rounded-xl px-3 py-2.5 text-sm font-medium leading-snug text-slate-800 transition-colors hover:bg-forest-50 hover:text-forest-700"
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+                );
+              }
+
               return (
                 <Link
                   key={item.href}
-                  href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
+                  href={navHref(locale, item.href)}
                   className={className}
                 >
                   {item.label}
@@ -161,10 +199,29 @@ export function Navbar({
                     onNavigate={() => setOpen(false)}
                     className="rounded-xl bg-forest-500/10 px-3 py-3.5 text-base font-semibold text-forest-700 transition-colors hover:bg-forest-500/15"
                   />
+                ) : item.children && item.children.length > 0 ? (
+                  <details key={item.href} className="group rounded-xl">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-3 py-3.5 text-base font-medium text-slate-800 [&::-webkit-details-marker]:hidden">
+                      {item.label}
+                      <ChevronDown className="h-5 w-5 shrink-0 text-forest-500 transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="flex flex-col pb-1">
+                      {item.children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={navHref(locale, child.href)}
+                          onClick={() => setOpen(false)}
+                          className="rounded-xl px-3 py-2.5 pl-6 text-base text-slate-700 transition-colors hover:bg-cream-2"
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
                 ) : (
                   <Link
                     key={item.href}
-                    href={item.href.startsWith("#") ? `/${locale}${item.href}` : item.href}
+                    href={navHref(locale, item.href)}
                     onClick={() => setOpen(false)}
                     className="rounded-xl px-3 py-3.5 text-base font-medium text-slate-800 transition-colors hover:bg-cream-2"
                   >

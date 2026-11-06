@@ -1,16 +1,19 @@
 import type { Locale } from "@/i18n/config";
+import { KUHNYA_ID, KUHNYA_PUBLIC_SLUG } from "@/lib/programs/kuhnya";
 
 export type ProgramLandingSlug =
   | "zhivey-bez-rezistentnost"
   | "preprogramirai-apetita"
   | "summer-programme"
-  | "po-stroyni-i-shtastlivi";
+  | "po-stroyni-i-shtastlivi"
+  | typeof KUHNYA_ID;
 
 export const PROGRAM_LANDING_SLUGS: ProgramLandingSlug[] = [
   "zhivey-bez-rezistentnost",
   "preprogramirai-apetita",
   "summer-programme",
   "po-stroyni-i-shtastlivi",
+  KUHNYA_ID,
 ];
 
 /**
@@ -24,6 +27,7 @@ export const PROGRAM_PUBLIC_SLUGS: Record<ProgramLandingSlug, string> = {
   "po-stroyni-i-shtastlivi": "21-dni",
   "preprogramirai-apetita": "klub",
   "summer-programme": "lyato",
+  [KUHNYA_ID]: KUHNYA_PUBLIC_SLUG,
 };
 
 /**
@@ -84,6 +88,20 @@ export type ProgramLandingContent = {
    * not indexed until the buttons carry a real price.
    */
   noindex?: boolean;
+  /**
+   * Olive/cream palette and the cooking-page layout. Other landings stay as they are.
+   */
+  variant?: "olive";
+  /** Email capture on the price card until that card's button is wired in the admin. */
+  waitlist?: {
+    pending: string;
+    prompt: string;
+    button: string;
+    consent: string;
+    success: string;
+    source: string;
+    tag: string;
+  };
   hero: {
     eyebrow: string;
     title: string;
@@ -97,10 +115,19 @@ export type ProgramLandingContent = {
     secondaryHref?: string;
     placementKey?: string;
     image?: string;
+    imageAlt?: string;
   };
-  galleries?: { title: string; titleAccent?: string; images: string[] }[];
+  galleries?: {
+    title: string;
+    titleAccent?: string;
+    images: string[];
+    /** Caption under one photo, keyed by its path. Other pages omit this. */
+    captions?: Record<string, string>;
+    /** Alt used instead of the shared one, keyed by path. */
+    alts?: Record<string, string>;
+  }[];
   pain?: { title: string; paragraphs: string[]; hook: string };
-  vision?: { title: string; paragraphs: string[]; image?: string };
+  vision?: { title: string; paragraphs: string[]; image?: string; imageAlt?: string };
   audience?: {
     eyebrow?: string;
     title: string;
@@ -178,8 +205,13 @@ export type ProgramLandingContent = {
       badge?: string;
       /** Usually a placeholder — `{price}`, `3 × {amount}`. */
       price: string;
-      /** Quoted only until the card's button has a Stripe price. */
-      fallbackPrice: ProgramFallbackPrice;
+      /** The earlier price, struck through next to `price` — „69 €“. */
+      oldPrice?: string;
+      /**
+       * Quoted only until the card's button has a Stripe price. Leave it out
+       * when there must be no amount on the page until the admin wires Stripe.
+       */
+      fallbackPrice?: ProgramFallbackPrice;
       note: string;
       cta: string;
       href?: string;

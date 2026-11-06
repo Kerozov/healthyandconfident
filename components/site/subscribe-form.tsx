@@ -193,7 +193,8 @@ export function SubscribeForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t.email}
-            className={cn(inputClass, "sm:flex-1")}
+            aria-label={t.email}
+            className={cn(inputClass, "min-w-0 sm:flex-1")}
             autoComplete="email"
           />
           <button
