@@ -163,7 +163,7 @@ export const kuhnyaBezRezistentnostBg: ProgramLandingContent = {
   ],
   pricing: {
     title: "Включи се в програмата",
-    subtitle: "Планиран старт: средата на ноември 2026.",
+    subtitle: "",
     options: [
       {
         label: name,
