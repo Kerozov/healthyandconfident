@@ -144,6 +144,7 @@ import { createFormInviteToken } from "@/lib/forms/form-invite-token";
 import { invalidateMetaPixelCache } from "@/lib/meta/config";
 import { sendMetaEvent } from "@/lib/meta/capi";
 import { publicSiteOrigin } from "@/lib/site";
+import { ACADEMY_CODES_ENABLED } from "@/lib/academy/product";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string; slug?: string };
 
@@ -3854,13 +3855,17 @@ function isMissingColumn(message: string | undefined): boolean {
   return Boolean(message && /column .* does not exist/i.test(message));
 }
 
-/** A slug the unique index refused — name the field the admin has to change. */
-/** Course code from the academy: `*` for every program, a slug, or empty for none. */
+/**
+ * Course code from the academy: `*` for every program, a slug, or empty for none.
+ * While the academy is switched off the column is left alone, so a save never
+ * depends on it.
+ */
 function academyProductColumn(value: string | undefined): { academy_product?: string | null } {
-  if (value === undefined) return {};
+  if (!ACADEMY_CODES_ENABLED || value === undefined) return {};
   return { academy_product: value.trim().toLowerCase() || null };
 }
 
+/** A slug the unique index refused — name the field the admin has to change. */
 function catalogSaveMessage(message: string): string {
   if (/slug/i.test(message) && /duplicate|unique/i.test(message)) {
     return "Този адрес вече се ползва от друго нещо. Смени „Адрес на страницата“.";

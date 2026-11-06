@@ -24,6 +24,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Two files with one version (085_a + 085_b) record only one of them; the
+      # other never runs and every migration after it stalls. Fail early.
+      - name: Refuse duplicate migration versions
+        run: |
+          set -euo pipefail
+          dupes=$(ls supabase/migrations/[0-9]*_*.sql | xargs -n1 basename | sed 's/_.*//' | sort | uniq -d)
+          if [ -n "$dupes" ]; then
+            echo "Two migration files share a version: $dupes"
+            exit 1
+          fi
+
       - uses: supabase/setup-cli@v1
         with:
           version: 2.121.0
