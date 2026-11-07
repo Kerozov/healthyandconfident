@@ -33,6 +33,18 @@ function subscriberNameParts(s: Subscriber): { first: string; last: string } {
   return { first, last: rest.join(" ") };
 }
 
+function quoted(names: string[]): string {
+  return names.map((n) => `„${n}“`).join(", ");
+}
+
+/** The note after a save that ran the automations. */
+function automationOutcomeNote({ started, failed }: { started: string[]; failed: string[] }): string {
+  const parts: string[] = [];
+  if (started.length > 0) parts.push(`Пуснати: ${quoted(started)}.`);
+  if (failed.length > 0) parts.push(`Неуспешни: ${quoted(failed)} - виж историята на автоматизацията.`);
+  return parts.length > 0 ? parts.join(" ") : "Не тръгна нито една автоматизация.";
+}
+
 /**
  * Name, health answer and groups of one person. Saving asks first when the
  * new groups would start automations, and names them.
@@ -102,7 +114,9 @@ export function SubscriberEditDialog({
       setError(res.message || "Записът не успя.");
       return;
     }
-    onSaved(`Запазено: ${subscriber.email}. ${note}`.trim());
+    // What the run actually did, read back after it — not what the preview expected.
+    const outcome = res.automations ? automationOutcomeNote(res.automations) : note;
+    onSaved(`Запазено: ${subscriber.email}. ${outcome}`.trim());
   }
 
   function save() {
@@ -141,14 +155,9 @@ export function SubscriberEditDialog({
 
   function confirmAutomations(startAutomations: boolean) {
     if (!automationConfirm) return;
-    const { tags, automations, checkError } = automationConfirm;
-    const note = !startAutomations
-      ? "Автоматизациите не са пуснати."
-      : checkError
-        ? "Автоматизациите са пуснати."
-        : `Пуснати: ${automations.map((a) => `„${a.name}“`).join(", ")}.`;
+    const { tags } = automationConfirm;
     startTransition(async () => {
-      await persist(tags, startAutomations, note);
+      await persist(tags, startAutomations, startAutomations ? "" : "Автоматизациите не са пуснати.");
     });
   }
 
