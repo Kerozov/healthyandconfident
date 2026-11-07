@@ -28,6 +28,7 @@ import {
   Shield,
   Loader2,
   Gift,
+  ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -50,6 +51,7 @@ const ICONS: Record<AdminScreenKey, typeof LayoutDashboard> = {
   "email-footer": Signature,
   subscribers: Users,
   "free-menu": Gift,
+  questionnaires: ListChecks,
   contacts: Route,
   zoom: Video,
   forms: ClipboardList,

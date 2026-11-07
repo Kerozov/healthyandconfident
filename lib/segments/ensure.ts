@@ -15,6 +15,8 @@ export type SegmentSeed = {
   key: string;
   name: string;
   group?: string;
+  /** Existing segment group to file the new segment under (wins over `group`). */
+  groupId?: string | null;
 };
 
 /** Top-level segment groups by name, created when missing. */
@@ -87,8 +89,10 @@ export async function ensureSubscriberSegmentKeys(
           SEGMENT_LABELS[key]?.description ??
           (group
             ? `Група „${seed?.name.trim()}“ от ${group}.`
-            : "Auto-created during subscriber import."),
-        group_id: (group && groupIds.get(group)) || null,
+            : seed?.groupId
+              ? "Създадена от синхронизацията с Launchify."
+              : "Auto-created during subscriber import."),
+        group_id: seed?.groupId || (group && groupIds.get(group)) || null,
       };
     }),
     { onConflict: "key", ignoreDuplicates: true },

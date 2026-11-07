@@ -3,6 +3,8 @@ export type NavItem = {
   href: string;
   /** Programmes under „Програми“ in the header. */
   children?: { label: string; href: string }[];
+  /** Drawn as a soft pill — the entry questionnaire, so it stands out. */
+  highlight?: boolean;
 };
 
 export type Program = {

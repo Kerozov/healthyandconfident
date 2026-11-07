@@ -135,3 +135,26 @@ export async function getFormSubmissions(formId: string): Promise<FormSubmission
 
   return (data as FormSubmissionRecord[]) ?? [];
 }
+
+/**
+ * Form name for every slug a form has had — subscribers keep the slug they
+ * signed up through (`form:<slug>`), which may be an old one.
+ */
+export async function getFormNamesBySlug(): Promise<Record<string, string>> {
+  const supabase = getAdminClient();
+  const [{ data: forms }, { data: aliases }] = await Promise.all([
+    supabase.from("form_templates").select("id, slug, name"),
+    supabase.from("form_template_slugs").select("slug, form_id"),
+  ]);
+  const names: Record<string, string> = {};
+  const nameById = new Map<string, string>();
+  for (const f of (forms as { id: string; slug: string; name: string }[] | null) ?? []) {
+    nameById.set(f.id, f.name);
+    if (f.slug) names[f.slug] = f.name;
+  }
+  for (const a of (aliases as { slug: string; form_id: string }[] | null) ?? []) {
+    const name = nameById.get(a.form_id);
+    if (name && !names[a.slug]) names[a.slug] = name;
+  }
+  return names;
+}

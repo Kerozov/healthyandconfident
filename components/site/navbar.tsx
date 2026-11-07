@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Leaf, ChevronDown } from "lucide-react";
+import { Menu, X, Leaf, ChevronDown, ClipboardList } from "lucide-react";
 import { localeSwitchHref, type Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -138,6 +138,19 @@ export function Navbar({
                 );
               }
 
+              if (item.highlight) {
+                return (
+                  <Link
+                    key={item.href}
+                    href={navHref(locale, item.href)}
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-forest-500/10 px-3 py-1.5 text-xs font-semibold text-forest-700 transition-colors hover:bg-forest-500/20 xl:text-sm"
+                  >
+                    <ClipboardList className="h-3.5 w-3.5" aria-hidden />
+                    {item.label}
+                  </Link>
+                );
+              }
+
               return (
                 <Link
                   key={item.href}
@@ -218,6 +231,16 @@ export function Navbar({
                       ))}
                     </div>
                   </details>
+                ) : item.highlight ? (
+                  <Link
+                    key={item.href}
+                    href={navHref(locale, item.href)}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 rounded-xl bg-forest-500/10 px-3 py-3.5 text-base font-semibold text-forest-700 transition-colors hover:bg-forest-500/15"
+                  >
+                    <ClipboardList className="h-5 w-5" aria-hidden />
+                    {item.label}
+                  </Link>
                 ) : (
                   <Link
                     key={item.href}

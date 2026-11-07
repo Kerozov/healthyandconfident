@@ -27,6 +27,9 @@ import type {
   ZoomWebhookLog,
   ZoomSessionEvent,
   IntegrationSyncState,
+  ContactStatus,
+  SubscriberHistoryEntry,
+  SiteQuestionnaireCta,
 } from "@/lib/supabase/types";
 import type { FormTemplateRecord, FormSubmissionRecord } from "@/lib/forms/types";
 import type { Contact, ContactWorkerJob, ContactEvent } from "@/lib/contacts/types";
@@ -137,6 +140,10 @@ export type Database = {
       site_visits: TableShape<SiteVisit>;
       admin_users: TableShape<AdminUser>;
       admin_audit_log: TableShape<AdminAuditLog>;
+      /** Migration 088 — statuses the main admin defines, and each person's history. */
+      contact_statuses: TableShape<ContactStatus>;
+      subscriber_history: TableShape<SubscriberHistoryEntry>;
+      site_questionnaire_cta: TableShape<SiteQuestionnaireCta>;
     };
     Views: Record<string, never>;
     Functions: {

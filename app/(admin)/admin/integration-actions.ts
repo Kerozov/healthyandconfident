@@ -4,44 +4,78 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import {
   listFunnelBrandFunnels,
+  previewFunnelBrandSync,
+  saveFunnelBrandSettings,
   syncFunnelBrandContacts,
   testFunnelBrandConnection,
   type FunnelBrandFunnelOption,
+  type FunnelBrandPreview,
   type FunnelBrandSyncResult,
-  type FunnelSegmentRouting,
+  type FunnelBrandSyncSettings,
 } from "@/lib/integrations/funnel-brand-sync";
 
 type ActionResult = { ok: boolean; message: string };
 
 /**
- * Pulls contacts from FunnelBrand. `full` ignores the saved cursor and re-reads
- * everything; `routing` picks the segment each funnel's contacts go to.
+ * Pulls contacts from Launchify. `full` ignores the saved cursor and re-reads
+ * everything; `settings` are the admin's webinar → group choices (saved too).
  */
 export async function syncFunnelBrandAction(
-  options: { full?: boolean; routing?: FunnelSegmentRouting } = {},
+  options: { full?: boolean; settings?: FunnelBrandSyncSettings } = {},
 ): Promise<ActionResult & Partial<FunnelBrandSyncResult>> {
+  let actor: { id: string | null; name: string };
   try {
-    await requireAdmin("subscribers", {
+    const session = await requireAdmin("subscribers", {
       action: "sync",
       summary: options.full
-        ? "Пълна синхронизация с FunnelBrand"
-        : "Синхронизира контакти от FunnelBrand",
+        ? "Пълна синхронизация с Launchify"
+        : "Синхронизира контакти от Launchify",
     });
+    actor = { id: session.id, name: session.displayName || session.username };
   } catch {
     return { ok: false, message: "Нямаш достъп." };
   }
 
   const result = await syncFunnelBrandContacts({
     full: options.full,
-    routing: options.routing,
+    settings: options.settings,
+    actor,
   });
 
+  revalidatePath("/admin/subscribers", "layout");
   if (result.created > 0 || result.updated > 0) {
-    revalidatePath("/admin/subscribers");
     revalidatePath("/admin/campaigns");
   }
 
   return result;
+}
+
+/** What the next sync would bring, per webinar — read only, nothing is written. */
+export async function previewFunnelBrandSyncAction(options: { full?: boolean } = {}): Promise<
+  { ok: true; preview: FunnelBrandPreview } | { ok: false; message: string }
+> {
+  try {
+    await requireAdmin("subscribers");
+  } catch {
+    return { ok: false, message: "Нямаш достъп." };
+  }
+  return previewFunnelBrandSync(options);
+}
+
+export async function saveFunnelBrandSettingsAction(
+  settings: FunnelBrandSyncSettings,
+): Promise<ActionResult> {
+  try {
+    await requireAdmin("subscribers", {
+      action: "update",
+      summary: "Промени настройките на синхронизацията с Launchify",
+    });
+  } catch {
+    return { ok: false, message: "Нямаш достъп." };
+  }
+  await saveFunnelBrandSettings(settings);
+  revalidatePath("/admin/subscribers");
+  return { ok: true, message: "Настройките са запазени." };
 }
 
 export async function listFunnelBrandFunnelsAction(): Promise<

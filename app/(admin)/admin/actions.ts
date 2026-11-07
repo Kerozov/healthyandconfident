@@ -7,8 +7,10 @@ import { after } from "next/server";
 import {
   AdminAccessError,
   AdminSessionUnavailableError,
+  getAdminSession,
   requireAdmin,
 } from "@/lib/admin/auth";
+import { diffTags, recordSubscriberHistory } from "@/lib/admin/contact-statuses";
 import { productPlacementKey } from "@/lib/site/product-placement";
 import {
   catalogSlug,
@@ -1969,6 +1971,22 @@ export async function updateSubscriber(input: {
     .eq("id", input.id);
   if (error) return { ok: false, message: error.message };
 
+  if (patch.tags && existing) {
+    const { added, removed } = diffTags(existing.tags ?? [], patch.tags);
+    if (added.length > 0 || removed.length > 0) {
+      const actor = await getAdminSession().catch(() => null);
+      await recordSubscriberHistory([
+        {
+          subscriber_id: input.id,
+          kind: "groups",
+          details: { added, removed, startAutomations: input.startAutomations !== false },
+          actor_id: actor?.id ?? null,
+          actor_name: actor?.displayName || actor?.username || "Админ",
+        },
+      ]);
+    }
+  }
+
   const { data: row } = await supabase
     .from("subscribers")
     .select("email, tags, status")
@@ -2012,7 +2030,7 @@ export async function updateSubscriber(input: {
     }
   }
 
-  revalidatePath("/admin/subscribers");
+  revalidatePath("/admin/subscribers", "layout");
   return { ok: true, automations };
 }
 

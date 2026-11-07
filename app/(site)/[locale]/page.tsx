@@ -15,6 +15,9 @@ import { Method } from "@/components/site/sections/method";
 import { About } from "@/components/site/sections/about";
 import { Faq } from "@/components/site/sections/faq";
 import { FinalCta } from "@/components/site/sections/final-cta";
+import { QuestionnaireCta } from "@/components/site/sections/questionnaire-cta";
+import { getSiteQuestionnaireCta } from "@/lib/site/questionnaire-cta-data";
+import { questionnaireCtaForLocale } from "@/lib/site/questionnaire-cta";
 import { StickyCta } from "@/components/site/sticky-cta";
 import { HomeJsonLd } from "@/components/seo/json-ld";
 
@@ -33,11 +36,13 @@ export default async function HomePage({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
-  const [dict, site, contactConfig] = await Promise.all([
+  const [dict, site, contactConfig, questionnaireRow] = await Promise.all([
     getDictionary(l),
     getPublicSiteContent(),
     getSiteContactConfig(),
+    getSiteQuestionnaireCta(),
   ]);
+  const questionnaire = questionnaireCtaForLocale(questionnaireRow, l);
   const productsSection = site.sections.products;
   const guidesSection = site.sections.guides;
   // An offer that already has a programme card is not sold a second time below it.
@@ -82,6 +87,7 @@ export default async function HomePage({
           <div id="shop" className="sr-only" />
         )}
       </Programs>
+      {questionnaire?.showOnHome && <QuestionnaireCta view={questionnaire} locale={l} />}
       {guidesSection && site.guides.length > 0 && (
         <GuidesSection
           dict={dict}

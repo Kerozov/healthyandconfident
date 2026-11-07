@@ -38,8 +38,62 @@ export type Subscriber = {
   tags: string[];
   consent: boolean;
   notes: string | null;
+  /** CRM status (migration 088) — absent until the migration has run. */
+  crm_status_id?: string | null;
+  crm_status_comment?: string | null;
+  crm_status_changed_at?: string | null;
+  crm_status_changed_by?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** A status the main admin defines; people in the list carry one of them. */
+export type ContactStatus = {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Migration 090 — the entry questionnaire in the site menu and under the programmes. */
+export type SiteQuestionnaireCta = {
+  id: "home";
+  form_slug: string;
+  show_in_nav: boolean;
+  show_on_home: boolean;
+  show_en: boolean;
+  nav_label_bg: string;
+  nav_label_en: string;
+  eyebrow_bg: string;
+  eyebrow_en: string;
+  title_bg: string;
+  title_en: string;
+  text_bg: string;
+  text_en: string;
+  button_bg: string;
+  button_en: string;
+  image_url: string | null;
+  updated_at: string;
+};
+
+export type SubscriberHistoryKind = "status" | "groups" | "sync";
+
+/** One line in a person's history: a status change, a group edit or a sync. */
+export type SubscriberHistoryEntry = {
+  id: string;
+  subscriber_id: string;
+  kind: SubscriberHistoryKind;
+  status_id: string | null;
+  status_name: string | null;
+  status_color: string | null;
+  previous_status_name: string | null;
+  comment: string | null;
+  details: Record<string, unknown>;
+  actor_id: string | null;
+  actor_name: string;
+  created_at: string;
 };
 
 /** Where a pull-based integration (e.g. FunnelBrand) stopped last time. */
