@@ -81,6 +81,55 @@ function hasMarketingConsent(
   return consentFields.some((f) => Boolean(answers[f.id]));
 }
 
+type AdminClient = ReturnType<typeof getAdminClient>;
+type Invitation = { id: string; completed_at: string | null };
+
+/**
+ * The subscriber an invite was sent to may have been deleted since. Linking the
+ * answer to that id would fail the insert, so it falls back to the email lookup.
+ */
+async function existingSubscriberId(
+  supabase: AdminClient,
+  id: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("subscribers")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+/**
+ * Write the invitation row a signed link should already have. A concurrent
+ * submit may write it first — then that row is read back. If neither works the
+ * answer is still saved, just without the one-answer-per-invite guard.
+ */
+async function recordMissingInvitation(
+  supabase: AdminClient,
+  row: { form_id: string; subscriber_id: string | null; email: string; token: string },
+): Promise<Invitation | null> {
+  const { data, error } = await supabase
+    .from("form_invitations")
+    .insert(row)
+    .select("id, completed_at")
+    .single();
+  if (!error && data) return data as Invitation;
+
+  const { data: existing } = await supabase
+    .from("form_invitations")
+    .select("id, completed_at")
+    .eq("token", row.token)
+    .maybeSingle();
+  if (existing) return existing as Invitation;
+
+  console.error(
+    `[form-submit] invitation row missing for form ${row.form_id} and could not be written:`,
+    error?.message,
+  );
+  return null;
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ slug: string }> },
@@ -143,23 +192,32 @@ export async function POST(
       return NextResponse.json({ error: formError(locale, "invalid") }, { status: 403 });
     }
     email = payload.e;
-    subscriberId = payload.sid ?? null;
 
     const supabase = getAdminClient();
+    subscriberId = payload.sid ? await existingSubscriberId(supabase, payload.sid) : null;
+
     const { data: inv } = await supabase
       .from("form_invitations")
       .select("id, completed_at")
       .eq("token", body.token)
       .maybeSingle();
 
-    const invitation = inv as { id: string; completed_at: string | null } | null;
-    if (!invitation) {
-      return NextResponse.json({ error: formError(locale, "invalid") }, { status: 403 });
-    }
-    if (invitation.completed_at) {
+    // The token is signed with our own key, so it is genuine even when its
+    // invitation row never got written (a failed batch insert at send time).
+    // Write the row now rather than turn away answers someone already typed.
+    const invitation =
+      (inv as Invitation | null) ??
+      (await recordMissingInvitation(supabase, {
+        form_id: form.id,
+        subscriber_id: subscriberId,
+        email,
+        token: body.token,
+      }));
+
+    if (invitation?.completed_at) {
       return NextResponse.json({ error: formError(locale, "already") }, { status: 409 });
     }
-    invitationId = invitation.id;
+    invitationId = invitation?.id ?? null;
   }
 
   if (!email || !email.includes("@")) {
