@@ -302,6 +302,22 @@ function computeChainedSendAt(
   return at.toISOString();
 }
 
+/** A step this late is dropped by the catch-up rather than sent out of context. */
+export const CHAIN_CATCH_UP_MAX_OVERDUE_DAYS = 14;
+
+/**
+ * When a chain step was due, for the catch-up's "too late" check. A no-delay
+ * step was due when its parent went out (computeChainedSendAt clamps its send
+ * time to "now", so the parent's time is the one that counts).
+ */
+function chainStepDueMs(step: Automation, parentAt: Date, sendAt: string): number {
+  const hasDelay =
+    Boolean(step.send_date) ||
+    (step.delay_days ?? 0) > 0 ||
+    (step.delay_minutes ?? 0) > 0;
+  return hasDelay ? new Date(sendAt).getTime() : parentAt.getTime();
+}
+
 type DeliveryRow = Pick<AutomationDelivery, "status" | "error" | "worker_job_id" | "sent_at">;
 
 export type StepOutcome = "sent" | "scheduled" | "skipped" | "failed";
@@ -666,15 +682,8 @@ async function runChainStep(
   }
 
   if (opts?.maxOverdueMs !== undefined) {
-    // A no-delay step was due when its parent went out (computeChainedSendAt
-    // clamps that to "now"). Long overdue: a "day 2" email weeks later reads
-    // out of context, so skip it.
-    const hasDelay =
-      Boolean(step.send_date) ||
-      (step.delay_days ?? 0) > 0 ||
-      (step.delay_minutes ?? 0) > 0;
-    const dueMs = hasDelay ? new Date(sendAt).getTime() : parentAt.getTime();
-    if (dueMs < Date.now() - opts.maxOverdueMs) {
+    // Long overdue: a "day 2" email weeks later reads out of context, so skip it.
+    if (chainStepDueMs(step, parentAt, sendAt) < Date.now() - opts.maxOverdueMs) {
       await recordSkip(step, ctx, overdueSkipReason(opts.maxOverdueMs), existing);
       return "skipped";
     }
@@ -1353,7 +1362,7 @@ export async function diagnoseAutomations(
       supabase.from("segment_groups").select("*"),
       supabase
         .from("automation_deliveries")
-        .select("automation_id, status, error")
+        .select("automation_id, status, error, sent_at, scheduled_for")
         .eq("email", email),
     ]);
 
@@ -1365,11 +1374,19 @@ export async function diagnoseAutomations(
   const segments = (segmentRows as Segment[]) ?? [];
   const groups = (groupRows as SegmentGroup[]) ?? [];
   const allRules = (data as Automation[]) ?? [];
+  type DiagnosisDeliveryRow = {
+    automation_id: string;
+    status: string;
+    error: string | null;
+    sent_at: string | null;
+    scheduled_for: string | null;
+  };
   const deliveries = new Map(
-    ((deliveryRows as { automation_id: string; status: string; error: string | null }[] | null) ?? []).map(
+    ((deliveryRows as DiagnosisDeliveryRow[] | null) ?? []).map(
       (row) => [row.automation_id, row],
     ),
   );
+  const maxOverdueMs = CHAIN_CATCH_UP_MAX_OVERDUE_DAYS * DAY_MS;
   diagnosis.totalRules = allRules.length;
   diagnosis.enabledRulesForTrigger = allRules.filter((r) => r.enabled).length;
 
@@ -1469,13 +1486,65 @@ export async function diagnoseAutomations(
         push(false, AUTOMATION_SKIP_REASONS.noPhone, "no");
         continue;
       }
+
+      if (parentState === "will") {
+        // Queued right after its parent — in this run only when this run sends
+        // the parent. A parent left to the daily catch-up takes this step
+        // along whenever it goes out.
+        if (rowsById.get(parent.id)?.via === "catch_up") {
+          push(
+            true,
+            `ще тръгне след „${parent.name}“, когато ежедневната проверка я изпрати`,
+            "will",
+            "catch_up",
+          );
+        } else {
+          push(true, `ще се насрочи след „${parent.name}“`, "will", "after_parent");
+        }
+        continue;
+      }
+
+      // The parent went out on an earlier visit. A step whose own trigger
+      // fires now and that has no delay goes out with this run.
+      if (automationTriggerMatchesEvents(rule.trigger_event, events)) {
+        const gate = await passesAutomationGates(rule, ctx, segments, groups).catch(
+          () => null,
+        );
+        if (gate?.ok) {
+          push(
+            true,
+            `„${parent.name}“ вече е изпратена - тази стъпка тръгва със своя тригер`,
+            "will",
+            "trigger",
+          );
+          continue;
+        }
+      }
+
+      // Otherwise only the daily catch-up sends it, timed from the parent, and
+      // it drops a step that is long overdue.
+      const parentRow = deliveries.get(parent.id);
+      const parsedParentAt = new Date(parentRow?.scheduled_for ?? parentRow?.sent_at ?? "");
+      const parentAt = Number.isNaN(parsedParentAt.getTime()) ? new Date() : parsedParentAt;
+      let dueMs: number;
+      try {
+        dueMs = chainStepDueMs(rule, parentAt, computeChainedSendAt(rule, parentAt));
+      } catch {
+        dueMs = Date.now();
+      }
+      if (dueMs < Date.now() - maxOverdueMs) {
+        push(
+          false,
+          `„${parent.name}“ е изпратена отдавна - ежедневната проверка не праща стъпка, закъсняла с над ${CHAIN_CATCH_UP_MAX_OVERDUE_DAYS} дни`,
+          "no",
+        );
+        continue;
+      }
       push(
         true,
-        parentState === "will"
-          ? `ще се насрочи след „${parent.name}“`
-          : `„${parent.name}“ вече е изпратена - тази стъпка ще я навакса ежедневната проверка`,
+        `„${parent.name}“ вече е изпратена - тази стъпка ще я навакса ежедневната проверка`,
         "will",
-        parentState === "will" ? "after_parent" : "catch_up",
+        "catch_up",
       );
       continue;
     }

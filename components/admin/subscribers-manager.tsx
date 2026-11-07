@@ -58,6 +58,18 @@ function subscriberNameParts(s: Subscriber): { first: string; last: string } {
   return { first, last: rest.join(" ") };
 }
 
+function quoted(names: string[]): string {
+  return names.map((n) => `„${n}“`).join(", ");
+}
+
+/** The note after a save that ran the automations. */
+function automationOutcomeNote({ started, failed }: { started: string[]; failed: string[] }): string {
+  const parts: string[] = [];
+  if (started.length > 0) parts.push(`Пуснати: ${quoted(started)}.`);
+  if (failed.length > 0) parts.push(`Неуспешни: ${quoted(failed)} - виж историята на автоматизацията.`);
+  return parts.length > 0 ? parts.join(" ") : "Не тръгна нито една автоматизация.";
+}
+
 export function SubscribersManager({
   subscribers,
   segments,
@@ -372,7 +384,9 @@ export function SubscribersManager({
       return;
     }
     setEditing(null);
-    setEditNote(`Запазено: ${target.email}. ${note}`.trim());
+    // What the run actually did, read back after it — not what the preview expected.
+    const outcome = res.automations ? automationOutcomeNote(res.automations) : note;
+    setEditNote(`Запазено: ${target.email}. ${outcome}`.trim());
     router.refresh();
   }
 
@@ -424,14 +438,14 @@ export function SubscribersManager({
   function confirmAutomations(startAutomations: boolean) {
     if (!editing || !automationConfirm) return;
     const target = editing;
-    const { tags, automations, checkError } = automationConfirm;
-    const note = !startAutomations
-      ? "Автоматизациите не са пуснати."
-      : checkError
-        ? "Автоматизациите са пуснати."
-        : `Пуснати: ${automations.map((a) => `„${a.name}“`).join(", ")}.`;
+    const { tags } = automationConfirm;
     startTransition(async () => {
-      await persistEdit(target, tags, startAutomations, note);
+      await persistEdit(
+        target,
+        tags,
+        startAutomations,
+        startAutomations ? "" : "Автоматизациите не са пуснати.",
+      );
     });
   }
 

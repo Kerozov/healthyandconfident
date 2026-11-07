@@ -3,6 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { Automation, Locale, Segment, SegmentGroup } from "@/lib/supabase/types";
 import {
+  CHAIN_CATCH_UP_MAX_OVERDUE_DAYS,
   continueChainStep,
   retryFailedAutomation,
   type AutomationRunContext,
@@ -13,8 +14,8 @@ import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** A step this late is dropped rather than sent out of context. */
-export const CHAIN_CATCH_UP_MAX_OVERDUE_DAYS = 14;
+/** Lives in run.ts, where the diagnosis needs it too. */
+export { CHAIN_CATCH_UP_MAX_OVERDUE_DAYS };
 
 /** A first email that failed is retried for this long after the trigger. */
 export const FAILED_RETRY_DAYS = 3;

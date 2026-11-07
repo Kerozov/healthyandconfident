@@ -1921,7 +1921,16 @@ export async function updateSubscriber(input: {
    * automation mail goes out because of this save.
    */
   startAutomations?: boolean;
-}): Promise<ActionResult> {
+}): Promise<
+  ActionResult & {
+    /**
+     * Set when this save ran the automations: what actually went out or was
+     * queued, and what failed — read back from the delivery rows, so the admin
+     * is told what happened rather than what the preview expected.
+     */
+    automations?: { started: string[]; failed: string[] };
+  }
+> {
   const guard = await guardAction("subscribers", { action: "update", summary: "Обнови абонат" });
   if (!guard.ok) return guard;
   const supabase = getAdminClient();
@@ -1966,6 +1975,7 @@ export async function updateSubscriber(input: {
     .eq("id", input.id)
     .maybeSingle();
 
+  let automations: { started: string[]; failed: string[] } | undefined;
   if (row?.email) {
     if (input.status === "unsubscribed" || row.status === "unsubscribed") {
       const { cancelAllScheduledMailForSubscriber } = await import(
@@ -1981,6 +1991,7 @@ export async function updateSubscriber(input: {
         (row.tags as string[]) ?? [],
       );
       if (input.startAutomations !== false) {
+        const runStartedAt = new Date().toISOString();
         try {
           await runAutomations({
             email: row.email as string,
@@ -1996,12 +2007,45 @@ export async function updateSubscriber(input: {
         } catch (err) {
           console.error("[updateSubscriber] automations:", err);
         }
+        automations = await automationsWrittenSince(row.email as string, runStartedAt);
       }
     }
   }
 
   revalidatePath("/admin/subscribers");
-  return { ok: true };
+  return { ok: true, automations };
+}
+
+/**
+ * Automation steps written for this email since `since`: queued or sent, and
+ * failed. Every step the run touches writes its delivery row with
+ * `sent_at = now`, chain steps included.
+ */
+async function automationsWrittenSince(
+  email: string,
+  since: string,
+): Promise<{ started: string[]; failed: string[] }> {
+  const { data, error } = await getAdminClient()
+    .from("automation_deliveries")
+    .select("status, automations(name)")
+    .eq("email", email.trim().toLowerCase())
+    .gte("sent_at", since)
+    .in("status", ["sent", "scheduled", "failed"])
+    .order("sent_at", { ascending: true });
+  if (error) {
+    console.error("[updateSubscriber] read deliveries:", error.message);
+    return { started: [], failed: [] };
+  }
+  const rows =
+    (data as unknown as
+      | { status: string; automations: { name: string } | { name: string }[] | null }[]
+      | null) ?? [];
+  const nameOf = (r: (typeof rows)[number]) =>
+    (Array.isArray(r.automations) ? r.automations[0]?.name : r.automations?.name) ?? "автоматизация";
+  return {
+    started: rows.filter((r) => r.status !== "failed").map(nameOf),
+    failed: rows.filter((r) => r.status === "failed").map(nameOf),
+  };
 }
 
 export async function deleteSubscriber(id: string): Promise<ActionResult> {
