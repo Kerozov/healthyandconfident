@@ -419,7 +419,8 @@ type ExistingSubscriber = Pick<
 type UpsertOutcome =
   | { kind: "created"; id: string | null; added: string[] }
   | { kind: "updated"; id: string; added: string[] }
-  | { kind: "skipped" };
+  /** `id` is set when the person is here and still subscribed — their answers are kept. */
+  | { kind: "skipped"; id?: string };
 
 /**
  * Merges one contact in. Never resurrects an unsubscribed person and never
@@ -483,7 +484,7 @@ async function upsertContact(
   if (!existing.last_name && contact.lastName) patch.last_name = contact.lastName;
   if (!existing.phone && contact.phone) patch.phone = contact.phone;
 
-  if (Object.keys(patch).length === 0) return { kind: "skipped" };
+  if (Object.keys(patch).length === 0) return { kind: "skipped", id: existing.id };
 
   patch.updated_at = new Date().toISOString();
   const { error } = await supabase.from("subscribers").update(patch).eq("id", existing.id);
@@ -501,6 +502,49 @@ async function upsertContact(
   }
 
   return { kind: "updated", id: existing.id, added };
+}
+
+const TICKET_LABELS: Record<string, string> = { free: "Безплатен", vip: "VIP" };
+
+/** What Launchify knows about the person beyond name and email — kept per webinar. */
+function launchifyFacts(contact: FunnelBrandContact): { label: string; value: string }[] {
+  const facts: { label: string; value: string }[] = [];
+  for (const [label, raw] of Object.entries(contact.formAnswers ?? {})) {
+    const value = (Array.isArray(raw) ? raw.join(", ") : String(raw ?? "")).trim();
+    if (label.trim() && value) facts.push({ label: label.trim().slice(0, 300), value: value.slice(0, 4000) });
+  }
+  if (contact.message?.trim()) facts.push({ label: "Съобщение", value: contact.message.trim().slice(0, 4000) });
+  if (contact.ticket) facts.push({ label: "Билет", value: TICKET_LABELS[contact.ticket] ?? contact.ticket });
+  if (contact.phone?.trim()) facts.push({ label: "Телефон", value: contact.phone.trim() });
+  return facts;
+}
+
+/** Best effort: before migration 091 the table is missing and the answers are skipped. */
+async function saveFacts(
+  rows: {
+    subscriber_id: string;
+    source: string;
+    source_label: string;
+    label: string;
+    value: string;
+    updated_at: string;
+  }[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  // One row per person, webinar and question — the latest answer wins.
+  const unique = new Map(rows.map((r) => [`${r.subscriber_id}|${r.source_label}|${r.label}`, r]));
+  const supabase = getAdminClient();
+  for (const batch of chunkArray([...unique.values()], 200)) {
+    const { error } = await supabase
+      .from("subscriber_facts")
+      .upsert(batch, { onConflict: "subscriber_id,source,source_label,label" });
+    if (error) {
+      if (!/subscriber_facts|schema cache|42P01|PGRST205/i.test(`${error.code} ${error.message}`)) {
+        console.error("[funnel-brand-sync] facts:", error.message);
+      }
+      return;
+    }
+  }
 }
 
 export async function syncFunnelBrandContacts(
@@ -582,6 +626,8 @@ async function runSync(
   const disabled = new Set(settings.disabledFunnels);
   const funnelNames = new Map<string, string>();
   const history: Parameters<typeof recordSubscriberHistory>[0] = [];
+  const facts: Parameters<typeof saveFacts>[0] = [];
+  const now = new Date().toISOString();
 
   function addSeed(seed: SegmentSeed) {
     if (!seeds.has(seed.key)) seeds.set(seed.key, seed);
@@ -633,6 +679,18 @@ async function runSync(
 
       try {
         const outcome = await upsertContact(contact, tagList);
+        if (outcome.id) {
+          for (const fact of launchifyFacts(contact)) {
+            facts.push({
+              subscriber_id: outcome.id,
+              source: "launchify",
+              source_label: funnelName || "",
+              label: fact.label,
+              value: fact.value,
+              updated_at: now,
+            });
+          }
+        }
         if (outcome.kind === "skipped") {
           skipped += 1;
           continue;
@@ -667,6 +725,7 @@ async function runSync(
 
   await ensureSegments([...segments], [...seeds.values()]);
   await recordSubscriberHistory(history);
+  await saveFacts(facts);
 
   const touched = created + updated;
   const message =

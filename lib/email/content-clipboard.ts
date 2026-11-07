@@ -8,7 +8,7 @@
  * attachment, signature — so the pasted copy sends exactly what the original
  * sends. The attachment is the same stored file, not a re-upload.
  */
-import type { Automation } from "@/lib/supabase/types";
+import type { Automation, EmailCampaign } from "@/lib/supabase/types";
 
 const STORAGE_KEY = "admin:copied-email";
 /** `storage` only fires in other tabs — this tells the copying tab itself. */
@@ -114,6 +114,35 @@ export function copiedEmailFromAutomation(a: AutomationEmailFields): CopiedEmail
     signature_enabled: a.signature_enabled !== false,
     bg,
     en,
+  };
+}
+
+/** A saved (or sent) campaign — one language, the one it went out in. */
+export function copiedEmailFromCampaign(
+  c: Pick<
+    EmailCampaign,
+    | "subject"
+    | "html"
+    | "cta_label"
+    | "cta_url"
+    | "attachment_path"
+    | "attachment_filename"
+    | "hero_image_url"
+    | "signature_enabled"
+    | "locale"
+  >,
+): CopiedEmail | null {
+  const version = copiedVersion(c);
+  if (!version) return null;
+  const en = c.locale === "en";
+  return {
+    v: 1,
+    source: "кампания",
+    name: clean(c.subject) || "кампания",
+    copiedAt: new Date().toISOString(),
+    signature_enabled: c.signature_enabled !== false,
+    bg: en ? null : version,
+    en: en ? version : null,
   };
 }
 

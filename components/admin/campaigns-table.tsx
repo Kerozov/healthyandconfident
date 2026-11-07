@@ -23,6 +23,8 @@ import {
   getCampaignRecipientReport,
 } from "@/app/(admin)/admin/actions";
 import { CampaignCtaEditor } from "@/components/admin/campaign-cta-editor";
+import { CopyEmailButton } from "@/components/admin/email-clipboard";
+import { copiedEmailFromCampaign } from "@/lib/email/content-clipboard";
 import type { RecipientRow } from "@/lib/worker/email";
 import { formatDate } from "@/lib/utils";
 import { formatScheduledAt } from "@/lib/datetime";
@@ -307,6 +309,11 @@ export function CampaignsTable({
                   </div>
 
                   <div className="flex items-center gap-1">
+                    <CopyEmailButton
+                      build={() => copiedEmailFromCampaign(c)}
+                      disabled={!c.html?.trim()}
+                      className="mr-1"
+                    />
                     {canCancel && (
                       <button
                         onClick={() => cancel(c)}

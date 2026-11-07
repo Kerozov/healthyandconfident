@@ -5,6 +5,7 @@ import { getContactStatuses, getSubscriberHistory } from "@/lib/admin/contact-st
 import { getFormNamesBySlug } from "@/lib/admin/forms-data";
 import { getSubscriberEngagementDetail } from "@/lib/admin/engagement";
 import { getPersonProfile } from "@/lib/admin/person-profile";
+import { buildPersonFacts, getSubscriberFacts } from "@/lib/admin/person-facts";
 import {
   SubscriberProfile,
   type SubscriberProfileData,
@@ -47,17 +48,33 @@ export default async function SubscriberProfilePage({
   const subscriber = (data as Subscriber | null) ?? null;
   if (!subscriber) notFound();
 
-  const [segments, groups, statusData, history, formNames, subscriberTags, engagement, profile] =
-    await Promise.all([
-      getSegments(),
-      getSegmentGroups(),
-      getContactStatuses(),
-      getSubscriberHistory(subscriber.id),
-      getFormNamesBySlug(),
-      getSubscriberTags(),
-      safe("engagement", () => getSubscriberEngagementDetail(subscriber.email), null),
-      safe("profile", () => getPersonProfile(subscriber.email), null),
-    ]);
+  const [
+    segments,
+    groups,
+    statusData,
+    history,
+    formNames,
+    subscriberTags,
+    storedFacts,
+    engagement,
+    profile,
+  ] = await Promise.all([
+    getSegments(),
+    getSegmentGroups(),
+    getContactStatuses(),
+    getSubscriberHistory(subscriber.id),
+    getFormNamesBySlug(),
+    getSubscriberTags(),
+    getSubscriberFacts(subscriber.id),
+    safe("engagement", () => getSubscriberEngagementDetail(subscriber.email), null),
+    safe("profile", () => getPersonProfile(subscriber.email), null),
+  ]);
+
+  const facts = buildPersonFacts({
+    subscriber,
+    formSubmissions: profile.value?.formSubmissions ?? [],
+    stored: storedFacts,
+  });
 
   const detail: SubscriberProfileData = {
     engagement: engagement.value,
@@ -76,6 +93,7 @@ export default async function SubscriberProfilePage({
       formNames={formNames}
       subscriberTags={subscriberTags}
       data={detail}
+      facts={facts}
     />
   );
 }

@@ -51,6 +51,17 @@ type FormTemplateSlug = {
   created_at: string;
 };
 
+/** Migration 091 — answers from Launchify (and other outside sources), per person. */
+type SubscriberFact = {
+  id: string;
+  subscriber_id: string;
+  source: string;
+  source_label: string;
+  label: string;
+  value: string;
+  updated_at: string;
+};
+
 type EmailLinkClick = {
   id: string;
   source_type: "campaign" | "automation";
@@ -144,6 +155,7 @@ export type Database = {
       contact_statuses: TableShape<ContactStatus>;
       subscriber_history: TableShape<SubscriberHistoryEntry>;
       site_questionnaire_cta: TableShape<SiteQuestionnaireCta>;
+      subscriber_facts: TableShape<SubscriberFact>;
     };
     Views: Record<string, never>;
     Functions: {

@@ -47,6 +47,8 @@ import { StatusBadge } from "@/components/admin/contact-status-badge";
 import { ContactStatusDialog } from "@/components/admin/contact-status-dialog";
 import { SubscriberEditDialog } from "@/components/admin/subscriber-edit-dialog";
 import { PersonEmailsTable } from "@/components/admin/person-emails-table";
+import { PersonFactsPanel } from "@/components/admin/person-facts-panel";
+import type { PersonFacts } from "@/lib/admin/person-facts";
 import { AdminNavLink, useAdminNavigate } from "@/components/admin/admin-navigation";
 import { Alert } from "@/components/admin/ui";
 import {
@@ -410,6 +412,7 @@ export function SubscriberProfile({
   formNames,
   subscriberTags,
   data,
+  facts,
 }: {
   subscriber: Subscriber;
   segments: Segment[];
@@ -420,6 +423,8 @@ export function SubscriberProfile({
   formNames: Record<string, string>;
   subscriberTags: string[];
   data: SubscriberProfileData;
+  /** Phone, Facebook, kilograms, the problem… from every source. */
+  facts: PersonFacts;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -721,6 +726,8 @@ export function SubscriberProfile({
           </div>
         </div>
       </section>
+
+      <PersonFactsPanel facts={facts} />
 
       {/* Numbers */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
