@@ -92,7 +92,7 @@ export async function notifyFormSubmission(input: {
     subject: `Ново запитване: ${form.title_bg || form.name || form.title_en}`,
     rows: () => [
       { label: "Форма", value: form.name },
-      { label: "Имейл", value: submission.email || "—" },
+      { label: "Имейл", value: submission.email || "-" },
       { label: "Получено на", value: formatScheduledAt(submission.submitted_at, "bg") },
       ...formatSubmissionAnswers(form.fields, submission.answers),
     ],

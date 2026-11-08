@@ -29,8 +29,8 @@ export type AccessCodeResult =
 const ERRORS: Record<string, string> = {
   invalid_key: "Ключът за академията (ACADEMY_SALE_KEY) е грешен или отменен.",
   space_archived: "Пространството в академията е архивирано.",
-  product_required: "В академията има няколко продукта или школи — избери курс в полето „Кой курс отключва“.",
-  unknown_product: "Няма такъв активен продукт или школа в академията — избери курса наново в полето „Кой курс отключва“.",
+  product_required: "В академията има няколко продукта или школи - избери курс в полето „Кой курс отключва“.",
+  unknown_product: "Няма такъв активен продукт или школа в академията - избери курса наново в полето „Кой курс отключва“.",
   product_without_courses: "Продуктът в академията няма избрани курсове.",
 };
 
@@ -186,7 +186,7 @@ export async function courseCodeForRecipient(input: {
     );
   const line = academyLines[0];
   if (!line) {
-    throw new Error("Няма платена покупка с курс от академията за този човек — кодът за курса няма откъде да дойде.");
+    throw new Error("Няма платена покупка с курс от академията за този човек - кодът за курса няма откъде да дойде.");
   }
   if (line.academy_code) return line.academy_code;
 

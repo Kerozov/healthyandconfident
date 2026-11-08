@@ -1012,7 +1012,7 @@ export function SubscribersTable({
             </label>
             <div className="flex items-center gap-2">
               <span className="text-ink-soft [font-variant-numeric:tabular-nums]">
-                {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} от{" "}
+                {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filtered.length)} от{" "}
                 {filtered.length}
               </span>
               <button

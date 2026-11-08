@@ -11,11 +11,11 @@ import { FunnelBrandSync } from "@/components/admin/funnel-brand-sync";
 import { ContactStatusesManager } from "@/components/admin/contact-statuses-manager";
 import { getFunnelBrandSyncStatus } from "@/lib/integrations/funnel-brand-sync";
 import { PageHeader } from "@/components/admin/ui";
+import { SubscribersTabs } from "@/components/admin/subscribers-tabs";
 import {
   SUBSCRIBER_TABS,
-  SubscribersTabs,
   type SubscriberTab,
-} from "@/components/admin/subscribers-tabs";
+} from "@/lib/admin/subscriber-tabs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

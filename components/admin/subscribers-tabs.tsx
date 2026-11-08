@@ -4,17 +4,7 @@ import { useState } from "react";
 import { BadgeCheck, FolderTree, RefreshCw, UserMinus, UserPlus, Users } from "lucide-react";
 import { TabList } from "@/components/admin/ui";
 import { InactiveSubscribersPanel } from "@/components/admin/inactive-subscribers-panel";
-
-export const SUBSCRIBER_TABS = [
-  "contacts",
-  "groups",
-  "sync",
-  "add",
-  "inactive",
-  "statuses",
-] as const;
-
-export type SubscriberTab = (typeof SUBSCRIBER_TABS)[number];
+import type { SubscriberTab } from "@/lib/admin/subscriber-tabs";
 
 /**
  * One screen, one job per tab. The contacts table opens first; groups, the
