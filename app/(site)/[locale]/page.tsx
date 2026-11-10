@@ -9,9 +9,9 @@ import { UpcomingEvents } from "@/components/site/sections/upcoming-events";
 import { Programs } from "@/components/site/sections/programs";
 import { MorePrograms } from "@/components/site/sections/more-programs";
 import { GuidesSection } from "@/components/site/sections/guides";
-import { Results } from "@/components/site/sections/results";
 import { Audience } from "@/components/site/sections/audience";
 import { Method } from "@/components/site/sections/method";
+import { Results } from "@/components/site/sections/results";
 import { About } from "@/components/site/sections/about";
 import { Faq } from "@/components/site/sections/faq";
 import { FinalCta } from "@/components/site/sections/final-cta";
@@ -23,10 +23,10 @@ import { HomeJsonLd } from "@/components/seo/json-ld";
 
 /**
  * The home page is a sales page: what is coming up soon (webinars to sign up
- * for) sits first, then the promise and who it is for, proof in numbers, the offers, then
- * everything that answers „will it work for me?“ — before and after, method,
- * who Vessie is, questions — and a close that keeps even the not-yet-ready in
- * touch with a free menu.
+ * for) sits first, followed by the promise, proof in numbers, and the offers.
+ * Visitors can then see who the programmes are for, how the method works,
+ * and what clients achieved, before meeting Vessie and reading the FAQs.
+ * The page closes with a free menu.
  */
 export default async function HomePage({
   params,
@@ -98,6 +98,8 @@ export default async function HomePage({
           guides={site.guides}
         />
       )}
+      <Audience dict={dict} locale={l} />
+      <Method dict={dict} locale={l} />
       <Results
         dict={dict}
         locale={l}
@@ -105,8 +107,6 @@ export default async function HomePage({
         videos={site.videos}
         messengerUrl={contactConfig.messenger_url}
       />
-      <Audience dict={dict} locale={l} />
-      <Method dict={dict} locale={l} />
       <About dict={dict} locale={l} />
       <Faq dict={dict} locale={l} />
       <FinalCta dict={dict} locale={l} contactConfig={contactConfig} />
