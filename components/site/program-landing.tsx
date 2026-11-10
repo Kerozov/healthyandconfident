@@ -968,6 +968,30 @@ export function ProgramLanding({
         <FoodGallery gallery={content.galleries[1]} locale={locale} />
       )}
 
+      {!!content.sampleRecipes?.length && (
+        <section className="bg-cream-50 py-16">
+          <Container>
+            <SectionTitle title={locale === "bg" ? "Примерни рецепти" : "Sample recipes in Bulgarian"} />
+            <div className="mx-auto mt-10 grid max-w-5xl gap-6 md:grid-cols-2">
+              {content.sampleRecipes.map(({ src, alt, width, height }) => (
+                <a
+                  key={src}
+                  href={src}
+                  target="_blank"
+                  rel="noopener"
+                  className="group block overflow-hidden rounded-2xl bg-white text-center shadow-md ring-1 ring-forest-100"
+                >
+                  <SiteImage src={src} alt={alt[locale]} width={width} height={height} />
+                  <span className="block px-4 py-3 text-sm font-semibold text-forest-700 group-hover:underline group-focus-visible:underline">
+                    {locale === "bg" ? "Отвори в пълен размер" : "Open full size"}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
+
       {/* Curriculum */}
       {content.curriculum && (
         <section className="bg-white py-24">

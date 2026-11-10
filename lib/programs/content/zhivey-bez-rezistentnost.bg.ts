@@ -48,6 +48,26 @@ export const zhiveyBezRezistentnostBg: ProgramLandingContent = {
     { title: "Хранейки се", titleAccent: "така", images: FOOD },
     { title: "А ето и какво ще хапваме", images: FOOD2 },
   ],
+  sampleRecipes: [
+    {
+      src: "/images/recipe-turkey-muffins.jpg",
+      alt: {
+        bg: "Пуешки мъфини с яйца и сирене",
+        en: "Turkey muffins with eggs and cheese",
+      },
+      width: 1545,
+      height: 2000,
+    },
+    {
+      src: "/images/recipe-everyday-salad.jpg",
+      alt: {
+        bg: "Лесна салата за всеки ден",
+        en: "Easy everyday salad",
+      },
+      width: 1545,
+      height: 1999,
+    },
+  ],
   pain: {
     title: "Ти сигурно вече си опитвала…",
     paragraphs: [

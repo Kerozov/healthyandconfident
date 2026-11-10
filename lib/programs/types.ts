@@ -126,6 +126,12 @@ export type ProgramLandingContent = {
     /** Alt used instead of the shared one, keyed by path. */
     alts?: Record<string, string>;
   }[];
+  sampleRecipes?: {
+    src: string;
+    alt: Record<Locale, string>;
+    width: number;
+    height: number;
+  }[];
   pain?: { title: string; paragraphs: string[]; hook: string };
   vision?: { title: string; paragraphs: string[]; image?: string; imageAlt?: string };
   audience?: {
