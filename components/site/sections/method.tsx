@@ -3,6 +3,8 @@ import type { Dictionary } from "@/i18n/types";
 import type { Locale } from "@/i18n/config";
 import { Container } from "@/components/ui/container";
 import { SiteImage } from "@/components/site/site-image";
+import { SampleRecipes } from "@/components/site/sample-recipes";
+import { sampleRecipes } from "@/lib/programs/sample-recipes";
 import { mediaAlt } from "@/lib/site/media-gallery";
 
 /** Real dishes from the programme menus — the answer to „will I be hungry?“. */
@@ -83,6 +85,7 @@ export function Method({ dict, locale }: { dict: Dictionary; locale: Locale }) {
               </li>
             ))}
           </ul>
+          <SampleRecipes recipes={sampleRecipes} locale={locale} heading="h4" className="mt-12" />
         </div>
       </Container>
     </section>

@@ -27,7 +27,7 @@ function dateTile(date: string, locale: Locale) {
 }
 
 /**
- * What is coming up — a webinar, a live, a questionnaire — as one calm card
+ * What is coming up — a webinar or a live — as one card
  * per item, at the very top of the home page: a free first step for whoever is not
  * ready to buy yet. A dated event drops off the page once its day has passed,
  * so the site never invites anyone to something that is over.

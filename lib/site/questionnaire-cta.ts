@@ -1,6 +1,8 @@
 import type { Locale } from "@/i18n/config";
 import type { NavItem } from "@/i18n/types";
-import type { SiteQuestionnaireCta } from "@/lib/supabase/types";
+import type { SiteEvent, SiteQuestionnaireCta } from "@/lib/supabase/types";
+import { siteConfig } from "@/lib/site";
+import { visibleInLocale } from "@/lib/site/locale-stripe";
 
 /**
  * The entry questionnaire as the site shows it. Client-safe: no database here,
@@ -39,6 +41,7 @@ export type QuestionnaireCtaView = {
   text: string;
   button: string;
   imageUrl: string;
+  preserveImage?: boolean;
   showInNav: boolean;
   showOnHome: boolean;
 };
@@ -68,6 +71,44 @@ export function questionnaireCtaForLocale(
     showInNav: row.show_in_nav,
     showOnHome: row.show_on_home,
   };
+}
+
+const entryFormPath = /^(?:\/(?:bg|en))?\/forms\/health-questionnaire19\/?$/;
+const siteHostname = new URL(siteConfig.domain).hostname.replace(/^www\./, "");
+
+function isEntryQuestionnaireEvent(event: SiteEvent): boolean {
+  const url = URL.parse(event.url, siteConfig.domain);
+  return !!url && url.hostname.replace(/^www\./, "") === siteHostname && entryFormPath.test(url.pathname);
+}
+
+/** Keep the existing questionnaire poster and destination when it is still managed as an event. */
+export function separateHomeQuestionnaire(events: SiteEvent[], locale: Locale) {
+  const upcomingEvents: SiteEvent[] = [];
+  let questionnaire: QuestionnaireCtaView | null = null;
+  const d = QUESTIONNAIRE_CTA_DEFAULTS;
+
+  for (const event of events) {
+    if (!isEntryQuestionnaireEvent(event)) {
+      upcomingEvents.push(event);
+      continue;
+    }
+    if (questionnaire || !visibleInLocale(event.enabled, event.enabled_en, locale)) continue;
+
+    questionnaire = {
+      href: (locale === "en" ? event.url_en?.trim() : "") || event.url.trim(),
+      navLabel: locale === "bg" ? d.nav_label_bg : d.nav_label_en,
+      eyebrow: locale === "bg" ? d.nav_label_bg : d.nav_label_en,
+      title: (locale === "en" ? event.title_en.trim() : "") || event.title_bg.trim(),
+      text: (locale === "en" ? event.description_en.trim() : "") || event.description_bg.trim(),
+      button: locale === "bg" ? d.button_bg : d.button_en,
+      imageUrl: event.image_url?.trim() || QUESTIONNAIRE_CTA_IMAGE,
+      preserveImage: Boolean(event.image_url?.trim()),
+      showInNav: false,
+      showOnHome: true,
+    };
+  }
+
+  return { upcomingEvents, questionnaire };
 }
 
 /** The header menu with the questionnaire right after „Програми“. */

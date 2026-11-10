@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import { KUHNYA_ID, KUHNYA_PUBLIC_SLUG } from "@/lib/programs/kuhnya";
+import type { SampleRecipe } from "./sample-recipes";
 
 export type ProgramLandingSlug =
   | "zhivey-bez-rezistentnost"
@@ -126,12 +127,7 @@ export type ProgramLandingContent = {
     /** Alt used instead of the shared one, keyed by path. */
     alts?: Record<string, string>;
   }[];
-  sampleRecipes?: {
-    src: string;
-    alt: Record<Locale, string>;
-    width: number;
-    height: number;
-  }[];
+  sampleRecipes?: readonly SampleRecipe[];
   pain?: { title: string; paragraphs: string[]; hook: string };
   vision?: { title: string; paragraphs: string[]; image?: string; imageAlt?: string };
   audience?: {
