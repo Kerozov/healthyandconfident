@@ -87,7 +87,9 @@ function NavLinks({
   const { pendingHref } = useAdminNavigate();
   const groups = ADMIN_SCREEN_GROUPS.map((group) => ({
     ...group,
-    screens: group.screens.filter((screen) => canSeeScreen(actor, screen.key)),
+    screens: group.screens.filter(
+      (screen) => screen.key !== "contacts" && canSeeScreen(actor, screen.key),
+    ),
   })).filter((group) => group.screens.length > 0);
 
   return (
