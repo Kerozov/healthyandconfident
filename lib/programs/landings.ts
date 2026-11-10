@@ -53,7 +53,10 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
     })),
     pain: {
       title: "Does this sound like you?",
-      paragraphs: zhiveyBezRezistentnostBg.pain!.paragraphs,
+      paragraphs: [
+        "Keto. Intermittent fasting. Counting calories. And you’re still dealing with fatigue, intense hunger and a number on the scale that won’t budge.",
+        "It’s easy to blame yourself. Appetite and weight depend on many things, including how your body responds to food and stress.",
+      ],
       hook: "You're not alone - there is already a solution!",
     },
     vision: {
@@ -65,6 +68,7 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
         "Not another diet - a full transformation based on a method proven in England with 94% success.",
       ],
     },
+    visualize: undefined,
     audience: {
       eyebrow: "Who it's for",
       title: "This program is for you if…",
@@ -100,11 +104,14 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
       closing: zhiveyBezRezistentnostBg.curriculum!.closing,
     },
     pillars: {
-      title: "Three pillars of your success",
-      items: zhiveyBezRezistentnostBg.pillars!.items.map((item, i) => ({
-        title: ["Cleansing & metabolism", "Blood sugar balance", "New mindset"][i],
-        text: item.text,
-      })),
+      title: "How Live Without Resistance works",
+      items: [
+        { title: "Satisfying meals", text: "Learn how to combine foods to make meals you enjoy and feel full after." },
+        { title: "Food and blood sugar", text: "Understand how food choices affect your blood sugar and the role insulin plays." },
+        { title: "Metabolism and weight", text: "Learn how eating habits and movement support weight management, and why fat around the waist and in the liver matters." },
+        { title: "Managing stress", text: "Practise ways to handle stress and make time to rest even on busy days." },
+        { title: "A new mindset", text: "Notice which habits get in your way and make time for yourself." },
+      ],
     },
     includes: {
       title: "Everything you need in one place!",
@@ -134,7 +141,10 @@ const en: Record<ProgramLandingSlug, ProgramLandingContent> = {
         "Lecturer and motivational coach",
         "Mentor and coach, trained in England",
       ],
-      accolades: zhiveyBezRezistentnostBg.trust!.accolades,
+      accolades: [
+        "Creator of Live Without Resistance",
+        "National award for contributions to addressing insulin resistance",
+      ],
       image: "/images/vessie-trust-award.png",
     },
     faq: [

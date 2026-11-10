@@ -41,7 +41,7 @@ import { SiteImage } from "@/components/site/site-image";
 import { mediaAlt, mediaIntrinsicSize } from "@/lib/site/media-gallery";
 import { cn } from "@/lib/utils";
 
-const pillarIcons = [Flame, Heart, Zap];
+const pillarIcons = [Flame, Heart, Zap, Moon, Sparkles];
 const audienceIcons = [Scale, Droplets, Leaf, Shield, Stethoscope, Sun, Moon];
 const cookingAudienceIcons = [Moon, Leaf, Sun, Stethoscope];
 
@@ -231,6 +231,64 @@ function FoodGallery({
   );
 }
 
+function ProgramPillars({
+  pillars,
+  olive,
+}: {
+  pillars: NonNullable<ProgramLandingContent["pillars"]>;
+  olive: boolean;
+}) {
+  const fivePillars = pillars.items.length === 5;
+
+  return (
+    <section className={cn("bg-forest-900 text-white", fivePillars ? "py-16 sm:py-24" : "py-24")}>
+      <Container>
+        <h2 className="mx-auto max-w-3xl text-balance text-center font-display text-3xl font-semibold sm:text-4xl">
+          {pillars.title}
+        </h2>
+        {pillars.intro && (
+          <p className="mx-auto mt-5 max-w-2xl text-balance text-center text-lg leading-relaxed text-slate-200">
+            {pillars.intro}
+          </p>
+        )}
+        <div
+          className={cn(
+            "grid",
+            fivePillars ? "mt-10 gap-4 sm:mt-14 sm:gap-8 lg:grid-cols-6" : "mt-14 gap-8 md:grid-cols-3",
+          )}
+        >
+          {pillars.items.map((item, i) => {
+            const Icon = pillarIcons[i] ?? Star;
+            return (
+              <div
+                key={item.title}
+                className={cn(
+                  "rounded-3xl border border-white/10 bg-white/5 backdrop-blur-sm",
+                  fivePillars ? "p-6 sm:p-8 lg:col-span-2" : "p-8",
+                  fivePillars && i === 3 && "lg:col-start-2",
+                )}
+              >
+                <Icon className="h-8 w-8 text-gold-400" aria-hidden />
+                <h3 className="mt-5 font-display text-xl font-semibold">{item.title}</h3>
+                {item.text ? (
+                  <p
+                    className={cn(
+                      "mt-3 leading-relaxed text-slate-200/80",
+                      olive ? "text-base" : "text-sm",
+                    )}
+                  >
+                    {item.text}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
 export function ProgramLanding({
   content,
   locale,
@@ -240,7 +298,7 @@ export function ProgramLanding({
   locale: Locale;
   ctaPlacements?: Record<string, SiteCtaPlacement>;
 }) {
-  const { hero } = content;
+  const { hero, pillars } = content;
   const olive = content.variant === "olive";
   const bodyText = olive ? "text-base leading-relaxed" : "text-lg leading-relaxed";
   const placementKey = programPlacementKey(content);
@@ -443,6 +501,8 @@ export function ProgramLanding({
           </Container>
         </section>
       )}
+
+      {pillars?.afterPain && <ProgramPillars pillars={pillars} olive={olive} />}
 
       {/* Vision */}
       {content.vision && (
@@ -960,40 +1020,7 @@ export function ProgramLanding({
         </section>
       )}
 
-      {/* Pillars */}
-      {content.pillars && (
-        <section className="bg-forest-900 py-24 text-white">
-          <Container>
-            <h2 className="text-center font-display text-3xl font-semibold sm:text-4xl">
-              {content.pillars.title}
-            </h2>
-            <div className="mt-14 grid gap-8 md:grid-cols-3">
-              {content.pillars.items.map((item, i) => {
-                const Icon = pillarIcons[i] ?? Star;
-                return (
-                  <div
-                    key={item.title}
-                    className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm"
-                  >
-                    <Icon className="h-8 w-8 text-gold-400" />
-                    <h3 className="mt-5 font-display text-xl font-semibold">{item.title}</h3>
-                    {item.text ? (
-                      <p
-                        className={cn(
-                          "mt-3 leading-relaxed text-slate-200/80",
-                          olive ? "text-base" : "text-sm",
-                        )}
-                      >
-                        {item.text}
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </Container>
-        </section>
-      )}
+      {pillars && !pillars.afterPain && <ProgramPillars pillars={pillars} olive={olive} />}
 
       {/* Includes — детайлен списък */}
       {content.includes && !content.valueStack && (

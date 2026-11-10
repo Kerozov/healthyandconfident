@@ -176,7 +176,12 @@ export type ProgramLandingContent = {
     bonuses?: string[];
     closing?: string;
   };
-  pillars?: { title: string; items: { title: string; text: string }[] };
+  pillars?: {
+    title: string;
+    intro?: string;
+    afterPain?: boolean;
+    items: { title: string; text: string }[];
+  };
   includes?: { title: string; items: { title: string; text: string }[] };
   testimonials?: { headline?: string; quote: string; name: string }[];
   /** Shown under the results — e.g. that outcomes vary per person. */
