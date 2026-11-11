@@ -6,6 +6,7 @@ import { getDictionary } from "@/i18n";
 import { getSiteBundles, getBlackFridayConfig } from "@/lib/site/bundles";
 import { BlackFridayBundleCard } from "@/components/site/black-friday-bundle-card";
 import { pageOpenGraph, publicSiteOrigin } from "@/lib/site";
+import { blackFridayPhase } from "@/lib/site/black-friday-phase";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +49,12 @@ export async function generateMetadata({
 
 export default async function BlackFridayPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { locale } = await params;
+  const [{ locale }, query] = await Promise.all([params, searchParams]);
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
   const [dict, config, bundles] = await Promise.all([
@@ -61,7 +64,9 @@ export default async function BlackFridayPage({
   ]);
   const bf = dict.blackFriday;
 
-  if (!config || !config.enabled) {
+  const phase = blackFridayPhase(config);
+
+  if (!config || phase === "off") {
     return (
       <section className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="font-display text-3xl font-semibold text-slate-800">
@@ -76,12 +81,22 @@ export default async function BlackFridayPage({
     );
   }
 
-  const now = Date.now();
-  const earlyAccessDeadline = config.early_access_deadline
-    ? new Date(config.early_access_deadline).getTime()
-    : NaN;
-  const earlyAccessOnly =
-    !Number.isNaN(earlyAccessDeadline) && now < earlyAccessDeadline;
+  if (phase === "ended") {
+    return (
+      <section className="mx-auto max-w-2xl px-4 py-24 text-center">
+        <h1 className="font-display text-3xl font-semibold text-slate-800">
+          {bf.title}
+        </h1>
+        <p className="mt-4 text-ink-soft">{bf.endedText}</p>
+      </section>
+    );
+  }
+
+  // The early-access email (26.11) links here with `?early=<key>`; with the
+  // right key the offers open before the public start.
+  const earlyKey = typeof query.early === "string" ? query.early.trim() : "";
+  const hasEarlyKey = Boolean(config.early_access_key) && earlyKey === config.early_access_key;
+  const earlyAccessOnly = phase === "early" && !hasEarlyKey;
   const deadlineLabel = formatDeadline(config.deadline, l);
 
   const visibleBundles = bundles.filter((b) =>

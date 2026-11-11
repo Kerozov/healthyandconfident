@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import type { SiteBundle, SiteBlackFridayConfig } from "@/lib/supabase/types";
 import {
   saveBundle,
   deleteBundle,
   moveBundle,
   saveBlackFridayConfig,
+  createPlanBundles,
   type BundleInput,
 } from "@/app/(admin)/admin/bundle-actions";
 import {
@@ -29,6 +30,17 @@ function toLocalInput(value: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours(),
   )}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * `datetime-local` gives a wall-clock time without a zone; turn it into an
+ * instant in the admin's browser zone (Sofia for Веси) before saving, so the
+ * database doesn't read „30.11 23:59“ as UTC.
+ */
+function fromLocalInput(value: string): string {
+  if (!value.trim()) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toISOString();
 }
 
 function splitLines(value: string): string[] {
@@ -317,17 +329,28 @@ function BundleEditor({
   );
 }
 
-function ConfigEditor({ config }: { config: SiteBlackFridayConfig | null }) {
+function ConfigEditor({
+  config,
+  siteOrigin,
+}: {
+  config: SiteBlackFridayConfig | null;
+  siteOrigin: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     enabled: config?.enabled ?? false,
-    deadline: toLocalInput(config?.deadline),
-    early_access_deadline: toLocalInput(config?.early_access_deadline),
+    // Defaults follow the 2026 plan: offers 27.11 8:00 – 30.11 23:59.
+    deadline: config ? toLocalInput(config.deadline) : "2026-11-30T23:59",
+    early_access_deadline: config
+      ? toLocalInput(config.early_access_deadline)
+      : "2026-11-27T08:00",
     early_access_form_slug: config?.early_access_form_slug ?? "",
-    banner_text_bg: config?.banner_text_bg ?? "",
-    banner_text_en: config?.banner_text_en ?? "",
+    banner_text_bg:
+      config?.banner_text_bg ?? "Черен петък: менюта и програми до −50% до 30.11",
+    banner_text_en:
+      config?.banner_text_en ?? "Black Friday: menus and programs up to −50% until 30.11",
     banner_href: config?.banner_href ?? "/black-friday",
   });
 
@@ -341,8 +364,8 @@ function ConfigEditor({ config }: { config: SiteBlackFridayConfig | null }) {
     startTransition(async () => {
       const res = await saveBlackFridayConfig({
         enabled: form.enabled,
-        deadline: form.deadline,
-        early_access_deadline: form.early_access_deadline,
+        deadline: fromLocalInput(form.deadline),
+        early_access_deadline: fromLocalInput(form.early_access_deadline),
         early_access_form_slug: form.early_access_form_slug,
         banner_text_bg: form.banner_text_bg,
         banner_text_en: form.banner_text_en,
@@ -355,6 +378,10 @@ function ConfigEditor({ config }: { config: SiteBlackFridayConfig | null }) {
       setSaved(true);
     });
   }
+
+  const earlyLink = config?.early_access_key
+    ? `${siteOrigin}/bg/black-friday?early=${config.early_access_key}`
+    : "";
 
   return (
     <Card title="Настройки на кампанията" className="space-y-4">
@@ -380,7 +407,7 @@ function ConfigEditor({ config }: { config: SiteBlackFridayConfig | null }) {
         </Field>
         <Field
           label="Начало на офертите (ранен достъп)"
-          hint="До този момент страницата показва само формата за ранен достъп."
+          hint="До този момент страницата показва само формата за ранен достъп (освен по тайния линк по-долу)."
         >
           <Input
             type="datetime-local"
@@ -389,6 +416,15 @@ function ConfigEditor({ config }: { config: SiteBlackFridayConfig | null }) {
           />
         </Field>
       </div>
+
+      {earlyLink && (
+        <Field
+          label="Линк за ранен достъп"
+          hint="Сложи го в имейл № 3 (26.11, 20:00). Който го има, вижда офертите преди началото."
+        >
+          <Input readOnly value={earlyLink} onFocus={(e) => e.currentTarget.select()} />
+        </Field>
+      )}
 
       <Field
         label="Slug на формата за ранен достъп"
@@ -436,12 +472,33 @@ function ConfigEditor({ config }: { config: SiteBlackFridayConfig | null }) {
 export function BundlesManager({
   bundles,
   config,
+  siteOrigin,
 }: {
   bundles: SiteBundle[];
   config: SiteBlackFridayConfig | null;
+  siteOrigin: string;
 }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  const [planPending, startPlan] = useTransition();
+  const [planMessage, setPlanMessage] = useState<string | null>(null);
+
+  function addPlanBundles() {
+    setPlanMessage(null);
+    startPlan(async () => {
+      const res = await createPlanBundles();
+      if (!res.ok) {
+        setPlanMessage(res.message || "Неуспешно");
+        return;
+      }
+      setPlanMessage(
+        res.created
+          ? `Добавих ${res.created} пакета като скрити чернови. Постави Stripe линковете и ги включи.`
+          : "Пакетите от плана вече са добавени.",
+      );
+      router.refresh();
+    });
+  }
 
   function refresh() {
     router.refresh();
@@ -449,14 +506,18 @@ export function BundlesManager({
 
   return (
     <div className="space-y-6">
-      <ConfigEditor config={config} />
+      <ConfigEditor config={config} siteOrigin={siteOrigin} />
 
       {bundles.length === 0 && !creating && (
         <Alert variant="info">
-          Все още няма пакети. Натисни „Нов пакет“ и създай първия — например „21 дни“ +
-          два наръчника за 39 € вместо 77 €.
+          Все още няма пакети. Натисни „Добави офертите от плана“ и ще създам четирите
+          оферти за Черния петък („21 дни“ за 39 €, „По-леко тяло“ за 69 €, PDF по 9 €,
+          „Живей без резистентност“ с подарък) като скрити чернови. Остава само да
+          поставиш Stripe линковете и да ги включиш.
         </Alert>
       )}
+
+      {planMessage && <Alert variant="info">{planMessage}</Alert>}
 
       {bundles.map((bundle) => (
         <BundleEditor key={bundle.id} bundle={bundle} isNew={false} onDone={refresh} />
@@ -465,9 +526,14 @@ export function BundlesManager({
       {creating && <BundleEditor bundle={null} isNew onDone={() => { setCreating(false); refresh(); }} />}
 
       {!creating && (
-        <AdminButton onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" /> Нов пакет
-        </AdminButton>
+        <div className="flex flex-wrap gap-3">
+          <AdminButton onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" /> Нов пакет
+          </AdminButton>
+          <AdminButton variant="secondary" onClick={addPlanBundles} disabled={planPending}>
+            <Sparkles className="h-4 w-4" /> Добави офертите от плана
+          </AdminButton>
+        </div>
       )}
     </div>
   );

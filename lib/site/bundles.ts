@@ -51,7 +51,7 @@ export async function getBlackFridayConfig(): Promise<SiteBlackFridayConfig | nu
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    return (data as SiteBlackFridayConfig) ?? null;
+    return (data as SiteBlackFridayConfig | null) ?? null;
   }, null);
 }
 
@@ -63,5 +63,5 @@ export async function getAdminBlackFridayConfig(): Promise<SiteBlackFridayConfig
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as SiteBlackFridayConfig) ?? null;
+  return (data as SiteBlackFridayConfig | null) ?? null;
 }

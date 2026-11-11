@@ -259,6 +259,7 @@ export type Dictionary = {
     earlyAccessTitle: string;
     earlyAccessText: string;
     earlyAccessCta: string;
+    endedText: string;
     notAvailable: string;
     faq: FaqItem[];
   };

@@ -608,6 +608,8 @@ export const en: Dictionary = {
     earlyAccessText:
       "Join the list and you'll get the discounts on the evening of 26.11, before everyone else. I'll also send you a 2-day colourful holiday menu right away.",
     earlyAccessCta: "Join the early access list",
+    endedText:
+      "Black Friday is over and prices are back to normal. Thank you to everyone who joined! Write to me if you have a question about the programs.",
     notAvailable:
       "This package cannot be bought online right now. Write to me and I'll help.",
     faq: [

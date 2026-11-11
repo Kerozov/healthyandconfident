@@ -33,6 +33,8 @@ import { getSiteQuestionnaireCta } from "@/lib/site/questionnaire-cta-data";
 import { navItemsWithQuestionnaire, questionnaireCtaForLocale } from "@/lib/site/questionnaire-cta";
 import { getBlackFridayConfig } from "@/lib/site/bundles";
 import { BlackFridayBanner } from "@/components/site/black-friday-banner";
+import { blackFridayPhase } from "@/lib/site/black-friday-phase";
+import { BlackFridayBannerGate } from "@/components/site/black-friday-banner-gate";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -140,9 +142,12 @@ export default async function SiteLayout({
             successButton={popupConfig?.success_button}
           >
             <HashScroll />
-            {blackFriday?.enabled && (
-              <BlackFridayBanner config={blackFriday} locale={l} />
-            )}
+            {blackFriday && blackFridayPhase(blackFriday) !== "off" &&
+              blackFridayPhase(blackFriday) !== "ended" && (
+                <BlackFridayBannerGate deadline={blackFriday.deadline}>
+                  <BlackFridayBanner config={blackFriday} locale={l} />
+                </BlackFridayBannerGate>
+              )}
             <SiteHeader locale={l} items={navItems} cta={dict.nav.cta} />
             <main>{children}</main>
             <Footer locale={l} dict={dict} contactConfig={contactConfig} />

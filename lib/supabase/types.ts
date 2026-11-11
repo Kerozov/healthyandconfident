@@ -647,6 +647,8 @@ export type SiteBlackFridayConfig = {
   early_access_deadline: string | null;
   /** Slug of the form the early-access signup opens. */
   early_access_form_slug: string;
+  /** Secret for `/black-friday?early=<key>` — shows the offers before the public start. */
+  early_access_key: string;
   banner_text_bg: string;
   banner_text_en: string;
   /** Site path without the locale — the banner links to `/{locale}<this>`. */

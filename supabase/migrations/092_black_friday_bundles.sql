@@ -52,6 +52,9 @@ create table if not exists public.site_black_friday (
   banner_text_bg           text not null default '',
   banner_text_en           text not null default '',
   banner_href              text not null default '/black-friday',
+  -- Secret for the early-access link (`/black-friday?early=<key>`): who has
+  -- it sees the offers before `early_access_deadline` (email № 3 on 26.11).
+  early_access_key         text not null default substr(md5(random()::text), 1, 10),
   updated_at               timestamptz not null default now()
 );
 

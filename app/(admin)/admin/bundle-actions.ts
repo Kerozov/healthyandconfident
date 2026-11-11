@@ -221,3 +221,125 @@ export async function saveBlackFridayConfig(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+/** The four offers from the Black Friday 2026 plan, as drafts to fill in. */
+const PLAN_BUNDLES: Array<Omit<BundleInput, "stripe_url" | "stripe_url_en" | "enabled" | "enabled_en">> = [
+  {
+    slug: "21-dni-black-friday",
+    title_bg: "„21 дни“ рецепти и менюта",
+    title_en: "“21 days” recipes and menus",
+    subtitle_bg: "Готови менюта и рецепти до 20 минути, плюс два наръчника.",
+    subtitle_en: "Ready menus and recipes under 20 minutes, plus two guides.",
+    includes_bg: [
+      "„21 дни“ рецепти и менюта",
+      "PDF „Вкусни гарнитури“",
+      "PDF „Растителни протеини“",
+    ],
+    includes_en: [
+      "“21 days” recipes and menus",
+      "PDF “Tasty side dishes”",
+      "PDF “Plant proteins”",
+    ],
+    old_price_bg: "77 €",
+    old_price_en: "77 €",
+    price_bg: "39 €",
+    price_en: "39 €",
+    bonus_bg: "Гаранция: следвай менюто 7 дни и ако не усетиш разлика, ти връщам парите.",
+    bonus_en: "Guarantee: follow the menu for 7 days, and if you feel no difference, I refund you.",
+    cta_label_bg: "Искам „21 дни“",
+    cta_label_en: "I want “21 days”",
+    badge_bg: "Най-продавано",
+    badge_en: "Bestseller",
+    highlight: true,
+  },
+  {
+    slug: "po-leko-tyalo-black-friday",
+    title_bg: "„По-леко тяло. По-свободно движение“",
+    title_en: "“A lighter body. Freer movement”",
+    subtitle_bg: "",
+    subtitle_en: "",
+    includes_bg: [],
+    includes_en: [],
+    old_price_bg: "96 €",
+    old_price_en: "96 €",
+    price_bg: "69 €",
+    price_en: "69 €",
+    bonus_bg: "",
+    bonus_en: "",
+    cta_label_bg: "",
+    cta_label_en: "",
+    badge_bg: "",
+    badge_en: "",
+    highlight: false,
+  },
+  {
+    slug: "pdf-black-friday",
+    title_bg: "PDF ръководства",
+    title_en: "PDF guides",
+    subtitle_bg: "Всеки наръчник на половин цена.",
+    subtitle_en: "Every guide at half price.",
+    includes_bg: ["Вкусни гарнитури", "Менопауза", "Кожа", "Растителни протеини"],
+    includes_en: ["Tasty side dishes", "Menopause", "Skin", "Plant proteins"],
+    old_price_bg: "по 16 €",
+    old_price_en: "16 € each",
+    price_bg: "по 9 €",
+    price_en: "9 € each",
+    bonus_bg: "",
+    bonus_en: "",
+    cta_label_bg: "",
+    cta_label_en: "",
+    badge_bg: "",
+    badge_en: "",
+    highlight: false,
+  },
+  {
+    slug: "zhivei-bez-rezistentnost-black-friday",
+    title_bg: "„Живей без резистентност“ (3 месеца)",
+    title_en: "“Live without resistance” (3 months)",
+    subtitle_bg: "Груповата програма на същата цена, с подарък.",
+    subtitle_en: "The group program at the same price, with a gift.",
+    includes_bg: [],
+    includes_en: [],
+    old_price_bg: "",
+    old_price_en: "",
+    price_bg: "",
+    price_en: "",
+    bonus_bg: "„21 дни“ подарък веднага + плащане на 2 вноски",
+    bonus_en: "“21 days” as a gift right away + pay in 2 instalments",
+    cta_label_bg: "",
+    cta_label_en: "",
+    badge_bg: "",
+    badge_en: "",
+    highlight: false,
+  },
+];
+
+/**
+ * Creates the plan's four offers as hidden drafts (skips any that already
+ * exist by slug). The admin then only pastes the Stripe links and turns them on.
+ */
+export async function createPlanBundles(): Promise<BundleActionResult & { created?: number }> {
+  const guardResult = await guard();
+  if (!guardResult.ok) return guardResult;
+  const supabase = getAdminClient();
+  const { data: existing } = await supabase.from("site_bundles").select("slug");
+  const taken = new Set(((existing as { slug: string | null }[]) ?? []).map((r) => r.slug));
+  let order = await nextSortOrder();
+  const rows = PLAN_BUNDLES.filter((b) => !taken.has(b.slug ?? "")).map((b) => ({
+    ...b,
+    slug: b.slug ?? null,
+    includes_bg: b.includes_bg ?? [],
+    includes_en: b.includes_en ?? [],
+    stripe_url: "",
+    stripe_url_en: "",
+    enabled: false,
+    enabled_en: false,
+    sort_order: order++,
+  }));
+  if (rows.length === 0) return { ok: true, created: 0 };
+  const { error } = await supabase.from("site_bundles").insert(rows);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/bundles");
+  revalidatePath("/", "layout");
+  return { ok: true, created: rows.length };
+}
