@@ -4977,7 +4977,7 @@ export async function createSiteImageUpload(
   folder: string,
 ): Promise<UploadTicketResult> {
   const guard = await guardAction(
-    ["blog", "website", "popup", "email-footer", "forms", "campaigns", "automations"] as const,
+    ["blog", "website", "popup", "email-footer", "forms", "campaigns", "automations", "bundles"] as const,
     { action: "upload", summary: "Качи изображение" },
   );
   if (!guard.ok) return guard;

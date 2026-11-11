@@ -30,6 +30,8 @@ import type {
   ContactStatus,
   SubscriberHistoryEntry,
   SiteQuestionnaireCta,
+  SiteBundle,
+  SiteBlackFridayConfig,
 } from "@/lib/supabase/types";
 import type { FormTemplateRecord, FormSubmissionRecord } from "@/lib/forms/types";
 import type { Contact, ContactWorkerJob, ContactEvent } from "@/lib/contacts/types";
@@ -156,6 +158,9 @@ export type Database = {
       subscriber_history: TableShape<SubscriberHistoryEntry>;
       site_questionnaire_cta: TableShape<SiteQuestionnaireCta>;
       subscriber_facts: TableShape<SubscriberFact>;
+      /** Migration 092 — Black Friday packages and campaign settings. */
+      site_bundles: TableShape<SiteBundle>;
+      site_black_friday: TableShape<SiteBlackFridayConfig>;
     };
     Views: Record<string, never>;
     Functions: {

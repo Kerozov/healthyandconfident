@@ -246,4 +246,21 @@ export type Dictionary = {
     resubscribeHint: string;
     backHome: string;
   };
+  blackFriday: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    includedLabel: string;
+    wasLabel: string;
+    deadlineLabel: string;
+    guaranteeTitle: string;
+    guaranteeText: string;
+    earlyAccessEyebrow: string;
+    earlyAccessTitle: string;
+    earlyAccessText: string;
+    earlyAccessCta: string;
+    endedText: string;
+    notAvailable: string;
+    faq: FaqItem[];
+  };
 };

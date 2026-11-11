@@ -601,6 +601,61 @@ export type SiteGuide = {
   updated_at: string;
 };
 
+/**
+ * One Black Friday package („пакет“) on the `/black-friday` page. Sold through
+ * a Stripe Payment Link the admin pastes in — no code, no new Stripe price
+ * required to create a package.
+ */
+export type SiteBundle = {
+  id: string;
+  slug?: string | null;
+  title_bg: string;
+  title_en: string;
+  subtitle_bg: string;
+  subtitle_en: string;
+  includes_bg: string[];
+  includes_en: string[];
+  old_price_bg: string;
+  old_price_en: string;
+  price_bg: string;
+  price_en: string;
+  bonus_bg: string;
+  bonus_en: string;
+  cta_label_bg: string;
+  cta_label_en: string;
+  stripe_url: string;
+  stripe_url_en: string;
+  image_url: string | null;
+  badge_bg: string;
+  badge_en: string;
+  highlight: boolean;
+  enabled: boolean;
+  /** When false, the bundle is hidden on the English site. */
+  enabled_en: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Single-row campaign settings for the Black Friday page and top banner. */
+export type SiteBlackFridayConfig = {
+  id: string;
+  enabled: boolean;
+  /** End of the offers — prices revert after this instant. */
+  deadline: string | null;
+  /** Until this instant the page shows only the early-access signup. */
+  early_access_deadline: string | null;
+  /** Slug of the form the early-access signup opens. */
+  early_access_form_slug: string;
+  /** Secret for `/black-friday?early=<key>` — shows the offers before the public start. */
+  early_access_key: string;
+  banner_text_bg: string;
+  banner_text_en: string;
+  /** Site path without the locale — the banner links to `/{locale}<this>`. */
+  banner_href: string;
+  updated_at: string;
+};
+
 export type SiteCtaPlacement = {
   key: string;
   label_bg: string;

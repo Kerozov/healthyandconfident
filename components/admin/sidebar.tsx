@@ -29,6 +29,7 @@ import {
   Loader2,
   Gift,
   ListChecks,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -47,6 +48,7 @@ const ICONS: Record<AdminScreenKey, typeof LayoutDashboard> = {
   guide: BookOpen,
   blog: FileText,
   website: Globe,
+  bundles: Package,
   popup: MousePointerClick,
   "email-footer": Signature,
   subscribers: Users,
