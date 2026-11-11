@@ -10,9 +10,9 @@ import { mediaAlt } from "@/lib/site/media-gallery";
 /** Real dishes from the programme menus — the answer to „will I be hungry?“. */
 const FOOD = [
   "/images/6.jpg",
-  "/images/7.jpg",
+  "/images/food-egg-wrap.jpg",
   "/images/10.jpg",
-  "/images/8.jpg",
+  "/images/food-fish-fingers.jpg",
   "/images/12.jpg",
   "/images/9.jpg",
 ] as const;

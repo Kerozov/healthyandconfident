@@ -264,7 +264,7 @@ export const en: Dictionary = {
   },
   method: {
     eyebrow: "The method",
-    title: "Three pillars that make results last",
+    title: "Why does the method work so well?",
     subtitle:
       "The latest in medicine plus the psychology of success. That's why it works where diets don't.",
     highlight: "The first programme in Bulgaria built on a new, different method",

@@ -23,7 +23,7 @@ export const siteMedia: SiteMediaItem[] = [
   {
     src: "/images/1.jpg",
     category: "vesi",
-    aspect: "landscape",
+    aspect: "portrait",
     alt: {
       bg: "Веси Ней получава награда за принос в областта на храненето и здравето",
       en: "Vessie Nay receiving an award for contribution in nutrition and health",
@@ -90,6 +90,24 @@ export const siteMedia: SiteMediaItem[] = [
     alt: {
       bg: "Тостове с авокадо, яйца и чери домати - лесни рецепти за цялото семейство",
       en: "Avocado toast with eggs and cherry tomatoes - easy family-friendly recipes",
+    },
+  },
+  {
+    src: "/images/food-egg-wrap.jpg",
+    category: "food",
+    aspect: "portrait",
+    alt: {
+      bg: "Тортила с яйца, спанак, авокадо и гъби - засищаща закуска от менюто",
+      en: "Tortilla wrap with eggs, spinach, avocado and mushrooms - a filling breakfast from the menu",
+    },
+  },
+  {
+    src: "/images/food-fish-fingers.jpg",
+    category: "food",
+    aspect: "portrait",
+    alt: {
+      bg: "Рибни филенца с броколи, зеле и морков - лесна вечеря за цялото семейство",
+      en: "Fish fingers with broccoli, cabbage and carrot - an easy family dinner",
     },
   },
   {

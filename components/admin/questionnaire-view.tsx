@@ -329,99 +329,6 @@ export function QuestionnaireView({
         />
       </div>
 
-      {sitePanel}
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Card title="Какво отговориха">
-          {report.questions.length === 0 ? (
-            <p className="text-sm text-ink-soft">Формата няма въпроси с отговори за обобщаване.</p>
-          ) : (
-            <div className="-mt-2 grid gap-3 xl:grid-cols-2">
-              {report.questions.map((q) =>
-                q.kind === "choice" ? (
-                  <ChoiceCard
-                    key={q.id}
-                    question={q}
-                    total={total}
-                    active={picked[q.id]}
-                    onPick={(value) => pick(q.id, value)}
-                  />
-                ) : q.kind === "number" ? (
-                  <div key={q.id} className="rounded-2xl border border-ink/10 bg-white p-4">
-                    <p className="text-sm font-semibold leading-snug text-ink">{q.label}</p>
-                    <p className="mb-3 mt-0.5 text-xs text-ink-soft">{q.answered} от {total} отговорили</p>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      {[
-                        ["Средно", q.avg],
-                        ["Най-малко", q.min],
-                        ["Най-много", q.max],
-                      ].map(([label, value]) => (
-                        <div key={String(label)} className="rounded-xl bg-cream/60 px-2 py-2.5">
-                          <p className="text-[11px] text-ink-soft">{label}</p>
-                          <p className="font-display text-xl font-semibold tabular-nums text-ink">
-                            {value ?? "-"}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div key={q.id} className="rounded-2xl border border-ink/10 bg-white p-4">
-                    <p className="text-sm font-semibold leading-snug text-ink">{q.label}</p>
-                    <p className="mb-3 mt-0.5 text-xs text-ink-soft">{q.answered} от {total} отговорили</p>
-                    {q.latest.length === 0 ? (
-                      <p className="text-xs text-ink-soft">Още няма отговори.</p>
-                    ) : (
-                      <ul className="space-y-1.5">
-                        {q.latest.map((a, i) => (
-                          <li key={`${a.at}-${i}`} className="rounded-xl bg-cream/50 px-3 py-2 text-sm text-ink">
-                            <p className="line-clamp-3 whitespace-pre-line">{a.value}</p>
-                            <p className="mt-0.5 text-[11px] text-ink-soft">{formatShortDate(a.at)}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ),
-              )}
-            </div>
-          )}
-        </Card>
-
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-          <ShareLinksPanel
-            title="Страницата с въпросника"
-            hint="Сложи линка в имейл, реклама или съобщение. Който попълни, влиза в групите, зададени във формата."
-            links={links}
-          />
-          {Object.keys(picked).length > 0 && (
-            <div className="rounded-2xl border border-forest-500/30 bg-forest-50/60 p-4">
-              <p className="text-sm font-semibold text-forest-800">Показвам само хората с:</p>
-              <ul className="mt-2 space-y-1.5">
-                {Object.entries(picked).map(([fieldId, value]) => (
-                  <li key={fieldId} className="flex items-start justify-between gap-2 text-sm">
-                    <span className="min-w-0">
-                      <span className="block text-xs text-ink-soft">
-                        {choiceQuestions.find((q) => q.id === fieldId)?.label}
-                      </span>
-                      <span className="font-medium text-ink">{labelOf(fieldId, value)}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => pick(fieldId, null)}
-                      aria-label="Махни филтъра"
-                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-white"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-
       <Card
         title="Попълнили"
         action={
@@ -550,6 +457,99 @@ export function QuestionnaireView({
           </div>
         )}
       </Card>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <Card title="Какво отговориха">
+          {report.questions.length === 0 ? (
+            <p className="text-sm text-ink-soft">Формата няма въпроси с отговори за обобщаване.</p>
+          ) : (
+            <div className="-mt-2 grid gap-3 xl:grid-cols-2">
+              {report.questions.map((q) =>
+                q.kind === "choice" ? (
+                  <ChoiceCard
+                    key={q.id}
+                    question={q}
+                    total={total}
+                    active={picked[q.id]}
+                    onPick={(value) => pick(q.id, value)}
+                  />
+                ) : q.kind === "number" ? (
+                  <div key={q.id} className="rounded-2xl border border-ink/10 bg-white p-4">
+                    <p className="text-sm font-semibold leading-snug text-ink">{q.label}</p>
+                    <p className="mb-3 mt-0.5 text-xs text-ink-soft">{q.answered} от {total} отговорили</p>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      {[
+                        ["Средно", q.avg],
+                        ["Най-малко", q.min],
+                        ["Най-много", q.max],
+                      ].map(([label, value]) => (
+                        <div key={String(label)} className="rounded-xl bg-cream/60 px-2 py-2.5">
+                          <p className="text-[11px] text-ink-soft">{label}</p>
+                          <p className="font-display text-xl font-semibold tabular-nums text-ink">
+                            {value ?? "-"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={q.id} className="rounded-2xl border border-ink/10 bg-white p-4">
+                    <p className="text-sm font-semibold leading-snug text-ink">{q.label}</p>
+                    <p className="mb-3 mt-0.5 text-xs text-ink-soft">{q.answered} от {total} отговорили</p>
+                    {q.latest.length === 0 ? (
+                      <p className="text-xs text-ink-soft">Още няма отговори.</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {q.latest.map((a, i) => (
+                          <li key={`${a.at}-${i}`} className="rounded-xl bg-cream/50 px-3 py-2 text-sm text-ink">
+                            <p className="line-clamp-3 whitespace-pre-line">{a.value}</p>
+                            <p className="mt-0.5 text-[11px] text-ink-soft">{formatShortDate(a.at)}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+        </Card>
+
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+          <ShareLinksPanel
+            title="Страницата с въпросника"
+            hint="Сложи линка в имейл, реклама или съобщение. Който попълни, влиза в групите, зададени във формата."
+            links={links}
+          />
+          {Object.keys(picked).length > 0 && (
+            <div className="rounded-2xl border border-forest-500/30 bg-forest-50/60 p-4">
+              <p className="text-sm font-semibold text-forest-800">Показвам само хората с:</p>
+              <ul className="mt-2 space-y-1.5">
+                {Object.entries(picked).map(([fieldId, value]) => (
+                  <li key={fieldId} className="flex items-start justify-between gap-2 text-sm">
+                    <span className="min-w-0">
+                      <span className="block text-xs text-ink-soft">
+                        {choiceQuestions.find((q) => q.id === fieldId)?.label}
+                      </span>
+                      <span className="font-medium text-ink">{labelOf(fieldId, value)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => pick(fieldId, null)}
+                      aria-label="Махни филтъра"
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-white"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {sitePanel}
 
       {open && <AnswersDialog response={open} formName={report.form.name} onClose={() => setOpen(null)} />}
     </div>
