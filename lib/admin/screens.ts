@@ -33,6 +33,12 @@ export const ADMIN_SCREEN_GROUPS = [
         description: "Секции, продукти, наръчници и CTA",
       },
       {
+        key: "bundles",
+        label: "Пакети",
+        href: "/admin/bundles",
+        description: "Черен петък - пакети и настройки на кампанията",
+      },
+      {
         key: "popup",
         label: "Popup",
         href: "/admin/popup",
@@ -152,6 +158,7 @@ const PATH_PREFIXES: { prefix: string; screen: AdminScreenKey | "team" }[] = [
   { prefix: "/admin/team", screen: "team" },
   { prefix: "/admin/blog", screen: "blog" },
   { prefix: "/admin/website", screen: "website" },
+  { prefix: "/admin/bundles", screen: "bundles" },
   { prefix: "/admin/popup", screen: "popup" },
   { prefix: "/admin/email-footer", screen: "email-footer" },
   { prefix: "/admin/subscribers", screen: "subscribers" },

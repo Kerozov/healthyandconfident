@@ -31,6 +31,8 @@ import { OfferPopupProvider } from "@/components/site/offer-popup";
 import { getPopupThankYouConfig } from "@/lib/site/popup-config";
 import { getSiteQuestionnaireCta } from "@/lib/site/questionnaire-cta-data";
 import { navItemsWithQuestionnaire, questionnaireCtaForLocale } from "@/lib/site/questionnaire-cta";
+import { getBlackFridayConfig } from "@/lib/site/bundles";
+import { BlackFridayBanner } from "@/components/site/black-friday-banner";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -95,14 +97,16 @@ export default async function SiteLayout({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const l = locale as Locale;
-  const [dict, site, contactConfig, metaPixel, popupConfig, questionnaire] = await Promise.all([
-    getDictionary(l),
-    getPublicSiteContent(),
-    getSiteContactConfig(),
-    getMetaPixelPublicConfig(),
-    getPopupThankYouConfig(l),
-    getSiteQuestionnaireCta(),
-  ]);
+  const [dict, site, contactConfig, metaPixel, popupConfig, questionnaire, blackFriday] =
+    await Promise.all([
+      getDictionary(l),
+      getPublicSiteContent(),
+      getSiteContactConfig(),
+      getMetaPixelPublicConfig(),
+      getPopupThankYouConfig(l),
+      getSiteQuestionnaireCta(),
+      getBlackFridayConfig(),
+    ]);
   const navItems = navItemsWithQuestionnaire(
     dict.nav.items,
     questionnaireCtaForLocale(questionnaire, l),
@@ -136,6 +140,9 @@ export default async function SiteLayout({
             successButton={popupConfig?.success_button}
           >
             <HashScroll />
+            {blackFriday?.enabled && (
+              <BlackFridayBanner config={blackFriday} locale={l} />
+            )}
             <SiteHeader locale={l} items={navItems} cta={dict.nav.cta} />
             <main>{children}</main>
             <Footer locale={l} dict={dict} contactConfig={contactConfig} />

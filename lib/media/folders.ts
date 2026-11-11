@@ -6,7 +6,8 @@ export type MediaFolder =
   | "programs"
   | "popup"
   | "forms"
-  | "email";
+  | "email"
+  | "bundles";
 
 export const MEDIA_FOLDERS: MediaFolder[] = [
   "blog",
@@ -17,4 +18,5 @@ export const MEDIA_FOLDERS: MediaFolder[] = [
   "popup",
   "forms",
   "email",
+  "bundles",
 ];

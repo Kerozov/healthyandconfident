@@ -592,4 +592,37 @@ export const en: Dictionary = {
     resubscribeHint: "Changed your mind? You can sign up again using the form on our website.",
     backHome: "Back to home",
   },
+  blackFriday: {
+    eyebrow: "Black Friday 27–30 November",
+    title: "Holidays without the extra kilos",
+    subtitle:
+      "The biggest discounts of the year on the menus and programmes — only until 30 November, 23:59.",
+    includedLabel: "What you get",
+    wasLabel: "instead of",
+    deadlineLabel: "Offers valid until",
+    guaranteeTitle: "The “21 days” guarantee",
+    guaranteeText:
+      "Follow the menu for 7 days. If you don't feel more energy and fewer cravings, write to me and I'll refund you.",
+    earlyAccessEyebrow: "Early access",
+    earlyAccessTitle: "See the offers one evening earlier",
+    earlyAccessText:
+      "Join the list and you'll get the discounts on the evening of 26.11, before everyone else. I'll also send you a 2-day colourful holiday menu right away.",
+    earlyAccessCta: "Join the early access list",
+    notAvailable:
+      "This package cannot be bought online right now. Write to me and I'll help.",
+    faq: [
+      {
+        q: "I don't have time to cook.",
+        a: "The “21 days” recipes take up to 20 minutes, and most can be cooked ahead for 2 days.",
+      },
+      {
+        q: "I've tried everything and nothing works.",
+        a: "There are no forbidden foods and no calorie counting here. You learn how to eat, not how to starve.",
+      },
+      {
+        q: "What if I don't like it?",
+        a: "You have 7 days. Write to me and I'll refund you.",
+      },
+    ],
+  },
 };
