@@ -4968,7 +4968,7 @@ export async function saveCtaPlacement(input: {
 // These actions hand out a signed Storage URL; the browser then PUTs the file
 // straight to Supabase. Nothing but the descriptor crosses the Server Action
 // boundary, so the 4 MB body limit and the function timeout stop applying and a
-// 20 MB PDF uploads as reliably as a 200 KB thumbnail.
+// 15 MB image uploads as reliably as a 200 KB thumbnail.
 
 export type UploadTicketResult = ActionResult & { ticket?: MediaUploadTicket };
 
