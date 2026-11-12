@@ -7,7 +7,14 @@ export type { MediaFolder } from "@/lib/media/folders";
 
 const BUCKET = "media";
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
-const MAX_PDF_BYTES = 20 * 1024 * 1024;
+/**
+ * Email PDFs are fetched by the worker once per send. Vercel's Data Cache in
+ * `/files` skips anything over 2 MB, so a bigger PDF is downloaded from
+ * Supabase for every email: a 17.7 MB menu on a welcome automation used up the
+ * organisation's whole monthly egress in one day (12 Nov 2026). The worker
+ * also rejects anything over 8 MB.
+ */
+const MAX_PDF_BYTES = 2 * 1024 * 1024;
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -149,7 +156,7 @@ export async function createPdfUploadTicket(
   if (file.size > MAX_PDF_BYTES) {
     return {
       ok: false,
-      message: `Файлът е ${formatMb(file.size)}. Максимум за PDF: ${formatMb(MAX_PDF_BYTES)}.`,
+      message: `Файлът е ${formatMb(file.size)}. Максимум за PDF: ${formatMb(MAX_PDF_BYTES)}. Компресирай го (напр. ilovepdf.com → Compress PDF) или сложи линк към файла в текста на имейла.`,
     };
   }
   if (file.type !== "application/pdf") {
