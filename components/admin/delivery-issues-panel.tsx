@@ -19,6 +19,7 @@ import { cn, formatDate } from "@/lib/utils";
 const KIND_LABELS: Record<DeliveryIssueKind, string> = {
   missing: "Без запис",
   failed: "Неуспешен",
+  stuck: "Засякнал",
   skipped: "Пропуснат",
   bounced: "Върнат",
 };
@@ -26,6 +27,7 @@ const KIND_LABELS: Record<DeliveryIssueKind, string> = {
 const KIND_TONE: Record<DeliveryIssueKind, string> = {
   missing: "bg-coral-500/15 text-coral-700",
   failed: "bg-coral-500/15 text-coral-700",
+  stuck: "bg-coral-500/15 text-coral-700",
   skipped: "bg-amber-500/15 text-amber-800",
   bounced: "bg-ink/10 text-ink-soft",
 };
@@ -38,7 +40,7 @@ type Group = { automationId: string; automationName: string; issues: DeliveryIss
  * by one, after reading the reason.
  */
 function bulkSendable(issues: DeliveryIssue[]): DeliveryIssue[] {
-  return issues.filter((i) => i.canSend && (i.kind === "missing" || i.kind === "failed"));
+  return issues.filter((i) => i.canSend && (i.kind === "missing" || i.kind === "failed" || i.kind === "stuck"));
 }
 
 /**
@@ -132,13 +134,14 @@ export function DeliveryIssuesPanel({
   }, [report, query, kind]);
 
   const kindCounts = useMemo(() => {
-    const counts: Record<DeliveryIssueKind, number> = { missing: 0, failed: 0, skipped: 0, bounced: 0 };
+    const counts: Record<DeliveryIssueKind, number> = { missing: 0, failed: 0, stuck: 0, skipped: 0, bounced: 0 };
     for (const issue of report?.issues ?? []) counts[issue.kind] += 1;
     return counts;
   }, [report]);
 
   function send(group: Group, issues: DeliveryIssue[], key: string) {
-    const emails = issues.filter((i) => i.canSend).map((i) => i.email);
+    const sendable = issues.filter((i) => i.canSend);
+    const emails = sendable.map((i) => i.email);
     if (emails.length === 0) return;
     // Each person gets only the one step they missed — no pacing needed here.
     if (
@@ -156,7 +159,9 @@ export function DeliveryIssuesPanel({
       const res = await sendAutomationNow(group.automationId, {
         mode: "emails",
         emails: emails.join("\n"),
-        resend: false,
+        // A worker failure or stuck job still has a "sent" row, which the
+        // normal already-sent check would treat as delivered.
+        resend: sendable.some((i) => i.resend),
         continueChain: true,
       });
       setNote({ ok: res.ok, text: res.message ?? (res.ok ? "Изпратено." : "Неуспешно.") });
@@ -231,7 +236,7 @@ export function DeliveryIssuesPanel({
             className="h-10 w-full rounded-full border border-ink/15 bg-white pl-9 pr-4 text-sm text-ink outline-none placeholder:text-ink-soft/50 focus:border-forest-400 focus:ring-2 focus:ring-forest-400/20"
           />
         </label>
-        {(["all", "missing", "failed", "skipped", "bounced"] as const).map((k) => {
+        {(["all", "missing", "failed", "stuck", "skipped", "bounced"] as const).map((k) => {
           const count = k === "all" ? total : kindCounts[k];
           if (k !== "all" && count === 0) return null;
           return (
@@ -291,7 +296,7 @@ export function DeliveryIssuesPanel({
                         type="button"
                         onClick={() => send(group, sendable, groupKey)}
                         disabled={busy}
-                        title="Само „Без запис“ и „Неуспешен“ - пропуснатите са по причина, прати ги поотделно"
+                        title="Само „Без запис“, „Неуспешен“ и „Засякнал“ - пропуснатите са по причина, прати ги поотделно"
                         className="inline-flex h-8 items-center gap-1.5 rounded-full bg-coral-500 px-3 text-xs font-semibold text-white hover:bg-coral-600 disabled:opacity-60"
                       >
                         {busyKey === groupKey ? (

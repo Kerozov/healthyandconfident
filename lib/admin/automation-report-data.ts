@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
+import { isAwaitingWorker, isStuckAtWorker } from "@/lib/admin/delivery-state";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
 import { aggregateAutomationStats } from "@/lib/automation/sync";
 import { dayKey, fetchAllRows, rate } from "@/lib/admin/stats-shared";
@@ -74,6 +75,8 @@ function recipientState(
   if (d.status === "canceled") return "canceled";
   if (d.status === "skipped") return "skipped";
   if (isFailed(d)) return "failed";
+  if (isStuckAtWorker(d)) return "stuck";
+  if (isAwaitingWorker(d)) return "queued";
   if (isBounced(d)) return "bounced";
   if (clicks > 0) return "clicked";
   if (isOpened(d)) return "opened";

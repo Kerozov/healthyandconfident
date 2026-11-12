@@ -21,6 +21,16 @@ function isOpenedRow(row: {
   return Boolean(row.opened_at) || row.recipient_status === "opened";
 }
 
+/** "sent" only once the worker says so; its failure is a failure. */
+function deliveryStatus(row: {
+  status: PersonEmailStatus;
+  recipient_status: string | null;
+}): PersonEmailStatus {
+  if (row.status === "sent" && row.recipient_status === "failed") return "failed";
+  if (row.status === "sent" && row.recipient_status === "pending") return "pending";
+  return row.status;
+}
+
 function mapWorkerJobStatus(status: string): PersonEmailStatus {
   if (status === "sent") return "sent";
   if (status === "pending") return "pending";
@@ -64,7 +74,7 @@ export async function getPersonEmailHistory(
     items.push({
       kind: "automation",
       title: auto?.name ?? "Автоматизация",
-      status: row.status,
+      status: deliveryStatus(row),
       at: row.scheduled_for ?? row.sent_at,
       opened: row.status === "sent" && isOpenedRow(row),
       openedAt: row.opened_at,
@@ -98,7 +108,7 @@ export async function getPersonEmailHistory(
     items.push({
       kind: "campaign",
       title: camp?.subject ?? "Кампания",
-      status: row.status,
+      status: deliveryStatus(row),
       at: row.sent_at,
       opened: row.status === "sent" && isOpenedRow(row),
       openedAt: row.opened_at,

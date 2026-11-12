@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
+import { isAwaitingWorker, isStuckAtWorker } from "@/lib/admin/delivery-state";
 import { fetchAllRows } from "@/lib/admin/stats-shared";
 import { labelSignupSource } from "@/lib/automation/signup-sources";
 import { ALL_HEALTH_TAG_KEYS } from "@/lib/site/health-tags";
@@ -14,6 +15,8 @@ export type FreeMenuEmailState =
   | "clicked"
   | "opened"
   | "sent"
+  | "queued"
+  | "stuck"
   | "scheduled"
   | "bounced"
   | "failed"
@@ -89,6 +92,8 @@ function emailState(d: DeliveryRow): FreeMenuEmailState {
   if (d.recipient_status === "bounced") return "bounced";
   if (d.status === "failed" || d.recipient_status === "failed") return "failed";
   if (d.status === "scheduled") return "scheduled";
+  if (isStuckAtWorker(d)) return "stuck";
+  if (isAwaitingWorker(d)) return "queued";
   if (d.status === "sent") return "sent";
   return "skipped";
 }
@@ -97,7 +102,9 @@ const STATE_RANK: Record<FreeMenuEmailState, number> = {
   clicked: 7,
   opened: 6,
   sent: 5,
+  queued: 4,
   scheduled: 4,
+  stuck: 2,
   bounced: 3,
   failed: 2,
   skipped: 1,

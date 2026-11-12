@@ -31,6 +31,8 @@ const STATE_STYLES: Record<AutomationRecipientState, string> = {
   opened: "bg-forest-500/10 text-forest-600",
   delivered: "bg-ink/5 text-ink-soft",
   sent: "bg-ink/5 text-ink-soft",
+  queued: "bg-gold-400/15 text-gold-600",
+  stuck: "bg-coral-500/15 text-coral-600",
   scheduled: "bg-gold-400/15 text-gold-600",
   bounced: "bg-coral-500/15 text-coral-600",
   failed: "bg-coral-500/15 text-coral-600",

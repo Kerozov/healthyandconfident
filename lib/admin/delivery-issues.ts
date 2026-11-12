@@ -19,13 +19,14 @@ import {
 } from "@/lib/automation/triggers";
 import { fetchAllRows, statsRange, type StatsPeriod } from "@/lib/admin/stats-shared";
 import { chunkArray } from "@/lib/utils";
+import { STUCK_AFTER_MS } from "@/lib/admin/delivery-state";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A chain step this far past due with no row is reported as missing. */
 const CHAIN_GRACE_MS = 2 * 60 * 60 * 1000;
 const MAX_ISSUES = 3000;
 
-export type DeliveryIssueKind = "missing" | "failed" | "skipped" | "bounced";
+export type DeliveryIssueKind = "missing" | "failed" | "stuck" | "skipped" | "bounced";
 
 export type DeliveryIssue = {
   automationId: string;
@@ -40,6 +41,11 @@ export type DeliveryIssue = {
   at: string | null;
   /** False when sending again cannot help (unsubscribed, not on the list, bounced). */
   canSend: boolean;
+  /**
+   * The row says "sent" although the email never left (worker failure or stuck
+   * job), so sending again has to skip the already-sent check.
+   */
+  resend: boolean;
   /** Why it cannot be sent, when `canSend` is false and it is not itself a bounce. */
   blocked: string | null;
 };
@@ -130,12 +136,14 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
   const deadAddresses = new Set<string>();
   const subscriberEmails = new Set<string>();
 
-  function push(issue: Omit<DeliveryIssue, "name" | "canSend" | "blocked">) {
+  function push(
+    issue: Omit<DeliveryIssue, "name" | "canSend" | "blocked" | "resend"> & { resend?: boolean },
+  ) {
     if (ignored.has(`${issue.automationId}|${issue.email}`)) {
       ignoredCount += 1;
       return;
     }
-    issues.push({ ...issue, name: null, canSend: true, blocked: null });
+    issues.push({ ...issue, name: null, canSend: true, blocked: null, resend: issue.resend ?? false });
     subscriberEmails.add(issue.email);
   }
 
@@ -155,9 +163,26 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
     if (!automation) continue;
     const email = row.email.trim().toLowerCase();
     hasRow.add(`${automation.id}|${email}`);
-    const bounced = row.status === "sent" || row.status === "scheduled";
+    const handedOff = row.status === "sent" || row.status === "scheduled";
+    // The worker could not send it (bad attachment, provider error): nothing
+    // reached the address, so it is a failure to send again, not a bounce.
+    const workerFailed = handedOff && row.recipient_status === "failed";
+    const bounced = handedOff && !workerFailed;
     if (bounced && (row.recipient_status === "bounced" || row.recipient_status === "complained")) {
       deadAddresses.add(email);
+    }
+    if (workerFailed) {
+      push({
+        automationId: automation.id,
+        automationName: automation.name,
+        channel: automation.channel,
+        email,
+        kind: "failed",
+        reason: row.error?.trim() || "Изпращачът не успя да го изпрати.",
+        at: row.sent_at,
+        resend: true,
+      });
+      continue;
     }
     push({
       automationId: automation.id,
@@ -169,6 +194,38 @@ export async function getDeliveryIssues(period: StatsPeriod): Promise<DeliveryIs
         ? bounceReason(row.recipient_status)
         : row.error?.trim() || (row.status === "failed" ? "Неуспешно изпращане." : "Пропусната."),
       at: row.sent_at,
+    });
+  }
+
+  // ── Handed to the worker, never sent ─────────────────────
+  const stuckBefore = new Date(Date.now() - STUCK_AFTER_MS).toISOString();
+  const stuckRows = await fetchAllRows<DeliveryRow>((from, to) => {
+    let q = supabase
+      .from("automation_deliveries")
+      .select("automation_id, email, status, error, recipient_status, sent_at, scheduled_for")
+      .eq("status", "sent")
+      .eq("recipient_status", "pending")
+      .is("delivered_at", null)
+      .lt("sent_at", stuckBefore)
+      .order("id")
+      .range(from, to);
+    if (since) q = q.gte("sent_at", since);
+    return q;
+  });
+  for (const row of stuckRows) {
+    const automation = byId.get(row.automation_id);
+    if (!automation) continue;
+    const email = row.email.trim().toLowerCase();
+    hasRow.add(`${automation.id}|${email}`);
+    push({
+      automationId: automation.id,
+      automationName: automation.name,
+      channel: automation.channel,
+      email,
+      kind: "stuck",
+      reason: "Предаден на изпращача, но не е изпратен повече от час.",
+      at: row.sent_at,
+      resend: true,
     });
   }
 
