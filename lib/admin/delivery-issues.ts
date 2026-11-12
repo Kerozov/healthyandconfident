@@ -19,18 +19,12 @@ import {
 } from "@/lib/automation/triggers";
 import { fetchAllRows, statsRange, type StatsPeriod } from "@/lib/admin/stats-shared";
 import { chunkArray } from "@/lib/utils";
+import { STUCK_AFTER_MS } from "@/lib/admin/delivery-state";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A chain step this far past due with no row is reported as missing. */
 const CHAIN_GRACE_MS = 2 * 60 * 60 * 1000;
 const MAX_ISSUES = 3000;
-/**
- * Handed to the worker but still not sent or failed after this long. A single
- * automation email leaves within minutes; an hour means the worker is stuck on
- * it (on 12 Nov 2026 an oversized PDF kept ten welcome emails in a retry loop
- * while the report showed them as sent).
- */
-const STUCK_AFTER_MS = 60 * 60 * 1000;
 
 export type DeliveryIssueKind = "missing" | "failed" | "stuck" | "skipped" | "bounced";
 

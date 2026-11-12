@@ -35,6 +35,8 @@ const EMAIL_STATE: Record<
   clicked: { label: "Отворен, кликнат", tone: "success" },
   opened: { label: "Отворен", tone: "success" },
   sent: { label: "Изпратен", tone: "forest" },
+  queued: { label: "Чака изпращане", tone: "neutral" },
+  stuck: { label: "Засякнал - не е изпратен", tone: "warning" },
   scheduled: { label: "Насрочен", tone: "neutral" },
   bounced: { label: "Върнат - грешен имейл", tone: "warning" },
   failed: { label: "Грешка при изпращане", tone: "warning" },

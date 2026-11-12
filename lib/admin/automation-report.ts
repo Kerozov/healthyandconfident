@@ -13,6 +13,8 @@ export type AutomationRecipientState =
   | "opened"
   | "delivered"
   | "sent"
+  | "queued"
+  | "stuck"
   | "scheduled"
   | "bounced"
   | "failed"
@@ -153,6 +155,8 @@ export const RECIPIENT_STATE_LABELS: Record<AutomationRecipientState, string> = 
   opened: "отворил",
   delivered: "доставен",
   sent: "изпратен",
+  queued: "чака изпращане",
+  stuck: "засякнал, не е изпратен",
   scheduled: "насрочен",
   bounced: "върнат",
   failed: "грешка",
@@ -168,7 +172,7 @@ export function matchesRecipientFilter(
     case "all":
       return true;
     case "sent":
-      return row.status === "sent";
+      return row.status === "sent" && row.state !== "queued" && row.state !== "stuck" && !row.failed;
     case "delivered":
       return row.status === "sent" && row.delivered;
     case "opened":
@@ -180,7 +184,7 @@ export function matchesRecipientFilter(
     case "bounced":
       return row.bounced;
     case "failed":
-      return row.failed;
+      return row.failed || row.state === "stuck";
     case "skipped":
       return row.status === "skipped";
     case "scheduled":

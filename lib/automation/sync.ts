@@ -286,6 +286,12 @@ export function aggregateAutomationStats(
     if (d.status === "scheduled") scheduled_count += 1;
     if (d.status === "failed") failed_count += 1;
     if (d.status !== "sent") continue;
+    // Handed to the worker but not sent yet, or the worker failed it: not "sent".
+    if (d.recipient_status === "pending") continue;
+    if (d.recipient_status === "failed") {
+      failed_count += 1;
+      continue;
+    }
 
     sent_count += 1;
 
