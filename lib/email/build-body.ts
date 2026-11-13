@@ -25,7 +25,7 @@ export async function buildEmailBodyForRecipient(input: {
     email: input.email,
     subscriberId: input.subscriberId,
   });
-  return bodyWithAttachment(
+  return await bodyWithAttachment(
     withForms,
     input.attachmentPath,
     input.attachmentFilename,
