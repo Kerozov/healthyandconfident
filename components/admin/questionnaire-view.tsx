@@ -13,6 +13,7 @@ import { ShareLinksPanel } from "@/components/admin/share-links";
 import { AdminNavLink, useAdminNavigate } from "@/components/admin/admin-navigation";
 import { Card } from "@/components/admin/fields";
 import { Badge, DataTable } from "@/components/admin/ui";
+import { StatusBadge } from "@/components/admin/contact-status-badge";
 import { formatDateTime, formatShortDate } from "@/lib/admin/contact-crm";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ async function exportExcel(report: QuestionnaireReport, rows: QuestionnaireRespo
         "Име": r.name ?? "",
         "Имейл": r.email ?? "",
         "Телефон": r.phone ?? "",
+        "Статус": r.crmStatus?.name ?? "Без статус",
       };
       for (const row of r.rows) {
         // Two questions with the same label must not overwrite each other.
@@ -381,6 +383,7 @@ export function QuestionnaireView({
               <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/70">
                 <th className="whitespace-nowrap px-4 py-3 font-semibold">Дата</th>
                 <th className="min-w-[14rem] px-4 py-3 font-semibold">Име и имейл</th>
+                <th className="px-4 py-3 font-semibold">Статус</th>
                 {keyQuestions.map((q) => (
                   <th key={q.id} className="max-w-[14rem] px-4 py-3 font-semibold">
                     <span className="line-clamp-2 normal-case tracking-normal" title={q.label}>
@@ -407,6 +410,13 @@ export function QuestionnaireView({
                       <span className="mt-1 inline-block">
                         <Badge tone="warning">Отписан</Badge>
                       </span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    {r.crmStatus ? (
+                      <StatusBadge name={r.crmStatus.name} color={r.crmStatus.color} />
+                    ) : (
+                      <span className="text-xs text-ink-soft">Без статус</span>
                     )}
                   </td>
                   {keyQuestions.map((q) => (

@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import { fetchAllRows } from "@/lib/admin/stats-shared";
+import { getContactStatuses } from "@/lib/admin/contact-statuses";
 import { chunkArray } from "@/lib/utils";
 import { formatSubmissionAnswers } from "@/lib/forms/format-answers";
 import { healthLabelForTag } from "@/lib/site/health-tags";
@@ -61,6 +62,7 @@ export type QuestionnaireResponse = {
   phone: string | null;
   subscriberId: string | null;
   unsubscribed: boolean;
+  crmStatus: { name: string; color: string | null } | null;
   /** Raw answers for filtering by option: field id → chosen values. */
   choices: Record<string, string[]>;
   /** Readable Q&A for the answers panel and the export. */
@@ -226,10 +228,33 @@ export async function getQuestionnaireReport(formId: string): Promise<Questionna
       phone: person?.phone || guessPhone(fields, answers),
       subscriberId: person?.id ?? s.subscriber_id ?? null,
       unsubscribed: person?.status === "unsubscribed",
+      crmStatus: null,
       choices,
       rows: formatSubmissionAnswers(fields, answers),
     };
   });
+
+  const { statuses, available } = await getContactStatuses();
+  if (available && statuses.length > 0) {
+    const statusById = new Map(statuses.map((status) => [status.id, status]));
+    const statusBySubscriber = new Map<string, string>();
+    const subscriberIds = [...new Set(responses.flatMap((r) => r.subscriberId ? [r.subscriberId] : []))];
+    for (const batch of chunkArray(subscriberIds, 200)) {
+      const { data, error } = await supabase
+        .from("subscribers")
+        .select("id, crm_status_id")
+        .in("id", batch);
+      if (error) throw new Error(`Questionnaire contact statuses: ${error.message}`);
+      for (const row of data ?? []) {
+        if (row.crm_status_id) statusBySubscriber.set(row.id, row.crm_status_id);
+      }
+    }
+    for (const response of responses) {
+      const statusId = response.subscriberId ? statusBySubscriber.get(response.subscriberId) : undefined;
+      const status = statusId ? statusById.get(statusId) : undefined;
+      response.crmStatus = status ? { name: status.name, color: status.color } : null;
+    }
+  }
 
   const questions: QuestionnaireQuestion[] = [];
   for (const field of fields) {
