@@ -4,6 +4,7 @@ import {
   getFunnelBrandConfig,
   type FunnelBrandEmailAllowance,
 } from "@/lib/integrations/funnel-brand";
+import { reportLaunchifyEmailUsage } from "@/lib/integrations/launchify-email-usage";
 
 /**
  * Лентата за имейлите от Launchify — същата като над „Имейли“ там, с числата
@@ -20,6 +21,10 @@ export async function LaunchifyEmailAllowance({
 }) {
   const config = getFunnelBrandConfig();
   if (!config) return null;
+
+  // Изпратеното оттук влиза в брояча отсреща преди да го прочетем — най-много
+  // веднъж на час, иначе лентата показва числото отпреди последната кампания.
+  await reportLaunchifyEmailUsage().catch(() => null);
 
   let view: FunnelBrandEmailAllowance;
   try {

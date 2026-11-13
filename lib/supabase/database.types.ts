@@ -179,6 +179,11 @@ export type Database = {
         Args: Record<string, never>;
         Returns: string[];
       };
+      /** Migration 093 — emails the site sent per Sofia day, for the Launchify allowance. */
+      launchify_email_usage_by_day: {
+        Args: { p_from: string };
+        Returns: { day: string; emails: number }[];
+      };
       /** Migration 080 — subscribed people who got mail but opened nothing since `p_since`. */
       inactive_subscribers: {
         Args: { p_since: string };

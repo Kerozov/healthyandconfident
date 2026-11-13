@@ -147,6 +147,7 @@ import { invalidateMetaPixelCache } from "@/lib/meta/config";
 import { sendMetaEvent } from "@/lib/meta/capi";
 import { publicSiteOrigin } from "@/lib/site";
 import { ACADEMY_CODES_ENABLED } from "@/lib/academy/product";
+import { reportLaunchifyEmailUsage } from "@/lib/integrations/launchify-email-usage";
 
 export type ActionResult = { ok: boolean; message?: string; id?: string; slug?: string };
 
@@ -2875,6 +2876,9 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
       await persistCampaignSync(campaignId, jobIds.join(","), null, total);
     }
 
+    // One request to Launchify for all days — the campaign counts toward the allowance right away.
+    after(() => reportLaunchifyEmailUsage({ force: true }).catch(() => null));
+
     revalidatePath("/admin/campaigns");
 
     const msg =
@@ -3528,6 +3532,9 @@ export async function cancelEmailCampaign(id: string): Promise<ActionResult> {
     .eq("id", id);
 
   if (updateError) return { ok: false, message: updateError.message };
+
+  // A canceled campaign leaves the Launchify allowance.
+  after(() => reportLaunchifyEmailUsage({ force: true }).catch(() => null));
 
   revalidatePath("/admin/campaigns");
   return {

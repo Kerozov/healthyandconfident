@@ -47,7 +47,12 @@ export type FunnelBrandPage = {
 
 export type FunnelBrandPing = {
   ok: true;
-  key: { name: string; prefix: string; source: string; scope: "funnel" | "account" };
+  key: {
+    name: string;
+    prefix: string;
+    source: string;
+    scope: "funnel" | "account";
+  };
   funnels: (FunnelBrandFunnel & { contacts: number })[];
   totalContacts: number;
 };
@@ -88,6 +93,7 @@ async function request<T>(
   path: string,
   params: Record<string, string> = {},
   timeoutMs = 30_000,
+  body?: unknown,
 ): Promise<T> {
   const url = new URL(`${config.baseUrl}${path}`);
   for (const [key, value] of Object.entries(params)) {
@@ -97,10 +103,13 @@ async function request<T>(
   let response: Response;
   try {
     response = await fetch(url, {
+      method: body === undefined ? "GET" : "POST",
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
         Accept: "application/json",
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
+      body: body === undefined ? undefined : JSON.stringify(body),
       // Contacts must never come from a cache — a stale page would silently
       // drop everything collected since it was stored.
       cache: "no-store",
@@ -118,10 +127,15 @@ async function request<T>(
     throw new FunnelBrandError("Ключът е невалиден или отменен.", 401);
   }
   if (response.status === 429) {
-    throw new FunnelBrandError("Твърде много заявки към FunnelBrand. Опитай пак след минута.", 429);
+    throw new FunnelBrandError(
+      "Твърде много заявки към FunnelBrand. Опитай пак след минута.",
+      429,
+    );
   }
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
     throw new FunnelBrandError(
       body?.error || `FunnelBrand върна грешка (${response.status}).`,
       response.status,
@@ -132,7 +146,9 @@ async function request<T>(
 }
 
 /** Connection test — confirms the key works and lists the funnels behind it. */
-export async function pingFunnelBrand(config: FunnelBrandConfig): Promise<FunnelBrandPing> {
+export async function pingFunnelBrand(
+  config: FunnelBrandConfig,
+): Promise<FunnelBrandPing> {
   return request<FunnelBrandPing>(config, "/api/export/ping");
 }
 
@@ -174,11 +190,42 @@ export type FunnelBrandEmailAllowance =
       /** The Launchify page where emails are bought. */
       buyUrl: string;
     }
-  | { ok: false; limited: true; plan: "start" | "pro"; error: string; buyUrl: string };
+  | {
+      ok: false;
+      limited: true;
+      plan: "start" | "pro";
+      error: string;
+      buyUrl: string;
+    };
 
 export async function fetchFunnelBrandEmailAllowance(
   config: FunnelBrandConfig,
 ): Promise<FunnelBrandEmailAllowance> {
   // Read while an admin page opens — it must not hold the page for half a minute.
-  return request<FunnelBrandEmailAllowance>(config, "/api/export/email-allowance", {}, 8_000);
+  return request<FunnelBrandEmailAllowance>(
+    config,
+    "/api/export/email-allowance",
+    {},
+    8_000,
+  );
+}
+
+/** Изпратеното от сайта за един ден (Europe/Sofia). */
+export type FunnelBrandEmailDay = { day: string; emails: number };
+
+/**
+ * Казва на Launchify колко имейла е пратил сайтът по дни — една заявка за всички
+ * дни. Сумата за деня заменя предишната отсреща, така че повторът не брои двойно.
+ */
+export async function reportFunnelBrandEmailDays(
+  config: FunnelBrandConfig,
+  days: FunnelBrandEmailDay[],
+): Promise<{ ok: boolean; counted: boolean }> {
+  return request<{ ok: boolean; counted: boolean }>(
+    config,
+    "/api/export/email-usage",
+    {},
+    8_000,
+    { days },
+  );
 }
