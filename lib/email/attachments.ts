@@ -54,18 +54,51 @@ export function appendAttachmentBlock(
   </p>`;
 }
 
-export function bodyWithAttachment(
+/**
+ * Over this, a PDF goes into the email as a link only. The worker downloads an
+ * attachment once per send and rejects anything over 8 MB; above 2 MB the
+ * `/files` cache skips it and every send pulls it from Supabase. On 12–13 Nov
+ * 2026 a 17.7 MB menu PDF first looped and then failed every welcome email.
+ */
+export const MAX_ATTACHED_PDF_BYTES = 2 * 1024 * 1024;
+
+const sizeCache = new Map<string, number | null>();
+
+/** Bytes, or null when Storage cannot say (then the file is linked, not attached). */
+async function storedFileSize(path: string): Promise<number | null> {
+  if (sizeCache.has(path)) return sizeCache.get(path) ?? null;
+  let size: number | null = null;
+  try {
+    const { data } = await getAdminClient().storage.from(BUCKET).info(path);
+    const raw = (data as { size?: number | null } | null)?.size;
+    size = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  } catch {
+    size = null;
+  }
+  // Keys are UUIDs and never overwritten, so a known size never changes.
+  if (size !== null) sizeCache.set(path, size);
+  return size;
+}
+
+/**
+ * The body always gets a link to the PDF. It is also attached only when it is
+ * small enough; a bigger (or unreadable) one is never handed to the worker, so
+ * the email still goes out.
+ */
+export async function bodyWithAttachment(
   bodyHtml: string,
   path: string | null | undefined,
   filename: string | null | undefined,
   locale: Locale,
-): { bodyHtml: string; attachments: WorkerAttachment[] } {
+): Promise<{ bodyHtml: string; attachments: WorkerAttachment[] }> {
   const attachments = workerAttachmentsFromStored(path, filename);
   if (!attachments.length) {
     return { bodyHtml, attachments: [] };
   }
-  return {
-    bodyHtml: appendAttachmentBlock(bodyHtml, attachments[0]!, locale),
-    attachments,
-  };
+  const withLink = appendAttachmentBlock(bodyHtml, attachments[0]!, locale);
+  const size = await storedFileSize(path!.trim());
+  if (size === null || size > MAX_ATTACHED_PDF_BYTES) {
+    return { bodyHtml: withLink, attachments: [] };
+  }
+  return { bodyHtml: withLink, attachments };
 }
