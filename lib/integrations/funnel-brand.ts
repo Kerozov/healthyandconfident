@@ -87,6 +87,7 @@ async function request<T>(
   config: FunnelBrandConfig,
   path: string,
   params: Record<string, string> = {},
+  timeoutMs = 30_000,
 ): Promise<T> {
   const url = new URL(`${config.baseUrl}${path}`);
   for (const [key, value] of Object.entries(params)) {
@@ -103,7 +104,7 @@ async function request<T>(
       // Contacts must never come from a cache — a stale page would silently
       // drop everything collected since it was stored.
       cache: "no-store",
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (err) {
     throw new FunnelBrandError(
@@ -147,3 +148,37 @@ export async function fetchFunnelBrandPage(
 }
 
 export { FunnelBrandError };
+
+/**
+ * How many emails the Launchify account has left — the same bar Launchify shows
+ * above „Имейли“. Numbers and sentences arrive ready-made so the two never drift.
+ */
+export type FunnelBrandEmailAllowance =
+  | { ok: true; limited: false; buyUrl: string }
+  | {
+      ok: true;
+      limited: true;
+      plan: "start" | "pro";
+      included: number;
+      renews: boolean;
+      spent: number;
+      includedLeft: number;
+      extraLeft: number;
+      remaining: number;
+      renewsOn: string | null;
+      low: boolean;
+      empty: boolean;
+      topupLabel: string;
+      headline: string;
+      detail: string;
+      /** The Launchify page where emails are bought. */
+      buyUrl: string;
+    }
+  | { ok: false; limited: true; plan: "start" | "pro"; error: string; buyUrl: string };
+
+export async function fetchFunnelBrandEmailAllowance(
+  config: FunnelBrandConfig,
+): Promise<FunnelBrandEmailAllowance> {
+  // Read while an admin page opens — it must not hold the page for half a minute.
+  return request<FunnelBrandEmailAllowance>(config, "/api/export/email-allowance", {}, 8_000);
+}

@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { LaunchifyEmailAllowance } from "@/components/admin/launchify-email-allowance";
 import { getAdminSession, sessionCanAccess } from "@/lib/admin/auth";
 import { getTeamOverview } from "@/lib/admin/team";
 import { PageHeader, Alert } from "@/components/admin/ui";
@@ -66,6 +68,12 @@ export default async function AdminDashboard() {
           Пусни SQL миграцията за профили и журнал (<code>052_admin_users_and_audit.sql</code>{" "}
           или <code>supabase/scripts/RUN_PENDING_MIGRATIONS.sql</code>), за да се записват екипът и промените.
         </Alert>
+      ) : null}
+
+      {access.campaigns ? (
+        <Suspense fallback={null}>
+          <LaunchifyEmailAllowance className="mb-6" />
+        </Suspense>
       ) : null}
 
       {anyAccess ? (

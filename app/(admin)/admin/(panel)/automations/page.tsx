@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { LaunchifyEmailAllowance } from "@/components/admin/launchify-email-allowance";
 import { getAutomations, getSegments, getSegmentGroups, getSiteProducts, getSiteGuides } from "@/lib/admin/data";
 import { getFormTemplates } from "@/lib/admin/forms-data";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
@@ -39,6 +41,11 @@ export default async function AdminAutomationsPage() {
           </Alert>
         )}
       </PageHeader>
+
+      {/* Launchify се чете отделно — бавен отговор не задържа страницата. */}
+      <Suspense fallback={null}>
+        <LaunchifyEmailAllowance className="mb-6" />
+      </Suspense>
 
       <AutomationHealthPanel issues={healthIssues} cronConfigured={cronConfigured} />
 
