@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { LaunchifyEmailAllowance } from "@/components/admin/launchify-email-allowance";
 import {
   getEmailCampaigns,
   getSmsCampaigns,
@@ -41,6 +43,11 @@ export default async function AdminCampaignsPage({
         title="Кампании"
         description="Изпращане по група или тагове, проследяване на доставката и повторно изпращане към неотворили."
       />
+
+      {/* Launchify се чете отделно — бавен отговор не задържа страницата. */}
+      <Suspense fallback={null}>
+        <LaunchifyEmailAllowance className="mb-6" />
+      </Suspense>
 
       <CampaignsWorkspace
           emailCampaigns={emailCampaigns}
