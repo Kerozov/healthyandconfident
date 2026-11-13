@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { syncFunnelBrandContacts } from "@/lib/integrations/funnel-brand-sync";
+import { reportLaunchifyEmailUsage } from "@/lib/integrations/launchify-email-usage";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,8 +17,13 @@ export const maxDuration = 60;
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
-    console.error("[cron/funnel-brand-sync] CRON_SECRET is not set - the nightly sync cannot run");
-    return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 500 });
+    console.error(
+      "[cron/funnel-brand-sync] CRON_SECRET is not set - the nightly sync cannot run",
+    );
+    return NextResponse.json(
+      { error: "CRON_SECRET is not configured" },
+      { status: 500 },
+    );
   }
   if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,5 +35,12 @@ export async function GET(req: Request) {
   });
 
   if (!result.ok) console.error("[cron/funnel-brand-sync]", result.message);
+
+  // What the site sent counts toward the Launchify allowance — one request for all days.
+  const usage = await reportLaunchifyEmailUsage({ force: true }).catch(
+    () => null,
+  );
+  if (usage && !usage.ok)
+    console.error("[cron/funnel-brand-sync] email usage:", usage.message);
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
 }
