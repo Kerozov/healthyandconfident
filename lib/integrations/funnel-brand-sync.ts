@@ -42,6 +42,8 @@ export type FunnelBrandSyncResult = {
   skipped: number;
   segments: string[];
   cursor: string | null;
+  /** Stopped on the time budget; the next run carries on from `cursor`. */
+  hasMore?: boolean;
 };
 
 /**
@@ -552,6 +554,12 @@ export async function syncFunnelBrandContacts(
     full?: boolean;
     settings?: FunnelBrandSyncSettings;
     actor?: { id: string | null; name: string };
+    /**
+     * The nightly cron stops reading new pages after this long, so a big backlog
+     * is drained over several nights instead of timing out every night before
+     * the cursor is saved.
+     */
+    timeBudgetMs?: number;
   } = {},
 ): Promise<FunnelBrandSyncResult> {
   const config = getFunnelBrandConfig();
@@ -582,7 +590,8 @@ export async function syncFunnelBrandContacts(
   }
 
   try {
-    const outcome = await runSync(config, since, settings, options.actor);
+    const deadline = options.timeBudgetMs ? Date.now() + options.timeBudgetMs : null;
+    const outcome = await runSync(config, since, settings, options.actor, deadline);
     await saveSyncState(FUNNEL_BRAND_INTEGRATION, {
       last_cursor: outcome.cursor ?? state?.last_cursor ?? null,
       last_run_at: new Date().toISOString(),
@@ -615,6 +624,7 @@ async function runSync(
   since: string | null,
   settings: FunnelBrandSyncSettings,
   actor: { id: string | null; name: string } | undefined,
+  deadline: number | null = null,
 ): Promise<FunnelBrandSyncResult> {
   let created = 0;
   let updated = 0;
@@ -628,6 +638,7 @@ async function runSync(
   const history: Parameters<typeof recordSubscriberHistory>[0] = [];
   const facts: Parameters<typeof saveFacts>[0] = [];
   const now = new Date().toISOString();
+  let hasMore = false;
 
   function addSeed(seed: SegmentSeed) {
     if (!seeds.has(seed.key)) seeds.set(seed.key, seed);
@@ -721,6 +732,12 @@ async function runSync(
 
     if (result.nextSince) cursor = result.nextSince;
     if (!result.hasMore) break;
+    // Pages are oldest-first and the cursor is inclusive, so stopping between
+    // pages loses nothing: the next run starts at the last row read here.
+    if (deadline !== null && Date.now() >= deadline) {
+      hasMore = true;
+      break;
+    }
   }
 
   await ensureSegments([...segments], [...seeds.values()]);
@@ -733,7 +750,9 @@ async function runSync(
       ? "Няма нови контакти от Launchify."
       : `Синхронизирани ${touched} контакта: ${created} нови, ${updated} обновени${
           skipped ? `, ${skipped} пропуснати` : ""
-        }.${errors.length ? ` Грешки: ${errors.join("; ")}` : ""}`;
+        }.${hasMore ? " Има още - продължава при следващото пускане." : ""}${
+          errors.length ? ` Грешки: ${errors.join("; ")}` : ""
+        }`;
 
   return {
     ok: errors.length === 0,
@@ -743,5 +762,6 @@ async function runSync(
     skipped,
     segments: [...segments],
     cursor,
+    hasMore,
   };
 }

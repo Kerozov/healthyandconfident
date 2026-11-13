@@ -2,5 +2,8 @@
   "buildCommand": "bun run build",
   "installCommand": "bun install",
   "framework": "nextjs",
-  "crons": [{ "path": "/api/cron/automations", "schedule": "0 7 * * *" }]
+  "crons": [
+    { "path": "/api/cron/automations", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/funnel-brand-sync", "schedule": "0 20 * * *" }
+  ]
 }
