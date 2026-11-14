@@ -40,10 +40,40 @@ export function CheckoutNotice({ locale, successButton }: {
   const status =
     checkout === "success" || checkout === "cancelled" ? checkout : null;
 
-  // A programme payment may carry the group invite for that programme in the
-  // return URL. When present it wins over the site-wide thank-you button.
-  const groupUrl = searchParams.get("group_url")?.trim() ?? "";
-  const groupLabel = searchParams.get("group_label")?.trim() ?? "";
+  // A programme payment returns with its Stripe session id. The server checks
+  // the session was paid and answers with that programme's group invite, which
+  // then wins over the site-wide thank-you button. The link itself is never
+  // read from the URL: anyone can craft one, and the dialog would vouch for it.
+  const sessionId =
+    checkout === "success" ? searchParams.get("session_id")?.trim() ?? "" : "";
+  const [groupLookup, setGroupLookup] = useState<{
+    sessionId: string;
+    group: { url: string; label: string } | null;
+  } | null>(null);
+  const groupPending = Boolean(sessionId) && groupLookup?.sessionId !== sessionId;
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const controller = new AbortController();
+    fetch("/api/checkout/group", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, locale }),
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : { group: null }))
+      .then((data: { group?: { url?: string; label?: string } | null }) => {
+        const url = data.group?.url?.trim() ?? "";
+        setGroupLookup({
+          sessionId,
+          group: url ? { url, label: data.group?.label?.trim() ?? "" } : null,
+        });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setGroupLookup({ sessionId, group: null });
+      });
+    return () => controller.abort();
+  }, [sessionId, locale]);
 
   // Closing is local state, so the dialog disappears on the click itself. The
   // old version waited for `router.replace` to re-render the whole (dynamic)
@@ -57,8 +87,7 @@ export function CheckoutNotice({ locale, successButton }: {
     // not resurrect the notice. Next syncs `useSearchParams` with this call.
     const params = new URLSearchParams(window.location.search);
     params.delete("checkout");
-    params.delete("group_url");
-    params.delete("group_label");
+    params.delete("session_id");
     const qs = params.toString();
     window.history.replaceState(
       window.history.state,
@@ -81,11 +110,16 @@ export function CheckoutNotice({ locale, successButton }: {
   if (!open || !status) return null;
 
   const isSuccess = status === "success";
-  const groupButton = isSuccess
-    ? normalizeThankYouButton({ label: groupLabel || copy.joinGroup, href: groupUrl })
-    : null;
+  const group = groupLookup?.sessionId === sessionId ? groupLookup.group : null;
+  const groupButton =
+    isSuccess && group
+      ? normalizeThankYouButton({ label: group.label || copy.joinGroup, href: group.url })
+      : null;
+  // While the lookup runs no button shows, so the site-wide one does not flash
+  // and then swap for the group invite a moment later.
   const thankYouButton =
-    groupButton ?? (isSuccess ? normalizeThankYouButton(successButton) : null);
+    groupButton ??
+    (isSuccess && !groupPending ? normalizeThankYouButton(successButton) : null);
 
   return (
     <div

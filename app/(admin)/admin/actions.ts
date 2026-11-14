@@ -136,7 +136,12 @@ import {
   getSubscriberEngagementDetail,
 } from "@/lib/admin/engagement";
 import type { FormField, FormSettings } from "@/lib/forms/types";
-import { normalizeThankYouButton, thankYouButtonError, type ThankYouButton } from "@/lib/site/thank-you-button";
+import {
+  normalizeThankYouButton,
+  thankYouButtonError,
+  validHref as validThankYouHref,
+  type ThankYouButton,
+} from "@/lib/site/thank-you-button";
 import { getFormPreset } from "@/lib/forms/presets";
 import { forceEmailFieldsRequired, emailFieldCount } from "@/lib/forms/required-email";
 import { formSlug as normalizeFormSlug } from "@/lib/forms/slug";
@@ -4623,6 +4628,14 @@ export async function saveSiteProgramCard(
   const titleBg = input.title_bg.trim();
   if (!titleBg) return { ok: false, message: "Попълни заглавие на картичката (BG)." };
   const titleEn = input.title_en?.trim() ?? "";
+  // An invalid invite would silently show no button after payment.
+  const groupUrl = input.group_url?.trim() ?? "";
+  if (groupUrl && !validThankYouHref(groupUrl)) {
+    return {
+      ok: false,
+      message: "Линкът към групата не е валиден. Сложи пълния адрес на поканата: https://…",
+    };
+  }
 
   const supabase = getAdminClient();
   const row = {
@@ -4644,7 +4657,7 @@ export async function saveSiteProgramCard(
     href_en: input.href_en?.trim() ?? "",
     group_label_bg: input.group_label_bg?.trim() ?? "",
     group_label_en: input.group_label_en?.trim() ?? "",
-    group_url: input.group_url?.trim() ?? "",
+    group_url: groupUrl,
     image_url: input.image_url?.trim() || null,
     highlight: input.highlight ?? false,
     enabled: input.enabled ?? true,

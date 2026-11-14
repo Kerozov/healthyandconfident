@@ -115,9 +115,10 @@ function formFromCard(card: SiteProgramCard): CardForm {
     cta_label_en: card.cta_label_en,
     href: card.href,
     href_en: card.href_en,
-    group_label_bg: card.group_label_bg,
-    group_label_en: card.group_label_en,
-    group_url: card.group_url,
+    // `?? ""` keeps the inputs controlled while migration 094 is not applied yet.
+    group_label_bg: card.group_label_bg ?? "",
+    group_label_en: card.group_label_en ?? "",
+    group_url: card.group_url ?? "",
     image_url: card.image_url ?? "",
     highlight: card.highlight,
     enabled: card.enabled,
