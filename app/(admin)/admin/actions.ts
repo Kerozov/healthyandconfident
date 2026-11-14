@@ -136,12 +136,7 @@ import {
   getSubscriberEngagementDetail,
 } from "@/lib/admin/engagement";
 import type { FormField, FormSettings } from "@/lib/forms/types";
-import {
-  normalizeThankYouButton,
-  thankYouButtonError,
-  validHref as validThankYouHref,
-  type ThankYouButton,
-} from "@/lib/site/thank-you-button";
+import { normalizeThankYouButton, thankYouButtonError, type ThankYouButton } from "@/lib/site/thank-you-button";
 import { getFormPreset } from "@/lib/forms/presets";
 import { forceEmailFieldsRequired, emailFieldCount } from "@/lib/forms/required-email";
 import { formSlug as normalizeFormSlug } from "@/lib/forms/slug";
@@ -4606,9 +4601,7 @@ export type SiteProgramCardInput = {
   cta_label_en?: string;
   href?: string;
   href_en?: string;
-  group_label_bg?: string;
-  group_label_en?: string;
-  group_url?: string;
+  purchase_tags?: string[];
   image_url?: string;
   highlight?: boolean;
   enabled?: boolean;
@@ -4628,15 +4621,6 @@ export async function saveSiteProgramCard(
   const titleBg = input.title_bg.trim();
   if (!titleBg) return { ok: false, message: "Попълни заглавие на картичката (BG)." };
   const titleEn = input.title_en?.trim() ?? "";
-  // An invalid invite would silently show no button after payment.
-  const groupUrl = input.group_url?.trim() ?? "";
-  if (groupUrl && !validThankYouHref(groupUrl)) {
-    return {
-      ok: false,
-      message: "Линкът към групата не е валиден. Сложи пълния адрес на поканата: https://…",
-    };
-  }
-
   const supabase = getAdminClient();
   const row = {
     badge_bg: input.badge_bg?.trim() ?? "",
@@ -4655,9 +4639,9 @@ export async function saveSiteProgramCard(
     cta_label_en: input.cta_label_en?.trim() ?? "",
     href: input.href?.trim() ?? "",
     href_en: input.href_en?.trim() ?? "",
-    group_label_bg: input.group_label_bg?.trim() ?? "",
-    group_label_en: input.group_label_en?.trim() ?? "",
-    group_url: groupUrl,
+    purchase_tags: Array.from(
+      new Set((input.purchase_tags ?? []).map((tag) => tag.trim()).filter(Boolean)),
+    ),
     image_url: input.image_url?.trim() || null,
     highlight: input.highlight ?? false,
     enabled: input.enabled ?? true,

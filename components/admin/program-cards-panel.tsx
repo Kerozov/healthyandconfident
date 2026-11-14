@@ -15,10 +15,13 @@ import {
   X,
 } from "lucide-react";
 import type {
+  Segment,
+  SegmentGroup,
   SiteCtaPlacement,
   SiteProgramCard,
   SiteSection,
 } from "@/lib/supabase/types";
+import { SegmentAssignChecklist } from "@/components/admin/segment-checklist";
 import {
   saveSiteProgramCard,
   deleteSiteProgramCard,
@@ -58,9 +61,7 @@ type CardForm = {
   cta_label_en: string;
   href: string;
   href_en: string;
-  group_label_bg: string;
-  group_label_en: string;
-  group_url: string;
+  purchase_tags: string[];
   image_url: string;
   highlight: boolean;
   enabled: boolean;
@@ -85,9 +86,7 @@ const EMPTY_CARD: CardForm = {
   cta_label_en: "",
   href: "",
   href_en: "",
-  group_label_bg: "",
-  group_label_en: "",
-  group_url: "",
+  purchase_tags: [],
   image_url: "",
   highlight: false,
   enabled: true,
@@ -115,10 +114,8 @@ function formFromCard(card: SiteProgramCard): CardForm {
     cta_label_en: card.cta_label_en,
     href: card.href,
     href_en: card.href_en,
-    // `?? ""` keeps the inputs controlled while migration 094 is not applied yet.
-    group_label_bg: card.group_label_bg ?? "",
-    group_label_en: card.group_label_en ?? "",
-    group_url: card.group_url ?? "",
+    // `?? []` while migration 095 is not applied yet.
+    purchase_tags: card.purchase_tags ?? [],
     image_url: card.image_url ?? "",
     highlight: card.highlight,
     enabled: card.enabled,
@@ -314,10 +311,14 @@ export function ProgramCardsPanel({
   cards,
   section,
   placements,
+  segments,
+  groups,
 }: {
   cards: SiteProgramCard[];
   section: SiteSection;
   placements: SiteCtaPlacement[];
+  segments: Segment[];
+  groups: SegmentGroup[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -568,35 +569,20 @@ export function ProgramCardsPanel({
             />
           </div>
 
-          <div className="rounded-xl border border-ink/10 bg-cream-2/20 p-4">
-            <p className="mb-1 text-sm font-medium text-ink">Група след покупка</p>
-            <p className="mb-3 text-xs text-ink-soft">
-              Показва се като бутон „Влез в групата“ на благодарствения екран веднага
-              след плащане на тази програма. Празен линк = без бутон за групата.
+          <div className="rounded-xl border border-forest-500/20 bg-forest-50/30 p-4 space-y-3">
+            <p className="text-sm font-semibold text-forest-800">Групи след покупка</p>
+            <p className="text-xs text-ink-soft">
+              След успешно плащане на тази програма (от картичката или от бутоните на
+              страницата ѝ) контактът влиза в избраните групи и автоматизациите им
+              тръгват сами.
             </p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Текст на бутона - BG" hint="Празно поле показва „Влез в групата“.">
-                <Input
-                  value={form.group_label_bg}
-                  onChange={(e) => set("group_label_bg", e.target.value)}
-                />
-              </Field>
-              <Field label="Текст на бутона - EN">
-                <Input
-                  value={form.group_label_en}
-                  onChange={(e) => set("group_label_en", e.target.value)}
-                />
-              </Field>
-            </div>
-            <div className="mt-4">
-              <Field label="Линк към групата" hint="Viber, Facebook или Skool линк за покана.">
-                <Input
-                  value={form.group_url}
-                  onChange={(e) => set("group_url", e.target.value)}
-                  placeholder="https://invite.viber.com/…"
-                />
-              </Field>
-            </div>
+            <SegmentAssignChecklist
+              segments={segments}
+              groups={groups}
+              selected={form.purchase_tags}
+              onChange={(purchase_tags) => set("purchase_tags", purchase_tags)}
+              disabled={pending}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

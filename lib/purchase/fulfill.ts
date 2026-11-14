@@ -4,6 +4,7 @@ import { runAutomations } from "@/lib/automation/run";
 import { issueCourseCodesForSession } from "@/lib/academy/issue";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { syncContactAfterPurchase } from "@/lib/contacts/payment";
+import { programPurchaseTags } from "@/lib/site/program-purchase-tags";
 import type { ResolvedLineItem } from "@/lib/stripe/resolve-products";
 import type { PurchasePaymentStatus } from "@/lib/purchase/status";
 import type { Locale, SiteGuide, SiteProduct } from "@/lib/supabase/types";
@@ -17,6 +18,8 @@ export type FulfillPurchaseInput = {
   paymentStatus?: PurchasePaymentStatus;
   amountCents?: number | null;
   currency?: string | null;
+  /** The site button that opened Checkout (`metadata.placement_key`), if any. */
+  placementKey?: string | null;
 };
 
 function splitPurchaseName(
@@ -202,9 +205,22 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
 
   const products = (productRows as SiteProduct[]) ?? [];
   const guides = (guideRows as SiteGuide[]) ?? [];
+
+  // A programme sold from its card or page buttons: the card's „Групи след
+  // покупка“. Its Stripe product is often not a site_products row, so without
+  // this the buyer would join no group and no automation would start.
+  let programTags: string[] = [];
+  try {
+    programTags = await programPurchaseTags(input.placementKey);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    return { ok: false, productIds, guideIds, tags: [] };
+  }
+
   const purchaseTags = mergeTags(
     ...products.map((p) => p.purchase_tags ?? []),
     ...guides.map((g) => g.purchase_tags ?? []),
+    programTags,
     productIds.map((id) => `product:${id}`),
     guideIds.map((id) => `guide:${id}`),
   );

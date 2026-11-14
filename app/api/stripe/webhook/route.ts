@@ -92,6 +92,7 @@ async function handlePaidSession(session: Stripe.Checkout.Session) {
     paymentStatus: "paid",
     amountCents: session.amount_total ?? null,
     currency: session.currency ?? null,
+    placementKey: session.metadata?.placement_key ?? null,
   });
 
   if (!result.ok) {

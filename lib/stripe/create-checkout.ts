@@ -234,11 +234,7 @@ export async function createPlacementCheckoutSession(
   const session = await stripe.checkout.sessions.create({
     mode,
     line_items: [{ price: priceId, quantity: 1 }],
-    // Stripe swaps `{CHECKOUT_SESSION_ID}` for the real id (the braces must
-    // stay unencoded). The thank-you screen sends that id to
-    // /api/checkout/group, which shows the programme's group invite only for
-    // a paid session — the invite itself never travels in the URL.
-    success_url: `${origin}/${locale}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${origin}/${locale}?checkout=success`,
     cancel_url: `${origin}/${locale}?checkout=cancelled`,
     locale: locale === "bg" ? "bg" : "en",
     metadata: {

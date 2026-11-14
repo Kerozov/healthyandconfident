@@ -3,8 +3,7 @@ export type ThankYouButton = {
   href: string;
 };
 
-/** A link a thank-you button may open: https://…, /bg/…, #section, mailto: or tel:. */
-export function validHref(href: string): boolean {
+function validHref(href: string): boolean {
   if (/[\s\\\u0000-\u001f\u007f]/.test(href)) return false;
   if (href.startsWith("/") && !href.startsWith("//")) return true;
   if (href.startsWith("#") && href.length > 1) return true;

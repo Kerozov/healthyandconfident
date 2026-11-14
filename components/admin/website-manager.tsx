@@ -683,6 +683,8 @@ export function WebsiteManager({
           cards={programCards}
           section={sections.programs ?? DEFAULT_SITE_SECTIONS.programs}
           placements={ctaPlacements}
+          segments={segments}
+          groups={groups}
         />
       )}
 
