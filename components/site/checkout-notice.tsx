@@ -16,6 +16,7 @@ const COPY = {
     cancelTitle: "Плащането е прекъснато",
     cancelBody: "Нямаше зареждане. Можеш да опиташ отново когато си готова.",
     close: "Затвори",
+    joinGroup: "Влез в групата",
   },
   en: {
     successTitle: "Thank you!",
@@ -24,6 +25,7 @@ const COPY = {
     cancelTitle: "Payment cancelled",
     cancelBody: "Nothing was charged. You can try again whenever you’re ready.",
     close: "Close",
+    joinGroup: "Join the group",
   },
 } as const;
 
@@ -38,6 +40,11 @@ export function CheckoutNotice({ locale, successButton }: {
   const status =
     checkout === "success" || checkout === "cancelled" ? checkout : null;
 
+  // A programme payment may carry the group invite for that programme in the
+  // return URL. When present it wins over the site-wide thank-you button.
+  const groupUrl = searchParams.get("group_url")?.trim() ?? "";
+  const groupLabel = searchParams.get("group_label")?.trim() ?? "";
+
   // Closing is local state, so the dialog disappears on the click itself. The
   // old version waited for `router.replace` to re-render the whole (dynamic)
   // home page from the server, which on a slow connection or a failed RSC
@@ -50,6 +57,8 @@ export function CheckoutNotice({ locale, successButton }: {
     // not resurrect the notice. Next syncs `useSearchParams` with this call.
     const params = new URLSearchParams(window.location.search);
     params.delete("checkout");
+    params.delete("group_url");
+    params.delete("group_label");
     const qs = params.toString();
     window.history.replaceState(
       window.history.state,
@@ -72,7 +81,11 @@ export function CheckoutNotice({ locale, successButton }: {
   if (!open || !status) return null;
 
   const isSuccess = status === "success";
-  const thankYouButton = isSuccess ? normalizeThankYouButton(successButton) : null;
+  const groupButton = isSuccess
+    ? normalizeThankYouButton({ label: groupLabel || copy.joinGroup, href: groupUrl })
+    : null;
+  const thankYouButton =
+    groupButton ?? (isSuccess ? normalizeThankYouButton(successButton) : null);
 
   return (
     <div

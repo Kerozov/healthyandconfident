@@ -553,6 +553,10 @@ export type SiteProgramCard = {
   /** Our own path („/programs/…“, „#contact“) or an external https link. */
   href: string;
   href_en: string;
+  /** Group invite shown on the thank-you screen after this programme is paid. */
+  group_label_bg: string;
+  group_label_en: string;
+  group_url: string;
   image_url: string | null;
   /** Renders the card outlined and slightly larger — one per section. */
   highlight: boolean;
