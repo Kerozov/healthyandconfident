@@ -58,6 +58,10 @@ type CardForm = {
   cta_label_en: string;
   href: string;
   href_en: string;
+  group_label_bg: string;
+  group_label_en: string;
+  group_url: string;
+  group_url_en: string;
   image_url: string;
   highlight: boolean;
   enabled: boolean;
@@ -82,6 +86,10 @@ const EMPTY_CARD: CardForm = {
   cta_label_en: "",
   href: "",
   href_en: "",
+  group_label_bg: "",
+  group_label_en: "",
+  group_url: "",
+  group_url_en: "",
   image_url: "",
   highlight: false,
   enabled: true,
@@ -109,6 +117,10 @@ function formFromCard(card: SiteProgramCard): CardForm {
     cta_label_en: card.cta_label_en,
     href: card.href,
     href_en: card.href_en,
+    group_label_bg: card.group_label_bg ?? "",
+    group_label_en: card.group_label_en ?? "",
+    group_url: card.group_url ?? "",
+    group_url_en: card.group_url_en ?? "",
     image_url: card.image_url ?? "",
     highlight: card.highlight,
     enabled: card.enabled,
@@ -556,6 +568,40 @@ export function ProgramCardsPanel({
               value={form.href_en}
               onChange={(href) => set("href_en", href)}
             />
+          </div>
+
+          <div className="rounded-xl border border-ink/10 p-4">
+            <p className="mb-3 text-sm font-medium text-ink">
+              Група след покупка <span className="font-normal text-ink-soft">(линк, който купувачът вижда веднага след плащане)</span>
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Надпис на бутона - BG" hint="Напр. „Влез в групата“. Празно = без бутон.">
+                <Input
+                  value={form.group_label_bg}
+                  onChange={(e) => set("group_label_bg", e.target.value)}
+                />
+              </Field>
+              <Field label="Надпис на бутона - EN">
+                <Input
+                  value={form.group_label_en}
+                  onChange={(e) => set("group_label_en", e.target.value)}
+                />
+              </Field>
+              <Field label="Линк към групата - BG" hint="Viber / Facebook / Skool… Отваря се в нов таб.">
+                <Input
+                  value={form.group_url}
+                  onChange={(e) => set("group_url", e.target.value)}
+                  placeholder="https://..."
+                />
+              </Field>
+              <Field label="Линк към групата - EN">
+                <Input
+                  value={form.group_url_en}
+                  onChange={(e) => set("group_url_en", e.target.value)}
+                  placeholder="https://..."
+                />
+              </Field>
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

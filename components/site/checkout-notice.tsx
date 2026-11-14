@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, XCircle, X } from "lucide-react";
+import { CheckCircle2, Users, XCircle, X } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 import { ThankYouButton } from "@/components/site/thank-you-button";
@@ -15,6 +15,7 @@ const COPY = {
       "Поръчката е приета. При успешно плащане ще получиш потвърждение на имейла си. Ако ползваш банков превод, потвърждението идва след като банката обработи плащането.",
     cancelTitle: "Плащането е прекъснато",
     cancelBody: "Нямаше зареждане. Можеш да опиташ отново когато си готова.",
+    groupFallbackLabel: "Влез в групата",
     close: "Затвори",
   },
   en: {
@@ -23,6 +24,7 @@ const COPY = {
       "Your order was received. You’ll get an email confirmation once payment clears. If you used a bank transfer, confirmation arrives after the bank processes it.",
     cancelTitle: "Payment cancelled",
     cancelBody: "Nothing was charged. You can try again whenever you’re ready.",
+    groupFallbackLabel: "Join the group",
     close: "Close",
   },
 } as const;
@@ -37,6 +39,10 @@ export function CheckoutNotice({ locale, successButton }: {
   const checkout = searchParams.get("checkout");
   const status =
     checkout === "success" || checkout === "cancelled" ? checkout : null;
+
+  const groupHref = searchParams.get("group")?.trim() || null;
+  const groupLabel =
+    searchParams.get("group_label")?.trim() || copy.groupFallbackLabel;
 
   // Closing is local state, so the dialog disappears on the click itself. The
   // old version waited for `router.replace` to re-render the whole (dynamic)
@@ -73,6 +79,7 @@ export function CheckoutNotice({ locale, successButton }: {
 
   const isSuccess = status === "success";
   const thankYouButton = isSuccess ? normalizeThankYouButton(successButton) : null;
+  const groupButton = isSuccess && groupHref && groupLabel;
 
   return (
     <div
@@ -114,12 +121,23 @@ export function CheckoutNotice({ locale, successButton }: {
             {isSuccess ? copy.successBody : copy.cancelBody}
           </p>
           <ThankYouButton button={thankYouButton} className="mt-6 w-full" />
+          {groupButton && (
+            <a
+              href={groupHref!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-forest-600 px-6 text-sm font-semibold text-white hover:bg-forest-700"
+            >
+              <Users className="h-4 w-4" />
+              {groupLabel}
+            </a>
+          )}
           <button
             type="button"
             onClick={dismiss}
             className={cn(
               "inline-flex h-11 w-full items-center justify-center rounded-full px-6 text-sm font-semibold",
-              thankYouButton
+              thankYouButton || groupButton
                 ? "mt-3 border border-forest-200 text-forest-700 hover:bg-forest-50"
                 : isSuccess
                   ? "mt-6 bg-forest-600 text-white hover:bg-forest-700"

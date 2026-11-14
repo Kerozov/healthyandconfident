@@ -13,6 +13,7 @@ import {
   guideStripeForLocale,
 } from "@/lib/site/guide-catalog";
 import { placementStripeForLocale } from "@/lib/site/cta-placements";
+import { programGroupLinkForPlacementKey } from "@/lib/site/program-group";
 import { getStripe } from "@/lib/stripe/server";
 
 /** Checkout URL plus the amounts needed for ad-platform conversion events. */
@@ -231,10 +232,19 @@ export async function createPlacementCheckoutSession(
   const mode = price.type === "recurring" ? "subscription" : "payment";
   const origin = publicSiteOrigin();
 
+  // If the button sells a programme, carry its group invite to the thank-you
+  // screen so the buyer can join right after paying.
+  const group = await programGroupLinkForPlacementKey(key, locale);
+  const successParams = new URLSearchParams({ checkout: "success" });
+  if (group) {
+    successParams.set("group", group.href);
+    successParams.set("group_label", group.label);
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${origin}/${locale}?checkout=success`,
+    success_url: `${origin}/${locale}?${successParams.toString()}`,
     cancel_url: `${origin}/${locale}?checkout=cancelled`,
     locale: locale === "bg" ? "bg" : "en",
     metadata: {

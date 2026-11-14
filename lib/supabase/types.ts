@@ -553,6 +553,14 @@ export type SiteProgramCard = {
   /** Our own path („/programs/…“, „#contact“) or an external https link. */
   href: string;
   href_en: string;
+  /**
+   * The buyer's group invite (Viber, Facebook, Skool…), shown on the
+   * thank-you screen after paying for this programme. Empty = no button.
+   */
+  group_label_bg: string;
+  group_label_en: string;
+  group_url: string;
+  group_url_en: string;
   image_url: string | null;
   /** Renders the card outlined and slightly larger — one per section. */
   highlight: boolean;

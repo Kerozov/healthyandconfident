@@ -4601,6 +4601,10 @@ export type SiteProgramCardInput = {
   cta_label_en?: string;
   href?: string;
   href_en?: string;
+  group_label_bg?: string;
+  group_label_en?: string;
+  group_url?: string;
+  group_url_en?: string;
   image_url?: string;
   highlight?: boolean;
   enabled?: boolean;
@@ -4639,6 +4643,10 @@ export async function saveSiteProgramCard(
     cta_label_en: input.cta_label_en?.trim() ?? "",
     href: input.href?.trim() ?? "",
     href_en: input.href_en?.trim() ?? "",
+    group_label_bg: input.group_label_bg?.trim() ?? "",
+    group_label_en: input.group_label_en?.trim() ?? "",
+    group_url: input.group_url?.trim() ?? "",
+    group_url_en: input.group_url_en?.trim() ?? "",
     image_url: input.image_url?.trim() || null,
     highlight: input.highlight ?? false,
     enabled: input.enabled ?? true,
