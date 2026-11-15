@@ -93,6 +93,7 @@ export type BlackFridayConfigInput = {
   banner_text_bg?: string;
   banner_text_en?: string;
   banner_href?: string;
+  purchase_segment_key?: string | null;
 };
 
 export async function saveBlackFridayConfig(
@@ -107,13 +108,19 @@ export async function saveBlackFridayConfig(
     return { ok: false, message: "Краят на офертите трябва да е след началото им." };
   }
 
+  const groupKey = input.purchase_segment_key;
+  if (groupKey != null && (typeof groupKey !== "string" || groupKey.trim() === "all")) {
+    return { ok: false, message: "Избери валидна група след покупка." };
+  }
+
   const supabase = getAdminClient();
-  const { data: existing } = await supabase
+  const { data: existing, error: readError } = await supabase
     .from("site_black_friday")
     .select("id")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (readError) return { ok: false, message: readError.message };
 
   const payload = {
     enabled: input.enabled,
@@ -123,6 +130,7 @@ export async function saveBlackFridayConfig(
     banner_text_bg: input.banner_text_bg?.trim() || "",
     banner_text_en: input.banner_text_en?.trim() || "",
     banner_href: input.banner_href?.trim() || "/black-friday",
+    ...(groupKey !== undefined ? { purchase_segment_key: groupKey?.trim() || null } : {}),
     updated_at: new Date().toISOString(),
   };
 
@@ -130,6 +138,9 @@ export async function saveBlackFridayConfig(
     ? await supabase.from("site_black_friday").update(payload).eq("id", existing.id)
     : await supabase.from("site_black_friday").insert(payload);
 
+  if (error?.code === "23503") {
+    return { ok: false, message: "Избраната група вече липсва. Презареди страницата и избери група." };
+  }
   if (error) return { ok: false, message: error.message };
   refresh(true);
   return { ok: true };

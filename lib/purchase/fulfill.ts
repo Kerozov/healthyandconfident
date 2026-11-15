@@ -2,6 +2,7 @@ import "server-only";
 
 import { runAutomations } from "@/lib/automation/run";
 import { issueCourseCodesForSession } from "@/lib/academy/issue";
+import { getAdminBlackFridayConfig } from "@/lib/black-friday/config";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { syncContactAfterPurchase } from "@/lib/contacts/payment";
 import { programPurchaseTags } from "@/lib/site/program-purchase-tags";
@@ -22,6 +23,7 @@ export type FulfillPurchaseInput = {
   placementKey?: string | null;
   /** Programme buttons inside a Black Friday Checkout — one per discounted programme. */
   placementKeys?: string[];
+  isBlackFriday?: boolean;
 };
 
 function splitPurchaseName(
@@ -211,24 +213,25 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
   // A programme sold from its card or page buttons: the card's „Групи след
   // покупка“. Its Stripe product is often not a site_products row, so without
   // this the buyer would join no group and no automation would start.
-  let programTags: string[] = [];
+  let purchaseTags: string[];
   try {
-    programTags = await programPurchaseTags([
-      input.placementKey ?? "",
-      ...(input.placementKeys ?? []),
+    const [programTags, campaign] = await Promise.all([
+      programPurchaseTags([input.placementKey ?? "", ...(input.placementKeys ?? [])]),
+      input.isBlackFriday ? getAdminBlackFridayConfig() : null,
     ]);
+    const campaignGroup = campaign?.purchase_segment_key;
+    purchaseTags = mergeTags(
+      ...products.map((p) => p.purchase_tags ?? []),
+      ...guides.map((g) => g.purchase_tags ?? []),
+      programTags,
+      campaignGroup ? [campaignGroup] : [],
+      productIds.map((id) => `product:${id}`),
+      guideIds.map((id) => `guide:${id}`),
+    );
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     return { ok: false, productIds, guideIds, tags: [] };
   }
-
-  const purchaseTags = mergeTags(
-    ...products.map((p) => p.purchase_tags ?? []),
-    ...guides.map((g) => g.purchase_tags ?? []),
-    programTags,
-    productIds.map((id) => `product:${id}`),
-    guideIds.map((id) => `guide:${id}`),
-  );
 
   // Stripe only gives one "name" field; split it so first/last are filled too,
   // but never overwrite names the person (or an admin) already set separately.
@@ -239,31 +242,21 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
     ...(nameParts.last && !row.last_name ? { last_name: nameParts.last } : {}),
   });
 
-  let { data: existing } = await supabase
+  const loadSubscriber = () => supabase
     .from("subscribers")
-    .select("id, tags, name, first_name, last_name, phone, locale")
+    .select("id, tags, name, first_name, last_name, phone, locale, updated_at")
     .eq("email", email)
     .maybeSingle();
 
-  let isNew = !existing;
-  let subscriberId = existing?.id as string | undefined;
-  let priorTags = (existing?.tags as string[]) ?? [];
-  let finalTags = mergeTags(priorTags, purchaseTags);
+  const { data, error: readError } = await loadSubscriber();
+  if (readError) {
+    console.error("[purchase] subscriber lookup failed:", readError.message);
+    return { ok: false, productIds, guideIds, tags: [] };
+  }
 
-  if (existing) {
-    const { error: updateError } = await supabase
-      .from("subscribers")
-      .update({
-        tags: finalTags,
-        status: "subscribed",
-        ...namePatch(existing),
-      })
-      .eq("id", existing.id as string);
-    if (updateError) {
-      console.error("[purchase] subscriber update failed:", updateError.message);
-      return { ok: false, productIds, guideIds, tags: [] };
-    }
-  } else {
+  let existing = data;
+  let insertedId: string | undefined;
+  if (!existing) {
     const { data: inserted, error: insertError } = await supabase
       .from("subscribers")
       .insert({
@@ -273,7 +266,7 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
         last_name: nameParts.last,
         locale,
         source: "purchase",
-        tags: finalTags,
+        tags: purchaseTags,
         consent: true,
       })
       .select("id")
@@ -281,32 +274,12 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
 
     if (insertError?.code === "23505") {
       // Concurrent webhook/signup — load winner and merge purchase tags.
-      const { data: raced } = await supabase
-        .from("subscribers")
-        .select("id, tags, name, first_name, last_name, phone, locale")
-        .eq("email", email)
-        .maybeSingle();
-      if (!raced) {
-        console.error("[purchase] subscriber race: duplicate but row missing");
+      const { data: raced, error } = await loadSubscriber();
+      if (error || !raced) {
+        console.error("[purchase] subscriber race:", error?.message ?? "duplicate but row missing");
         return { ok: false, productIds, guideIds, tags: [] };
       }
       existing = raced;
-      isNew = false;
-      subscriberId = raced.id as string;
-      priorTags = (raced.tags as string[]) ?? [];
-      finalTags = mergeTags(priorTags, purchaseTags);
-      const { error: raceUpdateError } = await supabase
-        .from("subscribers")
-        .update({
-          tags: finalTags,
-          status: "subscribed",
-          ...namePatch(raced),
-        })
-        .eq("id", subscriberId);
-      if (raceUpdateError) {
-        console.error("[purchase] subscriber race update failed:", raceUpdateError.message);
-        return { ok: false, productIds, guideIds, tags: [] };
-      }
     } else if (insertError || !inserted) {
       console.error(
         "[purchase] subscriber insert failed:",
@@ -314,7 +287,32 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
       );
       return { ok: false, productIds, guideIds, tags: [] };
     } else {
-      subscriberId = (inserted as { id: string }).id;
+      insertedId = inserted.id;
+    }
+  }
+
+  const isNew = !existing;
+  const subscriberId = existing?.id ?? insertedId;
+  const priorTags = existing?.tags ?? [];
+  const finalTags = mergeTags(priorTags, purchaseTags);
+
+  if (existing) {
+    // A concurrent purchase can add other groups after our read. Let Stripe
+    // retry with the current tags if the subscriber changed in the meantime.
+    const { data: updated, error } = await supabase
+      .from("subscribers")
+      .update({
+        tags: finalTags,
+        status: "subscribed",
+        ...namePatch(existing),
+      })
+      .eq("id", existing.id)
+      .eq("updated_at", existing.updated_at)
+      .select("id")
+      .maybeSingle();
+    if (error || !updated) {
+      console.error("[purchase] subscriber update failed:", error?.message ?? "subscriber changed");
+      return { ok: false, productIds, guideIds, tags: [] };
     }
   }
 

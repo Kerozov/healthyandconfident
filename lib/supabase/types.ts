@@ -656,6 +656,8 @@ export type SiteBlackFridayConfig = {
   banner_text_en: string;
   /** Site path without the locale — the banner links to `/{locale}<this>`. */
   banner_href: string;
+  /** Group assigned to buyers after a confirmed Black Friday payment. */
+  purchase_segment_key: string | null;
   updated_at: string;
 };
 

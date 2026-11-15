@@ -8,7 +8,7 @@ import type {
   BlackFridayDiscount,
   SiteBlackFridayConfig,
 } from "@/lib/supabase/types";
-import type { BlackFridayAdminItem } from "@/lib/black-friday/admin";
+import type { BlackFridayAdminData, BlackFridayAdminItem } from "@/lib/black-friday/admin";
 import {
   BUNDLE_MAX_ITEMS,
   BUNDLE_MIN_ITEMS,
@@ -147,9 +147,11 @@ function ItemOptions({
 
 function CampaignEditor({
   config,
+  purchaseGroups,
   siteOrigin,
 }: {
   config: SiteBlackFridayConfig | null;
+  purchaseGroups: BlackFridayAdminData["purchaseGroups"];
   siteOrigin: string;
 }) {
   const { pending, message, setMessage, run } = useAction();
@@ -166,6 +168,7 @@ function CampaignEditor({
     banner_text_en:
       config?.banner_text_en ?? "Black Friday: menus and programs up to −50% until 30.11",
     banner_href: config?.banner_href ?? "/black-friday",
+    purchase_segment_key: config?.purchase_segment_key ?? "",
   });
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -243,6 +246,24 @@ function CampaignEditor({
         <Input value={form.banner_href} onChange={(e) => set("banner_href", e.target.value)} />
       </Field>
 
+      <Field
+        htmlFor="black-friday-purchase-group"
+        label="Обща група след покупка"
+        hint="След успешно плащане на оферта или комплект от „Черен петък“ контактът влиза и в тази група."
+      >
+        <Select
+          id="black-friday-purchase-group"
+          value={form.purchase_segment_key}
+          onChange={(e) => set("purchase_segment_key", e.target.value)}
+          disabled={pending}
+        >
+          <option value="">Без обща група</option>
+          {purchaseGroups.map((group) => (
+            <option key={group.key} value={group.key}>{group.name}</option>
+          ))}
+        </Select>
+      </Field>
+
       <div className="flex flex-wrap items-center gap-3">
         <AdminButton
           disabled={pending}
@@ -256,6 +277,7 @@ function CampaignEditor({
                 banner_text_bg: form.banner_text_bg,
                 banner_text_en: form.banner_text_en,
                 banner_href: form.banner_href,
+                purchase_segment_key: form.purchase_segment_key || null,
               }),
             )
           }
@@ -725,25 +747,19 @@ function BundleEditor({
 
 export function BlackFridayManager({
   config,
+  purchaseGroups,
   discounts,
   bundles,
   items,
   tablesError,
   siteOrigin,
-}: {
-  config: SiteBlackFridayConfig | null;
-  discounts: BlackFridayDiscount[];
-  bundles: BlackFridayBundle[];
-  items: BlackFridayAdminItem[];
-  tablesError: string | null;
-  siteOrigin: string;
-}) {
+}: BlackFridayAdminData & { siteOrigin: string }) {
   const byKey = useMemo(() => new Map(items.map((item) => [item.key, item])), [items]);
   const [creating, setCreating] = useState(false);
 
   return (
     <div className="space-y-6">
-      <CampaignEditor config={config} siteOrigin={siteOrigin} />
+      <CampaignEditor config={config} purchaseGroups={purchaseGroups} siteOrigin={siteOrigin} />
 
       {tablesError ? (
         <Alert variant="warning">

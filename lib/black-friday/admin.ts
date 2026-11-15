@@ -1,9 +1,11 @@
 import "server-only";
 
+import { getSegments } from "@/lib/admin/data";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type {
   BlackFridayBundle,
   BlackFridayDiscount,
+  Segment,
   SiteBlackFridayConfig,
 } from "@/lib/supabase/types";
 import { getAdminBlackFridayConfig } from "@/lib/black-friday/config";
@@ -31,6 +33,7 @@ export type BlackFridayAdminItem = {
 
 export type BlackFridayAdminData = {
   config: SiteBlackFridayConfig | null;
+  purchaseGroups: Pick<Segment, "key" | "name">[];
   discounts: BlackFridayDiscount[];
   bundles: BlackFridayBundle[];
   items: BlackFridayAdminItem[];
@@ -65,7 +68,7 @@ export async function getBlackFridayAdminItems(): Promise<Map<string, BlackFrida
 
 export async function getBlackFridayAdminData(): Promise<BlackFridayAdminData> {
   const supabase = getAdminClient();
-  const [config, discounts, bundles, items] = await Promise.all([
+  const [config, discounts, bundles, items, segments] = await Promise.all([
     getAdminBlackFridayConfig(),
     supabase
       .from("black_friday_discounts")
@@ -78,10 +81,12 @@ export async function getBlackFridayAdminData(): Promise<BlackFridayAdminData> {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
     getBlackFridayAdminItems(),
+    getSegments(),
   ]);
 
   return {
     config,
+    purchaseGroups: segments.map(({ key, name }) => ({ key, name })),
     discounts: ((discounts.data as BlackFridayDiscount[]) ?? []).map((row) => ({
       ...row,
       discount_value: Number(row.discount_value),

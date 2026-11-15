@@ -21,11 +21,12 @@ export async function getBlackFridayConfig(): Promise<SiteBlackFridayConfig | nu
 }
 
 export async function getAdminBlackFridayConfig(): Promise<SiteBlackFridayConfig | null> {
-  const { data } = await getAdminClient()
+  const { data, error } = await getAdminClient()
     .from("site_black_friday")
     .select("*")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as SiteBlackFridayConfig | null) ?? null;
+  if (error) throw new Error(`[black-friday] campaign settings: ${error.message}`);
+  return data;
 }
