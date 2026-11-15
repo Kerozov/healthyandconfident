@@ -7,6 +7,7 @@ import { getStripe } from "@/lib/stripe/server";
 import { sendMetaEvent } from "@/lib/meta/capi";
 import { publicSiteOrigin } from "@/lib/site";
 import type { ResolvedLineItem } from "@/lib/stripe/resolve-products";
+import { programKeysFromMetadata } from "@/lib/black-friday/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,7 @@ async function handlePaidSession(session: Stripe.Checkout.Session) {
     amountCents: session.amount_total ?? null,
     currency: session.currency ?? null,
     placementKey: session.metadata?.placement_key ?? null,
+    placementKeys: programKeysFromMetadata(session.metadata?.bf_items),
   });
 
   if (!result.ok) {

@@ -593,13 +593,26 @@ export const en: Dictionary = {
     backHome: "Back to home",
   },
   blackFriday: {
-    eyebrow: "Black Friday 27–30 November",
+    eyebrow: "Black Friday 27-30 November",
     title: "Holidays without the extra kilos",
     subtitle:
-      "The biggest discounts of the year on the menus and programmes — only until 30 November, 23:59.",
+      "The biggest discounts of the year on the menus and programmes - only until 30 November, 23:59.",
     includedLabel: "What you get",
     wasLabel: "instead of",
     deadlineLabel: "Offers valid until",
+    countdownLabel: "Until the offers end",
+    countdownUnits: ["days", "hours", "minutes", "seconds"],
+    bundlesTitle: "Bundles",
+    bundlesText: "Several programmes and guides together, for less than buying them one by one.",
+    offersTitle: "Discounts",
+    offersText: "The price you see is the price you pay at checkout.",
+    savingsLabel: "you save",
+    separatelyLabel: "Separately",
+    buyCta: "Buy at the discount",
+    bundleCta: "Get the bundle",
+    detailsLink: "See more",
+    comingSoonText: "Black Friday is coming soon. Check back a little later.",
+    emptyText: "The offers are being prepared. Check back very soon.",
     guaranteeTitle: "The “21 days” guarantee",
     guaranteeText:
       "Follow the menu for 7 days. If you don't feel more energy and fewer cravings, write to me and I'll refund you.",
@@ -610,8 +623,7 @@ export const en: Dictionary = {
     earlyAccessCta: "Join the early access list",
     endedText:
       "Black Friday is over and prices are back to normal. Thank you to everyone who joined! Write to me if you have a question about the programs.",
-    notAvailable:
-      "This package cannot be bought online right now. Write to me and I'll help.",
+    faqTitle: "Frequently asked questions",
     faq: [
       {
         q: "I don't have time to cook.",

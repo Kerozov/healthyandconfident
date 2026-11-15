@@ -29,7 +29,7 @@ export type CheckoutTracking = {
   userAgent?: string | null;
 };
 
-function trackingMetadata(tracking?: CheckoutTracking): Record<string, string> {
+export function trackingMetadata(tracking?: CheckoutTracking): Record<string, string> {
   const meta: Record<string, string> = {};
   if (tracking?.fbp) meta.fbp = tracking.fbp.slice(0, 200);
   if (tracking?.fbc) meta.fbc = tracking.fbc.slice(0, 400);

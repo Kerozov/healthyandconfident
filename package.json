@@ -17,6 +17,7 @@
     "verify:upload": "bun scripts/verify-upload.ts",
     "verify:zoom": "bun scripts/verify-zoom-report.ts",
     "verify:stats": "bun scripts/verify-zoom-report.ts && bun scripts/verify-email-attribution.ts",
+    "verify:black-friday": "bun scripts/verify-black-friday.ts",
     "backfill:slugs": "bun scripts/backfill-catalog-slugs.ts"
   },
   "dependencies": {

@@ -34,9 +34,9 @@ export const ADMIN_SCREEN_GROUPS = [
       },
       {
         key: "bundles",
-        label: "Пакети",
+        label: "Черен петък",
         href: "/admin/bundles",
-        description: "Черен петък - пакети и настройки на кампанията",
+        description: "Черен петък - отстъпки, комплекти и срокове на кампанията",
       },
       {
         key: "popup",

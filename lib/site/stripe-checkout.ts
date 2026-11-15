@@ -84,6 +84,7 @@ type CheckoutRequest = {
   productIds?: string[];
   guideIds?: string[];
   placementKey?: string;
+  blackFriday?: { itemKey?: string; bundleId?: string; earlyKey?: string };
 };
 
 /**
@@ -141,6 +142,16 @@ export async function startPlacementCheckout(
   locale: Locale,
 ): Promise<void> {
   await startCheckout({ placementKey }, [placementKey], locale);
+}
+
+/** A Black Friday offer — the server re-prices it, the browser only names it. */
+export async function startBlackFridayCheckout(
+  target: { itemKey?: string; bundleId?: string },
+  locale: Locale,
+  earlyKey?: string,
+): Promise<void> {
+  const id = target.bundleId ?? target.itemKey ?? "black-friday";
+  await startCheckout({ blackFriday: { ...target, earlyKey } }, [id], locale);
 }
 
 /**

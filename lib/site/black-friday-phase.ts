@@ -25,3 +25,19 @@ export function blackFridayPhase(
   if (!Number.isNaN(start) && now < start) return "early";
   return "live";
 }
+
+/**
+ * Whether the offers can be seen and bought right now: during the campaign,
+ * or before the public start with the secret early-access key from the email.
+ */
+export function blackFridayOffersOpen(
+  config: SiteBlackFridayConfig | null,
+  earlyKey: string | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  const phase = blackFridayPhase(config, now);
+  if (phase === "live") return true;
+  if (phase !== "early") return false;
+  const key = config?.early_access_key?.trim() ?? "";
+  return Boolean(key) && earlyKey?.trim() === key;
+}

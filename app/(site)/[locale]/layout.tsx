@@ -31,7 +31,7 @@ import { OfferPopupProvider } from "@/components/site/offer-popup";
 import { getPopupThankYouConfig } from "@/lib/site/popup-config";
 import { getSiteQuestionnaireCta } from "@/lib/site/questionnaire-cta-data";
 import { navItemsWithQuestionnaire, questionnaireCtaForLocale } from "@/lib/site/questionnaire-cta";
-import { getBlackFridayConfig } from "@/lib/site/bundles";
+import { getBlackFridayConfig } from "@/lib/black-friday/config";
 import { BlackFridayBanner } from "@/components/site/black-friday-banner";
 import { blackFridayPhase } from "@/lib/site/black-friday-phase";
 import { BlackFridayBannerGate } from "@/components/site/black-friday-banner-gate";

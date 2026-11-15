@@ -20,6 +20,8 @@ export type FulfillPurchaseInput = {
   currency?: string | null;
   /** The site button that opened Checkout (`metadata.placement_key`), if any. */
   placementKey?: string | null;
+  /** Programme buttons inside a Black Friday Checkout — one per discounted programme. */
+  placementKeys?: string[];
 };
 
 function splitPurchaseName(
@@ -211,7 +213,10 @@ export async function fulfillPurchase(input: FulfillPurchaseInput): Promise<{
   // this the buyer would join no group and no automation would start.
   let programTags: string[] = [];
   try {
-    programTags = await programPurchaseTags(input.placementKey);
+    programTags = await programPurchaseTags([
+      input.placementKey ?? "",
+      ...(input.placementKeys ?? []),
+    ]);
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     return { ok: false, productIds, guideIds, tags: [] };

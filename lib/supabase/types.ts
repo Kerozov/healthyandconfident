@@ -607,36 +607,34 @@ export type SiteGuide = {
 };
 
 /**
- * One Black Friday package („пакет“) on the `/black-friday` page. Sold through
- * a Stripe Payment Link the admin pastes in — no code, no new Stripe price
- * required to create a package.
+ * A Black Friday discount on something the site already sells (migration 096).
+ * `item_key` is `product:<id>`, `guide:<id>` or `program:<button key>`; the
+ * regular price is read from Stripe at the moment of sale.
  */
-export type SiteBundle = {
+export type BlackFridayDiscount = {
+  item_key: string;
+  discount_type: "percent" | "amount" | "price";
+  /** Percent, or euro — `numeric`, so PostgREST may hand it over as a string. */
+  discount_value: number;
+  enabled: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Several catalog items sold together for one price (migration 096). */
+export type BlackFridayBundle = {
   id: string;
-  slug?: string | null;
   title_bg: string;
   title_en: string;
-  subtitle_bg: string;
-  subtitle_en: string;
-  includes_bg: string[];
-  includes_en: string[];
-  old_price_bg: string;
-  old_price_en: string;
-  price_bg: string;
-  price_en: string;
-  bonus_bg: string;
-  bonus_en: string;
-  cta_label_bg: string;
-  cta_label_en: string;
-  stripe_url: string;
-  stripe_url_en: string;
-  image_url: string | null;
+  description_bg: string;
+  description_en: string;
   badge_bg: string;
   badge_en: string;
-  highlight: boolean;
+  item_keys: string[];
+  price_type: "percent" | "price";
+  price_value: number;
   enabled: boolean;
-  /** When false, the bundle is hidden on the English site. */
-  enabled_en: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;

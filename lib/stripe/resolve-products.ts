@@ -4,6 +4,10 @@ import type Stripe from "stripe";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { SiteGuide, SiteProduct } from "@/lib/supabase/types";
 import { getStripe } from "@/lib/stripe/server";
+import {
+  BLACK_FRIDAY_METADATA,
+  parseBlackFridayItemKey,
+} from "@/lib/black-friday/pricing";
 
 export type ResolvedLineItem = {
   /** Internal site_products.id — null if only Stripe product / guide is known */
@@ -216,17 +220,93 @@ function lineFromGuides(
   return items;
 }
 
+function csv(value: string | null | undefined): string[] {
+  return (value ?? "").split(",").map((part) => part.trim());
+}
+
+/**
+ * A Black Friday Checkout charges one-off prices made for the session, so its
+ * lines carry no catalog price id. The session metadata names, in line order,
+ * the item behind each line and its regular price — that is what the purchase
+ * row records, so reports and course codes see the real product.
+ */
+async function resolveBlackFridayLineItems(
+  session: Stripe.Checkout.Session,
+  maps: Awaited<ReturnType<typeof loadCatalogMaps>>,
+): Promise<ResolvedLineItem[]> {
+  const keys = csv(session.metadata?.bf_items);
+  const prices = csv(session.metadata?.bf_prices);
+  const stripeProducts = csv(session.metadata?.stripe_product_ids);
+  if (keys.length === 0 || keys.some((key) => !parseBlackFridayItemKey(key))) return [];
+
+  const { data: lines } = await getStripe().checkout.sessions.listLineItems(session.id, {
+    limit: 100,
+  });
+  const lineProduct = (line: Stripe.LineItem): string =>
+    stripeProductIdFromPrice(line.price) ??
+    (typeof line.price?.product === "string" ? line.price.product : "");
+  const used = new Set<number>();
+
+  return keys.map((key, index) => {
+    const item = parseBlackFridayItemKey(key)!;
+    const regularPriceId = prices[index] ?? "";
+    const expectedProduct = stripeProducts[index] ?? "";
+    // Stripe keeps the line order; the product id guards against it ever not.
+    let lineIndex =
+      lines[index] && (!expectedProduct || lineProduct(lines[index]) === expectedProduct)
+        ? index
+        : lines.findIndex((line, i) => !used.has(i) && lineProduct(line) === expectedProduct);
+    if (lineIndex >= 0 && used.has(lineIndex)) lineIndex = -1;
+    if (lineIndex >= 0) used.add(lineIndex);
+    const line = lineIndex >= 0 ? lines[lineIndex] : undefined;
+    const stripeProductId =
+      (line ? lineProduct(line) : "") || expectedProduct || `price:${regularPriceId}`;
+
+    // A programme button is resolved the way its full-price Checkout is: by the
+    // product or guide that shares its Stripe price.
+    const product =
+      item.kind === "product"
+        ? maps.products.find((p) => p.id === item.ref) ?? null
+        : item.kind === "program"
+          ? maps.productByPrice.get(regularPriceId) ??
+            maps.productByStripeProduct.get(stripeProductId) ??
+            null
+          : null;
+    const guide =
+      item.kind === "guide"
+        ? maps.guides.find((g) => g.id === item.ref) ?? null
+        : item.kind === "program" && !product
+          ? maps.guideByPrice.get(regularPriceId) ?? null
+          : null;
+
+    return {
+      internalProductId: product?.id ?? null,
+      internalGuideId: guide?.id ?? null,
+      stripeProductId,
+      stripePriceId: regularPriceId,
+      amountCents: line?.amount_total ?? (keys.length === 1 ? session.amount_total ?? null : null),
+      currency: line?.currency ?? session.currency ?? null,
+    };
+  });
+}
+
 /** Resolve paid line items from a Stripe Checkout Session. */
 export async function resolveLineItemsFromCheckoutSession(
   session: Stripe.Checkout.Session,
 ): Promise<ResolvedLineItem[]> {
+  const maps = await loadCatalogMaps();
   const {
     products,
     guides,
     productByPrice,
     productByStripeProduct,
     guideByPrice,
-  } = await loadCatalogMaps();
+  } = maps;
+
+  if (session.metadata?.[BLACK_FRIDAY_METADATA] === "1") {
+    const resolved = await resolveBlackFridayLineItems(session, maps);
+    if (resolved.length > 0) return resolved;
+  }
 
   const productIdsFromMeta = (session.metadata?.product_ids ?? "")
     .split(",")

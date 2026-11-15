@@ -1,23 +1,20 @@
-import { getAdminSiteBundles, getAdminBlackFridayConfig } from "@/lib/site/bundles";
-import { BundlesManager } from "@/components/admin/bundles-manager";
+import { BlackFridayManager } from "@/components/admin/black-friday-manager";
 import { PageHeader } from "@/components/admin/ui";
+import { getBlackFridayAdminData } from "@/lib/black-friday/admin";
 import { publicSiteOrigin } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminBundlesPage() {
-  const [bundles, config] = await Promise.all([
-    getAdminSiteBundles(),
-    getAdminBlackFridayConfig(),
-  ]);
+export default async function AdminBlackFridayPage() {
+  const data = await getBlackFridayAdminData();
 
   return (
     <div>
       <PageHeader
-        title="Пакети за Черния петък"
-        description="Създавай пакетите за Черния петък тук - заглавие, какво включва, стара и нова цена, бонус и Stripe Payment Link. Готовите пакети излизат веднага на страницата /black-friday и в лентата най-горе на сайта."
+        title="Черен петък"
+        description="Сроковете на кампанията, отстъпки на програми, оферти и ръководства, и комплекти от няколко продукта на една цена. Цените се взимат от Stripe и излизат веднага на /black-friday."
       />
-      <BundlesManager bundles={bundles} config={config} siteOrigin={publicSiteOrigin()} />
+      <BlackFridayManager {...data} siteOrigin={publicSiteOrigin()} />
     </div>
   );
 }

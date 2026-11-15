@@ -55,15 +55,20 @@ export function findProgramCard<T extends CardTags>(
  * when the cards cannot be read, so the Stripe webhook fails and is retried
  * instead of leaving the buyer outside the group.
  */
-export async function programPurchaseTags(placementKey: string | null | undefined): Promise<string[]> {
-  const key = placementKey?.trim() ?? "";
-  if (!key) return [];
+export async function programPurchaseTags(
+  placementKeys: string | string[] | null | undefined,
+): Promise<string[]> {
+  const keys = (Array.isArray(placementKeys) ? placementKeys : [placementKeys])
+    .map((key) => key?.trim() ?? "")
+    .filter(Boolean);
+  if (keys.length === 0) return [];
 
   const { data, error } = await getAdminClient()
     .from("site_program_cards")
     .select("placement_key, href, href_en, purchase_tags");
   if (error) throw new Error(`[purchase] programme cards: ${error.message}`);
 
-  const card = findProgramCard(key, (data as CardTags[]) ?? []);
-  return (card?.purchase_tags ?? []).map((tag) => tag.trim()).filter(Boolean);
+  const cards = (data as CardTags[]) ?? [];
+  const tags = keys.flatMap((key) => findProgramCard(key, cards)?.purchase_tags ?? []);
+  return Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean)));
 }

@@ -253,6 +253,20 @@ export type Dictionary = {
     includedLabel: string;
     wasLabel: string;
     deadlineLabel: string;
+    countdownLabel: string;
+    /** Days, hours, minutes, seconds — under the countdown digits. */
+    countdownUnits: [string, string, string, string];
+    bundlesTitle: string;
+    bundlesText: string;
+    offersTitle: string;
+    offersText: string;
+    savingsLabel: string;
+    separatelyLabel: string;
+    buyCta: string;
+    bundleCta: string;
+    detailsLink: string;
+    comingSoonText: string;
+    emptyText: string;
     guaranteeTitle: string;
     guaranteeText: string;
     earlyAccessEyebrow: string;
@@ -260,7 +274,7 @@ export type Dictionary = {
     earlyAccessText: string;
     earlyAccessCta: string;
     endedText: string;
-    notAvailable: string;
+    faqTitle: string;
     faq: FaqItem[];
   };
 };
