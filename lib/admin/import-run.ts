@@ -5,7 +5,7 @@ import { applyEnglishRecipientTag } from "@/i18n/subscriber-locale";
 import { ensureSubscriberSegmentKeys, type SegmentSeed } from "@/lib/segments/ensure";
 import { runAutomations } from "@/lib/automation/send";
 import { chunkArray } from "@/lib/utils";
-import type { ImportSubscriberRow } from "@/lib/admin/import-subscribers";
+import type { ImportFact, ImportSubscriberRow } from "@/lib/admin/import-subscribers";
 
 export type ImportBatchResult = {
   ok: boolean;
@@ -14,6 +14,10 @@ export type ImportBatchResult = {
   failed: number;
   /** Unsubscribed here but active in the file — left unsubscribed. */
   keptUnsubscribed: number;
+  /** Extra columns written to `subscriber_facts`. */
+  factsSaved: number;
+  /** Set when the people were saved but their extra columns were not. */
+  factsError?: string;
   errors: string[];
   message?: string;
 };
@@ -87,6 +91,67 @@ async function mapLimit<T>(
   await Promise.all(workers);
 }
 
+/** Facts from the request body — only string pairs get through. */
+function cleanFacts(value: unknown): ImportFact[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (fact): fact is ImportFact =>
+        typeof fact?.label === "string" && typeof fact?.value === "string",
+    )
+    .map((fact) => ({
+      label: fact.label.trim().slice(0, 300),
+      value: fact.value.trim().slice(0, 4000),
+    }))
+    .filter((fact) => fact.label && fact.value);
+}
+
+/**
+ * Notes an earlier import wrote („Bulgaria · Килограми: 5-10 кг“) and nothing
+ * else: every part is something this row now stores as a fact.
+ */
+function notesOnlyFromImport(notes: string | null, legacyParts: unknown): boolean {
+  if (!notes?.trim() || !Array.isArray(legacyParts) || legacyParts.length === 0) {
+    return false;
+  }
+  const known = new Set(
+    legacyParts.filter((p): p is string => typeof p === "string").map((p) => p.trim()),
+  );
+  return notes
+    .split(" · ")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .every((part) => known.has(part));
+}
+
+type FactRow = {
+  subscriber_id: string;
+  source: string;
+  source_label: string;
+  label: string;
+  value: string;
+  updated_at: string;
+};
+
+/**
+ * One row per person, source and label — a new file updates the value, and a
+ * column that is empty this time keeps what the last file said.
+ */
+async function saveImportFacts(rows: FactRow[]): Promise<string | null> {
+  if (rows.length === 0) return null;
+  const unique = new Map(
+    rows.map((r) => [`${r.subscriber_id}|${r.source_label}|${r.label.toLowerCase()}`, r]),
+  );
+  const supabase = getAdminClient();
+  for (const batch of chunkArray([...unique.values()], 200)) {
+    const { error } = await supabase
+      .from("subscriber_facts")
+      .upsert(batch, { onConflict: "subscriber_id,source,source_label,label" });
+    if (error) return error.message;
+  }
+  return null;
+}
+
 async function loadExisting(emails: string[]): Promise<Map<string, ExistingRow>> {
   const supabase = getAdminClient();
   const found = new Map<string, ExistingRow>();
@@ -148,7 +213,15 @@ export async function importSubscriberBatch(
 
   const unique = [...byEmail.values()];
   if (unique.length === 0) {
-    return { ok: true, created: 0, updated: 0, failed: 0, keptUnsubscribed: 0, errors: [] };
+    return {
+      ok: true,
+      created: 0,
+      updated: 0,
+      failed: 0,
+      keptUnsubscribed: 0,
+      factsSaved: 0,
+      errors: [],
+    };
   }
 
   await ensureSubscriberSegmentKeys(
@@ -198,12 +271,25 @@ export async function importSubscriberBatch(
           : "subscribed",
       source: row.source?.trim() || before?.source || "import",
       tags: mergedTags,
-      notes: row.notes?.trim() || before?.notes || null,
+      notes:
+        row.notes?.trim() ||
+        (notesOnlyFromImport(before?.notes ?? null, row.legacy_note_parts)
+          ? null
+          : before?.notes) ||
+        null,
       consent: row.consent ?? before?.consent ?? true,
       ...(!before && row.created_at ? { created_at: row.created_at } : {}),
     };
 
-    return { payload, before, priorTags: before?.tags ?? [], keptUnsubscribed };
+    return {
+      payload,
+      before,
+      priorTags: before?.tags ?? [],
+      keptUnsubscribed,
+      facts: cleanFacts(row.facts),
+      factsSource:
+        typeof row.facts_source === "string" ? row.facts_source.trim().slice(0, 100) : "",
+    };
   });
 
   let failed = 0;
@@ -256,6 +342,22 @@ export async function importSubscriberBatch(
     }
   }
 
+  const factsAt = new Date().toISOString();
+  const factRows: FactRow[] = written.flatMap((item) => {
+    const subscriberId = idByEmail.get(item.payload.email);
+    if (!subscriberId) return [];
+    return item.facts.map((fact) => ({
+      subscriber_id: subscriberId,
+      source: "import",
+      source_label: item.factsSource,
+      label: fact.label,
+      value: fact.value,
+      updated_at: factsAt,
+    }));
+  });
+  const factsError = await saveImportFacts(factRows);
+  if (factsError) console.error("[import] facts:", factsError);
+
   await mapLimit(written, 6, async (item) => {
     const { payload, before, priorTags } = item;
 
@@ -298,6 +400,8 @@ export async function importSubscriberBatch(
     updated,
     failed,
     keptUnsubscribed,
+    factsSaved: factsError ? 0 : factRows.length,
+    ...(factsError ? { factsError } : {}),
     errors,
     message:
       total === 0 && failed > 0

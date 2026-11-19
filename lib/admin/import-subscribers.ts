@@ -28,6 +28,9 @@ export const SUBSCRIBER_SPREADSHEET_COLUMNS = [
 /** Segment group that new segments from a MailerLite `Groups` column land in. */
 export const MAILERLITE_SEGMENT_GROUP = "MailerLite";
 
+/** A column the subscriber has no field for — stored in `subscriber_facts`. */
+export type ImportFact = { label: string; value: string };
+
 export type ImportSubscriberRow = {
   email: string;
   name?: string;
@@ -47,6 +50,15 @@ export type ImportSubscriberRow = {
   notes?: string;
   consent?: boolean;
   created_at?: string;
+  /** Country, kilograms, the problem… — shown under „Информация за човека“. */
+  facts?: ImportFact[];
+  /** Where the facts came from, e.g. "MailerLite"; empty for a plain file. */
+  facts_source?: string;
+  /**
+   * What the importer used to put into `notes` for this row. Notes made only of
+   * these parts are cleared, because the same data now lives in the facts.
+   */
+  legacy_note_parts?: string[];
 };
 
 /** A segment the file assigns that the catalog does not have yet. */
@@ -69,6 +81,8 @@ export type ParsedImport = {
   skipped: { line: number; reason: string }[];
   segments: ImportSegmentUsage[];
   newSegments: ImportNewSegment[];
+  /** Extra columns and how many people have a value in each — for the preview. */
+  facts: { label: string; count: number }[];
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -128,9 +142,13 @@ const HEADER_ALIASES: Record<string, string> = {
   notes: "notes",
   note: "notes",
   бележки: "notes",
+  // MailerLite's own guess from the IP address.
   location: "location",
-  country: "location",
-  държава: "location",
+  // Typed by the person — preferred for the „Държава“ fact.
+  country: "country",
+  държава: "country",
+  mailerlite_total_spent: "total_spent",
+  total_spent: "total_spent",
   consent: "consent",
   created_at: "created_at",
   created: "created_at",
@@ -148,8 +166,6 @@ const IGNORED_COLUMNS = new Set([
   "clicks",
   "open_rate",
   "click_rate",
-  "mailerlite_total_spent",
-  "total_spent",
   "updated_at",
   "unsubscribed",
   "unsubscribed_at",
@@ -373,15 +389,125 @@ function parseTimestamp(value: string): string | undefined {
   return undefined;
 }
 
-function composeNotes({ fields, extras }: MappedRow): string | undefined {
-  const parts = [
-    fields.notes,
+/**
+ * What earlier versions of the importer wrote into `notes` (the location and
+ * every extra column as „Label: value“). The server clears notes made only of
+ * these, since the facts now hold the same data.
+ */
+function legacyNoteParts({ fields, extras }: MappedRow): string[] {
+  return [
     fields.location,
+    fields.country,
     ...extras.map((extra) => `${extra.label}: ${extra.value}`),
   ]
-    .map((part) => part?.trim())
+    .map((part) => part?.trim() ?? "")
     .filter(Boolean);
-  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+/** Cells that mean „nothing“: „Нямам“, „-“, „no“… */
+const EMPTY_ANSWER_RE = /^(нямам|няма|не ползвам|no|none|n\/a|-+|—)(?!\p{L})/iu;
+
+/**
+ * Phone numbers as MailerLite and Excel leave them: the leading 0 eaten
+ * (888123456), the country code without "+" (359888123456), a letter O for a
+ * zero. Only unambiguous forms are rewritten to +…; anything else stays as typed.
+ * A cell with words in it is not a number and comes back as `invalid`.
+ */
+const INTERNATIONAL_WITHOUT_PLUS: [prefix: string, length: number][] = [
+  ["359", 12],
+  ["44", 12],
+  ["49", 12],
+  ["49", 13],
+  ["43", 12],
+  ["43", 13],
+  ["353", 12],
+  ["357", 11],
+  ["30", 12],
+  ["31", 11],
+  ["32", 11],
+  ["33", 11],
+  ["34", 11],
+  ["39", 11],
+  ["39", 12],
+  ["41", 11],
+  ["971", 12],
+];
+
+export function normalizeImportPhone(
+  raw: string,
+): { phone?: string; invalid?: string } {
+  const value = raw.trim();
+  if (!value) return {};
+  // In a cell with digits, a letter O (Latin or Cyrillic) is a mistyped zero.
+  const compact = (/\d/.test(value) ? value.replace(/[OoОо]/g, "0") : value).replace(
+    /[\s\-().\/]/g,
+    "",
+  );
+  if (!/^\+?\d+$/.test(compact)) return { invalid: value };
+
+  const digits = compact.replace(/^\+/, "");
+  if (digits.replace(/0/g, "").length === 0 || digits.length < 6) return {};
+
+  if (compact.startsWith("+")) return { phone: `+${digits}` };
+  if (digits.startsWith("00")) return { phone: `+${digits.slice(2)}` };
+  // Bulgarian mobile: 0888123456, or 888123456 with the 0 lost.
+  if (digits.length === 10 && /^0[89]/.test(digits)) return { phone: `+359${digits.slice(1)}` };
+  if (digits.length === 9 && /^[89]/.test(digits)) return { phone: `+359${digits}` };
+  // UK mobile: 07123456789, or 7123456789 with the 0 lost.
+  if (digits.length === 11 && digits.startsWith("07")) return { phone: `+44${digits.slice(1)}` };
+  if (digits.length === 10 && /^7[1-9]/.test(digits)) return { phone: `+44${digits}` };
+  if (
+    INTERNATIONAL_WITHOUT_PLUS.some(
+      ([prefix, length]) => digits.length === length && digits.startsWith(prefix),
+    )
+  ) {
+    return { phone: `+${digits}` };
+  }
+  return { phone: compact };
+}
+
+function factLabel(label: string, mailerLite: boolean): string {
+  const clean = label.replace(/^\+\s*/, "").trim();
+  // MailerLite's built-in „Company“ field is used here for where the person came from.
+  if (mailerLite && clean.toLowerCase() === "company") return "Откъде е дошъл";
+  return clean;
+}
+
+/**
+ * Everything the subscriber row has no column for, under a readable label:
+ * the country, MailerLite's total spent, every custom field, and a phone cell
+ * that held words instead of a number.
+ */
+function composeFacts(
+  { fields, extras }: MappedRow,
+  { mailerLite, invalidPhone }: { mailerLite: boolean; invalidPhone?: string },
+): ImportFact[] {
+  const facts: ImportFact[] = [];
+  const country = fields.country || fields.location;
+  if (country) facts.push({ label: "Държава", value: country });
+
+  const spent = fields.total_spent?.trim();
+  if (spent && Number.parseFloat(spent.replace(",", ".")) > 0) {
+    facts.push({ label: mailerLite ? "Похарчено в MailerLite" : "Похарчено", value: spent });
+  }
+
+  for (const extra of extras) {
+    facts.push({ label: factLabel(extra.label, mailerLite), value: extra.value });
+  }
+  if (invalidPhone) facts.push({ label: "Неразпознат номер", value: invalidPhone });
+
+  // Two columns with one label (say „Company“ and „Откъде е дошъл“) become one fact.
+  const byLabel = new Map<string, ImportFact>();
+  for (const fact of facts) {
+    const label = fact.label.slice(0, 300);
+    const value = fact.value.slice(0, 4000);
+    if (!label || !value) continue;
+    const key = label.toLowerCase();
+    const prior = byLabel.get(key);
+    if (!prior) byLabel.set(key, { label, value });
+    else if (!prior.value.split(", ").includes(value)) prior.value = `${prior.value}, ${value}`;
+  }
+  return [...byLabel.values()];
 }
 
 /**
@@ -400,7 +526,7 @@ function resolveImportLocale(
   if (CYRILLIC_RE.test(name)) return { locale: "bg", explicit: false };
 
   return {
-    locale: inferLocaleFromLocation(row.location) ?? "bg",
+    locale: inferLocaleFromLocation(row.location || row.country) ?? "bg",
     explicit: false,
   };
 }
@@ -430,6 +556,14 @@ export function parseImportRows(
   const isKnown = (label: string) => resolve(label)?.existing === true;
 
   const mappedRows = rawRows.map(mapRow);
+  const factUsage = new Map<string, number>();
+  // MailerLite names the e-mail column „Subscriber“ and has a „Groups“ column.
+  const mailerLite = rawRows.some((raw) =>
+    Object.keys(raw).some((key) => {
+      const normalized = normalizeHeader(key);
+      return normalized === "subscriber" || normalized === "groups";
+    }),
+  );
   // MailerLite separates groups with ";" and keeps commas inside group names.
   // A file without a single ";" in its Groups column separates them with commas.
   const groupSeparator = mappedRows.some((m) => m.fields.groups?.includes(";"))
@@ -488,22 +622,34 @@ export function parseImportRows(
     for (const key of segmentKeys) usage.set(key, (usage.get(key) ?? 0) + 1);
 
     const createdAt = parseTimestamp(row.created_at ?? "");
+    const phone = normalizeImportPhone(row.phone ?? "");
+    const facebook = row.facebook_url && !EMPTY_ANSWER_RE.test(row.facebook_url)
+      ? row.facebook_url
+      : undefined;
+    const facts = composeFacts(mapped, { mailerLite, invalidPhone: phone.invalid });
+    for (const fact of facts) factUsage.set(fact.label, (factUsage.get(fact.label) ?? 0) + 1);
+    const legacy = legacyNoteParts(mapped);
 
     rows.push({
       email,
       name: composeName(row),
       first_name: row.first_name || undefined,
       last_name: row.last_name || undefined,
-      phone: row.phone || undefined,
-      facebook_url: row.facebook_url || undefined,
+      phone: phone.phone,
+      facebook_url: facebook,
       locale,
       locale_explicit: explicit,
       status: parseStatus(row.status ?? "") ?? "subscribed",
       segments: segmentKeys,
       source: row.source || undefined,
-      notes: composeNotes(mapped),
+      // Only a real notes column — everything else goes to the facts.
+      notes: row.notes?.trim() || undefined,
       consent: parseConsent(row.consent ?? ""),
       created_at: createdAt,
+      ...(facts.length > 0
+        ? { facts, facts_source: mailerLite ? "MailerLite" : "" }
+        : {}),
+      ...(legacy.length > 0 ? { legacy_note_parts: legacy } : {}),
     });
   });
 
@@ -521,6 +667,9 @@ export function parseImportRows(
     skipped,
     segments: segmentUsage,
     newSegments: [...newSegments.values()],
+    facts: [...factUsage.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "bg")),
   };
 }
 

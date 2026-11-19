@@ -65,6 +65,7 @@ import {
 } from "@/lib/admin/contact-crm";
 import { activityInterestLabelsFromTags, isActivityTag } from "@/lib/site/activity-tags";
 import { SCHEDULE_TIMEZONE } from "@/lib/datetime";
+import { facebookLink } from "@/lib/facebook-link";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -530,6 +531,7 @@ export function SubscriberProfile({
       : null;
   const lastActivity = timeline.find((i) => i.kind !== "signup" && i.kind !== "status" && i.kind !== "groups");
   const category = sourceCategory(subscriber.source);
+  const facebook = facebookLink(subscriber.facebook_url);
 
   function toggleSubscription() {
     const next = subscriber.status === "subscribed" ? "unsubscribed" : "subscribed";
@@ -631,18 +633,16 @@ export function SubscriberProfile({
                     <Phone className="h-4 w-4" /> {subscriber.phone}
                   </a>
                 )}
-                {subscriber.facebook_url && (
+                {facebook && (
                   <a
-                    href={
-                      subscriber.facebook_url.startsWith("http")
-                        ? subscriber.facebook_url
-                        : `https://${subscriber.facebook_url}`
-                    }
+                    href={facebook.href}
                     target="_blank"
                     rel="noopener noreferrer"
+                    title={facebook.isProfile ? undefined : "Търсене във Facebook"}
                     className="inline-flex w-fit items-center gap-2 hover:text-forest-700"
                   >
-                    <ExternalLink className="h-4 w-4" /> Facebook
+                    <ExternalLink className="h-4 w-4" />{" "}
+                    {facebook.isProfile ? "Facebook" : `Facebook: ${facebook.text}`}
                   </a>
                 )}
               </div>

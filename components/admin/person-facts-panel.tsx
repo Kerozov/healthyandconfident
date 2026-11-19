@@ -20,6 +20,7 @@ import {
   Wallet,
 } from "lucide-react";
 import type { FactSourceKind, PersonFact, PersonFacts } from "@/lib/admin/person-facts";
+import { facebookLink } from "@/lib/facebook-link";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<string, typeof Phone> = {
@@ -72,11 +73,17 @@ function FactValue({ fact }: { fact: PersonFact }) {
       </a>
     );
   }
-  if (fact.key === "facebook" && /^(https?:\/\/|www\.|m\.)?(facebook|fb)\.com\//i.test(fact.value)) {
-    const href = fact.value.startsWith("http") ? fact.value : `https://${fact.value}`;
+  const facebook = fact.key === "facebook" ? facebookLink(fact.value) : null;
+  if (facebook) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-forest-700 hover:underline">
-        {fact.value.replace(/^https?:\/\/(www\.)?/, "")}
+      <a
+        href={facebook.href}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        title={facebook.isProfile ? undefined : "Търсене във Facebook"}
+        className="hover:text-forest-700 hover:underline"
+      >
+        {facebook.text}
       </a>
     );
   }

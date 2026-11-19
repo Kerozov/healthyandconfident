@@ -19,6 +19,7 @@ import {
   type ImportNewSegment,
   type ImportSegmentUsage,
   type ImportSubscriberRow,
+  type ParsedImport,
 } from "@/lib/admin/import-subscribers";
 import { cn, chunkArray } from "@/lib/utils";
 
@@ -58,6 +59,7 @@ export function SubscriberAddImport({
   const [importSegmentUsage, setImportSegmentUsage] = useState<ImportSegmentUsage[]>([]);
   const [importNewSegments, setImportNewSegments] = useState<ImportNewSegment[]>([]);
   const [importTriggerAutomations, setImportTriggerAutomations] = useState(false);
+  const [importFacts, setImportFacts] = useState<ParsedImport["facts"]>([]);
   const [importNote, setImportNote] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{
@@ -110,6 +112,7 @@ export function SubscriberAddImport({
     setImportSkipped([]);
     setImportSegmentUsage([]);
     setImportNewSegments([]);
+    setImportFacts([]);
     if (!file) return;
 
     try {
@@ -118,6 +121,7 @@ export function SubscriberAddImport({
       setImportSkipped(parsed.skipped);
       setImportSegmentUsage(parsed.segments);
       setImportNewSegments(parsed.newSegments);
+      setImportFacts(parsed.facts);
       if (parsed.rows.length === 0) {
         setImportNote(
           parsed.skipped.length
@@ -151,6 +155,8 @@ export function SubscriberAddImport({
     let updated = 0;
     let failed = 0;
     let keptUnsubscribed = 0;
+    let factsSaved = 0;
+    let factsError: string | null = null;
     let firstError: string | null = null;
     let processed = 0;
 
@@ -174,6 +180,8 @@ export function SubscriberAddImport({
           updated?: number;
           failed?: number;
           keptUnsubscribed?: number;
+          factsSaved?: number;
+          factsError?: string;
           errors?: string[];
           message?: string;
         } = {};
@@ -187,6 +195,8 @@ export function SubscriberAddImport({
         updated += data.updated ?? 0;
         failed += data.failed ?? 0;
         keptUnsubscribed += data.keptUnsubscribed ?? 0;
+        factsSaved += data.factsSaved ?? 0;
+        if (!factsError) factsError = data.factsError ?? null;
         if (!firstError) firstError = data.errors?.[0] ?? null;
 
         if (!res.ok || !data.ok) {
@@ -214,6 +224,10 @@ export function SubscriberAddImport({
           (keptUnsubscribed
             ? ` ${keptUnsubscribed} вече отписани останаха отписани.`
             : "") +
+          (factsSaved ? ` Допълнителни данни: ${factsSaved} записа.` : "") +
+          (factsError
+            ? ` Допълнителните колони не се записаха (${factsError}) - пусни файла отново.`
+            : "") +
           (importTriggerAutomations
             ? " Автоматизациите са пуснати."
             : " Автоматизациите не са пуснати."),
@@ -222,6 +236,7 @@ export function SubscriberAddImport({
       setImportSkipped([]);
       setImportSegmentUsage([]);
       setImportNewSegments([]);
+      setImportFacts([]);
       router.refresh();
     } catch (err) {
       setImportNote(
@@ -361,9 +376,11 @@ export function SubscriberAddImport({
           група от колоната <strong>Groups</strong> (разделени с „;“ или със запетая) се
           слага на човека - съществуващата, ако името съвпада, иначе се създава нова в
           групата „{MAILERLITE_SEGMENT_GROUP}“ (само веднъж, без дубликати). Статусите bounced,
-          junk и unconfirmed се внасят като отписани. Допълнителните полета (Проблем,
-          Килограми, Company…) отиват в бележките. При повторен файл празните клетки не
-          изтриват данни, а отписаните тук не се записват отново.
+          junk и unconfirmed се внасят като отписани. Допълнителните колони (Килограми,
+          Друг проблем, Company, държава…) се записват поотделно и се виждат в профила под
+          „Информация за човека“. Телефоните се записват с код на държавата (+359…). При
+          повторен файл празните клетки не изтриват данни, а отписаните тук не се
+          записват отново.
         </p>
 
         <Field
@@ -503,6 +520,27 @@ export function SubscriberAddImport({
                       {usage.count}
                     </span>
                     {usage.isNew && <span className="ml-1 font-semibold">нов</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        {importPreview && importPreview.length > 0 && !importProgress &&
+          importFacts.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                Допълнителни колони · отиват в „Информация за човека“
+              </p>
+              <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                {importFacts.map((fact) => (
+                  <li
+                    key={fact.label}
+                    className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs text-amber-800"
+                  >
+                    {fact.label}{" "}
+                    <span className="[font-variant-numeric:tabular-nums] opacity-70">
+                      {fact.count}
+                    </span>
                   </li>
                 ))}
               </ul>
