@@ -1,63 +1,92 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import { getJobReport } from "@/lib/worker/email";
+import { getJobReport, type JobReport, type RecipientRow } from "@/lib/worker/email";
 import type { CampaignDelivery } from "@/lib/supabase/types";
 import { campaignClickTotal } from "@/lib/campaign/click-total";
 import { fetchAllRows } from "@/lib/admin/stats-shared";
+import { mapWithConcurrency } from "@/lib/util/concurrency";
 
-type CampaignDeliveryRow = {
-  id: string;
-  worker_job_id: string | null;
-  email: string;
-  status: CampaignDelivery["status"];
-};
+type CampaignDeliveryRow = Pick<
+  CampaignDelivery,
+  "id" | "worker_job_id" | "email" | "status" | "recipient_status" | "opened_at" | "delivered_at"
+>;
 
 async function loadCampaignDeliveryRows(
   campaignId: string,
+  signal?: AbortSignal,
 ): Promise<CampaignDeliveryRow[]> {
   const supabase = getAdminClient();
-  const all: CampaignDeliveryRow[] = [];
-  const page = 1000;
-  for (let from = 0; ; from += page) {
-    const { data } = await supabase
+  return fetchAllRows<CampaignDeliveryRow>(async (from, to) => {
+    const query = supabase
       .from("campaign_deliveries")
-      .select("id, worker_job_id, email, status")
+      .select("id, worker_job_id, email, status, recipient_status, opened_at, delivered_at")
       .eq("campaign_id", campaignId)
       .not("worker_job_id", "is", null)
-      .range(from, from + page - 1);
-    const rows = (data as CampaignDeliveryRow[] | null) ?? [];
-    all.push(...rows);
-    if (rows.length < page) break;
-  }
-  return all;
+      .order("id")
+      .range(from, to);
+    if (signal) query.abortSignal(signal);
+    const page = await query;
+    if (page.error) throw new Error(page.error.message);
+    return page;
+  });
 }
 
-export async function syncCampaignDeliveries(campaignId: string): Promise<number> {
-  const supabase = getAdminClient();
-  const now = new Date().toISOString();
-  const rows = await loadCampaignDeliveryRows(campaignId);
-  let synced = 0;
+function sameInstant(first: string | null, second: string | null): boolean {
+  return (
+    first === second ||
+    (first !== null && second !== null && Date.parse(first) === Date.parse(second))
+  );
+}
 
-  const reports = new Map<string, NonNullable<Awaited<ReturnType<typeof getJobReport>>>>();
-  for (const jobId of [...new Set(rows.map((row) => row.worker_job_id).filter(Boolean))]) {
+export async function syncCampaignDeliveries(
+  campaignId: string,
+  {
+    reports: knownReports,
+    syncedAt = new Date().toISOString(),
+    signal,
+    refreshClicks = true,
+  }: {
+    reports?: ReadonlyMap<string, JobReport>;
+    syncedAt?: string;
+    signal?: AbortSignal;
+    refreshClicks?: boolean;
+  } = {},
+): Promise<number> {
+  const supabase = getAdminClient();
+  const rows = await loadCampaignDeliveryRows(campaignId, signal);
+  const jobIds = [...new Set(rows.map((row) => row.worker_job_id).filter((id) => id !== null))];
+  const reports = new Map<string, JobReport>(knownReports);
+  for (const jobId of jobIds) {
+    signal?.throwIfAborted();
+    if (reports.has(jobId)) continue;
     try {
-      const report = await getJobReport(jobId as string);
-      if (report) reports.set(jobId as string, report);
+      const report = await getJobReport(jobId, signal);
+      if (report) reports.set(jobId, report);
     } catch {
       /* continue */
     }
   }
 
-  for (const row of rows) {
-    if (!row.worker_job_id) continue;
-    const report = reports.get(row.worker_job_id);
-    if (!report) continue;
-    const email = row.email.trim().toLowerCase();
+  const recipientsByJob = new Map<string, Map<string, RecipientRow>>();
+  for (const [jobId, report] of reports) {
+    const recipientsByEmail = new Map<string, RecipientRow>();
+    for (const recipient of report.recipients) {
+      const email = recipient.email.trim().toLowerCase();
+      if (!recipientsByEmail.has(email)) recipientsByEmail.set(email, recipient);
+    }
+    recipientsByJob.set(jobId, recipientsByEmail);
+  }
+
+  const writes = await mapWithConcurrency(rows, 8, async (row) => {
+    if (signal?.aborted || !row.worker_job_id) return null;
+    const jobId = row.worker_job_id;
+    const report = reports.get(jobId);
+    if (!report) return null;
     const recipient =
-      report.recipients.find((item) => item.email.trim().toLowerCase() === email) ??
+      recipientsByJob.get(jobId)?.get(row.email.trim().toLowerCase()) ??
       (report.recipients.length === 1 ? report.recipients[0] : null);
-    if (!recipient) continue;
+    if (!recipient) return null;
 
     let status: CampaignDelivery["status"] = row.status;
     if (recipient.status === "failed" || recipient.error) status = "failed";
@@ -73,27 +102,43 @@ export async function syncCampaignDeliveries(campaignId: string): Promise<number
       status = "sent";
     }
 
-    await supabase
+    if (
+      status === row.status &&
+      recipient.status === row.recipient_status &&
+      sameInstant(recipient.openedAt, row.opened_at) &&
+      sameInstant(recipient.deliveredAt, row.delivered_at)
+    ) {
+      return null;
+    }
+
+    const query = supabase
       .from("campaign_deliveries")
       .update({
         status,
         recipient_status: recipient.status,
         opened_at: recipient.openedAt,
         delivered_at: recipient.deliveredAt,
-        last_synced_at: now,
+        last_synced_at: syncedAt,
       })
-      .eq("id", row.id);
-    synced += 1;
+      .eq("id", row.id)
+      .eq("worker_job_id", jobId)
+      .or(`last_synced_at.is.null,last_synced_at.lte.${syncedAt}`);
+    if (signal) query.abortSignal(signal);
+    return await query;
+  });
+
+  signal?.throwIfAborted();
+  const failure = writes.find((result) => result?.error)?.error;
+  if (failure) throw new Error(failure.message);
+  if (refreshClicks) {
+    const clickedCount = await campaignClickTotal(campaignId);
+    await supabase
+      .from("email_campaigns")
+      .update({ clicked_count: clickedCount })
+      .eq("id", campaignId);
   }
 
-  const clickedCount = await campaignClickTotal(campaignId);
-
-  await supabase
-    .from("email_campaigns")
-    .update({ clicked_count: clickedCount })
-    .eq("id", campaignId);
-
-  return synced;
+  return writes.filter(Boolean).length;
 }
 
 export async function getCampaignClickCountsByEmail(

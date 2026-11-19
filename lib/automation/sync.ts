@@ -33,15 +33,30 @@ type DeliveryRow = Pick<
 
 export async function syncAutomationDelivery(
   delivery: DeliveryRow,
+  signal?: AbortSignal,
 ): Promise<boolean> {
   if (!delivery.worker_job_id) return false;
 
   const supabase = getAdminClient();
   const now = new Date().toISOString();
+  const workerJobId = delivery.worker_job_id;
+
+  async function save(patch: Partial<AutomationDelivery>) {
+    const query = supabase
+      .from("automation_deliveries")
+      .update({ ...patch, last_synced_at: now })
+      .eq("id", delivery.id)
+      .eq("worker_job_id", workerJobId)
+      .neq("status", "canceled")
+      .or(`last_synced_at.is.null,last_synced_at.lt.${now}`);
+    if (signal) query.abortSignal(signal);
+    const { error } = await query;
+    return !error;
+  }
 
   if (delivery.channel === "sms") {
-    const report = await getSmsJobReport(delivery.worker_job_id);
-    if (!report) return false;
+    const report = await getSmsJobReport(workerJobId, signal);
+    if (!report || report.status === "unknown") return false;
 
     const recipientStatus =
       report.failed > 0 && report.sent === 0
@@ -50,30 +65,19 @@ export async function syncAutomationDelivery(
           ? "sent"
           : report.status;
 
-    await supabase
-      .from("automation_deliveries")
-      .update({
-        recipient_status: recipientStatus,
-        last_synced_at: now,
-        ...(report.status === "sent" && delivery.status === "scheduled"
-          ? { status: "sent" }
-          : {}),
-      })
-      .eq("id", delivery.id);
-    return true;
+    return save({
+      recipient_status: recipientStatus,
+      ...(report.status === "sent" && delivery.status === "scheduled"
+        ? { status: "sent" }
+        : {}),
+    });
   }
 
-  const report = await getJobReport(delivery.worker_job_id);
-  if (!report) return false;
+  const report = await getJobReport(workerJobId, signal);
+  if (!report || report.status === "unknown") return false;
 
   const row = report.recipients[0];
-  if (!row) {
-    await supabase
-      .from("automation_deliveries")
-      .update({ last_synced_at: now })
-      .eq("id", delivery.id);
-    return true;
-  }
+  if (!row) return save({});
 
   const workerStatus = report.status;
   let deliveryStatus = delivery.status;
@@ -87,19 +91,13 @@ export async function syncAutomationDelivery(
     deliveryStatus = "scheduled";
   }
 
-  await supabase
-    .from("automation_deliveries")
-    .update({
-      status: deliveryStatus,
-      recipient_status: row.status,
-      opened_at: row.openedAt,
-      delivered_at: row.deliveredAt,
-      last_synced_at: now,
-      error: row.error,
-    })
-    .eq("id", delivery.id);
-
-  return true;
+  return save({
+    status: deliveryStatus,
+    recipient_status: row.status,
+    opened_at: row.openedAt,
+    delivered_at: row.deliveredAt,
+    error: row.error,
+  });
 }
 
 type SyncCandidate = DeliveryRow &
@@ -122,6 +120,7 @@ export type DeliverySyncOptions = {
   timeBudgetMs?: number;
   /** Parallel worker calls. Every automation delivery is its own worker job. */
   concurrency?: number;
+  signal?: AbortSignal;
   /**
    * Manual refresh: re-ask about every open-able row, not only stale ones. Rows
    * checked in the last half minute are still skipped so a double click is free.
@@ -169,12 +168,13 @@ function needsWorkerSync(row: SyncCandidate, now: number, force: boolean): boole
 
 async function loadSyncCandidates(
   automationIds: string[] | null,
+  signal?: AbortSignal,
 ): Promise<SyncCandidate[]> {
   const supabase = getAdminClient();
   // Paged with a unique sort key — one response stops at 1000 rows, which left
   // every delivery after the first thousand without opens forever.
   return fetchAllRows<SyncCandidate>(
-    (from, to) => {
+    async (from, to) => {
       let query = supabase
         .from("automation_deliveries")
         .select(SYNC_CANDIDATE_COLUMNS)
@@ -182,7 +182,10 @@ async function loadSyncCandidates(
         .in("status", ["sent", "scheduled", "failed"])
         .is("opened_at", null);
       if (automationIds) query = query.in("automation_id", automationIds);
-      return query.order("id", { ascending: true }).range(from, to);
+      if (signal) query.abortSignal(signal);
+      const page = await query.order("id", { ascending: true }).range(from, to);
+      if (page.error) throw new Error(page.error.message);
+      return page;
     },
     { pageSize: 1000, maxPages: 100 },
   );
@@ -211,6 +214,7 @@ export async function syncDeliveries(
   const budget = options.timeBudgetMs ?? 40_000;
   const concurrency = Math.max(1, Math.min(options.concurrency ?? 6, 12));
   const force = options.force === true;
+  const signal = options.signal;
 
   const ids = automationIds
     ? [...new Set(automationIds.filter(Boolean))]
@@ -218,7 +222,7 @@ export async function syncDeliveries(
   const candidates: SyncCandidate[] = [];
   // `.in()` goes into the URL — chunk it so a long automation list still fits.
   for (const batch of ids ? chunkArray(ids, 100) : [null]) {
-    candidates.push(...(await loadSyncCandidates(batch)));
+    candidates.push(...(await loadSyncCandidates(batch, signal)));
   }
 
   const now = Date.now();
@@ -229,10 +233,10 @@ export async function syncDeliveries(
   let next = 0;
   let synced = 0;
   const worker = async () => {
-    while (next < queue.length && Date.now() - started < budget) {
+    while (next < queue.length && Date.now() - started < budget && !signal?.aborted) {
       const row = queue[next++];
       try {
-        if (await syncAutomationDelivery(row)) synced += 1;
+        if (await syncAutomationDelivery(row, signal)) synced += 1;
       } catch {
         /* one bad job must not stop the rest */
       }

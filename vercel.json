@@ -4,6 +4,7 @@
   "framework": "nextjs",
   "crons": [
     { "path": "/api/cron/automations", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/worker-stats", "schedule": "0 19 * * *" },
     { "path": "/api/cron/funnel-brand-sync", "schedule": "0 20 * * *" }
   ]
 }

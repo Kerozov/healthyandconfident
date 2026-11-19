@@ -130,11 +130,15 @@ export async function scheduleSms(args: ScheduleArgs): Promise<WorkerSmsSendResu
   });
 }
 
-export async function getSmsJobReport(jobId: string): Promise<SmsJobReport | null> {
+export async function getSmsJobReport(
+  jobId: string,
+  signal?: AbortSignal,
+): Promise<SmsJobReport | null> {
   const { url, key } = getConfig();
   const res = await fetch(`${url}/api/v1/sms/jobs/${jobId}`, {
     headers: { Authorization: `Bearer ${key}` },
     cache: "no-store",
+    signal: signal && AbortSignal.any([signal, AbortSignal.timeout(20_000)]),
   });
   if (!res.ok) return null;
 

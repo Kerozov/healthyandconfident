@@ -391,11 +391,15 @@ export async function getJobTracking(jobId: string): Promise<JobTracking | null>
 }
 
 /** Per-recipient report — tracking counts come from the worker (authoritative). */
-export async function getJobReport(jobId: string): Promise<JobReport | null> {
+export async function getJobReport(
+  jobId: string,
+  signal?: AbortSignal,
+): Promise<JobReport | null> {
   const { url, key } = getConfig();
   const res = await fetch(`${url}/api/v1/jobs/${jobId}?recipients=true`, {
     headers: { Authorization: `Bearer ${key}` },
     cache: "no-store",
+    signal: signal && AbortSignal.any([signal, AbortSignal.timeout(20_000)]),
   });
   if (!res.ok) return null;
   const data = (await res.json().catch(() => null)) as {

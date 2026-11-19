@@ -44,12 +44,11 @@ import {
   sendEmail,
   scheduleEmail,
   lookupEmailJob,
-  getJobReport,
   cancelEmailJob,
   notOpenedRecipientEmails,
   type RecipientRow,
 } from "@/lib/worker/email";
-import { sendSms, scheduleSms, getSmsJobReport, cancelSmsJob } from "@/lib/worker/sms";
+import { sendSms, scheduleSms, cancelSmsJob } from "@/lib/worker/sms";
 import {
   buildSmsBody,
   checkSmsCompose,
@@ -89,6 +88,13 @@ import {
   syncCampaignDeliveries,
   getCampaignClickCountsByEmail,
 } from "@/lib/campaign/sync-deliveries";
+import {
+  aggregateJobReports,
+  deriveCampaignStatus,
+  parseWorkerJobIds,
+  persistCampaignSync,
+  persistSmsCampaignSync,
+} from "@/lib/campaign/worker-sync";
 import {
   campaignMergeFields,
   renderEmailTemplate,
@@ -2557,89 +2563,6 @@ export async function previewAudience(
 
 // ── Email campaigns ─────────────────────────────────────────
 
-/** Map worker job status + counts → our campaign status. */
-function deriveCampaignStatus(
-  workerStatus: string,
-  counts: { sent: number; failed: number; total: number },
-  scheduled: boolean,
-): CampaignStatus {
-  switch (workerStatus) {
-    case "pending":
-      return scheduled ? "scheduled" : "queued";
-    case "processing":
-      return "sending";
-    case "canceled":
-      return "canceled";
-    case "failed":
-      return "failed";
-    case "sent":
-    default:
-      if (counts.failed > 0 && counts.sent > 0) return "partial";
-      if (counts.sent === 0 && counts.failed > 0) return "failed";
-      return "sent";
-  }
-}
-
-function parseWorkerJobIds(workerJobId: string | null | undefined): string[] {
-  if (!workerJobId) return [];
-  return workerJobId
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean);
-}
-
-async function aggregateJobReports(jobIds: string[]) {
-  const reports = (
-    await Promise.all(jobIds.map((id) => getJobReport(id)))
-  ).filter(Boolean) as NonNullable<Awaited<ReturnType<typeof getJobReport>>>[];
-
-  if (reports.length === 0) return null;
-
-  const tracking = reports.reduce(
-    (acc, report) => ({
-      total: acc.total + report.tracking.total,
-      sent: acc.sent + report.tracking.sent,
-      failed: acc.failed + report.tracking.failed,
-      bounced: acc.bounced + report.tracking.bounced,
-      delivered: acc.delivered + report.tracking.delivered,
-      opened: acc.opened + report.tracking.opened,
-      notOpened: acc.notOpened + report.tracking.notOpened,
-      pending: acc.pending + report.tracking.pending,
-    }),
-    {
-      total: 0,
-      sent: 0,
-      failed: 0,
-      bounced: 0,
-      delivered: 0,
-      opened: 0,
-      notOpened: 0,
-      pending: 0,
-    },
-  );
-
-  const recipients = reports.flatMap((report) => report.recipients);
-  const status = reports.some((report) => report.status === "processing")
-    ? "processing"
-    : reports.every((report) => report.status === "canceled")
-      ? "canceled"
-      : reports.every((report) => report.status === "failed")
-        ? "failed"
-        : reports.every((report) => report.status === "pending")
-          ? "pending"
-          : reports.every((report) => report.status === "sent")
-            ? "sent"
-            : "sent";
-
-  return {
-    status,
-    sendAt: reports.find((report) => report.sendAt)?.sendAt ?? null,
-    sentAt: reports.find((report) => report.sentAt)?.sentAt ?? null,
-    tracking,
-    recipients,
-  };
-}
-
 type CampaignInsert = {
   subject: string;
   html: string;
@@ -3272,54 +3195,6 @@ export async function syncEmailCampaign(id: string): Promise<ActionResult> {
   return res;
 }
 
-async function persistCampaignSync(
-  id: string,
-  workerJobId: string,
-  scheduledAt: string | null,
-  recipientsCount: number,
-): Promise<ActionResult> {
-  const supabase = getAdminClient();
-  const jobIds = parseWorkerJobIds(workerJobId);
-  const aggregated =
-    jobIds.length > 1
-      ? await aggregateJobReports(jobIds)
-      : null;
-  const report =
-    aggregated ??
-    (jobIds[0] ? await getJobReport(jobIds[0]) : null);
-
-  if (!report) {
-    return { ok: false, message: "Could not reach the worker for this job." };
-  }
-
-  const t = aggregated?.tracking ?? report.tracking;
-  const status = deriveCampaignStatus(
-    aggregated?.status ?? report.status,
-    { sent: t.sent, failed: t.failed + t.bounced, total: t.total },
-    Boolean(scheduledAt),
-  );
-
-  const { error } = await supabase
-    .from("email_campaigns")
-    .update({
-      status,
-      sent_count: t.sent,
-      failed_count: t.failed,
-      bounced_count: t.bounced,
-      delivered_count: t.delivered,
-      opened_count: t.opened,
-      not_opened_count: t.notOpened,
-      total_count: t.total || recipientsCount,
-      sent_at: aggregated?.sentAt ?? report.sentAt,
-      last_synced_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-
-  if (error) return { ok: false, message: error.message };
-  await syncCampaignDeliveries(id);
-  return { ok: true };
-}
-
 /** Refresh every campaign that still has a worker job (skips drafts/failed-at-create). */
 export async function syncAllEmailCampaigns(): Promise<ActionResult> {
   const guard = await guardAction("campaigns", { action: "sync", summary: "Синхронизира всички кампании" });
@@ -3444,7 +3319,9 @@ export async function getCampaignRecipientReport(
     return { ok: false, message: "Could not load recipient report." };
   }
 
-  await syncCampaignDeliveries(campaignId);
+  await syncCampaignDeliveries(campaignId).catch((error) => {
+    console.error("[campaign recipient report] Could not save delivery stats:", error);
+  });
   const clickMap = await getCampaignClickCountsByEmail(campaignId);
 
   return {
@@ -3577,65 +3454,6 @@ export async function deleteEmailCampaign(id: string): Promise<ActionResult> {
 }
 
 // ── SMS campaigns ───────────────────────────────────────────
-
-function deriveSmsCampaignStatus(
-  workerStatus: string,
-  counts: { sent: number; failed: number; total: number },
-  scheduled: boolean,
-): SmsCampaignStatus {
-  switch (workerStatus) {
-    case "pending":
-      return scheduled ? "scheduled" : "queued";
-    case "processing":
-      return "sending";
-    case "canceled":
-      return "canceled";
-    case "failed":
-      return "failed";
-    case "sent":
-    case "partial":
-    default:
-      if (counts.failed > 0 && counts.sent > 0) return "partial";
-      if (counts.sent === 0 && counts.failed > 0) return "failed";
-      if (counts.sent > 0) return "sent";
-      return scheduled ? "scheduled" : "queued";
-  }
-}
-
-async function persistSmsCampaignSync(
-  id: string,
-  workerJobId: string,
-  scheduledAt: string | null,
-  recipientsCount: number,
-): Promise<ActionResult & { status?: SmsCampaignStatus; sent?: number; failed?: number }> {
-  const supabase = getAdminClient();
-  const report = await getSmsJobReport(workerJobId);
-  if (!report) {
-    return { ok: false, message: "Could not reach the worker for this SMS job." };
-  }
-
-  const t = report.tracking;
-  const failedTotal = t.failed + t.invalid;
-  const status = deriveSmsCampaignStatus(
-    report.status,
-    { sent: t.sent, failed: failedTotal, total: t.total || recipientsCount },
-    Boolean(scheduledAt) && report.status === "pending",
-  );
-
-  const { error } = await supabase
-    .from("sms_campaigns")
-    .update({
-      status,
-      sent_count: t.sent,
-      failed_count: failedTotal,
-      sent_at: report.sentAt,
-      error: report.error,
-    })
-    .eq("id", id);
-
-  if (error) return { ok: false, message: error.message };
-  return { ok: true, status, sent: t.sent, failed: failedTotal };
-}
 
 export async function sendSmsCampaign(input: {
   message: string;
