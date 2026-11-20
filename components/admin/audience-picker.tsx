@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { UserMinus } from "lucide-react";
 import type { AudienceInput, Segment, SegmentGroup } from "@/lib/supabase/types";
 import { previewAudience } from "@/app/(admin)/admin/actions";
 import { Field, Select } from "@/components/admin/fields";
@@ -14,6 +15,8 @@ const EMPTY_AUDIENCE: AudienceInput = {
   group_ids: [],
   tags: [],
   locale: "",
+  exclude_segment_keys: [],
+  exclude_group_ids: [],
 };
 
 export function AudiencePicker({
@@ -78,6 +81,8 @@ export function AudiencePicker({
   }
 
   const count = channel === "sms" ? preview?.phones : preview?.emails;
+  const excludeCount =
+    (value.exclude_segment_keys?.length ?? 0) + (value.exclude_group_ids?.length ?? 0);
 
   return (
     <div className="space-y-4">
@@ -156,6 +161,7 @@ export function AudiencePicker({
                 })
               }
               onChangeGroups={(group_ids) => onChange({ ...value, group_ids })}
+              hint={null}
             />
           </Field>
         </div>
@@ -190,6 +196,30 @@ export function AudiencePicker({
           )}
         </Field>
       )}
+
+      <div className="space-y-2 rounded-xl border border-coral-500/30 bg-coral-500/5 p-3">
+        <div className="flex items-center gap-2">
+          <UserMinus className="h-4 w-4 text-coral-600" />
+          <p className="text-sm font-semibold text-coral-800">Изключване</p>
+          {excludeCount > 0 && (
+            <span className="text-xs text-coral-700">({excludeCount} избрани)</span>
+          )}
+        </div>
+        <AudienceTargetChecklist
+          segments={segments}
+          groups={groups}
+          selectedSegmentKeys={value.exclude_segment_keys ?? []}
+          selectedGroupIds={value.exclude_group_ids ?? []}
+          onChangeSegments={(exclude_segment_keys) =>
+            onChange({ ...value, exclude_segment_keys })
+          }
+          onChangeGroups={(exclude_group_ids) => onChange({ ...value, exclude_group_ids })}
+          variant="exclude"
+          hint={`Абонат в някоя от тези групи или сегменти няма да получи ${
+            channel === "sms" ? "SMS-а" : "имейла"
+          }, дори да е в избраното горе. Сегментът изключва и всички групи в него. Проверява се в момента на изпращане или насрочване.`}
+        />
+      </div>
 
       <Field label="Language">
         <Select

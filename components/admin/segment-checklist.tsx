@@ -105,6 +105,7 @@ export function AudienceTargetChecklist({
   onChangeGroups,
   disabled,
   variant = "include",
+  hint,
 }: {
   segments: Segment[];
   groups: SegmentGroup[];
@@ -115,6 +116,8 @@ export function AudienceTargetChecklist({
   disabled?: boolean;
   /** include = зелено/златно; exclude = червено — за изключване от автоматизация */
   variant?: "include" | "exclude";
+  /** Replaces the automation note under the list; null hides it. */
+  hint?: string | null;
 }) {
   const rows = buildSegmentPickerRows(groups, segments);
 
@@ -218,11 +221,14 @@ export function AudienceTargetChecklist({
           </label>
         );
       })}
-      <p className="text-xs text-ink-soft">
-        {isExclude
-          ? "Ако абонатът влезе в някой от тези сегменти или групи, този имейл/SMS няма да тръгне - и вече насроченият във воркера се отменя веднага, заедно със следващите стъпки в същата поредица."
-          : "Сегментът включва всички групи в него и вложените подсегменти. Ако абонатът излезе от аудиторията, насроченият имейл във воркера също се отказва."}
-      </p>
+      {hint !== null && (
+        <p className="text-xs text-ink-soft">
+          {hint ??
+            (isExclude
+              ? "Ако абонатът влезе в някой от тези сегменти или групи, този имейл/SMS няма да тръгне - и вече насроченият във воркера се отменя веднага, заедно със следващите стъпки в същата поредица."
+              : "Сегментът включва всички групи в него и вложените подсегменти. Ако абонатът излезе от аудиторията, насроченият имейл във воркера също се отказва.")}
+        </p>
+      )}
     </div>
   );
 }

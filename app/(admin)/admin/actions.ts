@@ -2473,6 +2473,61 @@ async function loadAudienceRows(
 }
 
 async function resolveAudience(input: AudienceInput): Promise<ResolvedAudience> {
+  const included = await resolveIncludedAudience(input);
+  return applyAudienceExclusions(input, included);
+}
+
+/**
+ * Drops everyone in an excluded segment or group (groups expand to their
+ * segments and nested subgroups) from the included audience. The excluded
+ * people are looked up across every language and matched by both email and
+ * phone, so nobody excluded slips through on another locale or on a phone
+ * number shared with a second subscriber record.
+ */
+async function applyAudienceExclusions(
+  input: AudienceInput,
+  audience: ResolvedAudience,
+): Promise<ResolvedAudience> {
+  const segmentKeys = (input.exclude_segment_keys ?? [])
+    .map((k) => k.trim())
+    .filter((k) => k && k !== "all");
+  const groupIds = (input.exclude_group_ids ?? []).map((id) => id.trim()).filter(Boolean);
+  if (segmentKeys.length === 0 && groupIds.length === 0) return audience;
+
+  const supabase = getAdminClient();
+  const [{ data: segmentRows }, { data: groupRows }] = await Promise.all([
+    supabase.from("segments").select("*"),
+    supabase.from("segment_groups").select("*"),
+  ]);
+  const allSegments = (segmentRows as Segment[]) ?? [];
+  const allGroups = (groupRows as SegmentGroup[]) ?? [];
+
+  const nameByKey = new Map(allSegments.map((s) => [s.key, s.name]));
+  const nameByGroupId = new Map(allGroups.map((g) => [g.id, g.name]));
+  const names = [
+    ...groupIds.map((id) => nameByGroupId.get(id) ?? id),
+    ...segmentKeys.map((k) => nameByKey.get(k) ?? k),
+  ];
+  const label = `${audience.label} · без: ${names.join(", ")}`;
+
+  const keys = expandAudienceKeys(segmentKeys, groupIds, allGroups, allSegments);
+  // An excluded group with no segments in it holds nobody.
+  if (keys.length === 0) return { ...audience, label };
+
+  const excludedRows = await loadAudienceRows(undefined, keys);
+  const excludedEmails = new Set(uniqueNormalized(excludedRows.map((r) => r.email)));
+  const excludedPhones = new Set(uniqueNormalized(excludedRows.map((r) => r.phone || "")));
+
+  return {
+    emails: audience.emails.filter((email) => !excludedEmails.has(email)),
+    phones: audience.phones.filter((phone) => !excludedPhones.has(phone)),
+    label,
+    segment_tag: `${audience.segment_tag} · без:${keys.join(",")}`,
+    target_tags: audience.target_tags,
+  };
+}
+
+async function resolveIncludedAudience(input: AudienceInput): Promise<ResolvedAudience> {
   const supabase = getAdminClient();
   const locale = input.locale || undefined;
 

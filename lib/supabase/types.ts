@@ -369,6 +369,10 @@ export type AudienceInput = {
   group_ids?: string[];
   tags?: string[];
   locale?: "bg" | "en" | "";
+  /** Never send to subscribers in these segments, whatever the include rules say. */
+  exclude_segment_keys?: string[];
+  /** Never send to subscribers in these groups (and their nested subgroups). */
+  exclude_group_ids?: string[];
 };
 
 export type SmsCampaignStatus =

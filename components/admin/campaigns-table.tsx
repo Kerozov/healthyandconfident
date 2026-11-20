@@ -74,7 +74,11 @@ function clickRate(c: EmailCampaign) {
 }
 
 function audienceLabel(c: EmailCampaign) {
-  if (c.target_tags?.length) return `tags: ${c.target_tags.join(", ")}`;
+  if (c.target_tags?.length) {
+    // Exclusions live only in segment_tag (" · без:key1,key2"), so carry them over.
+    const without = c.segment_tag.match(/ · без:.*$/)?.[0] ?? "";
+    return `tags: ${c.target_tags.join(", ")}${without}`;
+  }
   return c.segment_tag;
 }
 
