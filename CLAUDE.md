@@ -2,6 +2,7 @@
 
 @.cursor/rules/agent-rules-sync.mdc
 @.cursor/rules/supabase-migrations.mdc
+@.cursor/rules/mcp-catalog.mdc
 
 ## Supabase grants
 

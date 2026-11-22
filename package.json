@@ -18,7 +18,9 @@
     "verify:zoom": "bun scripts/verify-zoom-report.ts",
     "verify:stats": "bun scripts/verify-zoom-report.ts && bun scripts/verify-email-attribution.ts",
     "verify:black-friday": "bun scripts/verify-black-friday.ts",
-    "backfill:slugs": "bun scripts/backfill-catalog-slugs.ts"
+    "backfill:slugs": "bun scripts/backfill-catalog-slugs.ts",
+    "mcp:catalog": "bun scripts/generate-mcp-catalog.ts",
+    "verify:mcp": "bun scripts/generate-mcp-catalog.ts --check && bun test ./scripts/mcp-connector.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

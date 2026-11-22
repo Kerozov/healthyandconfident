@@ -97,6 +97,49 @@ type SubscriberPurchase = {
   academy_code: string | null;
 };
 
+/** Migration 098 — the Claude connector (MCP). Only hashes are stored. */
+type McpClient = {
+  id: string;
+  name: string;
+  redirect_uris: string[];
+  created_at: string;
+};
+
+type McpEmailChallenge = {
+  id: string;
+  code_hash: string;
+  client_id: string;
+  email: string;
+  attempts: number;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+};
+
+type McpAuthCode = {
+  code_hash: string;
+  client_id: string;
+  redirect_uri: string;
+  code_challenge: string;
+  email: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+};
+
+type McpToken = {
+  id: string;
+  client_id: string;
+  email: string;
+  access_hash: string;
+  refresh_hash: string;
+  access_expires_at: string;
+  refresh_expires_at: string;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+};
+
 export type Json =
   | string
   | number
@@ -164,6 +207,11 @@ export type Database = {
       /** Migration 096 — Black Friday discounts and bundles from the catalog. */
       black_friday_discounts: TableShape<BlackFridayDiscount>;
       black_friday_bundles: TableShape<BlackFridayBundle>;
+      /** Migration 098 — the Claude connector (MCP). */
+      mcp_clients: TableShape<McpClient>;
+      mcp_email_challenges: TableShape<McpEmailChallenge>;
+      mcp_auth_codes: TableShape<McpAuthCode>;
+      mcp_tokens: TableShape<McpToken>;
     };
     Views: Record<string, never>;
     Functions: {

@@ -18,6 +18,7 @@ import {
 import { logAdminChange, type AdminAuditInput } from "@/lib/admin/audit";
 import { normalizeUsername } from "@/lib/admin/usernames";
 import type { AdminActorPublic } from "@/lib/admin/actor-types";
+import { mcpConnectorSession } from "@/lib/mcp/actor";
 
 const ADMIN_COOKIE = "hc_admin";
 const SEEN_THROTTLE_MS = 2 * 60 * 1000;
@@ -243,7 +244,23 @@ async function markLogin(user: AdminUser): Promise<void> {
   }
 }
 
-export const getAdminSession = cache(async (): Promise<AdminSession | null> => {
+/**
+ * The admin session for this request. Inside a Claude connector call (set only
+ * by `/api/mcp` after its token check) that is the connector's owner session;
+ * everywhere else it is the signed cookie, exactly as before.
+ */
+export async function getAdminSession(): Promise<AdminSession | null> {
+  return mcpConnectorSession() ?? getCookieSession();
+}
+
+/** The owner as the Claude connector acts — every screen, logged under its own label. */
+export async function connectorOwnerSession(label: string): Promise<AdminSession | null> {
+  const owner = await ensureOwnerRow();
+  if (!owner || !owner.active) return null;
+  return { ...toSession(owner), displayName: label };
+}
+
+const getCookieSession = cache(async (): Promise<AdminSession | null> => {
   // Sessions are signed with ADMIN_SECRET; without it none can be valid.
   if (!adminSecret()) return null;
 

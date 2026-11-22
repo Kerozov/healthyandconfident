@@ -69,6 +69,36 @@ automations do not fire on synced contacts.
 
 Requires migration `049_funnel_brand_sync.sql`.
 
+## Claude connector (MCP)
+
+The whole admin is available to Claude as a custom connector: campaigns (email
+and SMS), automations, subscribers, groups and statuses, forms and
+questionnaires, blog, site content, programmes and products, Black Friday,
+payments, Zoom, Meta, Launchify and the team.
+
+**Connect.** In Claude → Settings → Connectors → *Add custom connector*, use
+`https://<site>/api/mcp`. Claude opens `/admin/connect/claude`; press „Прати код“,
+enter the six digits from the email and press „Разреши“. The code only ever goes
+to the address in `lib/mcp/owner.ts`. `/admin/connect/claude` without parameters
+(signed in as the main admin) lists the connections and disconnects them.
+
+**Tools.** `list_areas` → `get_area_guide(area)` → `run_action(area, action, args)`.
+Every action is an existing admin function with its own checks and audit log;
+changes show up in „Профили и промени“ as „Claude (MCP)“. Actions that send,
+delete, publish or change many records at once need `confirmed: true`. Long
+lists are cut with `search`, `fields`, `offset` and `limit`.
+
+**Catalog.** `lib/mcp/catalog.ts` lists the actions; their parameters are read
+from the TypeScript types into `lib/mcp/catalog.generated.ts`:
+
+```bash
+bun run mcp:catalog   # regenerate after changing an action's signature
+bun run verify:mcp    # catalog is up to date + connector tests
+```
+
+Requires migration `098_mcp_connector.sql` and a working notification worker
+(the confirmation code is sent through it).
+
 ## Thank-you buttons
 
 In **Admin → Форми → Съдържание**, each form can have an optional thank-you

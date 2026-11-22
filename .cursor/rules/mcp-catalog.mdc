@@ -1,0 +1,22 @@
+---
+description: Claude connector (MCP) — keep the action catalog in sync with the admin
+globs: app/(admin)/admin/*.ts, lib/admin/**/*, lib/site/**/*, lib/mcp/**/*
+alwaysApply: false
+---
+
+# Конекторът на Claude (MCP)
+
+`/api/mcp` дава на Claude целия админ. Действията са изброени в
+`lib/mcp/catalog.ts`, а параметрите им се извеждат от типовете в
+`lib/mcp/catalog.generated.ts`.
+
+- Промениш ли сигнатурата на функция от каталога или добавиш нова в админа:
+  `bun run mcp:catalog` и commit на генерирания файл. `bun run verify:mcp`
+  пада, ако е остарял.
+- Нова админ функция, която Claude трябва да може да ползва: ред в
+  `MCP_CATALOG` (раздел, име, източник). Ако праща, трие, публикува или
+  променя много записи наведнъж и одитът ѝ не е `send`/`delete`/`publish`,
+  сложи `effect` — тогава иска `confirmed: true`.
+- Самоличността идва само от `withMcpConnectorSession` в `lib/mcp/tools.ts`.
+  Не чети токен, имейл или роля от аргументите на действие.
+- Кой може да свърже Claude е фиксирано в `lib/mcp/owner.ts`.
