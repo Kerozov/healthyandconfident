@@ -26,10 +26,26 @@ import { guidePagePath, productCheckoutPath } from "@/lib/site/product-placement
 import { shortenProgramHref } from "@/lib/programs/types";
 import { visibleInLocale } from "@/lib/site/locale-stripe";
 import { normalizeDisplayText } from "@/lib/site/typography";
+import { KUHNYA_OLD_PRICE, KUHNYA_PLACEMENT_KEY } from "@/lib/programs/kuhnya";
 import {
   blackFridayItemKey,
   type BlackFridayItemKind,
 } from "@/lib/black-friday/pricing";
+
+/**
+ * Regular prices, in cents, that Black Friday shows instead of the Stripe
+ * amount. The Stripe price of „Здравословно хранене за заети хора“ was set to
+ * 39 € by mistake; the programme's regular price is 69 €, so the page shows
+ * 69 € → 39 € for it. Checkout still charges the offer's final price.
+ */
+const REGULAR_CENTS_OVERRIDES: Record<string, number> = {
+  [blackFridayItemKey("program", `${KUHNYA_PLACEMENT_KEY}_pricing_0`)]: KUHNYA_OLD_PRICE * 100,
+};
+
+/** The regular price of an item: its Stripe amount, or the override above when higher. */
+export function blackFridayRegularCents(itemKey: string, stripeCents: number): number {
+  return Math.max(stripeCents, REGULAR_CENTS_OVERRIDES[itemKey] ?? 0);
+}
 
 /** One thing the site sells, as Black Friday sees it. */
 export type BlackFridayCatalogItem = {
@@ -116,7 +132,11 @@ export async function priceCatalogItem(
   if (!item.priceId) return null;
   const price = await readBlackFridayPrice(item.priceId);
   if (priceProblem(price, true) || !price) return null;
-  return { ...item, regularCents: price.unitAmount, stripeProductId: price.stripeProductId };
+  return {
+    ...item,
+    regularCents: blackFridayRegularCents(item.key, price.unitAmount),
+    stripeProductId: price.stripeProductId,
+  };
 }
 
 function pick(locale: Locale, bg: string | null | undefined, en: string | null | undefined): string {

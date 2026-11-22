@@ -10,6 +10,7 @@ import type {
 } from "@/lib/supabase/types";
 import { getAdminBlackFridayConfig } from "@/lib/black-friday/config";
 import {
+  blackFridayRegularCents,
   getBlackFridayCatalog,
   priceProblem,
   readBlackFridayPrice,
@@ -54,7 +55,7 @@ export async function adminItem(item: BlackFridayCatalogItem): Promise<BlackFrid
     title: item.title,
     priceId: item.priceId,
     stripeProductId: price?.stripeProductId ?? "",
-    regularCents: price && !problem ? price.unitAmount : null,
+    regularCents: price && !problem ? blackFridayRegularCents(item.key, price.unitAmount) : null,
     problem,
   };
 }
