@@ -12,8 +12,13 @@ import {
   ChevronDown,
   ChevronUp,
   Ban,
+  Eye,
+  MousePointerClick,
 } from "lucide-react";
-import type { EmailCampaign, CampaignStatus } from "@/lib/supabase/types";
+import type { EmailCampaign, CampaignStatus, SiteGuide, SiteProduct } from "@/lib/supabase/types";
+import type { FormTemplateRecord } from "@/lib/forms/types";
+import { EmailTemplatePreview } from "@/components/admin/email-template-preview";
+import { emailBodyLinks } from "@/lib/email/body-links";
 import {
   syncAllEmailCampaigns,
   syncEmailCampaign,
@@ -138,10 +143,85 @@ function RecipientStatusBadge({ status }: { status: string }) {
   );
 }
 
+function shortHref(href: string): string {
+  return href.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
+}
+
+/**
+ * The button the reader clicks, read from the email itself. Campaigns made
+ * with the block editor keep it in the body, and the admin used to show them
+ * an empty "button" form, as if the email had none. The form stays for
+ * campaigns sent with the separate bottom button, whose link can still move.
+ */
+function EmailBodyButtons({ html }: { html: string }) {
+  const links = emailBodyLinks(html);
+  const shown = links.slice(0, 5);
+  const title =
+    links.length === 0
+      ? "В имейла няма бутон или линк"
+      : links[0].kind === "link"
+        ? links.length === 1
+          ? "Линк в имейла"
+          : "Линкове в имейла"
+        : links.length === 1
+          ? "Бутон в имейла"
+          : "Бутони в имейла";
+  return (
+    <div className="mt-4 rounded-xl border border-gold-400/30 bg-gold-400/5 px-4 py-3">
+      <div className="flex items-start gap-2">
+        <MousePointerClick className="mt-0.5 h-4 w-4 shrink-0 text-gold-500" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-ink">{title}</p>
+          {shown.length > 0 && (
+            <ul className="mt-2 space-y-1.5">
+              {shown.map((l) => (
+                <li
+                  key={`${l.label}|${l.href}`}
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+                >
+                  {l.kind === "button" ? (
+                    <span className="rounded-lg bg-forest-600 px-3 py-1 text-xs font-semibold text-white">
+                      {l.label || "Бутон"}
+                    </span>
+                  ) : (
+                    <span className="font-medium text-ink">{l.label || "линк"}</span>
+                  )}
+                  <span className="text-ink-soft/60" aria-hidden>
+                    →
+                  </span>
+                  <a
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 break-all text-xs text-forest-700 underline underline-offset-2 hover:text-forest-900"
+                  >
+                    {shortHref(l.href)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+          {links.length > shown.length && (
+            <p className="mt-1.5 text-xs text-ink-soft/70">
+              и още {links.length - shown.length} — виж целия имейл.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CampaignsTable({
   campaigns,
+  products = [],
+  guides = [],
+  forms = [],
 }: {
   campaigns: EmailCampaign[];
+  products?: SiteProduct[];
+  guides?: SiteGuide[];
+  forms?: FormTemplateRecord[];
 }) {
   const router = useRouter();
   // Two transitions: the refresh of every campaign runs on its own, so the
@@ -154,6 +234,7 @@ export function CampaignsTable({
   const autoSyncedRef = useRef(false);
   const [note, setNote] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const [recipients, setRecipients] = useState<RecipientRow[] | null>(null);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
 
@@ -451,18 +532,48 @@ export function CampaignsTable({
                 </div>
                 )}
 
-                {c.worker_job_id && (
-                  <button
-                    onClick={() => toggleRecipients(c.id)}
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft hover:text-ink"
-                  >
-                    {isExpanded ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                    {isExpanded ? "Скрий получателите" : "Покажи получателите"}
-                  </button>
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                  {c.html?.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewId(previewId === c.id ? null : c.id)}
+                      aria-expanded={previewId === c.id}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft hover:text-ink"
+                    >
+                      <Eye className="h-4 w-4" />
+                      {previewId === c.id ? "Скрий имейла" : "Виж имейла"}
+                    </button>
+                  )}
+                  {c.worker_job_id && (
+                    <button
+                      type="button"
+                      onClick={() => toggleRecipients(c.id)}
+                      aria-expanded={isExpanded}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-soft hover:text-ink"
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                      {isExpanded ? "Скрий получателите" : "Покажи получателите"}
+                    </button>
+                  )}
+                </div>
+
+                {previewId === c.id && (
+                  <EmailTemplatePreview
+                    className="mt-3"
+                    subject={c.subject}
+                    bodyHtml={c.html ?? ""}
+                    ctaLabel={c.cta_label ?? ""}
+                    ctaUrl={c.cta_url ?? ""}
+                    locale={c.locale === "en" ? "en" : "bg"}
+                    heroImageUrl={c.hero_image_url ?? ""}
+                    products={products}
+                    guides={guides}
+                    forms={forms}
+                  />
                 )}
 
                 {isExpanded && (
@@ -502,11 +613,18 @@ export function CampaignsTable({
                   </div>
                 )}
 
-                <CampaignCtaEditor
-                  campaignId={c.id}
-                  initialLabel={c.cta_label ?? ""}
-                  initialUrl={c.cta_url ?? ""}
-                />
+                {/* The bottom button's link goes through our redirect, so it can
+                    still change after sending. A button in the body cannot, and
+                    a bottom button added later never reaches the queued email. */}
+                {c.cta_url?.trim() ? (
+                  <CampaignCtaEditor
+                    campaignId={c.id}
+                    initialLabel={c.cta_label ?? ""}
+                    initialUrl={c.cta_url ?? ""}
+                  />
+                ) : (
+                  <EmailBodyButtons html={c.html ?? ""} />
+                )}
 
                 {canResend && (
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-cream-2/50 px-4 py-3">

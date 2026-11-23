@@ -148,7 +148,12 @@ export function CampaignsWorkspace({
 
       <div id="campaigns-workspace-panel" className="mt-8" role="tabpanel">
         {tab === "email" ? (
-          <CampaignsTable campaigns={emailCampaigns} />
+          <CampaignsTable
+            campaigns={emailCampaigns}
+            products={products}
+            guides={guides}
+            forms={forms}
+          />
         ) : (
           <SmsCampaignsTable campaigns={smsCampaigns} />
         )}
