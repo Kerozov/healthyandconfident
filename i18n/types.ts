@@ -276,5 +276,15 @@ export type Dictionary = {
     endedText: string;
     faqTitle: string;
     faq: FaqItem[];
+    /** Site-wide popup that sends readers of any page to the offers. */
+    popup: {
+      eyebrow: string;
+      title: string;
+      text: string;
+      countdownLabel: string;
+      cta: string;
+      dismiss: string;
+      close: string;
+    };
   };
 };

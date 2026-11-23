@@ -638,5 +638,14 @@ export const en: Dictionary = {
         a: "You have 7 days. Write to me and I'll refund you.",
       },
     ],
+    popup: {
+      eyebrow: "Black Friday",
+      title: "The biggest discounts of the year",
+      text: "Menus, programmes and guides for less. When the timer hits zero, prices go back to normal.",
+      countdownLabel: "Ends in",
+      cta: "See all offers",
+      dismiss: "Not now",
+      close: "Close",
+    },
   },
 };

@@ -33,8 +33,9 @@ import { getSiteQuestionnaireCta } from "@/lib/site/questionnaire-cta-data";
 import { navItemsWithQuestionnaire, questionnaireCtaForLocale } from "@/lib/site/questionnaire-cta";
 import { getBlackFridayConfig } from "@/lib/black-friday/config";
 import { BlackFridayBanner } from "@/components/site/black-friday-banner";
-import { blackFridayPhase } from "@/lib/site/black-friday-phase";
+import { blackFridayHref, blackFridayPhase } from "@/lib/site/black-friday-phase";
 import { BlackFridayBannerGate } from "@/components/site/black-friday-banner-gate";
+import { BlackFridayPopup } from "@/components/site/black-friday-popup";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -109,6 +110,10 @@ export default async function SiteLayout({
       getSiteQuestionnaireCta(),
       getBlackFridayConfig(),
     ]);
+  const blackFridayOn =
+    blackFriday !== null &&
+    blackFridayPhase(blackFriday) !== "off" &&
+    blackFridayPhase(blackFriday) !== "ended";
   const navItems = navItemsWithQuestionnaire(
     dict.nav.items,
     questionnaireCtaForLocale(questionnaire, l),
@@ -142,12 +147,11 @@ export default async function SiteLayout({
             successButton={popupConfig?.success_button}
           >
             <HashScroll />
-            {blackFriday && blackFridayPhase(blackFriday) !== "off" &&
-              blackFridayPhase(blackFriday) !== "ended" && (
-                <BlackFridayBannerGate deadline={blackFriday.deadline}>
-                  <BlackFridayBanner config={blackFriday} locale={l} />
-                </BlackFridayBannerGate>
-              )}
+            {blackFridayOn && (
+              <BlackFridayBannerGate deadline={blackFriday.deadline}>
+                <BlackFridayBanner config={blackFriday} locale={l} />
+              </BlackFridayBannerGate>
+            )}
             <SiteHeader locale={l} items={navItems} cta={dict.nav.cta} />
             <main>{children}</main>
             <Footer locale={l} dict={dict} contactConfig={contactConfig} />
@@ -155,6 +159,14 @@ export default async function SiteLayout({
               <MessengerWidget
                 url={contactConfig.messenger_url}
                 label={dict.contact.messengerText}
+              />
+            )}
+            {/* Before <Popup>: during the campaign the offer takes the visit's one auto popup. */}
+            {blackFridayOn && (
+              <BlackFridayPopup
+                locale={l}
+                href={blackFridayHref(blackFriday, l)}
+                copy={{ ...dict.blackFriday.popup, units: dict.blackFriday.countdownUnits }}
               />
             )}
             <Popup locale={l} />

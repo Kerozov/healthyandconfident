@@ -41,3 +41,9 @@ export function blackFridayOffersOpen(
   const key = config?.early_access_key?.trim() ?? "";
   return Boolean(key) && earlyKey?.trim() === key;
 }
+
+/** Where the banner and the popup send visitors: the admin link, or the offers page. */
+export function blackFridayHref(config: SiteBlackFridayConfig, locale: string): string {
+  const href = config.banner_href?.trim() || "/black-friday";
+  return href.startsWith("/") ? `/${locale}${href}` : href;
+}

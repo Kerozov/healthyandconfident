@@ -6,6 +6,7 @@ import { useMenuPopup } from "@/components/site/menu-popup";
 import { isCtaPreviewPage } from "@/lib/site/cta-preview";
 import { isFreeMenuPath } from "@/lib/site/free-menu";
 import { isKuhnyaProgramPath } from "@/lib/programs/kuhnya";
+import { takeAutoPopup } from "@/lib/site/auto-popup-slot";
 
 /** Auto-opens the menu signup popup after delay (admin config). */
 export function Popup({ locale }: { locale: Locale }) {
@@ -36,6 +37,8 @@ export function Popup({ locale }: { locale: Locale }) {
           if (localStorage.getItem(storageKey)) return;
           if (isFreeMenuPath(window.location.pathname)) return;
           if (isKuhnyaProgramPath(window.location.pathname)) return;
+          // The Black Friday offer (or an open form) has this visit.
+          if (!takeAutoPopup("menu")) return;
           openMenuPopup("auto-popup");
         }, (d.delay_seconds || 6) * 1000);
       })

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n/config";
 import type { SiteBlackFridayConfig } from "@/lib/supabase/types";
+import { blackFridayHref } from "@/lib/site/black-friday-phase";
 
 /**
  * Slim top banner shown while the campaign is active. Rendered by the site
@@ -16,8 +17,7 @@ export function BlackFridayBanner({
   const text = (locale === "bg" ? config.banner_text_bg : config.banner_text_en).trim();
   if (!text) return null;
 
-  const href = config.banner_href?.trim() || "/black-friday";
-  const target = href.startsWith("/") ? `/${locale}${href}` : href;
+  const target = blackFridayHref(config, locale);
 
   return (
     <div className="bg-forest-900 text-white">
