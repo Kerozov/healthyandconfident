@@ -799,6 +799,39 @@ export async function retryFailedAutomation(
   return deliverStep(automation, ctx, sendAt, run, existing);
 }
 
+/**
+ * Queue one step again for a person whose email just changed, at the time the
+ * old copy was due. The old copy was cancelled in the worker first; its body
+ * carried the old address (`{{email}}`, the unsubscribe link), so it cannot
+ * simply be re-addressed. No trigger or audience checks: the step was already
+ * queued for this person. A fresh key, because the old one belongs to the
+ * cancelled job.
+ */
+export async function requeueStepForNewEmail(
+  automation: Automation,
+  ctx: AutomationRunContext,
+  sendAt: string,
+): Promise<StepOutcome | "already"> {
+  const email = ctx.email.trim().toLowerCase();
+  try {
+    const existing = await loadDelivery(automation.id, email);
+    if (isLiveDelivery(existing)) return "already";
+    // Tracking of the cancelled job must not show on the new one.
+    await clearDeliveryTracking(automation.id, email);
+    const due = Date.parse(sendAt);
+    const at = Number.isFinite(due) && due > Date.now() ? sendAt : new Date().toISOString();
+    const sendNow = Date.parse(at) <= Date.now() + 1000;
+    const key = `${automationJobIdempotencyKey(automation.id, {
+      email,
+      subscriberId: ctx.subscriberId,
+    })}-e${Date.now().toString(36)}`;
+    return await submitStep(automation, ctx, at, sendNow, existing, key);
+  } catch (err) {
+    await recordFailure(automation, ctx, errorMessage(err, "Неуспешно пренасочване към новия имейл"));
+    return "failed";
+  }
+}
+
 export type ManualSendOutcome = StepOutcome | "already";
 
 /**

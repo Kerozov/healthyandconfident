@@ -1,7 +1,12 @@
 import "server-only";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import { isAwaitingWorker, isStuckAtWorker } from "@/lib/admin/delivery-state";
+import {
+  deliveryOutcome,
+  isAwaitingWorker,
+  isBouncedRecipient,
+  isStuckAtWorker,
+} from "@/lib/admin/delivery-state";
 import { getAutomationDeliveries } from "@/lib/admin/automations-data";
 import { aggregateAutomationStats } from "@/lib/automation/sync";
 import { dayKey, fetchAllRows, rate } from "@/lib/admin/stats-shared";
@@ -35,20 +40,18 @@ type SubscriberRow = {
 const MAX_TIMELINE_DAYS = 120;
 
 function isBounced(d: AutomationDelivery): boolean {
-  return d.recipient_status === "bounced" || d.recipient_status === "complained";
+  return isBouncedRecipient(d.recipient_status);
 }
 
 function isOpened(d: AutomationDelivery): boolean {
-  return Boolean(d.opened_at) || d.recipient_status === "opened";
+  return (
+    Boolean(d.opened_at) || d.recipient_status === "opened" || d.recipient_status === "clicked"
+  );
 }
 
+/** Same rule as the totals: went out and did not bounce. */
 function isDelivered(d: AutomationDelivery): boolean {
-  return (
-    Boolean(d.delivered_at) ||
-    d.recipient_status === "delivered" ||
-    d.recipient_status === "clicked" ||
-    isOpened(d)
-  );
+  return deliveryOutcome(d) === "delivered";
 }
 
 function isFailed(d: AutomationDelivery): boolean {

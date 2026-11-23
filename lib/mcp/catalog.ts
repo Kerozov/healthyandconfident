@@ -97,6 +97,11 @@ export const MCP_CATALOG = {
       add: a("actions", "addSubscriber"),
       import: a("actions", "importSubscribers", "Импорт на редове (до няколко хиляди наведнъж).", "bulk"),
       update: a("actions", "updateSubscriber"),
+      change_email: a(
+        "actions",
+        "changeSubscriberEmail",
+        "Сменя имейла на човек по id. Историята, чакащите автоматизации, насрочените кампании и напомнянията минават на новия имейл.",
+      ),
       preview_automations: a("actions", "previewSubscriberAutomations", "Кои автоматизации ще тръгнат, ако човекът получи тези тагове."),
       delete: a("actions", "deleteSubscribers", "Изтрива абонати по id.", "delete"),
       inactive: a("actions", "getInactiveSubscribers", "Неактивни от N месеца."),

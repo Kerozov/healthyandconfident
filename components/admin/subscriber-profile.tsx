@@ -46,6 +46,7 @@ import { assignableSegments } from "@/components/admin/segment-checklist";
 import { StatusBadge } from "@/components/admin/contact-status-badge";
 import { ContactStatusDialog } from "@/components/admin/contact-status-dialog";
 import { SubscriberEditDialog } from "@/components/admin/subscriber-edit-dialog";
+import { SubscriberEmailDialog } from "@/components/admin/subscriber-email-dialog";
 import { PersonEmailsTable } from "@/components/admin/person-emails-table";
 import { PersonFactsPanel } from "@/components/admin/person-facts-panel";
 import type { PersonFacts } from "@/lib/admin/person-facts";
@@ -243,6 +244,16 @@ function buildTimeline(
         added,
         removed,
       });
+    } else if (h.kind === "email") {
+      const from = typeof h.details.from === "string" ? h.details.from : null;
+      const to = typeof h.details.to === "string" ? h.details.to : null;
+      items.push({
+        id: h.id,
+        at: h.created_at,
+        kind: "email",
+        title: from && to ? `Имейлът е сменен: ${from} → ${to}` : "Имейлът е сменен",
+        actor: h.actor_name,
+      });
     } else if (h.kind === "sync") {
       const funnel = typeof h.details.funnel === "string" ? h.details.funnel : null;
       const added = Array.isArray(h.details.added) ? (h.details.added as string[]) : [];
@@ -431,6 +442,7 @@ export function SubscriberProfile({
   const [pending, startTransition] = useTransition();
   const [statusOpen, setStatusOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [filter, setFilter] = useState<TimelineFilter>("all");
   const [showAll, setShowAll] = useState(false);
@@ -625,9 +637,18 @@ export function SubscriberProfile({
                 {name || subscriber.email}
               </h1>
               <div className="mt-2 flex flex-col gap-1 text-sm text-ink-soft">
-                <a href={`mailto:${subscriber.email}`} className="inline-flex w-fit items-center gap-2 hover:text-forest-700">
-                  <Mail className="h-4 w-4" /> {subscriber.email}
-                </a>
+                <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <a href={`mailto:${subscriber.email}`} className="inline-flex w-fit items-center gap-2 hover:text-forest-700">
+                    <Mail className="h-4 w-4" /> {subscriber.email}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setEmailOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-forest-700 hover:bg-forest-500/10"
+                  >
+                    <Pencil className="h-3 w-3" aria-hidden /> Смени
+                  </button>
+                </span>
                 {subscriber.phone && (
                   <a href={`tel:${subscriber.phone}`} className="inline-flex w-fit items-center gap-2 hover:text-forest-700">
                     <Phone className="h-4 w-4" /> {subscriber.phone}
@@ -1054,6 +1075,19 @@ export function SubscriberProfile({
           onSaved={(text) => {
             setStatusOpen(false);
             setNote({ ok: true, text });
+            router.refresh();
+          }}
+        />
+      )}
+
+      {emailOpen && (
+        <SubscriberEmailDialog
+          subscriberId={subscriber.id}
+          email={subscriber.email}
+          onClose={() => setEmailOpen(false)}
+          onSaved={(next) => {
+            setEmailOpen(false);
+            setNote(next);
             router.refresh();
           }}
         />

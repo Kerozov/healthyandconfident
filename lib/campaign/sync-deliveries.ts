@@ -32,6 +32,34 @@ async function loadCampaignDeliveryRows(
   });
 }
 
+/** Worker states where the email reached the mail server. */
+const WENT_OUT = new Set(["sent", "delivered", "opened", "clicked", "bounced", "complained"]);
+
+/**
+ * Our row status from the worker's per-recipient state. The worker's status
+ * decides, not its `error` note: removed addresses, bounces and addresses
+ * queued again after a temporary bounce all carry one, and reading it as a
+ * failure stored 3,199 removed addresses and every campaign bounce as "failed".
+ * A bounce stays "sent" — it went out — and `recipient_status` says it came back.
+ */
+function campaignRowStatus(
+  current: CampaignDelivery["status"],
+  recipient: RecipientRow,
+  report: JobReport,
+): CampaignDelivery["status"] {
+  if (recipient.status === "canceled") return "canceled";
+  if (recipient.status === "failed") return "failed";
+  if (WENT_OUT.has(recipient.status)) return "sent";
+  if (recipient.status !== "pending" && recipient.error) return "failed";
+  if (report.status === "failed" && report.recipients.length <= 1) return "failed";
+  if (recipient.status === "pending") {
+    // Went out once and waits for a retry: back to "sent", not a failure.
+    return current === "failed" && recipient.sentAt ? "sent" : current;
+  }
+  if (report.status === "sent" || report.status === "partial") return "sent";
+  return current;
+}
+
 function sameInstant(first: string | null, second: string | null): boolean {
   return (
     first === second ||
@@ -88,19 +116,7 @@ export async function syncCampaignDeliveries(
       (report.recipients.length === 1 ? report.recipients[0] : null);
     if (!recipient) return null;
 
-    let status: CampaignDelivery["status"] = row.status;
-    if (recipient.status === "failed" || recipient.error) status = "failed";
-    else if (recipient.status === "canceled") status = "canceled";
-    else if (report.status === "failed" && report.recipients.length <= 1) status = "failed";
-    else if (
-      report.status === "sent" ||
-      report.status === "partial" ||
-      recipient.status === "sent" ||
-      recipient.status === "opened" ||
-      recipient.status === "delivered"
-    ) {
-      status = "sent";
-    }
+    const status = campaignRowStatus(row.status, recipient, report);
 
     if (
       status === row.status &&

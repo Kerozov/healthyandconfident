@@ -96,11 +96,11 @@ import {
   persistSmsCampaignSync,
 } from "@/lib/campaign/worker-sync";
 import {
-  campaignMergeFields,
   renderEmailTemplate,
   SAMPLE_TEMPLATE_VARS,
   templateVarsFromSubscriber,
 } from "@/lib/automation/template";
+import { campaignRecipientMerge } from "@/lib/campaign/merge";
 import { fullNameFromParts } from "@/lib/site/health-tags";
 import { deriveNewSubscribersOnly } from "@/lib/automation/subscriber-origins";
 import {
@@ -2042,6 +2042,55 @@ export async function updateSubscriber(input: {
 }
 
 /**
+ * Change one person's email: their profile, everything they did under the old
+ * one, and every email still queued for them (automations, scheduled
+ * campaigns, payment reminders) moves to the new address.
+ */
+export async function changeSubscriberEmail(input: {
+  id: string;
+  email: string;
+}): Promise<
+  ActionResult & {
+    changed?: boolean;
+    email?: string;
+    automations?: number;
+    campaigns?: number;
+    reminders?: number;
+    warnings?: string[];
+  }
+> {
+  const guard = await guardAction("subscribers", {
+    action: "update",
+    summary: "Смени имейла на абонат",
+  });
+  if (!guard.ok) return guard;
+  if (!input.id) return { ok: false, message: "Липсва човек." };
+
+  const actor = await getAdminSession().catch(() => null);
+  const { changeSubscriberEmail: changeEmail } = await import("@/lib/subscribers/change-email");
+  const result = await changeEmail({
+    subscriberId: input.id,
+    newEmail: input.email ?? "",
+    actor: {
+      id: actor?.id ?? null,
+      name: actor?.displayName || actor?.username || "Админ",
+    },
+  });
+  if (!result.ok) return result;
+
+  revalidatePath("/admin/subscribers", "layout");
+  return {
+    ok: true,
+    changed: result.changed,
+    email: result.newEmail,
+    automations: result.automations,
+    campaigns: result.campaigns,
+    reminders: result.reminders,
+    warnings: result.warnings,
+  };
+}
+
+/**
  * Automation steps written for this email since `since`: queued or sent, and
  * failed. Every step the run touches writes its delivery row with
  * `sent_at = now`, chain steps included.
@@ -2744,11 +2793,7 @@ async function dispatchCampaign(input: CampaignInsert): Promise<ActionResult> {
     const merge: Record<string, Record<string, string>> = {};
     for (const email of emails) {
       const sub = subByEmail.get(email);
-      merge[email] = {
-        ...campaignMergeFields(templateVarsFromSubscriber(sub, email)),
-        sid: sub?.id ?? "",
-        unsubscribe_url: unsubscribeLinkForEmail(email, mailLocale) ?? "",
-      };
+      merge[email] = campaignRecipientMerge(sub, email, mailLocale);
     }
 
     const payloadBase = {

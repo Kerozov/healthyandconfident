@@ -46,6 +46,7 @@ function mergeJobReports(reports: JobReport[]) {
       opened: acc.opened + report.tracking.opened,
       notOpened: acc.notOpened + report.tracking.notOpened,
       pending: acc.pending + report.tracking.pending,
+      canceled: acc.canceled + report.tracking.canceled,
     }),
     {
       total: 0,
@@ -56,6 +57,7 @@ function mergeJobReports(reports: JobReport[]) {
       opened: 0,
       notOpened: 0,
       pending: 0,
+      canceled: 0,
     },
   );
 
@@ -112,9 +114,10 @@ export async function persistCampaignSync(
 
   const report = reports.length === 1 ? reports[0] : mergeJobReports(reports);
   const t = report.tracking;
+  // `sent` includes bounces; a campaign where every address bounced failed.
   const status = deriveCampaignStatus(
     report.status,
-    { sent: t.sent, failed: t.failed + t.bounced, total: t.total },
+    { sent: t.delivered, failed: t.failed + t.bounced, total: t.total },
     Boolean(scheduledAt),
   );
 

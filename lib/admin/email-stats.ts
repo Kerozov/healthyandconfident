@@ -17,6 +17,11 @@ import {
 } from "@/lib/admin/stats-shared";
 import { engagementTier, type EngagementTier } from "@/lib/admin/engagement";
 import {
+  deliveryOutcome,
+  wentOut,
+  type DeliveryOutcome,
+} from "@/lib/admin/delivery-state";
+import {
   buildPurchaseIndex,
   purchaseAfterEmail,
   type PurchaseIndex,
@@ -177,6 +182,9 @@ type DeliveryRow = {
   deliveredAt: string | null;
   clicks: number;
   sentAt: string;
+  outcome: DeliveryOutcome | null;
+  /** Went out to the mail server (delivered or bounced). */
+  wentOut: boolean;
 };
 
 type Acc = {
@@ -224,7 +232,7 @@ function buyersBySource(
 ): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
   for (const row of rows) {
-    if (row.kind !== kind || row.status !== "sent") continue;
+    if (row.kind !== kind || !row.wentOut) continue;
     if (!purchaseAfterEmail(purchases, row.email, row.sentAt)) continue;
     const set = out.get(row.sourceId) ?? new Set<string>();
     set.add(row.email);
@@ -233,22 +241,12 @@ function buyersBySource(
   return out;
 }
 
-function isDelivered(row: DeliveryRow): boolean {
-  if (row.deliveredAt) return true;
-  const status = row.recipientStatus ?? "";
-  return status === "delivered" || status === "opened" || status === "clicked";
-}
-
-function isBounced(row: DeliveryRow): boolean {
-  return (row.recipientStatus ?? "").includes("bounce");
-}
-
 function bump(acc: Acc, row: DeliveryRow) {
-  if (row.status === "sent") {
+  if (row.wentOut) {
     acc.sent += 1;
     acc.recipients.add(row.email);
-    if (isDelivered(row)) acc.delivered += 1;
-    if (isBounced(row)) acc.bounced += 1;
+    if (row.outcome === "delivered") acc.delivered += 1;
+    else acc.bounced += 1;
     if (isOpened(row)) acc.opened += 1;
     if (row.clicks > 0) {
       acc.withClicks += 1;
@@ -256,9 +254,23 @@ function bump(acc: Acc, row: DeliveryRow) {
     }
     return;
   }
-  if (row.status === "scheduled") acc.scheduled += 1;
-  else if (row.status === "failed") acc.failed += 1;
-  else if (row.status === "canceled") acc.canceled += 1;
+  // Handed to the worker but not out yet counts with the scheduled ones.
+  if (row.outcome === "scheduled" || row.outcome === "waiting") acc.scheduled += 1;
+  else if (row.outcome === "failed") acc.failed += 1;
+  else if (row.outcome === "canceled") acc.canceled += 1;
+}
+
+function withOutcome(
+  row: Omit<DeliveryRow, "outcome" | "wentOut">,
+): DeliveryRow {
+  const outcome = deliveryOutcome({
+    status: row.status,
+    recipient_status: row.recipientStatus,
+    opened_at: row.openedAt,
+    delivered_at: row.deliveredAt,
+    click_count: row.clicks,
+  });
+  return { ...row, outcome, wentOut: wentOut(outcome) };
 }
 
 function toTotals(acc: Acc): EmailTotals {
@@ -367,7 +379,7 @@ async function loadDeliveries(since: string | null): Promise<{
   const sms: { status: string; sentAt: string }[] = [];
 
   for (const row of campaignRows) {
-    email.push({
+    email.push(withOutcome({
       kind: "campaign",
       sourceId: row.campaign_id,
       email: row.email.toLowerCase(),
@@ -377,7 +389,7 @@ async function loadDeliveries(since: string | null): Promise<{
       deliveredAt: row.delivered_at,
       clicks: row.click_count ?? 0,
       sentAt: row.sent_at,
-    });
+    }));
   }
 
   for (const row of automationRows) {
@@ -385,7 +397,7 @@ async function loadDeliveries(since: string | null): Promise<{
       sms.push({ status: row.status, sentAt: row.sent_at });
       continue;
     }
-    email.push({
+    email.push(withOutcome({
       kind: "automation",
       sourceId: row.automation_id,
       email: row.email.toLowerCase(),
@@ -395,7 +407,7 @@ async function loadDeliveries(since: string | null): Promise<{
       deliveredAt: row.delivered_at,
       clicks: row.click_count ?? 0,
       sentAt: row.sent_at,
-    });
+    }));
   }
 
   return { email, sms };
@@ -410,7 +422,7 @@ function buildTimeline(
   const index = new Map(keys.map((k) => [k, { sent: 0, opened: 0, clicks: 0 }]));
 
   for (const row of rows) {
-    if (row.status === "sent") {
+    if (row.wentOut) {
       const bucket = index.get(dayKey(row.sentAt));
       if (bucket) bucket.sent += 1;
     }
@@ -547,7 +559,7 @@ function buildPeople(
     const acc = byEmail.get(row.email) ?? newAcc();
     bump(acc, row);
     byEmail.set(row.email, acc);
-    if (row.status !== "sent") continue;
+    if (!row.wentOut) continue;
     const prev = lastSent.get(row.email);
     if (!prev || row.sentAt > prev) lastSent.set(row.email, row.sentAt);
     if (!bought.has(row.email) && purchaseAfterEmail(purchases, row.email, row.sentAt)) {
@@ -708,7 +720,7 @@ export async function getEmailStats(
   // Domain deliverability.
   const domainMap = new Map<string, { sent: number; opened: number; emails: Set<string> }>();
   for (const row of currentRows) {
-    if (row.status !== "sent") continue;
+    if (!row.wentOut) continue;
     const domain = emailDomain(row.email);
     const entry = domainMap.get(domain) ?? { sent: 0, opened: 0, emails: new Set<string>() };
     entry.sent += 1;

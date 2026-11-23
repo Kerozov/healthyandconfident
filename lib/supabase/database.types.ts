@@ -225,6 +225,11 @@ export type Database = {
         Args: { p_campaign_id: string };
         Returns: number;
       };
+      /** Migration 099 — move a person to a new email across every table. */
+      change_subscriber_email: {
+        Args: { p_subscriber_id: string; p_new_email: string };
+        Returns: Json;
+      };
       /** Migration 075 — distinct tags of subscribed subscribers, in one call. */
       subscriber_tags: {
         Args: Record<string, never>;

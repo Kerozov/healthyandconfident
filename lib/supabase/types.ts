@@ -78,7 +78,7 @@ export type SiteQuestionnaireCta = {
   updated_at: string;
 };
 
-export type SubscriberHistoryKind = "status" | "groups" | "sync";
+export type SubscriberHistoryKind = "status" | "groups" | "sync" | "email";
 
 /** One line in a person's history: a status change, a group edit or a sync. */
 export type SubscriberHistoryEntry = {

@@ -104,6 +104,10 @@ export type RecipientRow = {
   error: string | null;
 };
 
+/**
+ * `sent` = went out to the mail server = `delivered` + `bounced`. ZeptoMail
+ * sends no "delivered" events, so delivered means "did not come back".
+ */
 export type RecipientStats = {
   total: number;
   sent: number;
@@ -113,6 +117,8 @@ export type RecipientStats = {
   opened: number;
   notOpened: number;
   pending: number;
+  /** Removed from the job before it went out — not a failure. */
+  canceled: number;
 };
 
 export type JobReport = {
@@ -134,7 +140,8 @@ function isFailedRecipient(r: RecipientRow): boolean {
 }
 
 function isOpened(r: RecipientRow): boolean {
-  return r.opened || r.status === "opened" || Boolean(r.openedAt);
+  // The worker marks a click as "clicked" even when the open pixel was blocked.
+  return r.opened || r.status === "opened" || r.status === "clicked" || Boolean(r.openedAt);
 }
 
 /** Only successfully delivered, non-opened addresses — never bounced/failed. */
@@ -148,53 +155,66 @@ export function notOpenedRecipientEmails(recipients: RecipientRow[]): string[] {
   return recipients.filter(canResendTo).map((r) => r.email);
 }
 
-function isDelivered(r: RecipientRow): boolean {
-  return Boolean(r.deliveredAt) || r.status === "delivered" || r.status === "opened";
+type RecipientOutcome = "delivered" | "bounced" | "failed" | "pending" | "canceled";
+
+/**
+ * The worker's status decides, not `error`: a removed address ("Removed from
+ * job"), a bounce and an address queued again after a temporary bounce all
+ * carry a note there. Reading any note as a failure counted 3,199 removed
+ * addresses of a cancelled campaign as failed.
+ */
+export function recipientOutcome(r: RecipientRow): RecipientOutcome {
+  switch (r.status) {
+    case "canceled":
+      return "canceled";
+    case "pending":
+      return "pending";
+    case "failed":
+      return "failed";
+    case "bounced":
+    case "complained":
+      return "bounced";
+    case "sent":
+    case "delivered":
+    case "opened":
+    case "clicked":
+      return r.sentAt || isOpened(r) ? "delivered" : "pending";
+  }
+  if (r.error) return "failed";
+  return r.sentAt ? "delivered" : "pending";
 }
 
 /** Per-recipient breakdown — bounced/failed are excluded from not-opened counts. */
 export function summarizeRecipients(recipients: RecipientRow[]): RecipientStats {
-  let bounced = 0;
-  let failed = 0;
-  let delivered = 0;
-  let opened = 0;
-  let notOpened = 0;
-  let pending = 0;
-  let sent = 0;
+  const stats: RecipientStats = {
+    total: recipients.length,
+    sent: 0,
+    failed: 0,
+    bounced: 0,
+    delivered: 0,
+    opened: 0,
+    notOpened: 0,
+    pending: 0,
+    canceled: 0,
+  };
 
   for (const r of recipients) {
-    if (isBounced(r)) {
-      bounced += 1;
+    const outcome = recipientOutcome(r);
+    if (outcome === "delivered" || outcome === "bounced") {
+      stats.sent += 1;
+      if (outcome === "bounced") {
+        stats.bounced += 1;
+        continue;
+      }
+      stats.delivered += 1;
+      if (isOpened(r)) stats.opened += 1;
+      else stats.notOpened += 1;
       continue;
     }
-    if (r.status === "failed" || (r.error && r.status !== "sent" && r.status !== "opened")) {
-      failed += 1;
-      continue;
-    }
-    if (r.status === "pending" || !r.sentAt) {
-      pending += 1;
-      continue;
-    }
-
-    sent += 1;
-    if (isDelivered(r)) delivered += 1;
-    if (isOpened(r)) {
-      opened += 1;
-    } else {
-      notOpened += 1;
-    }
+    stats[outcome] += 1;
   }
 
-  return {
-    total: recipients.length,
-    sent,
-    failed,
-    bounced,
-    delivered,
-    opened,
-    notOpened,
-    pending,
-  };
+  return stats;
 }
 
 function getConfig() {
@@ -480,6 +500,64 @@ export async function removeEmailJobRecipients(
     return res.ok || res.status === 404 || res.status === 409;
   } catch {
     return false;
+  }
+}
+
+export type ReplaceRecipientResult =
+  | "replaced"
+  | "unchanged"
+  /** That part of the job is sending or sent — it goes to the old address. */
+  | "not_pending"
+  | "not_in_job"
+  | "not_found"
+  | "error";
+
+/**
+ * Swap one address of a pending job for another (the person changed their
+ * email). A campaign is ONE job for its whole audience, so this is the only
+ * way to move one person without touching everyone else. `merge` carries the
+ * new address's own fields — `{{email}}` and its unsubscribe link.
+ */
+export async function replaceEmailJobRecipient(
+  jobId: string,
+  from: string,
+  to: string,
+  merge?: Record<string, string>,
+): Promise<ReplaceRecipientResult> {
+  if (!jobId) return "not_found";
+  const { url, key } = getConfig();
+  try {
+    const res = await fetch(
+      `${url}/api/v1/jobs/${encodeURIComponent(jobId)}/recipients/replace`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ from, to, merge }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(20_000),
+      },
+    );
+    if (res.status === 404) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      // An older worker without this route answers a bare 404 page.
+      return data.error === "Job not found" ? "not_found" : "error";
+    }
+    const data = (await res.json().catch(() => ({}))) as { outcome?: string };
+    const outcome = data.outcome;
+    if (
+      outcome === "replaced" ||
+      outcome === "unchanged" ||
+      outcome === "not_pending" ||
+      outcome === "not_in_job"
+    ) {
+      return outcome;
+    }
+    return "error";
+  } catch {
+    return "error";
   }
 }
 

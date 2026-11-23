@@ -6,6 +6,7 @@ import {
   type PersonEmailItem,
 } from "@/lib/admin/email-history";
 import { fetchAllRows } from "@/lib/admin/stats-shared";
+import { deliveryOutcome, wentOut } from "@/lib/admin/delivery-state";
 
 export type EngagementTier = "hot" | "warm" | "cold" | "none";
 
@@ -145,11 +146,12 @@ export async function getEngagementSummaryForEmails(
     for (const row of rows) {
       const acc = byEmail.get(row.email.toLowerCase());
       if (!acc) continue;
-      if (row.status === "sent") {
+      const outcome = deliveryOutcome(row);
+      if (wentOut(outcome)) {
         bumpAcc(acc, isOpenedRow(row), row.click_count ?? 0);
-      } else if (row.status === "scheduled") {
+      } else if (outcome === "scheduled" || outcome === "waiting") {
         acc.scheduled += 1;
-      } else if (row.status === "failed") {
+      } else if (outcome === "failed") {
         acc.failed += 1;
       }
     }

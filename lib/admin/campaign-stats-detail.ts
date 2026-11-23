@@ -3,6 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { fetchAllRows } from "@/lib/admin/stats-shared";
 import { chunkArray } from "@/lib/utils";
+import { deliveryOutcome, wentOut } from "@/lib/admin/delivery-state";
 import {
   buildPurchaseIndex,
   purchaseAfterEmail,
@@ -48,11 +49,14 @@ type DeliveryRow = {
   sent_at: string;
 };
 
-function stateOf(row: DeliveryRow): CampaignRecipientState {
-  if (row.status === "failed") return "failed";
-  if (row.status === "scheduled") return "waiting";
+/** `null` for addresses taken out of the campaign before it went. */
+function stateOf(row: DeliveryRow): CampaignRecipientState | null {
+  const outcome = deliveryOutcome(row);
+  if (outcome === "canceled" || outcome === "skipped" || outcome === null) return null;
+  if (outcome === "scheduled" || outcome === "waiting") return "waiting";
+  if (outcome === "failed") return "failed";
+  if (outcome === "bounced") return "bounced";
   const recipient = row.recipient_status ?? "";
-  if (recipient.includes("bounce")) return "bounced";
   if ((row.click_count ?? 0) > 0 || recipient === "clicked") return "clicked";
   if (row.opened_at || recipient === "opened") return "opened";
   return "not_opened";
@@ -142,7 +146,8 @@ export async function getCampaignStatsDetail(
     const loggedClicks = clicksByEmail.get(email) ?? 0;
     const clickTotal = Math.max(row.click_count ?? 0, loggedClicks);
     let state = stateOf({ ...row, click_count: clickTotal });
-    const sent = row.status === "sent";
+    if (!state) continue;
+    const sent = wentOut(deliveryOutcome(row));
     const next: CampaignRecipientRow = {
       email,
       name: names.get(email) ?? null,

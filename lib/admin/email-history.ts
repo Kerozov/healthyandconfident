@@ -6,6 +6,7 @@ import {
   SEQUENCE_PRE_PAYMENT_REMINDERS,
 } from "@/lib/contacts/types";
 import type { PersonEmailItem, PersonEmailStatus } from "@/lib/admin/person-email";
+import { deliveryOutcome } from "@/lib/admin/delivery-state";
 
 export type { PersonEmailItem, PersonEmailStatus } from "@/lib/admin/person-email";
 
@@ -26,9 +27,20 @@ function deliveryStatus(row: {
   status: PersonEmailStatus;
   recipient_status: string | null;
 }): PersonEmailStatus {
-  if (row.status === "sent" && row.recipient_status === "failed") return "failed";
-  if (row.status === "sent" && row.recipient_status === "pending") return "pending";
-  return row.status;
+  // A bounce went out (the row shows it as sent); a removal is not a failure.
+  switch (deliveryOutcome(row)) {
+    case "failed":
+      return "failed";
+    case "waiting":
+      return "pending";
+    case "canceled":
+      return "canceled";
+    case "delivered":
+    case "bounced":
+      return "sent";
+    default:
+      return row.status;
+  }
 }
 
 function mapWorkerJobStatus(status: string): PersonEmailStatus {
@@ -110,7 +122,7 @@ export async function getPersonEmailHistory(
       title: camp?.subject ?? "Кампания",
       status: deliveryStatus(row),
       at: row.sent_at,
-      opened: row.status === "sent" && isOpenedRow(row),
+      opened: deliveryStatus(row) === "sent" && isOpenedRow(row),
       openedAt: row.opened_at,
       clicks: row.click_count ?? 0,
       error: null,

@@ -7,6 +7,7 @@ import { getSmsJobReport } from "@/lib/worker/sms";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
 import { fetchAllRows } from "@/lib/admin/stats-shared";
 import { chunkArray } from "@/lib/utils";
+import { deliveryOutcome, wentOut } from "@/lib/admin/delivery-state";
 
 function isOpened(row: RecipientRow): boolean {
   return row.opened || row.status === "opened" || Boolean(row.openedAt);
@@ -287,33 +288,26 @@ export function aggregateAutomationStats(
       }
     }
 
-    if (d.status === "scheduled") scheduled_count += 1;
-    if (d.status === "failed") failed_count += 1;
-    if (d.status !== "sent") continue;
-    // Handed to the worker but not sent yet, or the worker failed it: not "sent".
-    if (d.recipient_status === "pending") continue;
-    if (d.recipient_status === "failed") {
-      failed_count += 1;
-      continue;
-    }
+    // Handed to the worker but not sent yet ("waiting") is neither sent nor scheduled.
+    const outcome = deliveryOutcome(d);
+    if (outcome === "scheduled") scheduled_count += 1;
+    if (outcome === "failed") failed_count += 1;
+    if (!wentOut(outcome)) continue;
 
     sent_count += 1;
 
-    const bounced =
-      d.recipient_status === "bounced" || d.recipient_status === "complained";
-    const opened = Boolean(d.opened_at) || d.recipient_status === "opened";
-    const delivered =
-      Boolean(d.delivered_at) ||
-      d.recipient_status === "delivered" ||
+    // Delivered = went out and did not bounce; ZeptoMail sends no "delivered"
+    // event, so waiting for one showed most automations under 50% delivered.
+    const bounced = outcome === "bounced";
+    const opened =
+      Boolean(d.opened_at) ||
       d.recipient_status === "opened" ||
-      opened;
+      d.recipient_status === "clicked";
 
     if (bounced) bounced_count += 1;
-    if (delivered) delivered_count += 1;
+    else delivered_count += 1;
     if (opened) opened_count += 1;
-    if (!opened && !bounced && d.recipient_status !== "failed") {
-      not_opened_count += 1;
-    }
+    if (!opened && !bounced) not_opened_count += 1;
     const clicks = d.click_count ?? 0;
     if (clicks > 0) {
       unique_clickers_count += 1;

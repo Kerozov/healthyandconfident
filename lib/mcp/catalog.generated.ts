@@ -61,6 +61,19 @@ export const MCP_SIGNATURES: Record<string, McpSignature> = {
     "summary": "Отмени SMS кампания",
     "auditAction": "cancel"
   },
+  "actions:changeSubscriberEmail": {
+    "params": [
+      {
+        "name": "input",
+        "type": "{ id: string; email: string }",
+        "optional": false
+      }
+    ],
+    "returns": "ActionResult & { changed?: boolean | undefined; email?: string | undefined; automations?: number | undefined; campaigns?: number | undefined; reminders?: number | undefined; warnings?: string[] | undefined; }",
+    "doc": "Change one person's email: their profile, everything they did under the old one, and every email still queued for them (automations, scheduled campaigns, payment reminders) moves to the new address.",
+    "summary": "Смени имейла на абонат",
+    "auditAction": "update"
+  },
   "actions:clearProgramCardButtonOverride": {
     "params": [
       {
@@ -402,7 +415,7 @@ export const MCP_SIGNATURES: Record<string, McpSignature> = {
         "optional": false
       }
     ],
-    "returns": "{ ok: true; recipients: ({ email: string; status: string; opened: boolean; openedAt: null | string; deliveredAt: null | string; sentAt: null | string; error: null | string })[]; tracking: { total: number; sent: number; failed: number; bounced: number; delivered: number; opened: number; notOpened: number; pending: number } } | { ok: false; message: string }",
+    "returns": "{ ok: true; recipients: ({ email: string; status: string; opened: boolean; openedAt: null | string; deliveredAt: null | string; sentAt: null | string; error: null | string })[]; tracking: { total: number; sent: number; failed: number; bounced: number; delivered: number; opened: number; notOpened: number; pending: number; /** Removed from the job before it went out — not a failure. */ canceled: number } } | { ok: false; message: string }",
     "doc": "",
     "summary": "",
     "auditAction": ""
@@ -1353,7 +1366,7 @@ export const MCP_SIGNATURES: Record<string, McpSignature> = {
         "optional": false
       }
     ],
-    "returns": "({ id: string; subscriber_id: string; kind: 'status' | 'groups' | 'sync'; status_id: null | string; status_name: null | string; status_color: null | string; previous_status_name: null | string; comment: null | string; details: { [key: string]: unknown }; actor_id: null | string; actor_name: string; created_at: string })[]",
+    "returns": "({ id: string; subscriber_id: string; kind: 'status' | 'groups' | 'sync' | 'email'; status_id: null | string; status_name: null | string; status_color: null | string; previous_status_name: null | string; comment: null | string; details: { [key: string]: unknown }; actor_id: null | string; actor_name: string; created_at: string })[]",
     "doc": "",
     "summary": "",
     "auditAction": ""
