@@ -114,10 +114,20 @@ export async function persistCampaignSync(
 
   const report = reports.length === 1 ? reports[0] : mergeJobReports(reports);
   const t = report.tracking;
-  // `sent` includes bounces; a campaign where every address bounced failed.
+  // A bounce went out, and an address that was never valid is not a failed
+  // send: with them counted, every campaign with one typo in the list read
+  // "Partial". Only real send errors do that now; a campaign where every
+  // address bounced still failed.
+  const invalid = report.recipients.filter(
+    (r) => r.status === "failed" && /invalid/i.test(r.error ?? ""),
+  ).length;
   const status = deriveCampaignStatus(
     report.status,
-    { sent: t.delivered, failed: t.failed + t.bounced, total: t.total },
+    {
+      sent: t.delivered,
+      failed: Math.max(0, t.failed - invalid) + (t.delivered === 0 ? t.bounced : 0),
+      total: t.total,
+    },
     Boolean(scheduledAt),
   );
 

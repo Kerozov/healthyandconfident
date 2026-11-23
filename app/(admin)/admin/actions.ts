@@ -128,6 +128,7 @@ import type {
 import { slugify, chunkArray } from "@/lib/utils";
 import { formatScheduledAt, parseScheduledAt, SCHEDULE_TIMEZONE } from "@/lib/datetime";
 import type { AudienceInput, CampaignStatus, EmailHeaderSize, SmsCampaignStatus, Segment, SegmentGroup } from "@/lib/supabase/types";
+import { mapWithConcurrency } from "@/lib/util/concurrency";
 import { expandAudienceKeys, isDescendantGroup } from "@/lib/segments/hierarchy";
 import {
   createImageUploadTicket,
@@ -3303,25 +3304,46 @@ export async function syncAllEmailCampaigns(): Promise<ActionResult> {
 
   const { data } = await supabase
     .from("email_campaigns")
-    .select("id, worker_job_id")
+    .select("id, worker_job_id, status, scheduled_at, last_synced_at")
     .not("worker_job_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(50);
 
-  const rows = (data as { id: string; worker_job_id: string | null }[]) ?? [];
+  type Row = {
+    id: string;
+    worker_job_id: string | null;
+    status: CampaignStatus;
+    scheduled_at: string | null;
+    last_synced_at: string | null;
+  };
+  const now = Date.now();
+  // Nothing to learn from a send that has not started, or from a canceled one
+  // already read once. Each of those is a full report of a few thousand
+  // recipients — asking anyway kept every button grey for minutes.
+  const rows = ((data as Row[] | null) ?? []).filter((r) => {
+    const future = r.scheduled_at !== null && Date.parse(r.scheduled_at) > now;
+    if ((r.status === "scheduled" || r.status === "queued") && future) return false;
+    if (r.status === "canceled" && r.last_synced_at) return false;
+    return true;
+  });
 
-  await Promise.all(
-    rows.map(async (r) => {
-      try {
-        await syncEmailCampaign(r.id);
-      } catch {
-        /* ignore individual failures so one bad job doesn't block the rest */
-      }
-    }),
-  );
+  // A few at a time: fifty reports at once is what made the worker time out.
+  const results = await mapWithConcurrency(rows, 4, async (r) => {
+    try {
+      return (await syncEmailCampaign(r.id)).ok;
+    } catch {
+      return false; // one bad job must not block the rest
+    }
+  });
+  const failed = results.filter((ok) => !ok).length;
 
   revalidatePath("/admin/campaigns");
-  return { ok: true, message: `Synced ${rows.length} campaign(s).` };
+  return {
+    ok: true,
+    message: failed
+      ? `Обновени ${rows.length - failed} кампании, ${failed} не отговориха — опитай пак.`
+      : `Обновени ${rows.length} кампании.`,
+  };
 }
 
 /** One-click resend to everyone who has NOT opened the original campaign. */

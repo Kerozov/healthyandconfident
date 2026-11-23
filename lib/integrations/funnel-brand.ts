@@ -187,6 +187,8 @@ export type FunnelBrandEmailAllowance =
       topupLabel: string;
       headline: string;
       detail: string;
+      /** The owner's bought emails in one sentence, or null — older Launchify omits it. */
+      boughtLine?: string | null;
       /** The Launchify page where emails are bought. */
       buyUrl: string;
     }

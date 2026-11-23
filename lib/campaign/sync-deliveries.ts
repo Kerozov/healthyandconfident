@@ -3,7 +3,7 @@ import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { getJobReport, type JobReport, type RecipientRow } from "@/lib/worker/email";
 import type { CampaignDelivery } from "@/lib/supabase/types";
-import { campaignClickTotal } from "@/lib/campaign/click-total";
+import { campaignClickerCount } from "@/lib/campaign/click-total";
 import { fetchAllRows } from "@/lib/admin/stats-shared";
 import { mapWithConcurrency } from "@/lib/util/concurrency";
 
@@ -147,7 +147,7 @@ export async function syncCampaignDeliveries(
   const failure = writes.find((result) => result?.error)?.error;
   if (failure) throw new Error(failure.message);
   if (refreshClicks) {
-    const clickedCount = await campaignClickTotal(campaignId);
+    const clickedCount = await campaignClickerCount(campaignId);
     await supabase
       .from("email_campaigns")
       .update({ clicked_count: clickedCount })

@@ -42,23 +42,37 @@ const STATUS_STYLES: Record<CampaignStatus, string> = {
 };
 
 const STATUS_LABEL: Record<CampaignStatus, string> = {
-  draft: "Draft",
-  queued: "Queued",
-  scheduled: "Scheduled",
-  sending: "Sending…",
-  sent: "Sent",
-  partial: "Partial",
-  failed: "Failed",
-  canceled: "Canceled",
+  draft: "Чернова",
+  queued: "Чака",
+  scheduled: "Насрочена",
+  sending: "Изпраща се…",
+  sent: "Изпратена",
+  partial: "Частично",
+  failed: "Неуспешна",
+  canceled: "Отменена",
 };
 
 const RECIPIENT_STATUS_STYLES: Record<string, string> = {
+  clicked: "text-forest-600 bg-forest-500/10",
   opened: "text-forest-600 bg-forest-500/10",
   delivered: "text-forest-600 bg-forest-500/10",
   sent: "text-ink-soft bg-ink/5",
   pending: "text-gold-600 bg-gold-400/15",
   bounced: "text-coral-600 bg-coral-500/15",
+  complained: "text-coral-600 bg-coral-500/15",
   failed: "text-coral-600 bg-coral-500/15",
+};
+
+const RECIPIENT_STATUS_LABEL: Record<string, string> = {
+  pending: "чака",
+  sent: "изпратен",
+  delivered: "доставен",
+  opened: "отворил",
+  clicked: "кликнал",
+  bounced: "върнат",
+  complained: "спам",
+  failed: "не тръгна",
+  canceled: "отменен",
 };
 
 function openRate(c: EmailCampaign) {
@@ -115,11 +129,11 @@ function RecipientStatusBadge({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+        "rounded-full px-2 py-0.5 text-[11px] font-medium",
         RECIPIENT_STATUS_STYLES[status] ?? "bg-ink/5 text-ink-soft",
       )}
     >
-      {status}
+      {RECIPIENT_STATUS_LABEL[status] ?? status}
     </span>
   );
 }
@@ -130,6 +144,10 @@ export function CampaignsTable({
   campaigns: EmailCampaign[];
 }) {
   const router = useRouter();
+  // Two transitions: the refresh of every campaign runs on its own, so the
+  // buttons of each campaign stay usable while it does (it used to grey them
+  // all out for as long as the refresh took).
+  const [syncingAll, startSyncAll] = useTransition();
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
   /** Ref, not state: the one-shot sync must not trigger an extra render. */
@@ -143,7 +161,7 @@ export function CampaignsTable({
 
   const refreshAll = useCallback(() => {
     setNote(null);
-    startTransition(async () => {
+    startSyncAll(async () => {
       const res = await syncAllEmailCampaigns();
       if (res.message) setNote(res.message);
       router.refresh();
@@ -169,7 +187,7 @@ export function CampaignsTable({
   function resend(c: EmailCampaign) {
     if (
       !confirm(
-        `Resend "${c.subject}" to ${c.not_opened_count} subscriber(s) who haven't opened it? (Bounced addresses are excluded.)`,
+        `Да изпратя ли „${c.subject}“ пак на ${c.not_opened_count} души, които не са го отворили? Върнатите адреси не влизат.`,
       )
     )
       return;
@@ -184,7 +202,7 @@ export function CampaignsTable({
   }
 
   function remove(c: EmailCampaign) {
-    if (!confirm(`Delete campaign "${c.subject}"? This cannot be undone.`)) return;
+    if (!confirm(`Да изтрия ли кампанията „${c.subject}“? Не може да се върне.`)) return;
     setBusyId(c.id);
     startTransition(async () => {
       await deleteEmailCampaign(c.id);
@@ -196,7 +214,7 @@ export function CampaignsTable({
   function cancel(c: EmailCampaign) {
     if (
       !confirm(
-        `Cancel scheduled send for "${c.subject}"? Recipients will not receive this email.`,
+        `Да отменя ли „${c.subject}“? Никой няма да получи този имейл.`,
       )
     ) {
       return;
@@ -230,30 +248,29 @@ export function CampaignsTable({
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold">Email campaigns</h2>
+          <h2 className="font-display text-lg font-semibold">Имейл кампании</h2>
           <p className="mt-0.5 text-xs text-ink-soft/70">
-            Live stats from the notification worker. Bounced addresses are not
-            counted as non-openers.
+            Числата идват от worker-а. Върнатите адреси не се броят към неотворилите.
           </p>
           {note && <p className="mt-0.5 text-xs text-ink-soft">{note}</p>}
         </div>
         <button
           onClick={refreshAll}
-          disabled={pending}
-          className="inline-flex h-9 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
+          disabled={syncingAll}
+          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-ink/15 px-4 text-sm font-medium hover:bg-ink/5 disabled:opacity-60"
         >
-          {pending ? (
+          {syncingAll ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <RefreshCw className="h-4 w-4" />
           )}
-          Refresh status
+          {syncingAll ? "Обновявам…" : "Обнови статистиката"}
         </button>
       </div>
 
       {campaigns.length === 0 ? (
         <p className="rounded-2xl border border-ink/10 bg-white p-8 text-center text-sm text-ink-soft">
-          No email campaigns yet.
+          Още няма имейл кампании.
         </p>
       ) : (
         <div className="space-y-3">
@@ -268,6 +285,13 @@ export function CampaignsTable({
             const canCancel = ["scheduled", "queued"].includes(c.status);
             const rowBusy = busyId === c.id && pending;
             const isExpanded = expandedId === c.id;
+            const total = c.total_count || c.recipients_count;
+            // Not sent yet: a row of zeros and a red "failed" said nothing useful.
+            const waiting = canCancel;
+            const notSent = c.status === "canceled" && c.sent_count === 0;
+            // Invalid addresses on an otherwise sent campaign are not an alarm.
+            const failedTone =
+              c.status === "failed" || c.status === "partial" ? "bad" : "muted";
 
             return (
               <div
@@ -301,10 +325,10 @@ export function CampaignsTable({
                       {audienceLabel(c)}
                       {c.locale ? ` · ${c.locale.toUpperCase()}` : ""} ·{" "}
                       {c.scheduled_at
-                        ? `scheduled ${formatScheduledAt(c.scheduled_at, "en")}`
-                        : formatDate(c.created_at, "en")}
+                        ? `за ${formatScheduledAt(c.scheduled_at, "bg")}`
+                        : formatDate(c.created_at, "bg")}
                       {c.last_synced_at && (
-                        <> · synced {formatDate(c.last_synced_at, "en")}</>
+                        <> · обновено {formatDate(c.last_synced_at, "bg")}</>
                       )}
                     </p>
                     {c.error && (
@@ -322,17 +346,17 @@ export function CampaignsTable({
                       <button
                         onClick={() => cancel(c)}
                         disabled={pending}
-                        title="Cancel scheduled send"
+                        title="Отмени изпращането"
                         className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-medium text-coral-600 hover:bg-coral-500/10 disabled:opacity-40"
                       >
                         <Ban className="h-4 w-4" />
-                        Cancel
+                        Отмени
                       </button>
                     )}
                     <button
                       onClick={() => syncOne(c.id)}
                       disabled={pending || !c.worker_job_id}
-                      title="Sync this campaign"
+                      title="Обнови тази кампания"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-ink/5 hover:text-ink disabled:opacity-40"
                     >
                       {rowBusy ? (
@@ -344,7 +368,7 @@ export function CampaignsTable({
                     <button
                       onClick={() => remove(c)}
                       disabled={pending}
-                      title="Delete"
+                      title="Изтрий"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-coral-500/10 hover:text-coral-600 disabled:opacity-40"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -352,12 +376,40 @@ export function CampaignsTable({
                   </div>
                 </div>
 
+                {waiting || notSent ? (
+                  <p className="mt-4 border-t border-ink/10 pt-4 text-sm text-ink-soft">
+                    {notSent ? (
+                      "Отменена преди да тръгне — никой не я е получил."
+                    ) : c.scheduled_at ? (
+                      <>
+                        Тръгва на{" "}
+                        <strong className="text-ink">
+                          {formatScheduledAt(c.scheduled_at, "bg")}
+                        </strong>{" "}
+                        до <strong className="text-ink">{total - c.failed_count}</strong> души.
+                      </>
+                    ) : (
+                      <>
+                        Чака да тръгне до{" "}
+                        <strong className="text-ink">{total - c.failed_count}</strong> души.
+                      </>
+                    )}
+                    {!notSent && c.failed_count > 0 && (
+                      <span className="text-ink-soft/70">
+                        {" "}
+                        {c.failed_count === 1
+                          ? "1 невалиден адрес се пропуска."
+                          : `${c.failed_count} невалидни адреса се пропускат.`}
+                      </span>
+                    )}
+                  </p>
+                ) : (
                 <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-ink/10 pt-4">
-                  <Metric label="Total" value={c.total_count || c.recipients_count} tone="muted" />
-                  <Metric label="Sent" value={c.sent_count} />
-                  <Metric label="Delivered" value={c.delivered_count} tone="good" />
+                  <Metric label="Общо" value={total} tone="muted" />
+                  <Metric label="Изпратени" value={c.sent_count} />
+                  <Metric label="Доставени" value={c.delivered_count} tone="good" />
                   <Metric
-                    label="Opened"
+                    label="Отворили"
                     value={
                       <span>
                         {c.opened_count}
@@ -369,7 +421,7 @@ export function CampaignsTable({
                     tone="good"
                   />
                   <Metric
-                    label="Clicks"
+                    label="Кликнали"
                     value={
                       <span>
                         {c.clicked_count ?? 0}
@@ -380,12 +432,12 @@ export function CampaignsTable({
                     }
                     tone="good"
                   />
-                  <Metric label="Not opened" value={c.not_opened_count} tone="muted" />
+                  <Metric label="Неотворили" value={c.not_opened_count} tone="muted" />
                   {(c.bounced_count ?? 0) > 0 && (
-                    <Metric label="Bounced" value={c.bounced_count} tone="bad" />
+                    <Metric label="Върнати" value={c.bounced_count} tone="muted" />
                   )}
                   {c.failed_count > 0 && (
-                    <Metric label="Failed" value={c.failed_count} tone="bad" />
+                    <Metric label="Не тръгнаха" value={c.failed_count} tone={failedTone} />
                   )}
 
                   <div className="ml-auto flex min-w-[160px] flex-1 items-center gap-3">
@@ -397,6 +449,7 @@ export function CampaignsTable({
                     </div>
                   </div>
                 </div>
+                )}
 
                 {c.worker_job_id && (
                   <button
@@ -408,23 +461,22 @@ export function CampaignsTable({
                     ) : (
                       <ChevronDown className="h-4 w-4" />
                     )}
-                    {isExpanded ? "Hide" : "Show"} per-recipient status
+                    {isExpanded ? "Скрий получателите" : "Покажи получателите"}
                   </button>
                 )}
 
                 {isExpanded && (
                   <div className="mt-3 overflow-x-auto rounded-xl border border-ink/10">
                     {loadingRecipients ? (
-                      <p className="p-4 text-sm text-ink-soft">Loading…</p>
+                      <p className="p-4 text-sm text-ink-soft">Зареждам…</p>
                     ) : recipients && recipients.length > 0 ? (
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-wider text-ink-soft/60">
-                            <th className="px-4 py-2">Email</th>
-                            <th className="px-4 py-2">Status</th>
-                            <th className="px-4 py-2">Sent</th>
-                            <th className="px-4 py-2">Opened</th>
-                            <th className="px-4 py-2">Clicks</th>
+                            <th className="px-4 py-2">Имейл</th>
+                            <th className="px-4 py-2">Статус</th>
+                            <th className="px-4 py-2">Изпратен</th>
+                            <th className="px-4 py-2">Отворен</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -435,20 +487,17 @@ export function CampaignsTable({
                                 <RecipientStatusBadge status={r.status} />
                               </td>
                               <td className="px-4 py-2 text-xs text-ink-soft">
-                                {r.sentAt ? formatDate(r.sentAt, "en") : "-"}
+                                {r.sentAt ? formatDate(r.sentAt, "bg") : "-"}
                               </td>
                               <td className="px-4 py-2 text-xs text-ink-soft">
-                                {r.openedAt ? formatDate(r.openedAt, "en") : "-"}
-                              </td>
-                              <td className="px-4 py-2 text-xs font-medium text-forest-700">
-                                {"clickCount" in r ? (r as { clickCount?: number }).clickCount ?? 0 : 0}
+                                {r.openedAt ? formatDate(r.openedAt, "bg") : "-"}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     ) : (
-                      <p className="p-4 text-sm text-ink-soft">No recipient data.</p>
+                      <p className="p-4 text-sm text-ink-soft">Няма данни за получателите.</p>
                     )}
                   </div>
                 )}
@@ -463,11 +512,10 @@ export function CampaignsTable({
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-cream-2/50 px-4 py-3">
                     <p className="text-sm text-ink-soft">
                       <MailOpen className="mr-1.5 inline h-4 w-4 text-coral-500" />
-                      <strong>{c.not_opened_count}</strong> valid{" "}
-                      {c.not_opened_count === 1 ? "address hasn't" : "addresses haven't"}{" "}
-                      opened yet
+                      <strong>{c.not_opened_count}</strong>{" "}
+                      {c.not_opened_count === 1 ? "човек още не е отворил" : "души още не са отворили"}
                       {(c.bounced_count ?? 0) > 0 && (
-                        <> · {c.bounced_count} bounced (excluded)</>
+                        <> · {c.bounced_count} върнати не влизат</>
                       )}
                       .
                     </p>
@@ -481,7 +529,7 @@ export function CampaignsTable({
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
-                      Resend to non-openers
+                      Изпрати пак на неотворилите
                     </button>
                   </div>
                 )}

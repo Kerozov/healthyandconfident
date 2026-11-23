@@ -86,7 +86,9 @@ export async function LaunchifyEmailAllowance({
           style={{ width: `${Math.round(usedShare * 100)}%` }}
         />
       </div>
-      {view.extraLeft > 0 ? (
+      {view.boughtLine ? (
+        <p className="text-xs font-medium text-ink">{view.boughtLine}</p>
+      ) : view.extraLeft > 0 ? (
         <p className="text-xs text-ink-soft">
           От тях {view.extraLeft.toLocaleString("bg-BG")} са добавени от теб и
           не изтичат.
