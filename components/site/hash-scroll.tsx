@@ -18,10 +18,19 @@ const HEADER_OFFSET = 88;
 const SETTLE_TIMEOUT_MS = 1600;
 const DRIFT_TOLERANCE_PX = 4;
 
+/** Live / Black Friday bars pinned above the header (set by SiteHeader). */
+function topBarsOffset(): number {
+  const value = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue("--site-top-bars"),
+  );
+  return Number.isFinite(value) ? value : 0;
+}
+
 function targetOffset(target: HTMLElement): number {
   // Sections declare their own clearance with `scroll-mt-24`; honour it.
   const declared = parseFloat(getComputedStyle(target).scrollMarginTop);
-  return Number.isFinite(declared) && declared > 0 ? declared : HEADER_OFFSET;
+  const base = Number.isFinite(declared) && declared > 0 ? declared : HEADER_OFFSET;
+  return base + topBarsOffset();
 }
 
 function scrollToElement(target: HTMLElement, smooth: boolean) {

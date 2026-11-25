@@ -1028,6 +1028,7 @@ async function submitPreparedJob(
       html: job.html,
       recipients: job.recipients,
       attachments: job.attachments,
+      merge: job.merge,
     };
     const res = await callWorkerWithFreshKeyFallback(
       (idempotencyKey) =>

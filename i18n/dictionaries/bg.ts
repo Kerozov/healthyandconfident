@@ -652,5 +652,12 @@ export const bg: Dictionary = {
       dismiss: "Не сега",
       close: "Затвори",
     },
+    bar: {
+      defaultText: "Черен петък: най-големите отстъпки за годината",
+      cta: "Виж офертите",
+      endsIn: "Остават",
+      startsIn: "Започва след",
+      units: ["д", "ч", "м", "с"],
+    },
   },
 };

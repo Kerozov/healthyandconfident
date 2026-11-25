@@ -9,16 +9,33 @@ import {
   type Contact,
 } from "@/lib/contacts/types";
 import { isNotificationWorkerConfigured } from "@/lib/worker/config";
+import {
+  isEmailUnsubscribed,
+  unsubscribeLinkForEmail,
+  unsubscribeMergeForEmail,
+} from "@/lib/email/unsubscribe";
 
 const REMINDER_OFFSETS_DAYS = [1, 3, 7] as const;
+
+/** The same „Отписване“ link every other email carries, as a small line at the bottom. */
+function unsubscribeFooter(href: string | null, locale: "bg" | "en"): string {
+  if (!href) return "";
+  const text =
+    locale === "en"
+      ? `Don't want these emails? <a href="${href}" style="color:#7a8b99">Unsubscribe</a>`
+      : `Не искаш да получаваш тези имейли? <a href="${href}" style="color:#7a8b99">Отписване</a>`;
+  return `\n<p style="margin-top:24px;font-size:12px;color:#7a8b99">${text}</p>`;
+}
 
 function reminderContent(input: {
   locale: "bg" | "en";
   name: string | null;
   ctaUrl: string;
   day: number;
+  unsubscribeHref: string | null;
 }): { subject: string; html: string } {
   const greeting = input.name?.trim() || (input.locale === "bg" ? "здравей" : "there");
+  const footer = unsubscribeFooter(input.unsubscribeHref, input.locale);
 
   if (input.locale === "en") {
     return {
@@ -26,7 +43,7 @@ function reminderContent(input: {
       html: `<p>Hi ${greeting},</p>
 <p>Just a friendly reminder - you started signing up but haven't completed payment yet.</p>
 <p><a href="${input.ctaUrl}">Complete your registration →</a></p>
-<p>With love,<br/>Vessie</p>`,
+<p>With love,<br/>Vessie</p>${footer}`,
     };
   }
 
@@ -35,7 +52,7 @@ function reminderContent(input: {
     html: `<p>Здравей, ${greeting},</p>
 <p>Кратко напомняне - започна записването, но плащането още не е завършено.</p>
 <p><a href="${input.ctaUrl}">Завърши регистрацията →</a></p>
-<p>С обич,<br/>Веси</p>`,
+<p>С обич,<br/>Веси</p>${footer}`,
   };
 }
 
@@ -46,6 +63,8 @@ export async function schedulePrePaymentReminders(
 ): Promise<number> {
   if (contact.payment_status === "paid") return 0;
   if (!isNotificationWorkerConfigured()) return 0;
+  // Someone who unsubscribed gets no reminders either.
+  if (await isEmailUnsubscribed(contact.email)) return 0;
 
   const supabase = getAdminClient();
   const { data: existing } = await supabase
@@ -58,6 +77,9 @@ export async function schedulePrePaymentReminders(
   if ((existing ?? []).length > 0) return 0;
 
   const checkoutPath = `/${locale}#programs`;
+  const unsubscribeHref = unsubscribeLinkForEmail(contact.email, locale);
+  // The worker turns this into the List-Unsubscribe headers (the mailbox's own button).
+  const merge = unsubscribeMergeForEmail(contact.email, locale);
   let scheduled = 0;
 
   for (const day of REMINDER_OFFSETS_DAYS) {
@@ -76,6 +98,7 @@ export async function schedulePrePaymentReminders(
       name: contact.name,
       ctaUrl,
       day,
+      unsubscribeHref,
     });
 
     const result = await scheduleContactEmail({
@@ -86,6 +109,7 @@ export async function schedulePrePaymentReminders(
       recipients: [contact.email],
       sendAt,
       idempotencyKey,
+      merge,
     });
 
     if (result) scheduled += 1;

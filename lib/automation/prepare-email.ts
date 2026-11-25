@@ -5,7 +5,7 @@ import type { AutomationRunContext } from "@/lib/automation/run";
 import { buildBrandedEmail } from "@/lib/email/compose";
 import { buildEmailBodyForRecipient } from "@/lib/email/build-body";
 import { automationCtaRedirectUrl } from "@/lib/email/cta-redirect";
-import { unsubscribeLinkForEmail } from "@/lib/email/unsubscribe";
+import { unsubscribeLinkForEmail, unsubscribeMergeForEmail } from "@/lib/email/unsubscribe";
 import { renderEmailTemplate } from "@/lib/automation/template";
 import { templateVarsForContext, withCourseCode } from "@/lib/automation/recipient-vars";
 import { automationEmailContent } from "@/lib/automation/content";
@@ -24,6 +24,8 @@ export type AutomationEmailMessage = {
   subject: string;
   html: string;
   attachments?: AutomationEmailAttachment[];
+  /** The person's unsubscribe link for the worker's List-Unsubscribe headers. */
+  merge?: Record<string, Record<string, string>>;
 };
 
 export type PreparedEmailJob = AutomationEmailMessage & {
@@ -107,6 +109,7 @@ export async function buildAutomationEmailMessage(
     subject,
     html,
     attachments: attachments.length ? attachments : undefined,
+    merge: unsubscribeMergeForEmail(email, locale),
   };
 }
 

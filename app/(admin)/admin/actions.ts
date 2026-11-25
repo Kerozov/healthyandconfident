@@ -2262,6 +2262,63 @@ export async function unsubscribeInactiveSubscribers(input: {
   return { ok: true, unsubscribed };
 }
 
+/** Most ids one call takes; the subscribers table sends bigger selections in parts. */
+const UNSUBSCRIBE_MAX_IDS = 1000;
+
+/**
+ * Unsubscribes the chosen people by id (the „Отпиши“ button for a selection in
+ * the subscribers table). Whatever is already scheduled for them is cancelled,
+ * the same as when they unsubscribe from an email. Already unsubscribed ids
+ * are skipped.
+ */
+export async function unsubscribeSubscribers(input: {
+  ids: string[];
+}): Promise<ActionResult & { unsubscribed?: number }> {
+  const ids = [...new Set(input.ids.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) return { ok: false, message: "Няма избрани хора." };
+  if (ids.length > UNSUBSCRIBE_MAX_IDS) {
+    return { ok: false, message: `Най-много ${UNSUBSCRIBE_MAX_IDS} души наведнъж.` };
+  }
+
+  const guard = await guardAction("subscribers", {
+    action: "update",
+    summary: `Отписа ${ids.length} абоната`,
+  });
+  if (!guard.ok) return guard;
+
+  const supabase = getAdminClient();
+  const emails: string[] = [];
+  let unsubscribed = 0;
+  for (const batch of chunkArray(ids, 200)) {
+    const { data, error } = await supabase
+      .from("subscribers")
+      .update({ status: "unsubscribed" })
+      .in("id", batch)
+      .eq("status", "subscribed")
+      .select("email");
+    if (error) {
+      revalidatePath("/admin/subscribers");
+      return { ok: false, message: error.message, unsubscribed };
+    }
+    const rows = (data as { email: string }[] | null) ?? [];
+    unsubscribed += rows.length;
+    emails.push(...rows.map((r) => r.email));
+  }
+
+  // Anything already queued for them must not go out after the opt-out.
+  if (emails.length > 0) {
+    try {
+      const { cancelScheduledMailForEmails } = await import("@/lib/automation/cancel");
+      await cancelScheduledMailForEmails(emails);
+    } catch (err) {
+      console.error("[unsubscribeSubscribers] cancel:", err);
+    }
+  }
+
+  revalidatePath("/admin/subscribers");
+  return { ok: true, unsubscribed };
+}
+
 // ── Segment groups ──────────────────────────────────────────
 export async function createSegmentGroup(input: {
   name: string;

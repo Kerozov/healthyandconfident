@@ -1060,6 +1060,19 @@ export const MCP_SIGNATURES: Record<string, McpSignature> = {
     "summary": "",
     "auditAction": "update"
   },
+  "actions:unsubscribeSubscribers": {
+    "params": [
+      {
+        "name": "input",
+        "type": "{ ids: string[] }",
+        "optional": false
+      }
+    ],
+    "returns": "ActionResult & { unsubscribed?: number | undefined; }",
+    "doc": "Unsubscribes the chosen people by id (the „Отпиши“ button for a selection in the subscribers table). Whatever is already scheduled for them is cancelled, the same as when they unsubscribe from an email. Already unsubscribed ids are skipped.",
+    "summary": "",
+    "auditAction": "update"
+  },
   "actions:updateAutomation": {
     "params": [
       {

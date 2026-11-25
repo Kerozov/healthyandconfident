@@ -76,12 +76,13 @@
 }
 
 html {
-  scroll-padding-top: 4rem;
+  /* --site-top-bars: the live / Black Friday bars above the header, set by SiteHeader. */
+  scroll-padding-top: calc(4rem + var(--site-top-bars, 0px));
 }
 
 @media (min-width: 640px) {
   html {
-    scroll-padding-top: 4.5rem;
+    scroll-padding-top: calc(4.5rem + var(--site-top-bars, 0px));
   }
 }
 
@@ -211,7 +212,53 @@ body {
 .animate-fade-in {
   animation: fade-in 0.9s ease both;
 }
+/*
+ * Black Friday bar: 10 s after it appears it drops a little over the menu,
+ * bounces and settles back, to catch the eye once. ::before fills the gap
+ * above it in the bar's own colour while it is down.
+ */
+@keyframes bf-bar-drop {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgb(15 23 42 / 0);
+  }
+  18% {
+    transform: translateY(12px);
+    box-shadow: 0 14px 28px -8px rgb(15 23 42 / 0.45);
+  }
+  26% {
+    transform: translateY(8px);
+  }
+  34%,
+  60% {
+    transform: translateY(12px);
+    box-shadow: 0 14px 28px -8px rgb(15 23 42 / 0.45);
+  }
+  78% {
+    transform: translateY(-2px);
+  }
+  88% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgb(15 23 42 / 0);
+  }
+}
+.animate-bf-bar-drop {
+  animation: bf-bar-drop 1.8s ease-in-out 10s both;
+}
+.animate-bf-bar-drop::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 100%;
+  height: 16px;
+  background-color: inherit;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-bf-bar-drop,
   .animate-fade-up,
   .animate-draw-line,
   .animate-grow-x,

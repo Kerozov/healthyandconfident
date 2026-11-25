@@ -286,5 +286,15 @@ export type Dictionary = {
       dismiss: string;
       close: string;
     };
+    /** Bar pinned above the site header for the whole campaign. */
+    bar: {
+      /** Used when the admin left the banner text empty. */
+      defaultText: string;
+      cta: string;
+      endsIn: string;
+      startsIn: string;
+      /** Short days, hours, minutes, seconds for the one-line countdown. */
+      units: [string, string, string, string];
+    };
   };
 };

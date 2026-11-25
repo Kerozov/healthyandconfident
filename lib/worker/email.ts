@@ -60,6 +60,8 @@ export type WorkerBatchJobItem = {
   sendAt: string;
   idempotencyKey?: string;
   attachments?: SendArgs["attachments"];
+  /** Per recipient; `unsubscribe_url` there becomes the List-Unsubscribe headers. */
+  merge?: SendArgs["merge"];
 };
 
 export type WorkerBatchResultItem = {
@@ -346,6 +348,7 @@ export async function submitEmailJobsBatch(
         // it sent lead-magnet emails with no PDF while the single-job fallback
         // attached one.
         attachments: job.attachments?.length ? withCdnUrls(job.attachments) : undefined,
+        merge: job.merge && Object.keys(job.merge).length > 0 ? job.merge : undefined,
       })),
     },
     { retry: jobs.every((job) => Boolean(job.idempotencyKey)) },

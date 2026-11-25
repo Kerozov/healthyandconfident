@@ -14,12 +14,13 @@ import {
   Search,
   Tag,
   Trash2,
+  UserMinus,
   X,
 } from "lucide-react";
 import type { ContactStatus, Segment, SegmentGroup, Subscriber } from "@/lib/supabase/types";
 import { assignableSegments } from "@/components/admin/segment-checklist";
 import { getSegmentKeysForGroup } from "@/lib/segments/hierarchy";
-import { deleteSubscriber } from "@/app/(admin)/admin/actions";
+import { deleteSubscriber, unsubscribeSubscribers } from "@/app/(admin)/admin/actions";
 import { exportSubscribersCsv, exportSubscribersExcel } from "@/lib/admin/export-subscribers";
 import {
   CONTACTS_LIST_URL_KEY,
@@ -56,6 +57,8 @@ type SortKey = "created" | "name" | "status" | "changed" | "source" | "groups";
 const SORT_KEYS: SortKey[] = ["created", "name", "status", "changed", "source", "groups"];
 const PAGE_SIZES = [25, 50, 100] as const;
 const DELETE_CLIENT_BATCH = 40;
+/** Ids per unsubscribe call; the server takes up to 1000. */
+const UNSUBSCRIBE_CLIENT_BATCH = 500;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -177,6 +180,7 @@ export function SubscribersTable({
   const [deleteProgress, setDeleteProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const [unsubscribing, setUnsubscribing] = useState(false);
 
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
   const statusOrder = useMemo(
@@ -466,6 +470,51 @@ export function SubscribersTable({
     }
   }
 
+  async function unsubscribeSelected() {
+    const targets = selectedInView.filter((s) => s.status === "subscribed");
+    if (unsubscribing) return;
+    if (targets.length === 0) {
+      setNote({ ok: false, text: "Всички избрани вече са отписани." });
+      return;
+    }
+    const preview = targets.slice(0, 5).map((s) => s.email).join("\n");
+    const more = targets.length > 5 ? `\n…и още ${targets.length - 5}` : "";
+    if (
+      !confirm(
+        `Отписване на ${targets.length} души? Спират да получават кампании и автоматизации, а насрочените им писма се отменят.\n\n${preview}${more}`,
+      )
+    ) {
+      return;
+    }
+    setNote(null);
+    setUnsubscribing(true);
+    let done = 0;
+    try {
+      for (const batch of chunkArray(
+        targets.map((s) => s.id),
+        UNSUBSCRIBE_CLIENT_BATCH,
+      )) {
+        const res = await unsubscribeSubscribers({ ids: batch });
+        if (!res.ok) {
+          const message = res.message ?? "Отписването не успя.";
+          setNote({
+            ok: false,
+            text: done > 0 ? `${message} (отписани ${done} от ${targets.length})` : message,
+          });
+          return;
+        }
+        done += res.unsubscribed ?? 0;
+      }
+      setNote({ ok: true, text: `Отписани: ${done}.` });
+      setSelectedIds(new Set());
+    } catch (err) {
+      setNote({ ok: false, text: err instanceof Error ? err.message : "Отписването не успя." });
+    } finally {
+      setUnsubscribing(false);
+      if (done > 0) router.refresh();
+    }
+  }
+
   const newThisWeek = rows.filter((r) => loadedAt - new Date(r.s.created_at).getTime() < WEEK_MS).length;
   const subscribedCount = rows.filter((r) => r.s.status === "subscribed").length;
 
@@ -717,6 +766,19 @@ export function SubscribersTable({
                   Смени статуса
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => void unsubscribeSelected()}
+                disabled={pending || unsubscribing || deleteProgress !== null}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink/15 bg-white px-4 text-sm font-semibold text-ink hover:bg-ink/5 disabled:opacity-60"
+              >
+                {unsubscribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserMinus className="h-4 w-4" />
+                )}
+                {unsubscribing ? "Отписване…" : "Отпиши"}
+              </button>
               <button
                 type="button"
                 onClick={() => void removeSelected()}

@@ -22,6 +22,8 @@ export type ScheduleEmailInput = {
   idempotencyKey?: string;
   from?: string;
   replyTo?: string;
+  /** Per recipient; `unsubscribe_url` there becomes the List-Unsubscribe headers. */
+  merge?: Record<string, Record<string, string>>;
 };
 
 export type ScheduleContactEmailInput = ScheduleEmailInput & {
@@ -114,6 +116,7 @@ export async function scheduleContactEmail(
     idempotencyKey: args.idempotencyKey,
     from: args.from,
     replyTo: args.replyTo,
+    merge: args.merge,
   });
 
   const local = await recordWorkerJob({

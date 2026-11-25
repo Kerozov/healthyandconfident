@@ -32,9 +32,7 @@ import { getPopupThankYouConfig } from "@/lib/site/popup-config";
 import { getSiteQuestionnaireCta } from "@/lib/site/questionnaire-cta-data";
 import { navItemsWithQuestionnaire, questionnaireCtaForLocale } from "@/lib/site/questionnaire-cta";
 import { getBlackFridayConfig } from "@/lib/black-friday/config";
-import { BlackFridayBanner } from "@/components/site/black-friday-banner";
 import { blackFridayHref, blackFridayPhase } from "@/lib/site/black-friday-phase";
-import { BlackFridayBannerGate } from "@/components/site/black-friday-banner-gate";
 import { BlackFridayPopup } from "@/components/site/black-friday-popup";
 
 export function generateStaticParams() {
@@ -114,6 +112,20 @@ export default async function SiteLayout({
     blackFriday !== null &&
     blackFridayPhase(blackFriday) !== "off" &&
     blackFridayPhase(blackFriday) !== "ended";
+  // Only what the bar shows: the row also holds the secret early-access key.
+  const blackFridayBar = blackFridayOn
+    ? {
+        data: {
+          text:
+            (l === "bg" ? blackFriday.banner_text_bg : blackFriday.banner_text_en)?.trim() ||
+            dict.blackFriday.bar.defaultText,
+          href: blackFridayHref(blackFriday, l),
+          startsAt: blackFriday.early_access_deadline ?? null,
+          endsAt: blackFriday.deadline ?? null,
+        },
+        copy: dict.blackFriday.bar,
+      }
+    : null;
   const navItems = navItemsWithQuestionnaire(
     dict.nav.items,
     questionnaireCtaForLocale(questionnaire, l),
@@ -147,12 +159,12 @@ export default async function SiteLayout({
             successButton={popupConfig?.success_button}
           >
             <HashScroll />
-            {blackFridayOn && (
-              <BlackFridayBannerGate deadline={blackFriday.deadline}>
-                <BlackFridayBanner config={blackFriday} locale={l} />
-              </BlackFridayBannerGate>
-            )}
-            <SiteHeader locale={l} items={navItems} cta={dict.nav.cta} />
+            <SiteHeader
+              locale={l}
+              items={navItems}
+              cta={dict.nav.cta}
+              blackFriday={blackFridayBar}
+            />
             <main>{children}</main>
             <Footer locale={l} dict={dict} contactConfig={contactConfig} />
             {contactConfig.messenger_enabled && contactConfig.messenger_url.trim() && (

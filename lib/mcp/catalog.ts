@@ -106,6 +106,12 @@ export const MCP_CATALOG = {
       delete: a("actions", "deleteSubscribers", "Изтрива абонати по id.", "delete"),
       inactive: a("actions", "getInactiveSubscribers", "Неактивни от N месеца."),
       unsubscribe_inactive: a("actions", "unsubscribeInactiveSubscribers", undefined, "bulk"),
+      unsubscribe: a(
+        "actions",
+        "unsubscribeSubscribers",
+        "Отписва хора по id (до 1000 наведнъж). Спира и насрочените им писма.",
+        "bulk",
+      ),
       create_group: a("actions", "createSegmentGroup"),
       update_group: a("actions", "updateSegmentGroup"),
       delete_group: a("actions", "deleteSegmentGroup", undefined, "delete"),

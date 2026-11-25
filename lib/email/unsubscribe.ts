@@ -19,6 +19,20 @@ export function unsubscribeLinkForEmail(
   return `${siteOrigin()}/api/unsubscribe?token=${encodeURIComponent(token)}&locale=${locale}`;
 }
 
+/**
+ * The worker's `merge` entry carrying this person's unsubscribe link. From it
+ * the worker adds the List-Unsubscribe headers, so Gmail and Apple Mail show
+ * their own „Отписване“ button. Undefined when no link can be signed.
+ */
+export function unsubscribeMergeForEmail(
+  email: string,
+  locale: "bg" | "en",
+): Record<string, Record<string, string>> | undefined {
+  const href = unsubscribeLinkForEmail(email, locale);
+  if (!href) return undefined;
+  return { [email.trim().toLowerCase()]: { unsubscribe_url: href } };
+}
+
 export async function isEmailUnsubscribed(email: string): Promise<boolean> {
   const supabase = getAdminClient();
   const { data } = await supabase

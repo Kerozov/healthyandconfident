@@ -647,5 +647,12 @@ export const en: Dictionary = {
       dismiss: "Not now",
       close: "Close",
     },
+    bar: {
+      defaultText: "Black Friday: the biggest discounts of the year",
+      cta: "See the offers",
+      endsIn: "Ends in",
+      startsIn: "Starts in",
+      units: ["d", "h", "m", "s"],
+    },
   },
 };
